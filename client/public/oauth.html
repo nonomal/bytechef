@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OAuth Authentication</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f5f5f5;
+        }
+        .container {
+            text-align: center;
+            padding: 20px;
+            border-radius: 8px;
+            background-color: white;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="container" id="message-container">
+        <div id="message" class="text-xl">Loading...</div>
+    </div>
+
+    <script>
+        // Constants
+        const OAUTH_RESPONSE = 'react-use-oauth2-response';
+        const OAUTH_STORAGE_KEY = 'react-use-oauth2-storage-response';
+        const OAUTH_BROADCAST_CHANNEL = 'react-use-oauth2-broadcast-channel';
+
+        // Utility function to convert query string to object
+        function queryToObject(query) {
+            if (!query) return {};
+            const parameters = new URLSearchParams(query);
+            return Object.fromEntries(parameters.entries());
+        }
+
+        // Extract the opener's origin from the OAuth state parameter
+        function getOpenerOrigin(payload) {
+            try {
+                const state = payload.state;
+
+                if (state) {
+                    const decoded = decodeURIComponent(atob(state));
+                    const stateObj = JSON.parse(decoded);
+
+                    if (stateObj.origin) {
+                        return stateObj.origin;
+                    }
+                }
+            } catch (error) {
+                console.warn('Failed to decode state for opener origin:', error);
+            }
+
+            return window.location.origin;
+        }
+
+        // Send message using available methods (postMessage, BroadcastChannel, localStorage)
+        // Uses all available methods to ensure message delivery across different browser contexts
+        function sendOAuthMessage(message, messageElement, targetOrigin) {
+            let messageSent = false;
+
+            // Method 1: Try window.opener.postMessage (preferred)
+            if (window.opener) {
+                try {
+                    window.opener.postMessage(message, targetOrigin);
+                    messageSent = true;
+                } catch (error) {
+                    console.warn('Failed to send message via window.opener:', error);
+                }
+            }
+
+            // Method 2: Try BroadcastChannel API (fallback for lost opener)
+            // Always attempt this as window.opener may be null in some contexts (e.g., Slack OAuth)
+            if (typeof BroadcastChannel !== 'undefined') {
+                try {
+                    const channel = new BroadcastChannel(OAUTH_BROADCAST_CHANNEL);
+                    channel.postMessage(message);
+                    channel.close();
+                    messageSent = true;
+                } catch (error) {
+                    console.warn('Failed to send message via BroadcastChannel:', error);
+                }
+            }
+
+            // Method 3: Use localStorage as final fallback
+            // Always store to handle same-origin case where storage events don't fire
+            try {
+                localStorage.setItem(OAUTH_STORAGE_KEY, JSON.stringify({
+                    ...message,
+                    timestamp: Date.now()
+                }));
+                messageSent = true;
+            } catch (error) {
+                console.warn('Failed to send message via localStorage:', error);
+            }
+
+            if (!messageSent) {
+                messageElement.textContent = 'Error: Could not communicate with parent window. Please close this window and try again.';
+                throw new Error('No communication method available');
+            }
+        }
+
+        // Main function to handle OAuth response
+        function handleOAuthResponse() {
+            const messageElement = document.getElementById('message');
+
+            // Extract query parameters and hash fragments
+            const queryParams = queryToObject(window.location.search.substring(1));
+            const hashParams = queryToObject(window.location.hash.substring(1));
+
+            // Combine both parameter sets
+            const payload = {
+                ...queryParams,
+                ...hashParams
+            };
+
+            const error = payload.error;
+            const targetOrigin = getOpenerOrigin(payload);
+
+            // Handle error case
+            if (error) {
+                const errorMessage = decodeURI(error) || 'OAuth error: An error has occurred.';
+                messageElement.textContent = errorMessage;
+
+                sendOAuthMessage({
+                    error: errorMessage,
+                    type: OAUTH_RESPONSE
+                }, messageElement, targetOrigin);
+            }
+            // Handle success case - let parent window validate state
+            else {
+                messageElement.textContent = 'Authentication successful! You can close this window.';
+
+                sendOAuthMessage({
+                    payload,
+                    type: OAUTH_RESPONSE
+                }, messageElement, targetOrigin);
+            }
+        }
+
+        // Execute when DOM is fully loaded
+        document.addEventListener('DOMContentLoaded', handleOAuthResponse);
+    </script>
+</body>
+</html>

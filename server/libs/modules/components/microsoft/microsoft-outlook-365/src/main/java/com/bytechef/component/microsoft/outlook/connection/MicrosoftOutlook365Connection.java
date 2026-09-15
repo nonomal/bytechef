@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,45 +16,43 @@
 
 package com.bytechef.component.microsoft.outlook.connection;
 
-import static com.bytechef.component.definition.Authorization.AuthorizationType;
-import static com.bytechef.component.definition.Authorization.CLIENT_ID;
-import static com.bytechef.component.definition.Authorization.CLIENT_SECRET;
-import static com.bytechef.component.definition.ComponentDSL.ModifiableConnectionDefinition;
-import static com.bytechef.component.definition.ComponentDSL.authorization;
-import static com.bytechef.component.definition.ComponentDSL.connection;
-import static com.bytechef.component.definition.ComponentDSL.string;
-import static com.bytechef.component.microsoft.outlook.constant.MicrosoftOutlook365Constants.TENANT_ID;
+import static com.bytechef.component.definition.ComponentDsl.ModifiableConnectionDefinition;
 
-import java.util.List;
+import com.bytechef.microsoft.commons.MicrosoftConnection;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 /**
- * @author Monika Domiter
+ * @author Monika Kušter
  * @author Ivica Cardic
  */
 public class MicrosoftOutlook365Connection {
 
-    public static final ModifiableConnectionDefinition CONNECTION_DEFINITION = connection()
-        .authorizations(
-            authorization(AuthorizationType.OAUTH2_AUTHORIZATION_CODE)
-                .title("OAuth2 Authorization Code")
-                .properties(
-                    string(CLIENT_ID)
-                        .label("Client Id")
-                        .required(true),
-                    string(CLIENT_SECRET)
-                        .label("Client Secret")
-                        .required(true),
-                    string(TENANT_ID)
-                        .label("Tenant Id")
-                        .defaultValue("common")
-                        .required(true))
-                .authorizationUrl(
-                    (parameters, context) -> "https://login.microsoftonline.com/" + parameters.getString(TENANT_ID) +
-                        "/oauth2/v2.0/authorize")
-                .tokenUrl(
-                    (parameters, context) -> "https://login.microsoftonline.com/" + parameters.getString(TENANT_ID) +
-                        "/oauth2/v2.0/token")
-                .scopes((connection, context) -> List.of("Mail.Read", "MailboxSettings.Read", "Mail.Send")));
+    public static final ModifiableConnectionDefinition CONNECTION_DEFINITION = MicrosoftConnection.createConnection(
+        1,
+        "https://docs.bytechef.io/reference/components/microsoft-outlook-365_v1#connection-setup",
+        (connection, context) -> {
+            Map<String, Boolean> map = new LinkedHashMap<>();
+
+            map.put("Calendars.Read", false);
+            map.put("Calendars.Read.Shared", false);
+            map.put("Calendars.ReadBasic", false);
+            map.put("Calendars.ReadWrite", true);
+            map.put("Calendars.ReadWrite.Shared", true);
+            map.put("Mail.Read", false);
+            map.put("Mail.ReadBasic", false);
+            map.put("Mail.ReadBasic.All", false);
+            map.put("Mail.ReadWrite", true);
+            map.put("Mail.Send", true);
+            map.put("MailboxSettings.Read", true);
+            map.put("MailboxSettings.ReadWrite", false);
+            map.put("User.Read", false);
+            map.put("User.Read.All", false);
+            map.put("User.ReadBasic.All", false);
+            map.put("offline_access", true);
+
+            return map;
+        });
 
     private MicrosoftOutlook365Connection() {
     }

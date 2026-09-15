@@ -1,0 +1,163 @@
+---
+title: "Customize Component"
+---
+
+### Connector Icon and Category
+
+1. Find an Icon:
+    - Search for a suitable user interface icon for your component in `.svg` format.
+
+2. Save the Icon:
+    - Place the icon in the following directory: `server/libs/modules/components/newcomponent/src/main/resources/assets/newcomponent.svg`.
+
+3. Choose a Category:
+    - Select a category for your component. Available categories can be found in [ComponentCategory](https://github.com/bytechefhq/bytechef/blob/master/sdks/backend/java/component-api/src/main/java/com/bytechef/component/definition/ComponentCategory.java).
+
+4. Update Component Handler:
+    - In `NewComponentComponentHandler`, override the `modifyComponent(ModifiableComponentDefinition modifiableComponentDefinition)` method:
+      ```java
+      @Override
+      public ModifiableComponentDefinition modifyComponent(ModifiableComponentDefinition modifiableComponentDefinition) {
+          return modifiableComponentDefinition
+                .icon("path:assets/newcomponent.svg")
+                .categories(ComponentCategory.HELPERS);
+      }
+      ```
+
+The icon and category you set here determine how the generated component is presented in the workflow editor: once the module is on the classpath and the server is running, it appears (with its icon) under the chosen category in the editor's component panel.
+
+{/* TODO screenshot: the generated component listed with its icon under its chosen category in the workflow editor's component panel */}
+
+### Connection
+
+If your component requires custom authentication parameters, override the `modifyConnection(ModifiableConnectionDefinition modifiableConnectionDefinition)` method in `NewComponentComponentHandler`.
+
+Refer to examples like [`ShopifyComponentHandler`](https://github.com/bytechefhq/bytechef/blob/master/server/libs/modules/components/shopify/src/main/java/com/bytechef/component/shopify/ShopifyComponentHandler.java#L72), [`DiscordComponentHandler`](https://github.com/bytechefhq/bytechef/blob/master/server/libs/modules/components/discord/src/main/java/com/bytechef/component/discord/DiscordComponentHandler.java#L92), or [`PipelinerComponentHandler`](https://github.com/bytechefhq/bytechef/blob/master/server/libs/modules/components/pipeliner/src/main/java/com/bytechef/component/pipeliner/PipelinerComponentHandler.java#L57) for guidance.
+
+#### API Key Labels via OpenAPI `x-title`
+
+You can customize user‑friendly labels for API key properties in the generated connection definition by using the `x-title` OpenAPI extension on security scheme properties. When present, ByteChef’s generator uses `x-title` as the label for the corresponding property.
+
+Example OpenAPI snippet:
+
+```yaml
+components:
+  securitySchemes:
+    ApiKeyQuery:
+      type: "apiKey"
+      in: "query"
+      name: "appid"
+      x-title: "App ID"
+```
+
+Expected generated code:
+
+```java
+public static final ComponentDsl.ModifiableConnectionDefinition CONNECTION_DEFINITION = connection()
+    .authorizations(authorization(AuthorizationType.API_KEY)
+        .title("API Key")
+        .properties(
+            string(KEY)
+                .label("Key")
+                .required(true)
+                .defaultValue("appid")
+                .hidden(true),
+            string(VALUE)
+                .label("App ID") // comes from x-title
+                .required(true),
+            string(ADD_TO)
+                .label("Add to")
+                .required(true)
+                .defaultValue(ApiTokenLocation.QUERY_PARAMETERS.name())
+                .hidden(true)
+        ));
+```
+
+#### Bearer Token Labels via OpenAPI `x-title`
+
+You can also customize the label of the bearer token field using the same `x-title` OpenAPI extension. When the generator processes a Bearer Token authorization scheme, it maps `x-title` to the `.label(...)` of the generated token property.
+
+Example OpenAPI snippet:
+
+```yaml
+components:
+  securitySchemes:
+    BearerAuth:
+      type: "http"
+      scheme: "bearer"
+      x-title: "Access Token"
+```
+
+Expected generated code:
+
+```java
+public static final ComponentDsl.ModifiableConnectionDefinition CONNECTION_DEFINITION = connection()
+    .authorizations(
+        authorization(AuthorizationType.BEARER_TOKEN)
+            .title("Bearer Token")
+            .properties(
+                string(TOKEN)
+                    .label("Access Token") // comes from x-title
+                    .required(true)
+            )
+    );
+```
+
+### Action
+
+If some actions require properties not specified in the OpenAPI schema, override the `modifyActions(ModifiableActionDefinition... actionDefinitions)` method in `NewComponentComponentHandler`.
+
+Refer to examples like [`DiscordComponentHandler`](https://github.com/bytechefhq/bytechef/blob/master/server/libs/modules/components/discord/src/main/java/com/bytechef/component/discord/DiscordComponentHandler.java#L66) or [`ClickupComponentHandler`](https://github.com/bytechefhq/bytechef/blob/master/server/libs/modules/components/clickup/src/main/java/com/bytechef/component/clickup/ClickupComponentHandler.java#L60).
+
+### Dynamic Options
+
+1. Define Dynamic Options in OpenAPI Schema:
+    - Add `x-dynamic-options: true` to the parameter in your OpenAPI schema to indicate that it requires dynamic options.
+    - If the dynamic options depend on another parameter, include `x-dynamic-options-dependency` with the relevant parameter name.
+2. Regenerate the Component:
+    - Run the following command to regenerate the component with updated dynamic options:
+      ```bash
+      ./bytechef.sh component init --open-api-path ../../server/libs/modules/components/newcomponent/openapi.yaml --output-path ../../server/libs/modules/components --name newcomponent
+      ```
+3. For each parameter with dynamic `options`, the options() and `optionsLookupDependsOn()` methods are automatically generated in the `ModifiableActionDefinition` class.
+4. The `AbstractNewComponentUtils` class is generated, providing methods to retrieve dynamic options for various properties within the component.
+5. Override the appropriate method in the `NewComponentUtils` class to load the correct options based on your specific requirements.
+
+For implementation details, refer to examples from existing components such as [`Shopify`](https://github.com/bytechefhq/bytechef/blob/master/server/libs/modules/components/shopify), [`Airtable`](https://github.com/bytechefhq/bytechef/blob/master/server/libs/modules/components/airtable), and [`Hubspot`](https://github.com/bytechefhq/bytechef/blob/master/server/libs/modules/components/hubspot).
+
+### Dynamic Properties
+
+1. Define Dynamic Properties in OpenAPI Schema:
+    - Add `x-dynamic-properties: true` to the parameter in your OpenAPI schema to mark it as dynamic.
+    - If the dynamic property depends on another parameter, include` x-dynamic-properties-dependency` with the relevant parameter name.
+2. Regenerate the Component:
+    - Run the following command to regenerate the component with updated dynamic properties:
+      ```bash
+      ./bytechef.sh component init --open-api-path ../../server/libs/modules/components/newcomponent/openapi.yaml --output-path ../../server/libs/modules/components --name newcomponent
+      ```
+3. For each dynamic property, the `properties()` and `propertiesLookupDependsOn()` methods are generated in the `ModifiableActionDefinition` class.
+4. The `AbstractNewComponentUtils` class is generated, offering methods to retrieve dynamic properties for various parameters within the component.
+5. Override the necessary method in the `NewComponentUtils` class to load the correct properties based on your specific needs.
+
+For implementation details, refer to examples from existing components such as [`Airtable`](https://github.com/bytechefhq/bytechef/blob/master/server/libs/modules/components/airtable).
+
+
+### Dynamic Output
+
+1. Define Dynamic Output in OpenAPI Schema:
+    - Add `x-dynamic-output: true` to the response in your OpenAPI schema to indicate that output is fully dynamic.
+
+For implementation details, refer to examples from existing components such as [`Airtable`](https://github.com/bytechefhq/bytechef/blob/master/server/libs/modules/components/airtable).
+
+### AI Agent Tool
+
+1. Define the AI Agent Tool in OpenAPI Schema:
+    - Add `x-ai-agent-tool: true` to the individual endpoint in your OpenAPI schema to indicate that it is an AI Agent Tool.
+2. Regenerate the Component:
+    - Run the following command to regenerate the component:
+    ```bash
+    ./bytechef.sh component init --open-api-path ../../server/libs/modules/components/newcomponent/openapi.yaml --output-path ../../server/libs/modules/components --name newcomponent
+    ```
+
+For implementation details, refer to examples from existing components such as [`Airtable`](https://github.com/bytechefhq/bytechef/blob/master/server/libs/modules/components/airtable).
+

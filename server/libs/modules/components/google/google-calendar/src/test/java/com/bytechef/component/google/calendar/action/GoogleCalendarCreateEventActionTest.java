@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,108 +19,142 @@ package com.bytechef.component.google.calendar.action;
 import static com.bytechef.component.google.calendar.constant.GoogleCalendarConstants.ALL_DAY;
 import static com.bytechef.component.google.calendar.constant.GoogleCalendarConstants.ATTACHMENTS;
 import static com.bytechef.component.google.calendar.constant.GoogleCalendarConstants.ATTENDEES;
+import static com.bytechef.component.google.calendar.constant.GoogleCalendarConstants.CALENDAR_ID;
 import static com.bytechef.component.google.calendar.constant.GoogleCalendarConstants.DESCRIPTION;
+import static com.bytechef.component.google.calendar.constant.GoogleCalendarConstants.END;
 import static com.bytechef.component.google.calendar.constant.GoogleCalendarConstants.GUEST_CAN_INVITE_OTHERS;
 import static com.bytechef.component.google.calendar.constant.GoogleCalendarConstants.GUEST_CAN_MODIFY;
 import static com.bytechef.component.google.calendar.constant.GoogleCalendarConstants.GUEST_CAN_SEE_OTHER_GUESTS;
 import static com.bytechef.component.google.calendar.constant.GoogleCalendarConstants.LOCATION;
 import static com.bytechef.component.google.calendar.constant.GoogleCalendarConstants.SEND_UPDATES;
+import static com.bytechef.component.google.calendar.constant.GoogleCalendarConstants.START;
 import static com.bytechef.component.google.calendar.constant.GoogleCalendarConstants.SUMMARY;
 import static com.bytechef.component.google.calendar.constant.GoogleCalendarConstants.USE_DEFAULT;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentCaptor.forClass;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 
+import com.bytechef.component.definition.ActionContext;
 import com.bytechef.component.definition.Parameters;
 import com.bytechef.component.google.calendar.util.GoogleCalendarUtils;
+import com.bytechef.component.google.calendar.util.GoogleCalendarUtils.CustomEvent;
+import com.bytechef.component.test.definition.MockParametersFactory;
+import com.bytechef.google.commons.GoogleServices;
+import com.bytechef.google.commons.GoogleUtils;
 import com.google.api.services.calendar.Calendar;
+import com.google.api.services.calendar.Calendar.Events;
+import com.google.api.services.calendar.Calendar.Events.Insert;
 import com.google.api.services.calendar.model.Event;
 import com.google.api.services.calendar.model.EventAttendee;
 import com.google.api.services.calendar.model.EventDateTime;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.MockedStatic;
 
 /**
- * @author Monika Domiter
+ * @author Monika Kušter
  */
-class GoogleCalendarCreateEventActionTest extends AbstractGoogleCalendarActionTest {
+class GoogleCalendarCreateEventActionTest {
 
-    private final ArgumentCaptor<Event> eventArgumentCaptor = ArgumentCaptor.forClass(Event.class);
-    private final Calendar.Events mockedEvents = mock(Calendar.Events.class);
-    private final Calendar.Events.Insert mockedInsert = mock(Calendar.Events.Insert.class);
-    private final ArgumentCaptor<String> sendUpdatesArgumentCaptor = ArgumentCaptor.forClass(String.class);
-    private final List<EventAttendee> eventAttendees =
-        List.of(new EventAttendee().setEmail("attendee1@mail.com"), new EventAttendee().setEmail("attendee2@mail.com"));
-    private final Event.Reminders reminders = new Event.Reminders().setUseDefault(true)
-        .setOverrides(List.of());
+    private final ArgumentCaptor<Calendar> calendarArgumentCaptor = forClass(Calendar.class);
+    private final ArgumentCaptor<Event> eventArgumentCaptor = forClass(Event.class);
     private final EventDateTime eventDateTime = new EventDateTime();
+    private final Calendar mockedCalendar = mock(Calendar.class);
+    private final Events mockedEvents = mock(Events.class);
+    private final CustomEvent mockedCustomEvent = mock(CustomEvent.class);
+    private final Event mockedEvent = mock(Event.class);
+    private final Insert mockedInsert = mock(Insert.class);
+    private final ArgumentCaptor<Parameters> parametersArgumentCaptor = forClass(Parameters.class);
+    private final ArgumentCaptor<String> stringArgumentCaptor = forClass(String.class);
 
     @Test
     void testPerform() throws IOException {
-        when(mockedParameters.getString(SUMMARY))
-            .thenReturn("summary");
-        when(mockedParameters.getRequiredBoolean(ALL_DAY))
-            .thenReturn(false);
-        when(mockedParameters.getString(DESCRIPTION))
-            .thenReturn("description");
-        when(mockedParameters.getString(LOCATION))
-            .thenReturn("location");
-        when(mockedParameters.getFileEntries(ATTACHMENTS, List.of()))
-            .thenReturn(List.of());
-        when(mockedParameters.getList(ATTENDEES, String.class, List.of()))
-            .thenReturn(List.of("attendee1@mail.com", "attendee2@mail.com"));
-        when(mockedParameters.getBoolean(GUEST_CAN_INVITE_OTHERS))
-            .thenReturn(true);
-        when(mockedParameters.getBoolean(GUEST_CAN_MODIFY))
-            .thenReturn(true);
-        when(mockedParameters.getBoolean(GUEST_CAN_SEE_OTHER_GUESTS))
-            .thenReturn(true);
-        when(mockedParameters.getString(SEND_UPDATES))
-            .thenReturn("sendUpdates");
-        when(mockedParameters.getRequiredBoolean(USE_DEFAULT))
-            .thenReturn(true);
-        when(mockedParameters.getString(SUMMARY))
-            .thenReturn("summary");
+        String calendarTimezone = "Europe/Zagreb";
+        Parameters mockedParameters = getParameters();
 
         when(mockedCalendar.events())
             .thenReturn(mockedEvents);
-        when(mockedEvents.insert(calendarIdArgumentCaptor.capture(), eventArgumentCaptor.capture()))
+        when(mockedEvents.insert(stringArgumentCaptor.capture(), eventArgumentCaptor.capture()))
             .thenReturn(mockedInsert);
-        when(mockedInsert.setSendUpdates(sendUpdatesArgumentCaptor.capture()))
+        when(mockedInsert.setSendUpdates(stringArgumentCaptor.capture()))
             .thenReturn(mockedInsert);
         when(mockedInsert.execute())
             .thenReturn(mockedEvent);
 
-        try (MockedStatic<GoogleCalendarUtils> googleCalendarUtilsMockedStatic = mockStatic(GoogleCalendarUtils.class)) {
+        try (MockedStatic<GoogleServices> googleServicesMockedStatic = mockStatic(GoogleServices.class);
+            MockedStatic<GoogleCalendarUtils> googleCalendarUtilsMockedStatic = mockStatic(GoogleCalendarUtils.class);
+            MockedStatic<GoogleUtils> googleUtilsMockedStatic = mockStatic(GoogleUtils.class)) {
+
+            googleServicesMockedStatic.when(() -> GoogleServices.getCalendar(parametersArgumentCaptor.capture()))
+                .thenReturn(mockedCalendar);
+            googleUtilsMockedStatic
+                .when(() -> GoogleUtils.getCalendarTimezone(calendarArgumentCaptor.capture()))
+                .thenReturn(calendarTimezone);
             googleCalendarUtilsMockedStatic
-                .when(() -> GoogleCalendarUtils.createEventDateTime(any(Parameters.class), anyString()))
+                .when(() -> GoogleCalendarUtils.createEventDateTime(
+                    parametersArgumentCaptor.capture(), stringArgumentCaptor.capture(), stringArgumentCaptor.capture()))
                 .thenReturn(eventDateTime);
+            googleCalendarUtilsMockedStatic
+                .when(() -> GoogleCalendarUtils.createCustomEvent(
+                    eventArgumentCaptor.capture(), stringArgumentCaptor.capture()))
+                .thenReturn(mockedCustomEvent);
 
-            Event event = GoogleCalendarCreateEventAction.perform(mockedParameters, mockedParameters, mockedContext);
+            CustomEvent result = GoogleCalendarCreateEventAction.perform(
+                mockedParameters, mockedParameters, mock(ActionContext.class));
 
-            assertEquals(mockedEvent, event);
-            assertEquals("sendUpdates", sendUpdatesArgumentCaptor.getValue());
+            assertEquals(mockedCustomEvent, result);
+            assertEquals(
+                List.of(mockedParameters, mockedParameters, mockedParameters), parametersArgumentCaptor.getAllValues());
+            assertEquals(mockedCalendar, calendarArgumentCaptor.getValue());
+            assertEquals(
+                List.of(END, calendarTimezone, START, calendarTimezone, "calendarId", "sendUpdates", calendarTimezone),
+                stringArgumentCaptor.getAllValues());
 
-            testEvent(eventArgumentCaptor.getValue());
+            Event expectedEvent = new Event()
+                .setAttachments(List.of())
+                .setAttendees(
+                    List.of(
+                        new EventAttendee().setEmail("attendee1@mail.com"),
+                        new EventAttendee().setEmail("attendee2@mail.com")))
+                .setDescription("description")
+                .setEnd(eventDateTime)
+                .setGuestsCanInviteOthers(true)
+                .setGuestsCanModify(true)
+                .setGuestsCanSeeOtherGuests(true)
+                .setLocation("location")
+                .setReminders(
+                    new Event.Reminders()
+                        .setUseDefault(true)
+                        .setOverrides(List.of()))
+                .setStart(eventDateTime)
+                .setSummary("summary");
+
+            assertEquals(List.of(expectedEvent, mockedEvent), eventArgumentCaptor.getAllValues());
         }
     }
 
-    private void testEvent(Event event) {
-        assertEquals(eventAttendees, event.getAttendees());
-        assertEquals("description", event.getDescription());
-        assertEquals(eventDateTime, event.getEnd());
-        assertEquals(true, event.getGuestsCanInviteOthers());
-        assertEquals(true, event.getGuestsCanModify());
-        assertEquals(true, event.getGuestsCanSeeOtherGuests());
-        assertEquals("location", event.getLocation());
-        assertEquals(reminders, event.getReminders());
-        assertEquals(eventDateTime, event.getStart());
-        assertEquals("summary", event.getSummary());
+    private static Parameters getParameters() {
+        Map<String, Object> parametersMap = new HashMap<>();
+
+        parametersMap.put(CALENDAR_ID, "calendarId");
+        parametersMap.put(SEND_UPDATES, "sendUpdates");
+        parametersMap.put(SUMMARY, "summary");
+        parametersMap.put(DESCRIPTION, "description");
+        parametersMap.put(LOCATION, "location");
+        parametersMap.put(ATTACHMENTS, List.of());
+        parametersMap.put(ATTENDEES, List.of("attendee1@mail.com", "attendee2@mail.com"));
+        parametersMap.put(ALL_DAY, false);
+        parametersMap.put(GUEST_CAN_INVITE_OTHERS, true);
+        parametersMap.put(GUEST_CAN_MODIFY, true);
+        parametersMap.put(GUEST_CAN_SEE_OTHER_GUESTS, true);
+        parametersMap.put(USE_DEFAULT, true);
+
+        return MockParametersFactory.create(parametersMap);
     }
 }

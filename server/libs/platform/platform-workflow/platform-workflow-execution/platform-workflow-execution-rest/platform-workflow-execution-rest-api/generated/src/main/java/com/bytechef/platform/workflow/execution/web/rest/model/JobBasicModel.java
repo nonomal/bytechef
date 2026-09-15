@@ -6,8 +6,11 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.annotation.JsonValue;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.util.HashMap;
+import java.util.Map;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.lang.Nullable;
 import org.openapitools.jackson.nullable.JsonNullable;
 import java.time.OffsetDateTime;
 import jakarta.validation.Valid;
@@ -24,30 +27,33 @@ import jakarta.annotation.Generated;
 
 @Schema(name = "JobBasic", description = "Represents an execution of a workflow.")
 @JsonTypeName("JobBasic")
-@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2024-06-30T07:20:55.672695+02:00[Europe/Zagreb]", comments = "Generator version: 7.5.0")
+@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2026-07-03T17:58:17.150015+02:00[Europe/Zagreb]", comments = "Generator version: 7.22.0")
 public class JobBasicModel {
 
-  private String createdBy;
+  private @Nullable String createdBy;
 
   @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
-  private LocalDateTime createdDate;
+  private @Nullable OffsetDateTime createdDate;
 
   @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
-  private LocalDateTime endDate;
+  private @Nullable OffsetDateTime endDate;
 
-  private String id;
+  private @Nullable String id;
 
-  private String label;
+  private @Nullable String label;
 
-  private String lastModifiedBy;
+  private @Nullable String lastModifiedBy;
 
   @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
-  private LocalDateTime lastModifiedDate;
+  private @Nullable OffsetDateTime lastModifiedDate;
+
+  @Valid
+  private Map<String, Object> metadata = new HashMap<>();
 
   private Integer priority;
 
   @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
-  private LocalDateTime startDate;
+  private OffsetDateTime startDate;
 
   /**
    * The job's status.
@@ -63,7 +69,7 @@ public class JobBasicModel {
     
     COMPLETED("COMPLETED");
 
-    private String value;
+    private final String value;
 
     StatusEnum(String value) {
       this.value = value;
@@ -92,7 +98,7 @@ public class JobBasicModel {
 
   private StatusEnum status;
 
-  private String workflowId;
+  private @Nullable String workflowId;
 
   public JobBasicModel() {
     super();
@@ -101,13 +107,13 @@ public class JobBasicModel {
   /**
    * Constructor with only required parameters
    */
-  public JobBasicModel(Integer priority, LocalDateTime startDate, StatusEnum status) {
+  public JobBasicModel(Integer priority, OffsetDateTime startDate, StatusEnum status) {
     this.priority = priority;
     this.startDate = startDate;
     this.status = status;
   }
 
-  public JobBasicModel createdBy(String createdBy) {
+  public JobBasicModel createdBy(@Nullable String createdBy) {
     this.createdBy = createdBy;
     return this;
   }
@@ -115,19 +121,20 @@ public class JobBasicModel {
   /**
    * The created by.
    * @return createdBy
-  */
+   */
   
   @Schema(name = "createdBy", accessMode = Schema.AccessMode.READ_ONLY, description = "The created by.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("createdBy")
-  public String getCreatedBy() {
+  public @Nullable String getCreatedBy() {
     return createdBy;
   }
 
-  public void setCreatedBy(String createdBy) {
+  @JsonProperty("createdBy")
+  public void setCreatedBy(@Nullable String createdBy) {
     this.createdBy = createdBy;
   }
 
-  public JobBasicModel createdDate(LocalDateTime createdDate) {
+  public JobBasicModel createdDate(@Nullable OffsetDateTime createdDate) {
     this.createdDate = createdDate;
     return this;
   }
@@ -135,19 +142,20 @@ public class JobBasicModel {
   /**
    * The created date.
    * @return createdDate
-  */
+   */
   @Valid 
   @Schema(name = "createdDate", accessMode = Schema.AccessMode.READ_ONLY, description = "The created date.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("createdDate")
-  public LocalDateTime getCreatedDate() {
+  public @Nullable OffsetDateTime getCreatedDate() {
     return createdDate;
   }
 
-  public void setCreatedDate(LocalDateTime createdDate) {
+  @JsonProperty("createdDate")
+  public void setCreatedDate(@Nullable OffsetDateTime createdDate) {
     this.createdDate = createdDate;
   }
 
-  public JobBasicModel endDate(LocalDateTime endDate) {
+  public JobBasicModel endDate(@Nullable OffsetDateTime endDate) {
     this.endDate = endDate;
     return this;
   }
@@ -155,19 +163,20 @@ public class JobBasicModel {
   /**
    * The time execution entered end status COMPLETED, STOPPED, FAILED
    * @return endDate
-  */
+   */
   @Valid 
   @Schema(name = "endDate", description = "The time execution entered end status COMPLETED, STOPPED, FAILED", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("endDate")
-  public LocalDateTime getEndDate() {
+  public @Nullable OffsetDateTime getEndDate() {
     return endDate;
   }
 
-  public void setEndDate(LocalDateTime endDate) {
+  @JsonProperty("endDate")
+  public void setEndDate(@Nullable OffsetDateTime endDate) {
     this.endDate = endDate;
   }
 
-  public JobBasicModel id(String id) {
+  public JobBasicModel id(@Nullable String id) {
     this.id = id;
     return this;
   }
@@ -175,19 +184,20 @@ public class JobBasicModel {
   /**
    * The id of a job.
    * @return id
-  */
+   */
   
   @Schema(name = "id", accessMode = Schema.AccessMode.READ_ONLY, description = "The id of a job.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("id")
-  public String getId() {
+  public @Nullable String getId() {
     return id;
   }
 
-  public void setId(String id) {
+  @JsonProperty("id")
+  public void setId(@Nullable String id) {
     this.id = id;
   }
 
-  public JobBasicModel label(String label) {
+  public JobBasicModel label(@Nullable String label) {
     this.label = label;
     return this;
   }
@@ -195,19 +205,20 @@ public class JobBasicModel {
   /**
    * The job's human-readable name.
    * @return label
-  */
+   */
   
   @Schema(name = "label", accessMode = Schema.AccessMode.READ_ONLY, description = "The job's human-readable name.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("label")
-  public String getLabel() {
+  public @Nullable String getLabel() {
     return label;
   }
 
-  public void setLabel(String label) {
+  @JsonProperty("label")
+  public void setLabel(@Nullable String label) {
     this.label = label;
   }
 
-  public JobBasicModel lastModifiedBy(String lastModifiedBy) {
+  public JobBasicModel lastModifiedBy(@Nullable String lastModifiedBy) {
     this.lastModifiedBy = lastModifiedBy;
     return this;
   }
@@ -215,19 +226,20 @@ public class JobBasicModel {
   /**
    * The last modified by.
    * @return lastModifiedBy
-  */
+   */
   
   @Schema(name = "lastModifiedBy", accessMode = Schema.AccessMode.READ_ONLY, description = "The last modified by.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("lastModifiedBy")
-  public String getLastModifiedBy() {
+  public @Nullable String getLastModifiedBy() {
     return lastModifiedBy;
   }
 
-  public void setLastModifiedBy(String lastModifiedBy) {
+  @JsonProperty("lastModifiedBy")
+  public void setLastModifiedBy(@Nullable String lastModifiedBy) {
     this.lastModifiedBy = lastModifiedBy;
   }
 
-  public JobBasicModel lastModifiedDate(LocalDateTime lastModifiedDate) {
+  public JobBasicModel lastModifiedDate(@Nullable OffsetDateTime lastModifiedDate) {
     this.lastModifiedDate = lastModifiedDate;
     return this;
   }
@@ -235,16 +247,46 @@ public class JobBasicModel {
   /**
    * The last modified date.
    * @return lastModifiedDate
-  */
+   */
   @Valid 
   @Schema(name = "lastModifiedDate", accessMode = Schema.AccessMode.READ_ONLY, description = "The last modified date.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("lastModifiedDate")
-  public LocalDateTime getLastModifiedDate() {
+  public @Nullable OffsetDateTime getLastModifiedDate() {
     return lastModifiedDate;
   }
 
-  public void setLastModifiedDate(LocalDateTime lastModifiedDate) {
+  @JsonProperty("lastModifiedDate")
+  public void setLastModifiedDate(@Nullable OffsetDateTime lastModifiedDate) {
     this.lastModifiedDate = lastModifiedDate;
+  }
+
+  public JobBasicModel metadata(Map<String, Object> metadata) {
+    this.metadata = metadata;
+    return this;
+  }
+
+  public JobBasicModel putMetadataItem(String key, Object metadataItem) {
+    if (this.metadata == null) {
+      this.metadata = new HashMap<>();
+    }
+    this.metadata.put(key, metadataItem);
+    return this;
+  }
+
+  /**
+   * Key-value map of metadata.
+   * @return metadata
+   */
+  
+  @Schema(name = "metadata", accessMode = Schema.AccessMode.READ_ONLY, description = "Key-value map of metadata.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+  @JsonProperty("metadata")
+  public Map<String, Object> getMetadata() {
+    return metadata;
+  }
+
+  @JsonProperty("metadata")
+  public void setMetadata(Map<String, Object> metadata) {
+    this.metadata = metadata;
   }
 
   public JobBasicModel priority(Integer priority) {
@@ -255,7 +297,7 @@ public class JobBasicModel {
   /**
    * The priority value.
    * @return priority
-  */
+   */
   
   @Schema(name = "priority", accessMode = Schema.AccessMode.READ_ONLY, description = "The priority value.", requiredMode = Schema.RequiredMode.REQUIRED)
   @JsonProperty("priority")
@@ -263,11 +305,12 @@ public class JobBasicModel {
     return priority;
   }
 
+  @JsonProperty("priority")
   public void setPriority(Integer priority) {
     this.priority = priority;
   }
 
-  public JobBasicModel startDate(LocalDateTime startDate) {
+  public JobBasicModel startDate(OffsetDateTime startDate) {
     this.startDate = startDate;
     return this;
   }
@@ -275,15 +318,16 @@ public class JobBasicModel {
   /**
    * The time of when the job began.
    * @return startDate
-  */
+   */
   @Valid 
   @Schema(name = "startDate", accessMode = Schema.AccessMode.READ_ONLY, description = "The time of when the job began.", requiredMode = Schema.RequiredMode.REQUIRED)
   @JsonProperty("startDate")
-  public LocalDateTime getStartDate() {
+  public OffsetDateTime getStartDate() {
     return startDate;
   }
 
-  public void setStartDate(LocalDateTime startDate) {
+  @JsonProperty("startDate")
+  public void setStartDate(OffsetDateTime startDate) {
     this.startDate = startDate;
   }
 
@@ -295,7 +339,7 @@ public class JobBasicModel {
   /**
    * The job's status.
    * @return status
-  */
+   */
   
   @Schema(name = "status", accessMode = Schema.AccessMode.READ_ONLY, description = "The job's status.", requiredMode = Schema.RequiredMode.REQUIRED)
   @JsonProperty("status")
@@ -303,11 +347,12 @@ public class JobBasicModel {
     return status;
   }
 
+  @JsonProperty("status")
   public void setStatus(StatusEnum status) {
     this.status = status;
   }
 
-  public JobBasicModel workflowId(String workflowId) {
+  public JobBasicModel workflowId(@Nullable String workflowId) {
     this.workflowId = workflowId;
     return this;
   }
@@ -315,15 +360,16 @@ public class JobBasicModel {
   /**
    * Get workflowId
    * @return workflowId
-  */
+   */
   
   @Schema(name = "workflowId", accessMode = Schema.AccessMode.READ_ONLY, requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("workflowId")
-  public String getWorkflowId() {
+  public @Nullable String getWorkflowId() {
     return workflowId;
   }
 
-  public void setWorkflowId(String workflowId) {
+  @JsonProperty("workflowId")
+  public void setWorkflowId(@Nullable String workflowId) {
     this.workflowId = workflowId;
   }
 
@@ -343,6 +389,7 @@ public class JobBasicModel {
         Objects.equals(this.label, jobBasic.label) &&
         Objects.equals(this.lastModifiedBy, jobBasic.lastModifiedBy) &&
         Objects.equals(this.lastModifiedDate, jobBasic.lastModifiedDate) &&
+        Objects.equals(this.metadata, jobBasic.metadata) &&
         Objects.equals(this.priority, jobBasic.priority) &&
         Objects.equals(this.startDate, jobBasic.startDate) &&
         Objects.equals(this.status, jobBasic.status) &&
@@ -351,7 +398,7 @@ public class JobBasicModel {
 
   @Override
   public int hashCode() {
-    return Objects.hash(createdBy, createdDate, endDate, id, label, lastModifiedBy, lastModifiedDate, priority, startDate, status, workflowId);
+    return Objects.hash(createdBy, createdDate, endDate, id, label, lastModifiedBy, lastModifiedDate, metadata, priority, startDate, status, workflowId);
   }
 
   @Override
@@ -365,6 +412,7 @@ public class JobBasicModel {
     sb.append("    label: ").append(toIndentedString(label)).append("\n");
     sb.append("    lastModifiedBy: ").append(toIndentedString(lastModifiedBy)).append("\n");
     sb.append("    lastModifiedDate: ").append(toIndentedString(lastModifiedDate)).append("\n");
+    sb.append("    metadata: ").append(toIndentedString(metadata)).append("\n");
     sb.append("    priority: ").append(toIndentedString(priority)).append("\n");
     sb.append("    startDate: ").append(toIndentedString(startDate)).append("\n");
     sb.append("    status: ").append(toIndentedString(status)).append("\n");
@@ -377,11 +425,8 @@ public class JobBasicModel {
    * Convert the given object to string with each line indented by 4 spaces
    * (except the first line).
    */
-  private String toIndentedString(Object o) {
-    if (o == null) {
-      return "null";
-    }
-    return o.toString().replace("\n", "\n    ");
+  private String toIndentedString(@Nullable Object o) {
+    return o == null ? "null" : o.toString().replace("\n", "\n    ");
   }
 }
 

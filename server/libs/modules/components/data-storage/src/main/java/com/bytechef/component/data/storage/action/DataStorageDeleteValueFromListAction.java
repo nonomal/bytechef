@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,13 +20,13 @@ import static com.bytechef.component.data.storage.constant.DataStorageConstants.
 import static com.bytechef.component.data.storage.constant.DataStorageConstants.KEY;
 import static com.bytechef.component.data.storage.constant.DataStorageConstants.SCOPE;
 import static com.bytechef.component.data.storage.constant.DataStorageConstants.SCOPE_OPTIONS;
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.integer;
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.integer;
+import static com.bytechef.component.definition.ComponentDsl.string;
 
 import com.bytechef.component.definition.ActionContext;
 import com.bytechef.component.definition.ActionContext.Data.Scope;
-import com.bytechef.component.definition.ComponentDSL.ModifiableActionDefinition;
+import com.bytechef.component.definition.ComponentDsl.ModifiableActionDefinition;
 import com.bytechef.component.definition.Parameters;
 import java.util.List;
 import java.util.Optional;
@@ -47,20 +47,23 @@ public class DataStorageDeleteValueFromListAction {
             string(SCOPE)
                 .label("Scope")
                 .description(
-                    "The namespace to delete a value from. The value should have been previously accessible, either in the present workflow execution, or the workflow itself for all the executions, or the user account for all the workflows the user has.")
+                    "The namespace to delete a value from. The value should have been previously accessible, " +
+                        "either in the present workflow execution, or the workflow itself for all the executions, or " +
+                        "the user account for all the workflows the user has.")
                 .options(SCOPE_OPTIONS)
                 .required(true),
             integer(INDEX)
                 .label("Index")
                 .description(
-                    "The specified index in the list will be removed, and if it doesn't exist, the list will remain unaltered.")
+                    "The specified index in the list will be removed, and if it doesn't exist, the list will " +
+                        "remain unaltered.")
                 .required(true))
         .perform(DataStorageDeleteValueFromListAction::perform);
 
     protected static Object perform(
         Parameters inputParameters, Parameters connectionParameters, ActionContext context) {
 
-        return context.data(data -> data.setValue(
+        return context.data(data -> data.put(
             Scope.valueOf(inputParameters.getRequiredString(SCOPE)),
             inputParameters.getRequiredString(KEY), getValues(inputParameters, context)));
     }
@@ -70,7 +73,7 @@ public class DataStorageDeleteValueFromListAction {
         List<Object> list;
 
         Optional<Object> optionalList = context
-            .data(data -> data.fetchValue(Scope.valueOf(inputParameters.getRequiredString(SCOPE)),
+            .data(data -> data.fetch(Scope.valueOf(inputParameters.getRequiredString(SCOPE)),
                 inputParameters.getRequiredString(KEY)));
         if (optionalList.isPresent() && optionalList.get() instanceof List<?> curList) {
             list = (List<Object>) curList;

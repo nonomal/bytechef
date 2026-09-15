@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 
 package com.bytechef.task.dispatcher.loop;
 
-import static com.bytechef.platform.workflow.task.dispatcher.definition.TaskDispatcherDSL.taskDispatcher;
+import static com.bytechef.platform.workflow.task.dispatcher.definition.TaskDispatcherDsl.taskDispatcher;
 import static com.bytechef.task.dispatcher.loop.constant.LoopTaskDispatcherConstants.LOOP_BREAK;
 
 import com.bytechef.platform.workflow.task.dispatcher.TaskDispatcherDefinitionFactory;
@@ -32,7 +32,7 @@ public class LoopBreakTaskDispatcherDefinitionFactory implements TaskDispatcherD
     private static final TaskDispatcherDefinition TASK_DISPATCHER_DEFINITION = taskDispatcher(LOOP_BREAK)
         .title("Loop Break")
         .description("Breaks the loop execution.")
-        .icon("path:assets/loopbreak.svg");
+        .icon("path:assets/loop-break.svg");
 
     @Override
     public TaskDispatcherDefinition getDefinition() {

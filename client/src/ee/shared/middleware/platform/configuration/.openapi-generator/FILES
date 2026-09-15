@@ -1,0 +1,8 @@
+apis/GitConfigurationApi.ts
+apis/index.ts
+docs/GitConfiguration.md
+docs/GitConfigurationApi.md
+index.ts
+models/GitConfiguration.ts
+models/index.ts
+runtime.ts

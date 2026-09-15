@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,13 +17,17 @@
 package com.bytechef.platform.configuration.web.rest.mapper.config;
 
 import com.bytechef.platform.configuration.web.rest.adapter.PlatformConfigurationConversionServiceAdapter;
+import com.bytechef.web.rest.mapper.DateTimeMapper;
+import com.bytechef.web.rest.mapper.JsonNullableMapper;
 import org.mapstruct.MapperConfig;
 import org.mapstruct.extensions.spring.SpringMapperConfig;
 
 /**
  * @author Ivica Cardic
  */
-@MapperConfig(componentModel = "spring", uses = PlatformConfigurationConversionServiceAdapter.class)
+@MapperConfig(componentModel = "spring", uses = {
+    DateTimeMapper.class, JsonNullableMapper.class, PlatformConfigurationConversionServiceAdapter.class
+})
 @SpringMapperConfig(
     conversionServiceAdapterPackage = "com.bytechef.platform.configuration.web.rest.adapter",
     conversionServiceAdapterClassName = "PlatformConfigurationConversionServiceAdapter")

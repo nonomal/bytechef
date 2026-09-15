@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,9 +16,12 @@
 
 package com.bytechef.commons.util;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
+import java.util.Enumeration;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
@@ -27,7 +30,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 import org.apache.commons.lang3.Validate;
-import org.springframework.lang.Nullable;
+import org.jspecify.annotations.Nullable;
 
 /**
  * @author Ivica Cardic
@@ -43,6 +46,23 @@ public final class CollectionUtils {
 
         return list.stream()
             .anyMatch(predicate);
+    }
+
+    /**
+     * Returns map representation of the source object. Caller must provide the transformation function. Method performs
+     * the null check against the source object.
+     *
+     * @param source      the source object to be transformed into Map
+     * @param mapFunction the function that transforms the source into Map
+     * @return empty map if the source is null, otherwise returns the source transformed into Map
+     * @param <T>
+     */
+    public static <T> Map<String, ?> asMap(T source, Function<T, Map<String, ?>> mapFunction) {
+        if (source == null) {
+            return Map.of();
+        }
+
+        return mapFunction.apply(source);
     }
 
     @SafeVarargs
@@ -112,35 +132,32 @@ public final class CollectionUtils {
             .findFirst();
     }
 
-    public static <T> T findFirstOrElse(Collection<T> list, T elseObject) {
+    public static <T> T findFirstOrElse(Collection<T> list, @Nullable T elseObject) {
         Validate.notNull(list, "'list' must not be null");
 
-        return OptionalUtils.orElse(
-            list.stream()
-                .findFirst(),
-            elseObject);
+        return list.stream()
+            .findFirst()
+            .orElse(elseObject);
     }
 
     public static <T> T findFirstFilterOrElse(Collection<T> list, Predicate<? super T> filter, T elseObject) {
         Validate.notNull(list, "'list' must not be null");
         Validate.notNull(filter, "'filter' must not be null");
 
-        return OptionalUtils.orElse(
-            list.stream()
-                .filter(filter)
-                .findFirst(),
-            elseObject);
+        return list.stream()
+            .filter(filter)
+            .findFirst()
+            .orElse(elseObject);
     }
 
     public static <T, R> R findFirstMapOrElse(Collection<T> list, Function<? super T, R> mapper, R elseObject) {
         Validate.notNull(list, "'list' must not be null");
         Validate.notNull(mapper, "'mapper' must not be null");
 
-        return OptionalUtils.orElse(
-            list.stream()
-                .map(mapper)
-                .findFirst(),
-            elseObject);
+        return list.stream()
+            .map(mapper)
+            .findFirst()
+            .orElse(elseObject);
     }
 
     public static <T, R> List<R> flatMap(
@@ -155,19 +172,30 @@ public final class CollectionUtils {
     }
 
     public static <T> T getFirst(Collection<T> collection) {
-        return OptionalUtils.get(
-            collection.stream()
-                .findFirst());
+        return collection.stream()
+            .findFirst()
+            .orElseThrow();
     }
 
     public static <T> T getFirst(Collection<T> collection, Predicate<? super T> filter) {
         Validate.notNull(collection, "'collection' must not be null");
         Validate.notNull(filter, "'filter' must not be null");
 
-        return OptionalUtils.get(
-            collection.stream()
-                .filter(filter)
-                .findFirst());
+        return collection.stream()
+            .filter(filter)
+            .findFirst()
+            .orElseThrow();
+    }
+
+    public static <T> T getFirst(Collection<T> collection, Predicate<? super T> filter, String exceptionMessage) {
+        Validate.notNull(collection, "'collection' must not be null");
+        Validate.notNull(filter, "'filter' must not be null");
+        Validate.notNull(exceptionMessage, "'exceptionMessage' must not be null");
+
+        return collection.stream()
+            .filter(filter)
+            .findFirst()
+            .orElseThrow(() -> new IllegalArgumentException(exceptionMessage));
     }
 
     public static <T, U> U getFirstFilter(
@@ -177,24 +205,24 @@ public final class CollectionUtils {
         Validate.notNull(filter, "'filter' must not be null");
         Validate.notNull(mapper, "'mapper' must not be null");
 
-        return OptionalUtils.get(
-            collection.stream()
-                .filter(filter)
-                .map(mapper)
-                .findFirst());
+        return collection.stream()
+            .filter(filter)
+            .map(mapper)
+            .findFirst()
+            .orElseThrow();
     }
 
     public static <T, U> U getFirstMap(Collection<T> collection, Function<? super T, ? extends U> mapper) {
         Validate.notNull(collection, "'collection' must not be null");
         Validate.notNull(mapper, "'mapper' must not be null");
 
-        return OptionalUtils.get(
-            collection.stream()
-                .map(mapper)
-                .findFirst());
+        return collection.stream()
+            .map(mapper)
+            .findFirst()
+            .orElseThrow();
     }
 
-    public static boolean isEmpty(@Nullable Collection<?> collection) {
+    public static boolean isEmpty(Collection<?> collection) {
         return collection == null || collection.isEmpty();
     }
 
@@ -211,9 +239,18 @@ public final class CollectionUtils {
         Validate.notNull(set, "'set' must not be null");
         Validate.notNull(mapper, "'mapper' must not be null");
 
-        return set.stream()
+        return set
+            .stream()
             .map(mapper)
             .toList();
+    }
+
+    public static <T> boolean noneMatch(Collection<T> list, Predicate<? super T> predicate) {
+        Validate.notNull(list, "'list' must not be null");
+        Validate.notNull(predicate, "'predicate' must not be null");
+
+        return list.stream()
+            .noneMatch(predicate);
     }
 
     public static int size(Collection<?> collection) {
@@ -245,6 +282,16 @@ public final class CollectionUtils {
 
     public static <T> Stream<T> stream(Iterable<T> iterable) {
         return StreamSupport.stream(iterable.spliterator(), false);
+    }
+
+    public static List<String> toList(Enumeration<String> enumeration) {
+        List<String> list = new ArrayList<>();
+
+        while (enumeration.hasMoreElements()) {
+            list.add(enumeration.nextElement());
+        }
+
+        return list;
     }
 
     public static <T> List<T> toList(Iterable<T> iterable) {

@@ -1,56 +1,139 @@
-import App from '@/App';
-import Activate from '@/pages/account/public/Activate';
+import ImportApp from '@/ImportApp';
+import {IntegrationApi} from '@/ee/shared/middleware/embedded/configuration';
+import {IntegrationKeys} from '@/ee/shared/queries/embedded/integrations.queries';
+import AccountErrorPage from '@/pages/account/public/AccountErrorPage';
 import Login from '@/pages/account/public/Login';
+import OAuth2Redirect from '@/pages/account/public/OAuth2Redirect';
+import PasswordResetEmailSent from '@/pages/account/public/PasswordResetEmailSent';
 import PasswordResetFinish from '@/pages/account/public/PasswordResetFinish';
 import PasswordResetInit from '@/pages/account/public/PasswordResetInit';
 import Register from '@/pages/account/public/Register';
+import RegisterSuccess from '@/pages/account/public/RegisterSuccess';
 import VerifyEmail from '@/pages/account/public/VerifyEmail';
-import AccountProfile from '@/pages/account/settings/AccountProfile';
-import Appearance from '@/pages/account/settings/Appearance';
-import Sessions from '@/pages/account/settings/Sessions';
-import {Connections as AutomationConnections} from '@/pages/automation/connections/Connections';
-import ProjectInstances from '@/pages/automation/project-instances/ProjectInstances';
-import Project from '@/pages/automation/project/Project';
-import Projects from '@/pages/automation/projects/Projects';
-import {WorkflowExecutions as AutomationWorkflowExecutions} from '@/pages/automation/workflow-executions/WorkflowExecutions';
-import AppEvents from '@/pages/embedded/app-events/AppEvents';
-import ConnectedUsers from '@/pages/embedded/connected-users/ConnectedUsers';
-import {Connections as EmbeddedConnections} from '@/pages/embedded/connections/Connections';
-import IntegrationInstanceConfigurations from '@/pages/embedded/integration-instance-configurations/IntegrationInstanceConfigurations';
-import Integration from '@/pages/embedded/integration/Integration';
-import EmbeddedIPaaSIntegrations from '@/pages/embedded/integrations/EmbeddedIPaaSIntegrations';
-import Integrations from '@/pages/embedded/integrations/Integrations';
-import {WorkflowExecutions as EmbeddedIntegrationWorkflowExecutions} from '@/pages/embedded/workflow-executions/WorkflowExecutions';
-import Home from '@/pages/home/Home';
-import OAuthPopup from '@/pages/platform/connection/components/oauth2/OAuthPopup';
-import Workspaces from '@/pages/settings/automation/workspaces/Workspaces';
-import ApiKeys from '@/pages/settings/embedded/api-keys/ApiKeys';
-import SigningKeys from '@/pages/settings/embedded/signing-keys/SigningKeys';
+import ResumeForm from '@/pages/automation/resume-form/ResumeForm';
+import TriggerForm from '@/pages/automation/trigger-form/TriggerForm';
+import {AccessControl} from '@/shared/auth/AccessControl';
 import PrivateRoute from '@/shared/auth/PrivateRoute';
-import {AUTHORITIES} from '@/shared/constants';
+import {AUTHORITIES, DEVELOPMENT_ENVIRONMENT} from '@/shared/constants';
 import EEVersion from '@/shared/edition/EEVersion';
 import ErrorPage from '@/shared/error/ErrorPage';
+import LazyLoadWrapper from '@/shared/error/LazyLoadWrapper';
 import PageNotFound from '@/shared/error/PageNotFound';
 import Settings from '@/shared/layout/Settings';
 import {ProjectApi} from '@/shared/middleware/automation/configuration';
-import {IntegrationApi} from '@/shared/middleware/embedded/configuration';
+import {EnvironmentApi} from '@/shared/middleware/platform/configuration';
 import {ProjectKeys} from '@/shared/queries/automation/projects.queries';
-import {IntegrationKeys} from '@/shared/queries/embedded/integrations.queries';
+import {EnvironmentKeys} from '@/shared/queries/platform/environments.queries';
+import {authenticationStore} from '@/shared/stores/useAuthenticationStore';
+import {environmentStore} from '@/shared/stores/useEnvironmentStore';
 import {QueryClient} from '@tanstack/react-query';
+import {Suspense, lazy} from 'react';
 import {createBrowserRouter, redirect} from 'react-router-dom';
+
+const App = lazy(() => import('@/App'));
+const AccountProfile = lazy(() => import('@/pages/account/settings/AccountProfile'));
+const AiSkills = lazy(() => import('@/pages/automation/ai/skills/AiSkills'));
+const Appearance = lazy(() => import('@/pages/account/settings/Appearance'));
+const AutomationConnections = lazy(() =>
+    import('@/pages/automation/connections/Connections').then((module) => ({default: module.Connections}))
+);
+const AutomationWorkflowExecutions = lazy(() =>
+    import('@/pages/automation/workflow-executions/WorkflowExecutions').then((module) => ({
+        default: module.WorkflowExecutions,
+    }))
+);
+const DataTables = lazy(() => import('@/pages/automation/datatables/DataTables'));
+const DataTable = lazy(() => import('@/pages/automation/datatable/DataTable'));
+const Home = lazy(() => import('@/pages/home/Home'));
+const KnowledgeBase = lazy(() => import('@/pages/automation/knowledge-base/KnowledgeBase'));
+const KnowledgeBases = lazy(() => import('@/pages/automation/knowledge-bases/KnowledgeBases'));
+const McpServer = lazy(() => import('@/pages/settings/platform/mcp-server/McpServer'));
+const McpServers = lazy(() => import('@/pages/automation/mcp-servers/McpServers'));
+const Notifications = lazy(() => import('@/pages/settings/platform/notifications/Notifications'));
+const Project = lazy(() => import('@/pages/automation/project/Project'));
+const ProjectDeployments = lazy(() => import('@/pages/automation/project-deployments/ProjectDeployments'));
+const ProjectTemplate = lazy(() => import('@/pages/automation/template/project-template/ProjectTemplate'));
+const ProjectTemplates = lazy(() => import('@/pages/automation/templates/project-templates/ProjectTemplates'));
+const Projects = lazy(() => import('@/pages/automation/projects/Projects'));
+const Sessions = lazy(() => import('@/pages/account/settings/Sessions'));
+const ApprovalTasks = lazy(() => import('@/pages/automation/approval-tasks/ApprovalTasks'));
+const Chat = lazy(() => import('@/pages/automation/chats/Chat'));
+const Chats = lazy(() => import('@/pages/automation/chats/Chats'));
+const WorkflowTemplate = lazy(() => import('@/pages/automation/template/workflow-template/WorkflowTemplate'));
+const WorkflowTemplates = lazy(() => import('@/pages/automation/templates/workflow-templates/WorkflowTemplates'));
+
+const AiProviders = lazy(() => import('@/pages/settings/platform/ai-providers/AiProviders'));
+const ApiClients = lazy(() => import('@/ee/pages/automation/api-platform/api-clients/ApiClients'));
+const ApiCollections = lazy(() => import('@/ee/pages/automation/api-platform/api-collections/ApiCollections'));
+const ApiConnectors = lazy(() => import('@/ee/pages/settings/platform/api-connectors/ApiConnectors'));
+const ApiConnectorManualPage = lazy(
+    () => import('@/ee/pages/settings/platform/api-connectors/pages/ApiConnectorManualPage')
+);
+const ApiConnectorImportPage = lazy(
+    () => import('@/ee/pages/settings/platform/api-connectors/pages/ApiConnectorImportPage')
+);
+const ApiConnectorAiPage = lazy(() => import('@/ee/pages/settings/platform/api-connectors/pages/ApiConnectorAiPage'));
+const EmbeddedApiKeys = lazy(() => import('@/ee/pages/settings/embedded/api-keys/ApiKeys'));
+const AppEvents = lazy(() => import('@/ee/pages/embedded/app-events/AppEvents'));
+const AdminApiKeys = lazy(() => import('@/ee/pages/settings/platform/admin-api-keys/AdminApiKeys'));
+const Billing = lazy(() => import('@/ee/pages/settings/platform/billing/Billing'));
+const IdentityProvidersPage = lazy(
+    () => import('@/ee/pages/settings/platform/identity-providers/IdentityProvidersPage')
+);
+const AutomationWorkflows = lazy(() => import('@/ee/pages/embedded/automation-workflows/AutomationWorkflows'));
+const AutomationWorkflow = lazy(() => import('@/ee/pages/embedded/automation-workflow/AutomationWorkflow'));
+const ConnectedUsers = lazy(() => import('@/ee/pages/embedded/connected-users/ConnectedUsers'));
+const CustomComponents = lazy(() => import('@/ee/pages/settings/platform/custom-components/CustomComponents'));
+const EmbeddedConnections = lazy(() =>
+    import('@/ee/pages/embedded/connections/Connections').then((module) => ({default: module.Connections}))
+);
+const EmbeddedMcpServers = lazy(() => import('@/ee/pages/embedded/mcp-servers/McpServers'));
+const EmbeddedIntegrationWorkflowExecutions = lazy(() =>
+    import('@/ee/pages/embedded/workflow-executions/WorkflowExecutions').then((module) => ({
+        default: module.WorkflowExecutions,
+    }))
+);
+const GitConfiguration = lazy(() => import('@/ee/pages/settings/platform/git-configuration/GitConfiguration'));
+const IntegrationInstanceConfigurations = lazy(
+    () => import('@/ee/pages/embedded/integration-instance-configurations/IntegrationInstanceConfigurations')
+);
+const Integration = lazy(() => import('@/ee/pages/embedded/integration/Integration'));
+const Integrations = lazy(() => import('@/ee/pages/embedded/integrations/Integrations'));
+const SigningKeys = lazy(() => import('@/ee/pages/settings/embedded/signing-keys/SigningKeys'));
+const WorkspaceApiKeys = lazy(() => import('@/ee/pages/settings/automation/workspace-api-keys/WorkspaceApiKeys'));
+const Workspaces = lazy(() => import('@/ee/pages/settings/automation/workspaces/Workspaces'));
+const UsersPage = lazy(() => import('@/pages/settings/platform/users/UsersPage'));
 
 const getAccountRoutes = (path: string) => ({
     children: [
         {
-            element: <AccountProfile />,
+            element: (
+                <PrivateRoute>
+                    <LazyLoadWrapper>
+                        <AccountProfile />
+                    </LazyLoadWrapper>
+                </PrivateRoute>
+            ),
             index: true,
         },
         {
-            element: <Appearance />,
+            element: (
+                <PrivateRoute>
+                    <LazyLoadWrapper>
+                        <Appearance />
+                    </LazyLoadWrapper>
+                </PrivateRoute>
+            ),
             path: 'appearance',
         },
         {
-            element: <Sessions />,
+            element: (
+                <PrivateRoute>
+                    <LazyLoadWrapper>
+                        <Sessions />
+                    </LazyLoadWrapper>
+                </PrivateRoute>
+            ),
             path: 'sessions',
         },
     ],
@@ -76,16 +159,278 @@ const getAccountRoutes = (path: string) => ({
     path: 'account',
 });
 
+// Current workspace settings routes
+const currentWorkspaceSettingsRoutes = {
+    children: [
+        {
+            element: (
+                <PrivateRoute hasAnyAuthorities={[AUTHORITIES.ADMIN]}>
+                    <EEVersion>
+                        <LazyLoadWrapper>
+                            <GitConfiguration />
+                        </LazyLoadWrapper>
+                    </EEVersion>
+                </PrivateRoute>
+            ),
+            path: 'git-configuration',
+        },
+        {
+            element: (
+                <PrivateRoute hasAnyAuthorities={[AUTHORITIES.ADMIN]}>
+                    <EEVersion>
+                        <LazyLoadWrapper>
+                            <WorkspaceApiKeys />
+                        </LazyLoadWrapper>
+                    </EEVersion>
+                </PrivateRoute>
+            ),
+            path: 'workspace-api-keys',
+        },
+    ],
+    navItems: [
+        {
+            title: 'Current Workspace',
+        },
+        {
+            href: 'git-configuration',
+            title: 'Git Configuration',
+        },
+        {
+            href: 'workspace-api-keys',
+            title: 'API Keys',
+        },
+    ],
+};
+
+const organizationSettingsNavItem = {
+    title: 'Organization',
+};
+
+// Platform settings routes
+const platformSettingsRoutes = {
+    children: [
+        {
+            element: (
+                <PrivateRoute hasAnyAuthorities={[AUTHORITIES.ADMIN]}>
+                    <LazyLoadWrapper>
+                        <Billing />
+                    </LazyLoadWrapper>
+                </PrivateRoute>
+            ),
+            path: 'billing',
+        },
+        {
+            element: (
+                <PrivateRoute hasAnyAuthorities={[AUTHORITIES.ADMIN]}>
+                    <LazyLoadWrapper>
+                        <UsersPage />
+                    </LazyLoadWrapper>
+                </PrivateRoute>
+            ),
+            path: 'users',
+        },
+        {
+            element: (
+                <PrivateRoute hasAnyAuthorities={[AUTHORITIES.ADMIN]}>
+                    <LazyLoadWrapper>
+                        <AiProviders />
+                    </LazyLoadWrapper>
+                </PrivateRoute>
+            ),
+            path: 'ai-providers',
+        },
+        {
+            element: (
+                <PrivateRoute hasAnyAuthorities={[AUTHORITIES.ADMIN, AUTHORITIES.USER]}>
+                    <LazyLoadWrapper>
+                        <AiSkills />
+                    </LazyLoadWrapper>
+                </PrivateRoute>
+            ),
+            path: 'ai/skills',
+        },
+        {
+            element: (
+                <PrivateRoute hasAnyAuthorities={[AUTHORITIES.ADMIN, AUTHORITIES.USER]}>
+                    <LazyLoadWrapper>
+                        <AiSkills />
+                    </LazyLoadWrapper>
+                </PrivateRoute>
+            ),
+            path: 'ai/skills/:skillId',
+        },
+        {
+            element: (
+                <PrivateRoute hasAnyAuthorities={[AUTHORITIES.ADMIN, AUTHORITIES.USER]}>
+                    <LazyLoadWrapper>
+                        <McpServer />
+                    </LazyLoadWrapper>
+                </PrivateRoute>
+            ),
+            path: 'mcp-server',
+        },
+        {
+            element: (
+                <PrivateRoute hasAnyAuthorities={[AUTHORITIES.ADMIN, AUTHORITIES.USER]}>
+                    <EEVersion>
+                        <LazyLoadWrapper>
+                            <CustomComponents />
+                        </LazyLoadWrapper>
+                    </EEVersion>
+                </PrivateRoute>
+            ),
+            path: 'custom-components',
+        },
+        {
+            children: [
+                {
+                    element: (
+                        <PrivateRoute hasAnyAuthorities={[AUTHORITIES.ADMIN, AUTHORITIES.USER]}>
+                            <EEVersion>
+                                <LazyLoadWrapper>
+                                    <ApiConnectors />
+                                </LazyLoadWrapper>
+                            </EEVersion>
+                        </PrivateRoute>
+                    ),
+                    index: true,
+                },
+                {
+                    element: (
+                        <PrivateRoute hasAnyAuthorities={[AUTHORITIES.ADMIN, AUTHORITIES.USER]}>
+                            <EEVersion>
+                                <LazyLoadWrapper>
+                                    <ApiConnectorManualPage />
+                                </LazyLoadWrapper>
+                            </EEVersion>
+                        </PrivateRoute>
+                    ),
+                    path: 'new/manual',
+                },
+                {
+                    element: (
+                        <PrivateRoute hasAnyAuthorities={[AUTHORITIES.ADMIN, AUTHORITIES.USER]}>
+                            <EEVersion>
+                                <LazyLoadWrapper>
+                                    <ApiConnectorImportPage />
+                                </LazyLoadWrapper>
+                            </EEVersion>
+                        </PrivateRoute>
+                    ),
+                    path: 'new/import',
+                },
+                {
+                    element: (
+                        <PrivateRoute hasAnyAuthorities={[AUTHORITIES.ADMIN, AUTHORITIES.USER]}>
+                            <EEVersion>
+                                <LazyLoadWrapper>
+                                    <ApiConnectorAiPage />
+                                </LazyLoadWrapper>
+                            </EEVersion>
+                        </PrivateRoute>
+                    ),
+                    path: 'new/ai',
+                },
+            ],
+            path: 'api-connectors',
+        },
+        {
+            element: (
+                <PrivateRoute hasAnyAuthorities={[AUTHORITIES.ADMIN]}>
+                    <LazyLoadWrapper>
+                        <Notifications />
+                    </LazyLoadWrapper>
+                </PrivateRoute>
+            ),
+            path: 'notifications',
+        },
+        {
+            element: (
+                <PrivateRoute hasAnyAuthorities={[AUTHORITIES.ADMIN]}>
+                    <EEVersion>
+                        <LazyLoadWrapper>
+                            <IdentityProvidersPage />
+                        </LazyLoadWrapper>
+                    </EEVersion>
+                </PrivateRoute>
+            ),
+            path: 'identity-providers',
+        },
+        {
+            element: (
+                <PrivateRoute hasAnyAuthorities={[AUTHORITIES.ADMIN, AUTHORITIES.USER]}>
+                    <EEVersion>
+                        <LazyLoadWrapper>
+                            <AdminApiKeys />
+                        </LazyLoadWrapper>
+                    </EEVersion>
+                </PrivateRoute>
+            ),
+            path: 'admin-api-keys',
+        },
+    ],
+    navItems: [
+        {
+            href: 'users',
+            title: 'Users',
+        },
+        {
+            href: 'billing',
+            title: 'Billing',
+        },
+        {
+            items: [
+                {
+                    href: 'ai-providers',
+                    title: 'Providers',
+                },
+                {
+                    href: 'ai/skills',
+                    title: 'Skills',
+                },
+            ],
+            title: 'AI',
+        },
+        {
+            href: 'mcp-server',
+            title: 'MCP Server',
+        },
+        {
+            href: 'custom-components',
+            title: 'Custom Components',
+        },
+        {
+            href: `api-connectors`,
+            title: 'API Connectors',
+        },
+        {
+            href: 'notifications',
+            title: 'Notifications',
+        },
+        {
+            href: 'identity-providers',
+            title: 'Identity Providers',
+        },
+        {
+            href: 'admin-api-keys',
+            title: 'Admin API Keys',
+        },
+    ],
+};
+
+export const loadEnvironments = async (queryClient: QueryClient) => {
+    if (authenticationStore.getState().authenticated) {
+        const environments = await queryClient.fetchQuery({
+            queryFn: () => new EnvironmentApi().getEnvironments(),
+            queryKey: EnvironmentKeys,
+        });
+
+        environmentStore.getState().setEnvironments(environments);
+    }
+};
+
 export const getRouter = (queryClient: QueryClient) =>
     createBrowserRouter([
-        {
-            element: <Activate />,
-            path: 'activate',
-        },
-        {
-            element: <OAuthPopup />,
-            path: '/callback',
-        },
         {
             element: <Login />,
             path: '/login',
@@ -95,248 +440,631 @@ export const getRouter = (queryClient: QueryClient) =>
             path: '/register',
         },
         {
-            children: [
-                {
-                    element: <PasswordResetInit />,
-                    path: 'init',
-                },
-                {
-                    element: <PasswordResetFinish />,
-                    path: 'finish',
-                },
-            ],
-            path: 'password-reset',
+            element: <OAuth2Redirect />,
+            path: '/oauth2/redirect',
         },
         {
-            element: <VerifyEmail />,
+            element: <PasswordResetInit />,
+            path: '/password-reset/init',
+        },
+        {
+            element: (
+                <AccessControl requiresFlow requiresKey>
+                    <RegisterSuccess />
+                </AccessControl>
+            ),
+            path: '/activate',
+        },
+        {
+            element: (
+                <AccessControl requiresKey>
+                    <PasswordResetFinish />
+                </AccessControl>
+            ),
+            path: '/password-reset/finish',
+        },
+        {
+            element: (
+                <AccessControl requiresFlow>
+                    <PasswordResetEmailSent />
+                </AccessControl>
+            ),
+            path: '/password-reset/email',
+        },
+        {
+            element: (
+                <AccessControl requiresFlow>
+                    <VerifyEmail />
+                </AccessControl>
+            ),
             path: '/verify-email',
         },
         {
+            element: <ResumeForm />,
+            path: 'resume/:id',
+        },
+        {
+            element: <TriggerForm />,
+            path: 'form/:workflowExecutionId',
+        },
+        {
+            element: <TriggerForm />,
+            path: 'form/:environmentId/:workflowExecutionId',
+        },
+        {
             children: [
+                {
+                    element: (
+                        <PrivateRoute hasAnyAuthorities={[AUTHORITIES.ADMIN, AUTHORITIES.USER]}>
+                            <LazyLoadWrapper>
+                                <ProjectTemplate sharedProject />
+                            </LazyLoadWrapper>
+                        </PrivateRoute>
+                    ),
+                    path: 'shared/projects/:id',
+                },
+                {
+                    element: (
+                        <PrivateRoute hasAnyAuthorities={[AUTHORITIES.ADMIN, AUTHORITIES.USER]}>
+                            <LazyLoadWrapper>
+                                <WorkflowTemplate sharedWorkflow />
+                            </LazyLoadWrapper>
+                        </PrivateRoute>
+                    ),
+                    path: 'shared/workflows/:id',
+                },
+                {
+                    element: (
+                        <PrivateRoute hasAnyAuthorities={[AUTHORITIES.ADMIN, AUTHORITIES.USER]}>
+                            <LazyLoadWrapper>
+                                <ProjectTemplate />
+                            </LazyLoadWrapper>
+                        </PrivateRoute>
+                    ),
+                    path: 'template/projects/:id',
+                },
+                {
+                    element: (
+                        <PrivateRoute hasAnyAuthorities={[AUTHORITIES.ADMIN, AUTHORITIES.USER]}>
+                            <LazyLoadWrapper>
+                                <WorkflowTemplate />
+                            </LazyLoadWrapper>
+                        </PrivateRoute>
+                    ),
+                    path: 'template/workflows/:id',
+                },
+            ],
+            element: <ImportApp />,
+            path: 'import',
+        },
+        {
+            children: [
+                {
+                    element: (
+                        <AccessControl requiresFlow>
+                            <AccountErrorPage />
+                        </AccessControl>
+                    ),
+                    path: '/account-error',
+                },
                 {
                     children: [
                         {
+                            element: (
+                                <LazyLoadWrapper>
+                                    <Home />
+                                </LazyLoadWrapper>
+                            ),
                             index: true,
-                            loader: async () => {
-                                return redirect('projects');
-                            },
-                        },
-                        getAccountRoutes('/automation'),
-                        {
-                            children: [],
-                            element: (
-                                <PrivateRoute hasAnyAuthorities={[AUTHORITIES.ADMIN, AUTHORITIES.USER]}>
-                                    <Projects />
-                                </PrivateRoute>
-                            ),
-                            path: 'projects',
-                        },
-                        {
-                            element: (
-                                <PrivateRoute hasAnyAuthorities={[AUTHORITIES.ADMIN, AUTHORITIES.USER]}>
-                                    <Project />
-                                </PrivateRoute>
-                            ),
-                            loader: async ({params}) =>
-                                queryClient.ensureQueryData({
-                                    queryFn: () =>
-                                        new ProjectApi().getProject({
-                                            id: parseInt(params.projectId!),
-                                        }),
-                                    queryKey: ProjectKeys.project(parseInt(params.projectId!)),
-                                }),
-                            path: 'projects/:projectId/project-workflows/:projectWorkflowId',
-                        },
-                        {
-                            element: (
-                                <PrivateRoute hasAnyAuthorities={[AUTHORITIES.ADMIN, AUTHORITIES.USER]}>
-                                    <ProjectInstances />
-                                </PrivateRoute>
-                            ),
-                            path: 'instances',
-                        },
-                        {
-                            element: (
-                                <PrivateRoute hasAnyAuthorities={[AUTHORITIES.ADMIN, AUTHORITIES.USER]}>
-                                    <AutomationConnections />
-                                </PrivateRoute>
-                            ),
-                            path: 'connections',
-                        },
-                        {
-                            element: (
-                                <PrivateRoute hasAnyAuthorities={[AUTHORITIES.ADMIN, AUTHORITIES.USER]}>
-                                    <AutomationWorkflowExecutions />
-                                </PrivateRoute>
-                            ),
-                            path: 'executions',
                         },
                         {
                             children: [
                                 {
                                     index: true,
                                     loader: async () => {
-                                        return redirect('workspaces');
+                                        return redirect('projects');
                                     },
                                 },
-                                {
-                                    element: (
-                                        <PrivateRoute hasAnyAuthorities={[AUTHORITIES.ADMIN]}>
-                                            <EEVersion>
-                                                <Workspaces />
-                                            </EEVersion>
-                                        </PrivateRoute>
-                                    ),
-                                    path: 'workspaces',
-                                },
-                            ],
-                            element: (
-                                <Settings
-                                    sidebarNavItems={[
-                                        {
-                                            href: '/automation/settings/workspaces',
-                                            title: 'Workspaces',
-                                        },
-                                    ]}
-                                />
-                            ),
-                            path: 'settings',
-                        },
-                    ],
-                    errorElement: <ErrorPage />,
-                    path: 'automation',
-                },
-                {
-                    children: [
-                        {
-                            index: true,
-                            loader: async () => {
-                                return redirect('integrations');
-                            },
-                        },
-                        getAccountRoutes('/embedded'),
-                        {
-                            children: [
+                                getAccountRoutes('/automation'),
                                 {
                                     element: (
                                         <PrivateRoute hasAnyAuthorities={[AUTHORITIES.ADMIN, AUTHORITIES.USER]}>
-                                            <EmbeddedIPaaSIntegrations />
+                                            <LazyLoadWrapper hasLeftSidebar>
+                                                <Projects />
+                                            </LazyLoadWrapper>
                                         </PrivateRoute>
                                     ),
-                                    index: true,
+                                    loader: async () => {
+                                        const currentEnvironmentId = environmentStore.getState().currentEnvironmentId;
+
+                                        if (currentEnvironmentId !== DEVELOPMENT_ENVIRONMENT) {
+                                            return redirect('/automation/deployments');
+                                        }
+
+                                        return null;
+                                    },
+                                    path: 'projects',
+                                },
+                                {
+                                    element: (
+                                        <PrivateRoute hasAnyAuthorities={[AUTHORITIES.ADMIN, AUTHORITIES.USER]}>
+                                            <LazyLoadWrapper>
+                                                <Project />
+                                            </LazyLoadWrapper>
+                                        </PrivateRoute>
+                                    ),
+                                    loader: async ({params}) =>
+                                        queryClient.ensureQueryData({
+                                            queryFn: () =>
+                                                new ProjectApi().getProject({
+                                                    id: parseInt(params.projectId!),
+                                                }),
+                                            queryKey: ProjectKeys.project(parseInt(params.projectId!)),
+                                        }),
+                                    path: 'projects/:projectId/project-workflows/:projectWorkflowId',
+                                },
+                                {
+                                    element: (
+                                        <PrivateRoute hasAnyAuthorities={[AUTHORITIES.ADMIN, AUTHORITIES.USER]}>
+                                            <LazyLoadWrapper>
+                                                <ProjectTemplates />
+                                            </LazyLoadWrapper>
+                                        </PrivateRoute>
+                                    ),
+                                    path: 'projects/templates',
+                                },
+                                {
+                                    element: (
+                                        <PrivateRoute hasAnyAuthorities={[AUTHORITIES.ADMIN, AUTHORITIES.USER]}>
+                                            <LazyLoadWrapper>
+                                                <ProjectTemplate fromInternalFlow sharedProject={false} />
+                                            </LazyLoadWrapper>
+                                        </PrivateRoute>
+                                    ),
+                                    path: 'projects/templates/:id',
+                                },
+                                {
+                                    element: (
+                                        <PrivateRoute hasAnyAuthorities={[AUTHORITIES.ADMIN, AUTHORITIES.USER]}>
+                                            <LazyLoadWrapper>
+                                                <WorkflowTemplates />
+                                            </LazyLoadWrapper>
+                                        </PrivateRoute>
+                                    ),
+                                    path: 'projects/:projectId/templates',
+                                },
+                                {
+                                    element: (
+                                        <PrivateRoute hasAnyAuthorities={[AUTHORITIES.ADMIN, AUTHORITIES.USER]}>
+                                            <LazyLoadWrapper>
+                                                <WorkflowTemplate fromInternalFlow sharedWorkflow={false} />
+                                            </LazyLoadWrapper>
+                                        </PrivateRoute>
+                                    ),
+                                    path: 'projects/:projectId/templates/:id',
+                                },
+                                {
+                                    element: (
+                                        <PrivateRoute hasAnyAuthorities={[AUTHORITIES.ADMIN, AUTHORITIES.USER]}>
+                                            <LazyLoadWrapper hasLeftSidebar>
+                                                <ProjectDeployments />
+                                            </LazyLoadWrapper>
+                                        </PrivateRoute>
+                                    ),
+                                    path: 'deployments',
+                                },
+                                {
+                                    children: [
+                                        {
+                                            index: true,
+                                            loader: async () => {
+                                                return redirect('api-collections');
+                                            },
+                                        },
+                                        {
+                                            element: (
+                                                <PrivateRoute hasAnyAuthorities={[AUTHORITIES.ADMIN, AUTHORITIES.USER]}>
+                                                    <EEVersion>
+                                                        <LazyLoadWrapper hasLeftSidebar>
+                                                            <ApiCollections />
+                                                        </LazyLoadWrapper>
+                                                    </EEVersion>
+                                                </PrivateRoute>
+                                            ),
+                                            path: 'api-collections',
+                                        },
+                                        {
+                                            element: (
+                                                <PrivateRoute hasAnyAuthorities={[AUTHORITIES.ADMIN, AUTHORITIES.USER]}>
+                                                    <EEVersion>
+                                                        <LazyLoadWrapper hasLeftSidebar>
+                                                            <ApiClients />
+                                                        </LazyLoadWrapper>
+                                                    </EEVersion>
+                                                </PrivateRoute>
+                                            ),
+                                            path: 'api-clients',
+                                        },
+                                    ],
+                                    path: 'api-platform',
+                                },
+                                {
+                                    element: (
+                                        <PrivateRoute hasAnyAuthorities={[AUTHORITIES.ADMIN, AUTHORITIES.USER]}>
+                                            <LazyLoadWrapper hasLeftSidebar>
+                                                <McpServers />
+                                            </LazyLoadWrapper>
+                                        </PrivateRoute>
+                                    ),
+                                    path: 'mcp-servers',
+                                },
+                                {
+                                    element: (
+                                        <PrivateRoute hasAnyAuthorities={[AUTHORITIES.ADMIN, AUTHORITIES.USER]}>
+                                            <LazyLoadWrapper hasLeftSidebar>
+                                                <AutomationWorkflowExecutions />
+                                            </LazyLoadWrapper>
+                                        </PrivateRoute>
+                                    ),
+                                    path: 'executions',
+                                },
+                                {
+                                    element: (
+                                        <PrivateRoute hasAnyAuthorities={[AUTHORITIES.ADMIN, AUTHORITIES.USER]}>
+                                            <LazyLoadWrapper hasLeftSidebar>
+                                                <AutomationConnections />
+                                            </LazyLoadWrapper>
+                                        </PrivateRoute>
+                                    ),
+                                    path: 'connections',
+                                },
+                                {
+                                    element: (
+                                        <PrivateRoute hasAnyAuthorities={[AUTHORITIES.ADMIN, AUTHORITIES.USER]}>
+                                            <LazyLoadWrapper hasLeftSidebar>
+                                                <DataTables />
+                                            </LazyLoadWrapper>
+                                        </PrivateRoute>
+                                    ),
+                                    path: 'datatables',
+                                },
+                                {
+                                    element: (
+                                        <PrivateRoute hasAnyAuthorities={[AUTHORITIES.ADMIN, AUTHORITIES.USER]}>
+                                            <LazyLoadWrapper hasLeftSidebar>
+                                                <DataTable />
+                                            </LazyLoadWrapper>
+                                        </PrivateRoute>
+                                    ),
+                                    path: 'datatables/:id',
+                                },
+                                {
+                                    element: (
+                                        <PrivateRoute hasAnyAuthorities={[AUTHORITIES.ADMIN, AUTHORITIES.USER]}>
+                                            <LazyLoadWrapper hasLeftSidebar>
+                                                <KnowledgeBases />
+                                            </LazyLoadWrapper>
+                                        </PrivateRoute>
+                                    ),
+                                    path: 'knowledge-bases',
+                                },
+                                {
+                                    element: (
+                                        <PrivateRoute hasAnyAuthorities={[AUTHORITIES.ADMIN, AUTHORITIES.USER]}>
+                                            <LazyLoadWrapper hasLeftSidebar>
+                                                <KnowledgeBase />
+                                            </LazyLoadWrapper>
+                                        </PrivateRoute>
+                                    ),
+                                    path: 'knowledge-bases/:id',
+                                },
+                                {
+                                    children: [
+                                        {
+                                            element: (
+                                                <PrivateRoute hasAnyAuthorities={[AUTHORITIES.ADMIN, AUTHORITIES.USER]}>
+                                                    <LazyLoadWrapper hasLeftSidebar>
+                                                        <Chat />
+                                                    </LazyLoadWrapper>
+                                                </PrivateRoute>
+                                            ),
+                                            path: ':workflowExecutionId',
+                                        },
+                                    ],
+                                    element: (
+                                        <LazyLoadWrapper hasLeftSidebar>
+                                            <Chats />
+                                        </LazyLoadWrapper>
+                                    ),
+                                    path: 'chats',
+                                },
+                                {
+                                    element: (
+                                        <PrivateRoute hasAnyAuthorities={[AUTHORITIES.ADMIN, AUTHORITIES.USER]}>
+                                            <LazyLoadWrapper>
+                                                <ApprovalTasks />
+                                            </LazyLoadWrapper>
+                                        </PrivateRoute>
+                                    ),
+                                    path: 'approval-tasks',
+                                },
+                                {
+                                    loader: async () => redirect('/automation/settings/ai/skills'),
+                                    path: 'ai',
+                                },
+                                {
+                                    loader: async () => redirect('/automation/settings/ai/skills'),
+                                    path: 'ai/skills',
+                                },
+                                {
+                                    loader: async () => redirect('/automation/settings/ai/skills'),
+                                    path: 'ai/skills/create',
+                                },
+                                {
+                                    loader: async () => redirect('/automation/settings/ai/skills'),
+                                    path: 'ai/skills/create/write',
+                                },
+                                {
+                                    loader: async () => redirect('/automation/settings/ai/skills'),
+                                    path: 'ai/skills/create/upload',
+                                },
+                                {
+                                    loader: async () => redirect('/automation/settings/ai/skills'),
+                                    path: 'ai/skills/create/ai',
+                                },
+                                {
+                                    loader: async ({params}) =>
+                                        redirect(`/automation/settings/ai/skills/${params.skillId}`),
+                                    path: 'ai/skills/:skillId',
+                                },
+                                {
+                                    children: [
+                                        {
+                                            index: true,
+                                            loader: async () => {
+                                                return redirect('workspaces');
+                                            },
+                                        },
+                                        {
+                                            element: (
+                                                <PrivateRoute hasAnyAuthorities={[AUTHORITIES.ADMIN]}>
+                                                    <EEVersion>
+                                                        <LazyLoadWrapper>
+                                                            <Workspaces />
+                                                        </LazyLoadWrapper>
+                                                    </EEVersion>
+                                                </PrivateRoute>
+                                            ),
+                                            path: 'workspaces',
+                                        },
+                                        ...currentWorkspaceSettingsRoutes.children,
+                                        ...platformSettingsRoutes.children,
+                                    ],
+                                    element: (
+                                        <Settings
+                                            sidebarNavItems={[
+                                                ...currentWorkspaceSettingsRoutes.navItems,
+                                                organizationSettingsNavItem,
+                                                {
+                                                    href: '/automation/settings/workspaces',
+                                                    title: 'Workspaces',
+                                                },
+                                                ...platformSettingsRoutes.navItems,
+                                            ]}
+                                        />
+                                    ),
+                                    path: 'settings',
                                 },
                             ],
-                            element: <Integrations />,
-                            path: 'integrations',
-                        },
-                        {
-                            element: (
-                                <PrivateRoute hasAnyAuthorities={[AUTHORITIES.ADMIN, AUTHORITIES.USER]}>
-                                    <Integration />
-                                </PrivateRoute>
-                            ),
-                            loader: async ({params}) =>
-                                queryClient.ensureQueryData({
-                                    queryFn: () =>
-                                        new IntegrationApi().getIntegration({
-                                            id: parseInt(params.integrationId!),
-                                        }),
-                                    queryKey: IntegrationKeys.integration(parseInt(params.integrationId!)),
-                                }),
-                            path: 'integrations/:integrationId/integration-workflows/:integrationWorkflowId',
-                        },
-                        {
-                            element: (
-                                <PrivateRoute hasAnyAuthorities={[AUTHORITIES.ADMIN, AUTHORITIES.USER]}>
-                                    <IntegrationInstanceConfigurations />
-                                </PrivateRoute>
-                            ),
-                            path: 'configurations',
-                        },
-                        {
-                            element: (
-                                <PrivateRoute hasAnyAuthorities={[AUTHORITIES.ADMIN, AUTHORITIES.USER]}>
-                                    <ConnectedUsers />
-                                </PrivateRoute>
-                            ),
-                            path: 'connected-users',
-                        },
-                        {
-                            element: (
-                                <PrivateRoute hasAnyAuthorities={[AUTHORITIES.ADMIN, AUTHORITIES.USER]}>
-                                    <AppEvents />
-                                </PrivateRoute>
-                            ),
-                            path: 'app-events',
-                        },
-                        {
-                            element: (
-                                <PrivateRoute hasAnyAuthorities={[AUTHORITIES.ADMIN, AUTHORITIES.USER]}>
-                                    <EmbeddedConnections />
-                                </PrivateRoute>
-                            ),
-                            path: 'connections',
-                        },
-                        {
-                            element: (
-                                <PrivateRoute hasAnyAuthorities={[AUTHORITIES.ADMIN, AUTHORITIES.USER]}>
-                                    <EmbeddedIntegrationWorkflowExecutions />
-                                </PrivateRoute>
-                            ),
-                            path: 'executions',
+                            errorElement: <ErrorPage />,
+                            path: 'automation',
                         },
                         {
                             children: [
                                 {
                                     index: true,
                                     loader: async () => {
-                                        return redirect('api-keys');
+                                        return redirect('integrations');
                                     },
                                 },
+                                getAccountRoutes('/embedded'),
                                 {
                                     element: (
-                                        <PrivateRoute hasAnyAuthorities={[AUTHORITIES.ADMIN]}>
-                                            <ApiKeys />
+                                        <PrivateRoute hasAnyAuthorities={[AUTHORITIES.ADMIN, AUTHORITIES.USER]}>
+                                            <EEVersion>
+                                                <LazyLoadWrapper>
+                                                    <Integrations />
+                                                </LazyLoadWrapper>
+                                            </EEVersion>
                                         </PrivateRoute>
                                     ),
-                                    path: 'api-keys',
+                                    path: 'integrations',
                                 },
                                 {
                                     element: (
-                                        <PrivateRoute hasAnyAuthorities={[AUTHORITIES.ADMIN]}>
-                                            <SigningKeys />
+                                        <PrivateRoute hasAnyAuthorities={[AUTHORITIES.ADMIN, AUTHORITIES.USER]}>
+                                            <LazyLoadWrapper>
+                                                <EEVersion>
+                                                    <Integration />
+                                                </EEVersion>
+                                            </LazyLoadWrapper>
                                         </PrivateRoute>
                                     ),
-                                    path: 'signing-keys',
+                                    loader: async ({params}) =>
+                                        queryClient.ensureQueryData({
+                                            queryFn: () =>
+                                                new IntegrationApi().getIntegration({
+                                                    id: parseInt(params.integrationId!),
+                                                }),
+                                            queryKey: IntegrationKeys.integration(parseInt(params.integrationId!)),
+                                        }),
+                                    path: 'integrations/:integrationId/integration-workflows/:integrationWorkflowId',
+                                },
+                                {
+                                    element: (
+                                        <PrivateRoute hasAnyAuthorities={[AUTHORITIES.ADMIN, AUTHORITIES.USER]}>
+                                            <EEVersion>
+                                                <LazyLoadWrapper>
+                                                    <IntegrationInstanceConfigurations />
+                                                </LazyLoadWrapper>
+                                            </EEVersion>
+                                        </PrivateRoute>
+                                    ),
+                                    path: 'configurations',
+                                },
+                                {
+                                    element: (
+                                        <PrivateRoute hasAnyAuthorities={[AUTHORITIES.ADMIN, AUTHORITIES.USER]}>
+                                            <EEVersion>
+                                                <LazyLoadWrapper>
+                                                    <AutomationWorkflows />
+                                                </LazyLoadWrapper>
+                                            </EEVersion>
+                                        </PrivateRoute>
+                                    ),
+                                    path: 'automation-workflows',
+                                },
+                                {
+                                    element: (
+                                        <PrivateRoute hasAnyAuthorities={[AUTHORITIES.ADMIN, AUTHORITIES.USER]}>
+                                            <EEVersion>
+                                                <LazyLoadWrapper>
+                                                    <AutomationWorkflow />
+                                                </LazyLoadWrapper>
+                                            </EEVersion>
+                                        </PrivateRoute>
+                                    ),
+                                    path: 'automation-workflows/:workflowId/editor',
+                                },
+                                {
+                                    element: (
+                                        <PrivateRoute hasAnyAuthorities={[AUTHORITIES.ADMIN, AUTHORITIES.USER]}>
+                                            <EEVersion>
+                                                <LazyLoadWrapper>
+                                                    <ConnectedUsers />
+                                                </LazyLoadWrapper>
+                                            </EEVersion>
+                                        </PrivateRoute>
+                                    ),
+                                    path: 'connected-users',
+                                },
+                                {
+                                    element: (
+                                        <PrivateRoute hasAnyAuthorities={[AUTHORITIES.ADMIN, AUTHORITIES.USER]}>
+                                            <EEVersion>
+                                                <LazyLoadWrapper>
+                                                    <AppEvents />
+                                                </LazyLoadWrapper>
+                                            </EEVersion>
+                                        </PrivateRoute>
+                                    ),
+                                    path: 'app-events',
+                                },
+                                {
+                                    element: (
+                                        <PrivateRoute hasAnyAuthorities={[AUTHORITIES.ADMIN, AUTHORITIES.USER]}>
+                                            <EEVersion>
+                                                <LazyLoadWrapper>
+                                                    <EmbeddedIntegrationWorkflowExecutions />
+                                                </LazyLoadWrapper>
+                                            </EEVersion>
+                                        </PrivateRoute>
+                                    ),
+                                    path: 'executions',
+                                },
+                                {
+                                    element: (
+                                        <PrivateRoute hasAnyAuthorities={[AUTHORITIES.ADMIN, AUTHORITIES.USER]}>
+                                            <EEVersion>
+                                                <LazyLoadWrapper>
+                                                    <EmbeddedConnections />
+                                                </LazyLoadWrapper>
+                                            </EEVersion>
+                                        </PrivateRoute>
+                                    ),
+                                    path: 'connections',
+                                },
+                                {
+                                    element: (
+                                        <PrivateRoute hasAnyAuthorities={[AUTHORITIES.ADMIN, AUTHORITIES.USER]}>
+                                            <EEVersion>
+                                                <LazyLoadWrapper>
+                                                    <EmbeddedMcpServers />
+                                                </LazyLoadWrapper>
+                                            </EEVersion>
+                                        </PrivateRoute>
+                                    ),
+                                    path: 'mcp-servers',
+                                },
+                                {
+                                    children: [
+                                        {
+                                            index: true,
+                                            loader: async () => {
+                                                return redirect('signing-keys');
+                                            },
+                                        },
+                                        {
+                                            element: (
+                                                <PrivateRoute hasAnyAuthorities={[AUTHORITIES.ADMIN]}>
+                                                    <EEVersion>
+                                                        <LazyLoadWrapper>
+                                                            <SigningKeys />
+                                                        </LazyLoadWrapper>
+                                                    </EEVersion>
+                                                </PrivateRoute>
+                                            ),
+                                            path: 'signing-keys',
+                                        },
+                                        {
+                                            element: (
+                                                <PrivateRoute hasAnyAuthorities={[AUTHORITIES.ADMIN]}>
+                                                    <EEVersion>
+                                                        <LazyLoadWrapper>
+                                                            <EmbeddedApiKeys />
+                                                        </LazyLoadWrapper>
+                                                    </EEVersion>
+                                                </PrivateRoute>
+                                            ),
+                                            path: 'api-keys',
+                                        },
+                                        ...platformSettingsRoutes.children,
+                                    ],
+                                    element: (
+                                        <Settings
+                                            sidebarNavItems={[
+                                                {
+                                                    href: '/embedded/settings/signing-keys',
+                                                    title: 'Signing Keys',
+                                                },
+                                                {
+                                                    href: '/embedded/settings/api-keys',
+                                                    title: 'API Keys',
+                                                },
+                                                organizationSettingsNavItem,
+                                                ...platformSettingsRoutes.navItems,
+                                            ]}
+                                        />
+                                    ),
+                                    path: 'settings',
                                 },
                             ],
-                            element: (
-                                <Settings
-                                    sidebarNavItems={[
-                                        {
-                                            href: '/embedded/settings/api-keys',
-                                            title: 'API Keys',
-                                        },
-                                        {
-                                            href: '/embedded/settings/signing-keys',
-                                            title: 'Signing Keys',
-                                        },
-                                    ]}
-                                />
-                            ),
-                            path: 'settings',
+                            errorElement: <ErrorPage />,
+                            path: 'embedded',
                         },
                     ],
-                    errorElement: <ErrorPage />,
-                    path: 'embedded',
-                },
-                {
-                    element: <Home />,
-                    index: true,
+                    path: '/',
                 },
             ],
-            element: <App />,
+            element: (
+                <Suspense fallback={null}>
+                    <App />
+                </Suspense>
+            ),
             errorElement: <ErrorPage />,
+            loader: async () => {
+                await loadEnvironments(queryClient);
+            },
             path: '/',
         },
         {

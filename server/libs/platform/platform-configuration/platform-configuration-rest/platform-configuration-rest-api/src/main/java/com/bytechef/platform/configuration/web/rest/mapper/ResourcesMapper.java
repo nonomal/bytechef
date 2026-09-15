@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 
 package com.bytechef.platform.configuration.web.rest.mapper;
 
-import com.bytechef.platform.component.registry.domain.Resources;
+import com.bytechef.platform.component.domain.Resources;
 import com.bytechef.platform.configuration.web.rest.mapper.config.PlatformConfigurationMapperSpringConfig;
 import com.bytechef.platform.configuration.web.rest.model.ResourcesModel;
 import org.mapstruct.Mapper;
@@ -36,9 +36,9 @@ public interface ResourcesMapper {
 
     @Mapper(config = PlatformConfigurationMapperSpringConfig.class)
     interface TaskDispatcherResourcesMapper
-        extends Converter<com.bytechef.platform.workflow.task.dispatcher.registry.domain.Resources, ResourcesModel> {
+        extends Converter<com.bytechef.platform.workflow.task.dispatcher.domain.Resources, ResourcesModel> {
 
         @Override
-        ResourcesModel convert(com.bytechef.platform.workflow.task.dispatcher.registry.domain.Resources resources);
+        ResourcesModel convert(com.bytechef.platform.workflow.task.dispatcher.domain.Resources resources);
     }
 }

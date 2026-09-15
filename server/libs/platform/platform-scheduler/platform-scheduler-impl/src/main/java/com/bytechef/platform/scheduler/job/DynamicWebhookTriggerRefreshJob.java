@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,20 +16,23 @@
 
 package com.bytechef.platform.scheduler.job;
 
+import static com.bytechef.platform.scheduler.constant.QuartzTriggerSchedulerConstants.CONNECTION_ID;
+import static com.bytechef.platform.scheduler.constant.QuartzTriggerSchedulerConstants.DYNAMIC_WEBHOOK_TRIGGER_REFRESH;
+
 import com.bytechef.atlas.configuration.domain.Workflow;
 import com.bytechef.atlas.configuration.service.WorkflowService;
-import com.bytechef.commons.util.DateUtils;
 import com.bytechef.commons.util.OptionalUtils;
-import com.bytechef.component.definition.TriggerDefinition.DynamicWebhookEnableOutput;
-import com.bytechef.platform.component.registry.facade.TriggerDefinitionFacade;
+import com.bytechef.component.definition.TriggerDefinition.WebhookEnableOutput;
+import com.bytechef.platform.component.facade.TriggerDefinitionFacade;
 import com.bytechef.platform.configuration.domain.WorkflowTrigger;
-import com.bytechef.platform.configuration.instance.accessor.InstanceAccessor;
-import com.bytechef.platform.configuration.instance.accessor.InstanceAccessorRegistry;
 import com.bytechef.platform.definition.WorkflowNodeType;
-import com.bytechef.platform.workflow.execution.WorkflowExecutionId;
+import com.bytechef.platform.workflow.WorkflowExecutionId;
+import com.bytechef.platform.workflow.execution.accessor.JobPrincipalAccessor;
+import com.bytechef.platform.workflow.execution.accessor.JobPrincipalAccessorRegistry;
 import com.bytechef.platform.workflow.execution.service.TriggerStateService;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.util.Date;
 import org.quartz.Job;
 import org.quartz.JobDataMap;
 import org.quartz.JobExecutionContext;
@@ -45,7 +48,7 @@ import org.springframework.beans.factory.annotation.Autowired;
  */
 public class DynamicWebhookTriggerRefreshJob implements Job {
 
-    private InstanceAccessorRegistry instanceAccessorRegistry;
+    private JobPrincipalAccessorRegistry jobPrincipalAccessorRegistry;
     private TriggerDefinitionFacade remoteTriggerDefinitionFacade;
     private TriggerStateService triggerStateService;
     private WorkflowService workflowService;
@@ -55,20 +58,21 @@ public class DynamicWebhookTriggerRefreshJob implements Job {
         JobDataMap jobDataMap = context.getMergedJobDataMap();
 
         String workflowExecutionId = jobDataMap.getString("workflowExecutionId");
+        Long connectionId = (Long) jobDataMap.get(CONNECTION_ID);
 
-        LocalDateTime webhookExpirationDate = refreshDynamicWebhookTrigger(
-            WorkflowExecutionId.parse(workflowExecutionId));
+        Instant webhookExpirationDate = refreshDynamicWebhookTrigger(
+            WorkflowExecutionId.parse(workflowExecutionId), connectionId);
 
         if (webhookExpirationDate != null) {
             Scheduler scheduler = context.getScheduler();
             try {
-                TriggerKey triggerKey = TriggerKey.triggerKey(workflowExecutionId, "DynamicWebhookTriggerRefresh");
+                TriggerKey triggerKey = TriggerKey.triggerKey(workflowExecutionId, DYNAMIC_WEBHOOK_TRIGGER_REFRESH);
 
                 scheduler.rescheduleJob(
                     triggerKey,
                     TriggerBuilder.newTrigger()
                         .withIdentity(triggerKey)
-                        .startAt(DateUtils.toDate(webhookExpirationDate))
+                        .startAt(Date.from(webhookExpirationDate))
                         .build());
             } catch (SchedulerException e) {
                 throw new JobExecutionException(e);
@@ -77,13 +81,11 @@ public class DynamicWebhookTriggerRefreshJob implements Job {
     }
 
     @Autowired
-    @SuppressFBWarnings("EI")
-    public void setInstanceAccessorRegistry(InstanceAccessorRegistry instanceAccessorRegistry) {
-        this.instanceAccessorRegistry = instanceAccessorRegistry;
+    public void setPrincipalAccessorRegistry(JobPrincipalAccessorRegistry jobPrincipalAccessorRegistry) {
+        this.jobPrincipalAccessorRegistry = jobPrincipalAccessorRegistry;
     }
 
     @Autowired
-    @SuppressFBWarnings("EI")
     public void setRemoteTriggerDefinitionFacade(TriggerDefinitionFacade triggerDefinitionService) {
         this.remoteTriggerDefinitionFacade = triggerDefinitionService;
     }
@@ -101,10 +103,11 @@ public class DynamicWebhookTriggerRefreshJob implements Job {
     }
 
     private WorkflowNodeType getComponentOperation(WorkflowExecutionId workflowExecutionId) {
-        InstanceAccessor instanceAccessor = instanceAccessorRegistry.getInstanceAccessor(workflowExecutionId.getType());
+        JobPrincipalAccessor jobPrincipalAccessor =
+            jobPrincipalAccessorRegistry.getJobPrincipalAccessor(workflowExecutionId.getType());
 
-        String workflowId = instanceAccessor.getWorkflowId(
-            workflowExecutionId.getInstanceId(), workflowExecutionId.getWorkflowReferenceCode());
+        String workflowId = jobPrincipalAccessor.getWorkflowId(
+            workflowExecutionId.getJobPrincipalId(), workflowExecutionId.getWorkflowUuid());
 
         Workflow workflow = workflowService.getWorkflow(workflowId);
 
@@ -113,14 +116,14 @@ public class DynamicWebhookTriggerRefreshJob implements Job {
         return WorkflowNodeType.ofType(workflowTrigger.getType());
     }
 
-    private LocalDateTime refreshDynamicWebhookTrigger(WorkflowExecutionId workflowExecutionId) {
+    private Instant refreshDynamicWebhookTrigger(WorkflowExecutionId workflowExecutionId, Long connectionId) {
         WorkflowNodeType workflowNodeType = getComponentOperation(workflowExecutionId);
-        DynamicWebhookEnableOutput output = OptionalUtils.get(triggerStateService.fetchValue(workflowExecutionId));
-        LocalDateTime webhookExpirationDate = null;
+        WebhookEnableOutput output = OptionalUtils.get(triggerStateService.fetchValue(workflowExecutionId));
+        Instant webhookExpirationDate = null;
 
         output = remoteTriggerDefinitionFacade.executeDynamicWebhookRefresh(
-            workflowNodeType.componentName(), workflowNodeType.componentVersion(),
-            workflowNodeType.componentOperationName(), output.parameters());
+            workflowNodeType.name(), workflowNodeType.version(),
+            workflowNodeType.operation(), output.parameters(), connectionId);
 
         if (output != null) {
             triggerStateService.save(workflowExecutionId, output);

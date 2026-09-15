@@ -1,0 +1,122 @@
+import {Accordion} from '@/components/ui/accordion';
+import {ResizableHandle, ResizablePanel, ResizablePanelGroup} from '@/components/ui/resizable';
+import {ScrollArea} from '@/components/ui/scroll-area';
+import {useGetWorkflowExecutionTaskExecutionQuery} from '@/ee/shared/queries/embedded/workflowExecutions.queries';
+import WorkflowExecutionContent from '@/shared/components/workflow-executions/WorkflowExecutionContent';
+import WorkflowExecutionsAccordionItem from '@/shared/components/workflow-executions/WorkflowExecutionsAccordionItem';
+import WorkflowExecutionsHeader from '@/shared/components/workflow-executions/WorkflowExecutionsHeader';
+import WorkflowExecutionsTabsPanel from '@/shared/components/workflow-executions/WorkflowExecutionsTabsPanel';
+import WorkflowTaskExecutionItem from '@/shared/components/workflow-executions/WorkflowTaskExecutionItem';
+import WorkflowTriggerExecutionItem from '@/shared/components/workflow-executions/WorkflowTriggerExecutionItem';
+import {Job, JobStatusEnum, TaskExecution, TriggerExecution} from '@/shared/middleware/automation/workflow/execution';
+import {TabValueType} from '@/shared/types';
+import {useCallback, useState} from 'react';
+import {useShallow} from 'zustand/react/shallow';
+
+import useWorkflowExecutionSheetStore from '../../stores/useWorkflowExecutionSheetStore';
+
+const WorkflowExecutionSheetContent = ({job, triggerExecution}: {job: Job; triggerExecution?: TriggerExecution}) => {
+    const workflowExecutionId = useWorkflowExecutionSheetStore(useShallow((state) => state.workflowExecutionId));
+
+    const hasNoTaskExecutions = !job.taskExecutions || job.taskExecutions.length === 0;
+    const jobFailedWithNoExecutions = hasNoTaskExecutions && job.status === JobStatusEnum.Failed;
+    const jobFailureError = job.error ?? {
+        message: 'Workflow execution failed before any executions were created.',
+        stackTrace: [],
+    };
+
+    const [activeTab, setActiveTab] = useState<TabValueType>(jobFailedWithNoExecutions ? 'error' : 'input');
+    const [dialogOpen, setDialogOpen] = useState(false);
+    const [selectedItem, setSelectedItem] = useState<TaskExecution | TriggerExecution | undefined>(
+        triggerExecution || job.taskExecutions?.[0] || undefined
+    );
+
+    const taskExecutions = job?.taskExecutions || [];
+
+    const onTaskClick = useCallback((taskExecution: TaskExecution | TriggerExecution) => {
+        setActiveTab(taskExecution.error ? 'error' : 'input');
+        setSelectedItem(taskExecution);
+    }, []);
+
+    const isTriggerExecution = selectedItem?.id === triggerExecution?.id;
+
+    const isTaskSelected = !!selectedItem && !isTriggerExecution && selectedItem.id !== undefined;
+
+    const {data: selectedTaskExecution, isLoading: selectedTaskExecutionLoading} =
+        useGetWorkflowExecutionTaskExecutionQuery(
+            {id: Number(workflowExecutionId), taskExecutionId: Number(selectedItem?.id)},
+            isTaskSelected,
+            false
+        );
+
+    return (
+        <div className="flex size-full flex-col">
+            <WorkflowExecutionsHeader job={job} triggerExecution={triggerExecution} />
+
+            {jobFailedWithNoExecutions ? (
+                <div className="flex-1 p-4">
+                    <WorkflowExecutionContent error={jobFailureError} />
+                </div>
+            ) : (
+                <ResizablePanelGroup className="px-2" orientation="horizontal">
+                    <ResizablePanel
+                        className="flex min-h-0 flex-col overflow-hidden"
+                        defaultSize={40}
+                        groupResizeBehavior="preserve-pixel-size"
+                        minSize={15}
+                    >
+                        <ScrollArea className="mb-4 h-full pr-4">
+                            <Accordion
+                                className="ml-2 space-y-2"
+                                defaultValue={
+                                    isTriggerExecution ? [triggerExecution?.id || ''] : [selectedItem?.id || '']
+                                }
+                                type="multiple"
+                            >
+                                {triggerExecution && (
+                                    <WorkflowExecutionsAccordionItem
+                                        execution={triggerExecution}
+                                        onExecutionClick={onTaskClick}
+                                        selectedExecutionId={selectedItem?.id || ''}
+                                    >
+                                        <WorkflowTriggerExecutionItem triggerExecution={triggerExecution} />
+                                    </WorkflowExecutionsAccordionItem>
+                                )}
+
+                                {taskExecutions.map((taskExecution) => (
+                                    <WorkflowExecutionsAccordionItem
+                                        execution={taskExecution}
+                                        key={taskExecution.id}
+                                        onExecutionClick={onTaskClick}
+                                        selectedExecutionId={selectedItem?.id || ''}
+                                    >
+                                        <WorkflowTaskExecutionItem taskExecution={taskExecution} />
+                                    </WorkflowExecutionsAccordionItem>
+                                ))}
+                            </Accordion>
+                        </ScrollArea>
+                    </ResizablePanel>
+
+                    <ResizableHandle />
+
+                    <ResizablePanel className="flex min-h-0 flex-col overflow-hidden" defaultSize={60} minSize={20}>
+                        <WorkflowExecutionsTabsPanel
+                            activeTab={activeTab}
+                            dialogOpen={dialogOpen}
+                            job={job}
+                            selectedItem={selectedItem}
+                            selectedItemDataLoading={isTaskSelected && selectedTaskExecutionLoading}
+                            selectedItemInput={selectedTaskExecution?.input}
+                            selectedItemOutput={selectedTaskExecution?.output}
+                            setActiveTab={setActiveTab}
+                            setDialogOpen={setDialogOpen}
+                            triggerExecution={triggerExecution}
+                        />
+                    </ResizablePanel>
+                </ResizablePanelGroup>
+            )}
+        </div>
+    );
+};
+
+export default WorkflowExecutionSheetContent;

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,15 +17,16 @@
 package com.bytechef.component.insightly.action;
 
 import static com.bytechef.component.OpenApiComponentHandler.PropertyType;
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.integer;
-import static com.bytechef.component.definition.ComponentDSL.object;
-import static com.bytechef.component.definition.ComponentDSL.option;
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.integer;
+import static com.bytechef.component.definition.ComponentDsl.object;
+import static com.bytechef.component.definition.ComponentDsl.option;
+import static com.bytechef.component.definition.ComponentDsl.outputSchema;
+import static com.bytechef.component.definition.ComponentDsl.string;
 import static com.bytechef.component.definition.Context.Http.BodyContentType;
 import static com.bytechef.component.definition.Context.Http.ResponseType;
 
-import com.bytechef.component.definition.ComponentDSL;
+import com.bytechef.component.definition.ComponentDsl;
 import java.util.Map;
 
 /**
@@ -34,34 +35,39 @@ import java.util.Map;
  * @generated
  */
 public class InsightlyCreateTaskAction {
-    public static final ComponentDSL.ModifiableActionDefinition ACTION_DEFINITION = action("createTask")
-        .title("Create task")
-        .description("Creates new Task")
+    public static final ComponentDsl.ModifiableActionDefinition ACTION_DEFINITION = action("createTask")
+        .title("Create Task")
+        .description("Creates new task.")
         .metadata(
             Map.of(
                 "method", "POST",
                 "path", "/Tasks", "bodyContentType", BodyContentType.JSON, "mimeType", "application/json"
 
             ))
-        .properties(object("__item").properties(string("TITLE").maxLength(500)
+        .properties(string("TITLE").maxLength(500)
+            .metadata(
+                Map.of(
+                    "type", PropertyType.BODY))
             .label("Title")
             .required(true),
-            string("STATUS").label("Status")
+            string("STATUS").metadata(
+                Map.of(
+                    "type", PropertyType.BODY))
+                .label("Status")
                 .description("Task status")
                 .options(option("Not Started", "Not Started"), option("In Progress", "In Progress"),
                     option("Completed", "Completed"), option("Deferred", "Deferred"), option("Waiting", "Waiting"))
                 .required(false))
-            .label("Task")
-            .required(true)
+        .output(outputSchema(object().properties(integer("TASK_ID").description("ID of the task.")
+            .required(false),
+            string("TITLE").description("Title of the task.")
+                .required(false),
+            string("STATUS").description("Task status.")
+                .required(false))
             .metadata(
                 Map.of(
-                    "type", PropertyType.BODY)))
-        .outputSchema(object()
-            .properties(integer("TASK_ID").required(false), string("TITLE").required(false),
-                string("STATUS").required(false))
-            .metadata(
-                Map.of(
-                    "responseType", ResponseType.JSON)));
+                    "responseType", ResponseType.JSON))))
+        .help("", "https://docs.bytechef.io/reference/components/insightly_v1#create-task");
 
     private InsightlyCreateTaskAction() {
     }

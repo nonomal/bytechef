@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,13 +17,14 @@
 package com.bytechef.component.active.campaign.action;
 
 import static com.bytechef.component.OpenApiComponentHandler.PropertyType;
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.object;
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.object;
+import static com.bytechef.component.definition.ComponentDsl.outputSchema;
+import static com.bytechef.component.definition.ComponentDsl.string;
 import static com.bytechef.component.definition.Context.Http.BodyContentType;
 import static com.bytechef.component.definition.Context.Http.ResponseType;
 
-import com.bytechef.component.definition.ComponentDSL;
+import com.bytechef.component.definition.ComponentDsl;
 import java.util.Map;
 
 /**
@@ -32,16 +33,16 @@ import java.util.Map;
  * @generated
  */
 public class ActiveCampaignCreateContactAction {
-    public static final ComponentDSL.ModifiableActionDefinition ACTION_DEFINITION = action("createContact")
-        .title("Create contact")
-        .description("Creates a new contact")
+    public static final ComponentDsl.ModifiableActionDefinition ACTION_DEFINITION = action("createContact")
+        .title("Create Contact")
+        .description("Creates a new contact.")
         .metadata(
             Map.of(
                 "method", "POST",
                 "path", "/contacts", "bodyContentType", BodyContentType.JSON, "mimeType", "application/json"
 
             ))
-        .properties(object("__item").properties(object("contact").properties(string("email").label("Email")
+        .properties(object("contact").properties(string("email").label("Email")
             .description("Email address of the new contact.")
             .required(true)
             .exampleValue("test@example.com"),
@@ -54,22 +55,30 @@ public class ActiveCampaignCreateContactAction {
             string("phone").label("Phone")
                 .description("Phone number of the contact.")
                 .required(false))
+            .metadata(
+                Map.of(
+                    "type", PropertyType.BODY))
             .label("Contact")
             .required(false))
-            .label("Contact")
-            .metadata(
-                Map.of(
-                    "type", PropertyType.BODY)))
-        .outputSchema(object()
-            .properties(object("body")
-                .properties(object("contact")
-                    .properties(string("email").required(false), string("firstName").required(false),
-                        string("lastName").required(false), string("phone").required(false))
-                    .required(false))
-                .required(false))
-            .metadata(
-                Map.of(
-                    "responseType", ResponseType.JSON)));
+        .output(
+            outputSchema(
+                object()
+                    .properties(object("contact")
+                        .properties(string("email").description("Email address of the contact.")
+                            .required(false),
+                            string("firstName").description("First name of the contact.")
+                                .required(false),
+                            string("lastName").description("Last name of the contact.")
+                                .required(false),
+                            string("phone").description("Phone number of the contact.")
+                                .required(false),
+                            string("id").description("ID of the contact.")
+                                .required(false))
+                        .required(false))
+                    .metadata(
+                        Map.of(
+                            "responseType", ResponseType.JSON))))
+        .help("", "https://docs.bytechef.io/reference/components/active-campaign_v1#create-contact");
 
     private ActiveCampaignCreateContactAction() {
     }

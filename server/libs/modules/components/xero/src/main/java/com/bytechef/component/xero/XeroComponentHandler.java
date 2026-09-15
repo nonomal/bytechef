@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,8 +16,7 @@
 
 package com.bytechef.component.xero;
 
-import static com.bytechef.component.definition.ComponentDSL.component;
-import static com.bytechef.component.xero.constant.XeroConstants.XERO;
+import static com.bytechef.component.definition.ComponentDsl.component;
 
 import com.bytechef.component.ComponentHandler;
 import com.bytechef.component.definition.ComponentCategory;
@@ -30,6 +29,7 @@ import com.bytechef.component.xero.connection.XeroConnection;
 import com.bytechef.component.xero.trigger.XeroNewBillTrigger;
 import com.bytechef.component.xero.trigger.XeroNewContactTrigger;
 import com.bytechef.component.xero.trigger.XeroNewInvoiceTrigger;
+import com.bytechef.component.xero.unified.XeroUnifiedApi;
 import com.google.auto.service.AutoService;
 
 /**
@@ -39,7 +39,7 @@ import com.google.auto.service.AutoService;
 @AutoService(ComponentHandler.class)
 public class XeroComponentHandler implements ComponentHandler {
 
-    private static final ComponentDefinition COMPONENT_DEFINITION = component(XERO)
+    private static final ComponentDefinition COMPONENT_DEFINITION = component("xero")
         .title("Xero")
         .description(
             "Xero is an online accounting software platform designed for small businesses and accountants to manage " +
@@ -55,7 +55,8 @@ public class XeroComponentHandler implements ComponentHandler {
         .triggers(
             XeroNewBillTrigger.TRIGGER_DEFINITION,
             XeroNewContactTrigger.TRIGGER_DEFINITION,
-            XeroNewInvoiceTrigger.TRIGGER_DEFINITION);
+            XeroNewInvoiceTrigger.TRIGGER_DEFINITION)
+        .unifiedApi(XeroUnifiedApi.UNIFIED_API_DEFINITION);
 
     @Override
     public ComponentDefinition getDefinition() {

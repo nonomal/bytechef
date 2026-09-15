@@ -53,44 +53,40 @@ const TablePagination = ({onClick, pageNumber, pageSize, totalElements, totalPag
         ));
     }, [pageNumber, totalPages, onClick]);
 
+    const paginationStart = pageNumber * pageSize + 1;
+    const paginationEnd = Math.min(totalElements, (pageNumber + 1) * pageSize);
+
     return (
         <Pagination className="w-full">
             <PaginationContent className="w-full">
-                <div className="flex-1">
-                    <p className="text-sm text-gray-700">
-                        Showing
-                        <span className="px-2 font-medium">{pageNumber * pageSize + 1}</span>
-                        to
-                        <span className="px-2 font-medium">{Math.min(totalElements, (pageNumber + 1) * pageSize)}</span>
-                        of
-                        <span className="px-2 font-medium">{totalElements}</span>
-                        results
-                    </p>
-                </div>
+                <p className="flex-1 px-4 py-2.5 text-sm text-content-neutral-secondary">
+                    Showing {paginationStart} to {paginationEnd} of {totalElements} results
+                </p>
 
-                <PaginationItem>
-                    <PaginationPrevious
-                        href="#"
-                        onClick={() => {
-                            if (pageNumber > 0) {
-                                onClick(pageNumber - 1);
-                            }
-                        }}
-                    />
-                </PaginationItem>
+                {totalPages > 1 && (
+                    <>
+                        {pageNumber > 0 && (
+                            <PaginationItem>
+                                <PaginationPrevious href="#" onClick={() => onClick(pageNumber - 1)} />
+                            </PaginationItem>
+                        )}
 
-                {renderPageLinks()}
+                        {renderPageLinks()}
 
-                <PaginationItem>
-                    <PaginationNext
-                        href="#"
-                        onClick={() => {
-                            if (pageNumber < totalPages - 1) {
-                                onClick(pageNumber + 1);
-                            }
-                        }}
-                    />
-                </PaginationItem>
+                        {pageNumber < totalPages - 1 && (
+                            <PaginationItem>
+                                <PaginationNext
+                                    href="#"
+                                    onClick={() => {
+                                        if (pageNumber < totalPages - 1) {
+                                            onClick(pageNumber + 1);
+                                        }
+                                    }}
+                                />
+                            </PaginationItem>
+                        )}
+                    </>
+                )}
             </PaginationContent>
         </Pagination>
     );

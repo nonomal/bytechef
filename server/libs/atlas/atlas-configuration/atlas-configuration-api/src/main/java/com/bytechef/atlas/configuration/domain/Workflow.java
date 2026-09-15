@@ -13,27 +13,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * Modifications copyright (C) 2023 ByteChef Inc.
+ * Modifications copyright (C) 2025 ByteChef
  */
 
 package com.bytechef.atlas.configuration.domain;
 
 import com.bytechef.atlas.configuration.constant.WorkflowConstants;
+import com.bytechef.atlas.configuration.util.WorkflowTaskUtils;
 import com.bytechef.atlas.configuration.workflow.mapper.WorkflowReader;
 import com.bytechef.atlas.configuration.workflow.mapper.WorkflowResource;
 import com.bytechef.commons.util.CollectionUtils;
 import com.bytechef.commons.util.MapUtils;
 import java.io.Serializable;
 import java.nio.charset.StandardCharsets;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
+import java.time.Instant;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import org.apache.commons.lang3.Validate;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.annotation.CreatedDate;
@@ -46,6 +45,7 @@ import org.springframework.data.annotation.Version;
 import org.springframework.data.domain.Persistable;
 import org.springframework.data.relational.core.mapping.Column;
 import org.springframework.data.relational.core.mapping.Table;
+import org.springframework.util.Assert;
 
 /**
  * Workflows are the blueprints that describe the execution of a job.
@@ -61,7 +61,7 @@ public final class Workflow implements Persistable<String>, Serializable {
         JSON, YAML;
 
         public static Format parse(String filename) {
-            Validate.notNull(filename, "Filename '%s' can not be null".formatted(filename));
+            Assert.notNull(filename, "Filename '%s' can not be null".formatted(filename));
 
             String extension = Optional.of(filename)
                 .filter(f -> f.contains("."))
@@ -82,7 +82,7 @@ public final class Workflow implements Persistable<String>, Serializable {
 
     @Column("created_date")
     @CreatedDate
-    private LocalDateTime createdDate;
+    private Instant createdDate;
 
     @Column
     private String definition;
@@ -114,7 +114,7 @@ public final class Workflow implements Persistable<String>, Serializable {
 
     @Column("last_modified_date")
     @LastModifiedDate
-    private LocalDateTime lastModifiedDate;
+    private Instant lastModifiedDate;
 
     @Transient
     private Map<String, Object> metadata = new HashMap<>();
@@ -144,12 +144,11 @@ public final class Workflow implements Persistable<String>, Serializable {
 
     @SuppressWarnings("unchecked")
     public Workflow(
-        String id, String definition, Format format, LocalDateTime lastModifiedDate,
-        Map<String, Object> metadata) {
+        String id, String definition, Format format, Instant lastModifiedDate, Map<String, Object> metadata) {
 
-        Validate.notNull(definition, "'definition' must not be null");
-        Validate.notNull(format, "'format' must not be null");
-        Validate.notNull(metadata, "'metadata' must not be null");
+        Assert.notNull(definition, "'definition' must not be null");
+        Assert.notNull(format, "'format' must not be null");
+        Assert.notNull(metadata, "'metadata' must not be null");
 
         this.definition = definition;
         this.format = format.ordinal();
@@ -165,11 +164,7 @@ public final class Workflow implements Persistable<String>, Serializable {
             } else if (WorkflowConstants.INPUTS.equals(entry.getKey())) {
                 this.inputs = CollectionUtils.map(
                     MapUtils.getList(sourceMap, WorkflowConstants.INPUTS, Map.class, Collections.emptyList()),
-                    map -> new Input(
-                        MapUtils.getRequiredString(map, WorkflowConstants.NAME),
-                        MapUtils.getString(map, WorkflowConstants.LABEL),
-                        MapUtils.getString(map, WorkflowConstants.TYPE, "string"),
-                        MapUtils.getBoolean(map, WorkflowConstants.REQUIRED, false)));
+                    Workflow::getInput);
             } else if (WorkflowConstants.LABEL.equals(entry.getKey())) {
                 this.label = MapUtils.getString(sourceMap, WorkflowConstants.LABEL);
             } else if (WorkflowConstants.OUTPUTS.equals(entry.getKey())) {
@@ -196,9 +191,7 @@ public final class Workflow implements Persistable<String>, Serializable {
     }
 
     @PersistenceCreator
-    public Workflow(String id, String definition, Format format, LocalDateTime lastModifiedDate)
-        throws Exception {
-
+    public Workflow(String id, String definition, Format format, Instant lastModifiedDate) throws Exception {
         this(id, definition, format, lastModifiedDate, Map.of());
     }
 
@@ -237,15 +230,11 @@ public final class Workflow implements Persistable<String>, Serializable {
         return getClass().hashCode();
     }
 
-    public List<WorkflowTask> getAllTasks() {
-        return getAllTasks(tasks);
-    }
-
     public String getCreatedBy() {
         return createdBy;
     }
 
-    public LocalDateTime getCreatedDate() {
+    public Instant getCreatedDate() {
         return createdDate;
     }
 
@@ -280,7 +269,7 @@ public final class Workflow implements Persistable<String>, Serializable {
         return lastModifiedBy;
     }
 
-    public LocalDateTime getLastModifiedDate() {
+    public Instant getLastModifiedDate() {
         return lastModifiedDate;
     }
 
@@ -311,18 +300,30 @@ public final class Workflow implements Persistable<String>, Serializable {
     }
 
     public WorkflowTask getTask(String workflowNodeName) {
-        for (WorkflowTask workflowTask : getAllTasks(tasks)) {
+        for (WorkflowTask workflowTask : WorkflowTaskUtils.getTasks(tasks, null)) {
             if (Objects.equals(workflowTask.getName(), workflowNodeName)) {
                 return workflowTask;
             }
         }
 
-        throw new IllegalArgumentException("Workflow task name=%s does not exist".formatted(workflowNodeName));
+        throw new IllegalArgumentException("Workflow task with name: %s does not exist".formatted(workflowNodeName));
     }
 
     /** Returns the steps that make up the workflow. */
     public List<WorkflowTask> getTasks() {
+        return getTasks(false);
+    }
+
+    public List<WorkflowTask> getTasks(boolean flatten) {
+        if (flatten) {
+            return WorkflowTaskUtils.getTasks(tasks, null);
+        }
+
         return Collections.unmodifiableList(tasks);
+    }
+
+    public List<WorkflowTask> getTasks(String lastWorkflowNodeName) {
+        return WorkflowTaskUtils.getTasks(tasks, lastWorkflowNodeName);
     }
 
     public int getVersion() {
@@ -383,54 +384,25 @@ public final class Workflow implements Persistable<String>, Serializable {
             '}';
     }
 
-    private static List<WorkflowTask> getAllTasks(List<WorkflowTask> workflowTasks) {
-        List<WorkflowTask> allWorkflowTasks = new ArrayList<>();
+    private static Input getInput(Map<String, ?> map) {
+        Map<String, Object> extensions = new HashMap<>();
 
-        for (WorkflowTask workflowTask : workflowTasks) {
-            allWorkflowTasks.add(workflowTask);
+        for (Map.Entry<?, ?> inputEntry : map.entrySet()) {
+            String key = String.valueOf(inputEntry.getKey());
 
-            Map<String, ?> parameters = workflowTask.getParameters();
+            if (!WorkflowConstants.NAME.equals(key) && !WorkflowConstants.LABEL.equals(key)
+                && !WorkflowConstants.TYPE.equals(key) && !WorkflowConstants.REQUIRED.equals(key)) {
 
-            for (Map.Entry<String, ?> entry : parameters.entrySet()) {
-                if (entry.getValue() instanceof WorkflowTask curWorkflowTask) {
-                    allWorkflowTasks.addAll(getAllTasks(List.of(curWorkflowTask)));
-                } else if (entry.getValue() instanceof List<?> curList) {
-                    if (!curList.isEmpty()) {
-                        Object firstItem = curList.getFirst();
-
-                        if (firstItem instanceof WorkflowTask) {
-                            for (Object item : curList) {
-                                allWorkflowTasks.addAll(getAllTasks(List.of((WorkflowTask) item)));
-                            }
-                        }
-
-                        if (firstItem instanceof Map<?, ?> map && map.containsKey(WorkflowConstants.PARAMETERS) &&
-                            map.containsKey(WorkflowConstants.TYPE)) {
-
-                            for (Object item : curList) {
-                                // TODO exclude task dispatchers as we don't need them in 'allWorkflowTasks' list by
-                                // checking if any item of 'parameters' map is again a map or list which contains
-                                // map/s with 'parameters' and 'type' keys.
-                                // If true then drill-down further until extracting WorkflowTasks, if false, the 'item'
-                                // is a WorkflowTask
-
-                                // new WorkflowTask((Map<String, ?>) item) should be added to allWorkflowTasks only
-                                // if it is a real workflow task and not a task dispatcher
-                                allWorkflowTasks.addAll(getAllTasks(List.of(new WorkflowTask((Map<String, ?>) item))));
-                            }
-                        }
-                    }
-                } else if (entry.getValue() instanceof Map<?, ?> curMap) {
-                    for (Map.Entry<?, ?> curMapEntry : curMap.entrySet()) {
-                        if (curMapEntry.getValue() instanceof WorkflowTask curWorkflowTask) {
-                            allWorkflowTasks.addAll(getAllTasks(List.of(curWorkflowTask)));
-                        }
-                    }
-                }
+                extensions.put(key, inputEntry.getValue());
             }
         }
 
-        return allWorkflowTasks;
+        return new Input(
+            MapUtils.getRequiredString(map, WorkflowConstants.NAME),
+            MapUtils.getString(map, WorkflowConstants.LABEL),
+            MapUtils.getString(map, WorkflowConstants.TYPE, "string"),
+            MapUtils.getBoolean(map, WorkflowConstants.REQUIRED, false),
+            extensions);
     }
 
     private static Map<String, ?> readWorkflowMap(String definition, String id, Format format) {
@@ -443,9 +415,29 @@ public final class Workflow implements Persistable<String>, Serializable {
         }
     }
 
-    public record Input(String name, String label, String type, boolean required)
+    public record Input(
+        String name, String label, String type, boolean required, Map<String, Object> extensions)
         implements Serializable {
 
+        public Input {
+            extensions = extensions == null ? Map.of() : new HashMap<>(extensions);
+        }
+
+        public Input(String name, String label, String type, boolean required) {
+            this(name, label, type, required, Map.of());
+        }
+
+        public Map<String, Object> extensions() {
+            return Collections.unmodifiableMap(extensions);
+        }
+
+        public <T> T getExtension(String name, Class<T> elementType, T defaultValue) {
+            return MapUtils.get(extensions, name, elementType, defaultValue);
+        }
+
+        public <T> List<T> getExtensions(String name, Class<T> elementType, List<T> defaultValue) {
+            return MapUtils.getList(extensions, name, elementType, defaultValue);
+        }
     }
 
     public record Output(String name, Object value) implements Serializable {

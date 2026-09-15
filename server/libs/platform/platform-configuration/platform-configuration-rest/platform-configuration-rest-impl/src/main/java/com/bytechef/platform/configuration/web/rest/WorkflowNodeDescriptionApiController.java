@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 
 package com.bytechef.platform.configuration.web.rest;
 
+import com.bytechef.atlas.coordinator.annotation.ConditionalOnCoordinator;
 import com.bytechef.platform.configuration.facade.WorkflowNodeDescriptionFacade;
 import com.bytechef.platform.configuration.web.rest.model.GetWorkflowNodeDescription200ResponseModel;
 import org.springframework.http.ResponseEntity;
@@ -27,6 +28,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @RestController
 @RequestMapping("${openapi.openAPIDefinition.base-path.platform:}/internal")
+@ConditionalOnCoordinator
 public class WorkflowNodeDescriptionApiController implements WorkflowNodeDescriptionApi {
 
     private final WorkflowNodeDescriptionFacade workflowNodeDescriptionFacade;
@@ -36,11 +38,21 @@ public class WorkflowNodeDescriptionApiController implements WorkflowNodeDescrip
     }
 
     @Override
-    public ResponseEntity<GetWorkflowNodeDescription200ResponseModel> getWorkflowNodeDescription(
-        String workflowId, String workflowNodeName) {
+    public ResponseEntity<GetWorkflowNodeDescription200ResponseModel> getClusterElementWorkflowNodeDescription(
+        String workflowId, String workflowNodeName, String clusterElementName, Long environmentId) {
 
         return ResponseEntity.ok(
             new GetWorkflowNodeDescription200ResponseModel().description(
-                workflowNodeDescriptionFacade.getWorkflowNodeDescription(workflowId, workflowNodeName)));
+                workflowNodeDescriptionFacade.getClusterElementWorkflowNodeDescription(
+                    workflowId, workflowNodeName, clusterElementName, environmentId)));
+    }
+
+    @Override
+    public ResponseEntity<GetWorkflowNodeDescription200ResponseModel> getWorkflowNodeDescription(
+        String workflowId, String workflowNodeName, Long environmentId) {
+
+        return ResponseEntity.ok(
+            new GetWorkflowNodeDescription200ResponseModel().description(
+                workflowNodeDescriptionFacade.getWorkflowNodeDescription(workflowId, workflowNodeName, environmentId)));
     }
 }

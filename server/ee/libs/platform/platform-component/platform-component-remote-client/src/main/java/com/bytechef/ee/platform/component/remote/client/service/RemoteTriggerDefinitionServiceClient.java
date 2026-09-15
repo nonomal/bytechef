@@ -1,0 +1,222 @@
+/*
+ * Copyright 2025 ByteChef
+ *
+ * Licensed under the ByteChef Enterprise license (the "Enterprise License");
+ * you may not use this file except in compliance with the Enterprise License.
+ */
+
+package com.bytechef.ee.platform.component.remote.client.service;
+
+import com.bytechef.component.definition.TriggerDefinition.WebhookEnableOutput;
+import com.bytechef.component.definition.TriggerDefinition.WebhookValidateResponse;
+import com.bytechef.component.exception.ProviderException;
+import com.bytechef.ee.platform.component.remote.client.AbstractWorkerClient;
+import com.bytechef.ee.remote.client.DefaultRestClient;
+import com.bytechef.platform.component.ComponentConnection;
+import com.bytechef.platform.component.domain.Option;
+import com.bytechef.platform.component.domain.Property;
+import com.bytechef.platform.component.domain.TriggerDefinition;
+import com.bytechef.platform.component.domain.WebhookTriggerFlags;
+import com.bytechef.platform.component.service.TriggerDefinitionService;
+import com.bytechef.platform.component.trigger.TriggerOutput;
+import com.bytechef.platform.component.trigger.WebhookRequest;
+import com.bytechef.platform.constant.PlatformType;
+import com.bytechef.platform.domain.OutputResponse;
+import java.util.List;
+import java.util.Map;
+import org.springframework.cloud.client.discovery.DiscoveryClient;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.stereotype.Component;
+import tools.jackson.databind.ObjectMapper;
+
+/**
+ * @version ee
+ *
+ * @author Ivica Cardic
+ */
+@Component
+public class RemoteTriggerDefinitionServiceClient extends AbstractWorkerClient implements TriggerDefinitionService {
+
+    private static final String TRIGGER_DEFINITION_SERVICE = "/trigger-definition-service";
+
+    public RemoteTriggerDefinitionServiceClient(
+        DefaultRestClient defaultRestClient, DiscoveryClient discoveryClient, ObjectMapper objectMapper) {
+
+        super(defaultRestClient, discoveryClient, objectMapper);
+    }
+
+    @Override
+    public void executeWebhookDisable(
+        String componentName, int componentVersion, String triggerName, Map<String, ?> inputParameters,
+        String workflowExecutionId, Map<String, ?> outputParameters, ComponentConnection componentConnection) {
+
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public List<Property> executeDynamicProperties(
+        String componentName, int componentVersion, String triggerName, Map<String, ?> inputParameters,
+        String propertyName, List<String> lookupDependsOnPaths, ComponentConnection componentConnection) {
+
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public WebhookEnableOutput executeWebhookEnable(
+        String componentName, int componentVersion, String triggerName, Map<String, ?> inputParameters,
+        String webhookUrl, String workflowExecutionId, ComponentConnection componentConnection, long environmentId) {
+
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public WebhookEnableOutput executeDynamicWebhookRefresh(
+        String componentName, int componentVersion, String triggerName, ComponentConnection componentConnection,
+        Map<String, ?> outputParameters) {
+
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void executeListenerDisable(
+        String componentName, int componentVersion, String triggerName, Map<String, ?> inputParameters,
+        String workflowExecutionId, ComponentConnection componentConnection) {
+
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void executeListenerEnable(
+        String componentName, int componentVersion, String triggerName, Map<String, ?> inputParameters,
+        String workflowExecutionId, ComponentConnection componentConnection) {
+
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public List<Option> executeOptions(
+        String componentName, int componentVersion, String triggerName, String propertyName,
+        Map<String, ?> inputParameters, List<String> lookupDependsOnPaths, String searchText,
+        ComponentConnection componentConnection) {
+
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public OutputResponse executeOutput(
+        String componentName, int componentVersion, String triggerName, Map<String, ?> inputParameters,
+        ComponentConnection componentConnection) {
+
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public WebhookValidateResponse executeWebhookValidate(
+        String componentName, int componentVersion, String triggerName, Map<String, ?> inputParameters,
+        WebhookRequest webhookRequest, ComponentConnection componentConnection) {
+
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public WebhookValidateResponse executeWebhookValidateOnEnable(
+        String componentName, int componentVersion, String triggerName, Map<String, ?> inputParameters,
+        WebhookRequest webhookRequest, ComponentConnection componentConnection) {
+
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public String executeWorkflowNodeDescription(
+        String componentName, int componentVersion, String triggerName,
+        Map<String, ?> inputParameters) {
+
+        return defaultRestClient.post(
+            uriBuilder -> toUri(
+                uriBuilder, componentName, TRIGGER_DEFINITION_SERVICE + "/execute-workflow-node-description"),
+            new WorkflowNodeDescriptionRequest(
+                componentName, componentVersion, triggerName, inputParameters),
+            String.class);
+    }
+
+    @Override
+    public List<String> getPropertyLookupDependsOn(
+        String componentName, int componentVersion, String triggerName, String propertyName) {
+
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public TriggerDefinition getTriggerDefinition(
+        String componentName, int componentVersion, String triggerName) {
+
+        return defaultRestClient.get(
+            uriBuilder -> toUri(
+                uriBuilder, componentName,
+                TRIGGER_DEFINITION_SERVICE + "/get-trigger-definition/{componentName}/{componentVersion}/{triggerName}",
+                componentName, componentVersion, triggerName),
+            TriggerDefinition.class);
+    }
+
+    @Override
+    public List<TriggerDefinition> getTriggerDefinitions(String componentName, int componentVersion) {
+        return defaultRestClient.get(
+            uriBuilder -> toUri(
+                uriBuilder, componentName,
+                TRIGGER_DEFINITION_SERVICE + "/get-trigger-definitions/{componentName}/{componentVersion}",
+                componentName,
+                componentVersion),
+            new ParameterizedTypeReference<>() {});
+    }
+
+    @Override
+    public WebhookTriggerFlags getWebhookTriggerFlags(
+        String componentName, int componentVersion, String triggerName) {
+
+        return defaultRestClient.get(
+            uriBuilder -> toUri(
+                uriBuilder, componentName,
+                TRIGGER_DEFINITION_SERVICE + "/get-webhook-trigger-flags/{componentName}/{componentVersion}" +
+                    "/{triggerName}",
+                componentName, componentVersion, triggerName),
+            WebhookTriggerFlags.class);
+    }
+
+    @Override
+    public boolean isDynamicOutputDefined(String componentName, int componentVersion, String actionName) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public boolean propertyHasOptionsDataSource(
+        String componentName, int componentVersion, String triggerName, String propertyName) {
+
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public boolean triggerDefinesConnection(String componentName, int componentVersion, String triggerName) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public ProviderException executeProcessErrorResponse(
+        String componentName, int componentVersion, int connectionVersion, String componentOperationName,
+        int statusCode, Object body, Map<String, List<String>> headers) {
+
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public TriggerOutput executeTrigger(
+        String componentName, int componentVersion, String triggerName, Long jobPrincipalId, String workflowUuid,
+        Long triggerExecutionId, Map<String, ?> inputParameters, Object triggerState, WebhookRequest webhookRequest,
+        ComponentConnection componentConnection, Long environmentId, PlatformType type, boolean editorEnvironment) {
+
+        throw new UnsupportedOperationException();
+    }
+
+    private record WorkflowNodeDescriptionRequest(
+        String componentName, int componentVersion, String triggerName, Map<String, ?> inputParameters) {
+    }
+}

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,21 +16,17 @@
 
 package com.bytechef.component.box.action;
 
-import static com.bytechef.component.box.constant.BoxConstants.BASE_URL;
-import static com.bytechef.component.box.constant.BoxConstants.CREATE_FOLDER;
-import static com.bytechef.component.box.constant.BoxConstants.FILE_OUTPUT_PROPERTY;
+import static com.bytechef.component.box.constant.BoxConstants.FOLDER_OUTPUT_PROPERTY;
 import static com.bytechef.component.box.constant.BoxConstants.ID;
 import static com.bytechef.component.box.constant.BoxConstants.NAME;
 import static com.bytechef.component.box.constant.BoxConstants.PARENT;
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.outputSchema;
+import static com.bytechef.component.definition.ComponentDsl.string;
 
-import com.bytechef.component.box.util.BoxUtils;
 import com.bytechef.component.definition.ActionContext;
-import com.bytechef.component.definition.ComponentDSL.ModifiableActionDefinition;
+import com.bytechef.component.definition.ComponentDsl.ModifiableActionDefinition;
 import com.bytechef.component.definition.Context.Http;
-import com.bytechef.component.definition.Context.TypeReference;
-import com.bytechef.component.definition.OptionsDataSource.ActionOptionsFunction;
 import com.bytechef.component.definition.Parameters;
 import java.util.Map;
 
@@ -39,41 +35,39 @@ import java.util.Map;
  */
 public class BoxCreateFolderAction {
 
-    public static final ModifiableActionDefinition ACTION_DEFINITION = action(CREATE_FOLDER)
-        .title("Create folder")
+    public static final ModifiableActionDefinition ACTION_DEFINITION = action("createFolder")
+        .title("Create Folder")
         .description("Creates a new empty folder within the specified parent folder.")
+        .help("", "https://docs.bytechef.io/reference/components/box_v1#create-folder")
         .properties(
             string(NAME)
-                .label("Folder name")
+                .label("Folder Name")
                 .description("The name for the new folder.")
                 .minLength(1)
                 .maxLength(255)
                 .required(true),
             string(ID)
-                .label("Parent folder")
+                .label("Parent Folder ID")
                 .description(
-                    "Folder where the new folder will be created; if no folder is selected, the folder will be " +
-                        "created in the root folder.")
-                .options((ActionOptionsFunction<String>) BoxUtils::getRootFolderOptions)
+                    "ID of the folder where the new folder will be created. The root folder is always represented " +
+                        "by the ID 0.")
                 .defaultValue("0")
                 .required(true))
-        .outputSchema(FILE_OUTPUT_PROPERTY)
+        .output(outputSchema(FOLDER_OUTPUT_PROPERTY))
         .perform(BoxCreateFolderAction::perform);
 
     private BoxCreateFolderAction() {
     }
 
-    public static Object perform(
-        Parameters inputParameters, Parameters connectionParameters, ActionContext context) {
-
+    public static Object perform(Parameters inputParameters, Parameters connectionParameters, ActionContext context) {
         return context
-            .http(http -> http.post(BASE_URL + "/folders"))
+            .http(http -> http.post("/folders"))
             .configuration(Http.responseType(Http.ResponseType.JSON))
             .body(
                 Http.Body.of(
                     NAME, inputParameters.getRequiredString(NAME),
                     PARENT, Map.of(ID, inputParameters.getRequiredString(ID))))
             .execute()
-            .getBody(new TypeReference<>() {});
+            .getBody();
     }
 }

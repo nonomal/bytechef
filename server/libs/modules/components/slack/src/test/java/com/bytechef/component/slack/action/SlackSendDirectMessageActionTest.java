@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,11 @@
 package com.bytechef.component.slack.action;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.mockito.Mockito.mock;
 
+import com.bytechef.component.definition.Context;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -26,10 +30,16 @@ import org.junit.jupiter.api.Test;
  */
 class SlackSendDirectMessageActionTest extends AbstractSlackActionTest {
 
+    private final Context mockedContext = mock(Context.class);
+
     @Test
     void testPerform() {
         Object result = SlackSendDirectMessageAction.perform(mockedParameters, mockedParameters, mockedContext);
 
         assertEquals(mockedObject, result);
+        assertEquals(List.of("channel", "text"), stringArgumentCaptor.getAllValues());
+        assertNull(localDateTimeArgumentCaptor.getValue());
+        assertNull(listArgumentCaptor.getValue());
+        assertEquals(mockedContext, contextArgumentCaptor.getValue());
     }
 }

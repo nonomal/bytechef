@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,18 +16,55 @@
 
 package com.bytechef.platform.configuration.facade;
 
-import com.bytechef.platform.configuration.dto.UpdateParameterResultDTO;
+import com.bytechef.platform.configuration.dto.DisplayConditionResultDTO;
+import com.bytechef.platform.configuration.dto.ParameterResultDTO;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * @author Ivica Cardic
  */
 public interface WorkflowNodeParameterFacade {
 
-    Map<String, ?> deleteParameter(String workflowId, String workflowNodeName, String path);
+    ParameterResultDTO deleteClusterElementParameter(
+        String workflowId, String workflowNodeName, String clusterElementTypeName,
+        String clusterElementWorkflowNodeName, String parameterPath, long environmentId);
 
-    Map<String, Boolean> getDisplayConditions(String workflowId, String workflowNodeName);
+    ParameterResultDTO deleteWorkflowNodeParameter(
+        String workflowId, String workflowNodeName, String parameterPath, long environmentId);
 
-    UpdateParameterResultDTO updateParameter(
-        String workflowId, String workflowNodeName, String path, Object value, String type, boolean includeInMetadata);
+    /**
+     * Evaluates an operation's display conditions against a standalone parameter map, with no workflow involved.
+     *
+     * @param parameters the form's current values, which is what the conditions are evaluated against
+     */
+    Map<String, Boolean> getDisplayConditions(
+        String componentName, int componentVersion, String operationName, OperationType operationType,
+        Map<String, ?> parameters);
+
+    enum OperationType {
+        ACTION, CLUSTER_ELEMENT, TRIGGER
+    }
+
+    DisplayConditionResultDTO getClusterElementDisplayConditions(
+        String workflowId, String workflowNodeName, String clusterElementTypeName,
+        String clusterElementWorkflowNodeName, long environmentId);
+
+    Set<String> getClusterElementMissingRequiredProperties(
+        String workflowId, String workflowNodeName, String clusterElementTypeName,
+        String clusterElementWorkflowNodeName);
+
+    DisplayConditionResultDTO
+        getWorkflowNodeDisplayConditions(String workflowId, String workflowNodeName, long environmentId);
+
+    Set<String> getWorkflowNodeMissingRequiredProperties(String workflowId, String workflowNodeName);
+
+    ParameterResultDTO updateClusterElementParameter(
+        String workflowId, String workflowNodeName, String clusterElementTypeName,
+        String clusterElementWorkflowNodeName, String parameterPath, Object value, String type,
+        boolean fromAiInMetadata, boolean includeInMetadata, long environmentId);
+
+    ParameterResultDTO updateWorkflowNodeParameter(
+        String workflowId, String workflowNodeName, String parameterPath, Object value, String type,
+        boolean includeInMetadata, long environmentId);
 }

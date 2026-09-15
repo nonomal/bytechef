@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,12 +16,16 @@
 
 package com.bytechef.security.web.filter;
 
+import com.bytechef.platform.security.web.config.SpaWebFilterContributor;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.RequestDispatcher;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 /**
@@ -29,26 +33,51 @@ import org.springframework.web.filter.OncePerRequestFilter;
  */
 public class SpaWebFilter extends OncePerRequestFilter {
 
+    private final List<String> nonSpaPathPrefixes = new ArrayList<>();
+
+    public SpaWebFilter(List<SpaWebFilterContributor> spaWebFilterContributors) {
+        for (SpaWebFilterContributor spaWebFilterContributor : spaWebFilterContributors) {
+            nonSpaPathPrefixes.addAll(spaWebFilterContributor.getNonSpaPathPrefixes());
+        }
+
+        nonSpaPathPrefixes.addAll(
+            Arrays.asList("/actuator", "/api", "/graphql", "/graphiql", "/icons", "/v3/api-docs"));
+    }
+
     /**
-     * Forwards any unmapped paths (except those containing a period) to the client {@code index.html}.
+     * Forwards any HTTP request with an unmapped path (i.e., not handled by other controllers or static resources),
+     * except those containing a period (indicating a file extension), to the client {@code index.html}.
+     *
+     * <p>
+     * This is commonly used in Single Page Application (SPA) setups where client-side routing handles navigation. If
+     * the requested path is:
+     * <ul>
+     * <li>Not matching a predefined server route or static resource</li>
+     * <li>Does NOT contain a period (to exclude direct file requests, such as images or scripts)</li>
+     * <li>Matches the pattern {@code /(.*)} (i.e., is a valid root-relative path)</li>
+     * </ul>
+     * then the method forwards the request internally to {@code /index.html}. This allows the front-end application to
+     * handle the routing on the client side.
+     * <p>
+     * All other requests, including paths with file extensions (e.g., {@code index.html}, {@code app.js}), are
+     * processed normally.
+     *
+     * @param request     the current HTTP request
+     * @param response    the current HTTP response
+     * @param filterChain the filter chain to pass control to the next filter
+     * @throws ServletException if an exception occurs during request processing
+     * @throws IOException      if an input or output exception occurs
      */
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
         throws ServletException, IOException {
-        // Request URI includes the contextPath if any, removed it.
+
         String requestURI = request.getRequestURI();
         String contextPath = request.getContextPath();
 
         String path = requestURI.substring(contextPath.length());
 
-        if (!path.startsWith("/api") &&
-            !path.startsWith("/actuator") &&
-            !path.startsWith("/auditevents") &&
-            !path.startsWith("/v3/api-docs") &&
-            !path.startsWith("/webhooks") &&
-            !path.contains(".") &&
-            path.matches("/(.*)")) {
-
+        if (isNonSpaPath(path) && !path.contains(".") && path.matches("/(.*)")) {
             RequestDispatcher requestDispatcher = request.getRequestDispatcher("/index.html");
 
             requestDispatcher.forward(request, response);
@@ -57,5 +86,10 @@ public class SpaWebFilter extends OncePerRequestFilter {
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    private boolean isNonSpaPath(String path) {
+        return nonSpaPathPrefixes.stream()
+            .noneMatch(path::startsWith);
     }
 }

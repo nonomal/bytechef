@@ -1,131 +1,203 @@
-import {Alert, AlertDescription, AlertTitle} from '@/components/ui/alert';
-import {Button} from '@/components/ui/button';
+import Button from '@/components/Button/Button';
+import {Input} from '@/components/Input/Input';
+import LoadingIcon from '@/components/LoadingIcon';
 import {Card, CardContent, CardDescription, CardHeader, CardTitle} from '@/components/ui/card';
 import {Form, FormControl, FormField, FormItem, FormLabel, FormMessage} from '@/components/ui/form';
-import {Input} from '@/components/ui/input';
 import {useRegisterStore} from '@/pages/account/public/stores/useRegisterStore';
+import {useAnalytics} from '@/shared/hooks/useAnalytics';
 import PublicLayoutContainer from '@/shared/layout/PublicLayoutContainer';
+import {useApplicationInfoStore} from '@/shared/stores/useApplicationInfoStore';
+import {useFeatureFlagsStore} from '@/shared/stores/useFeatureFlagsStore';
 import {zodResolver} from '@hookform/resolvers/zod';
-import React, {useEffect} from 'react';
+import {CheckIcon, DotIcon, EyeIcon, EyeOffIcon, XIcon} from 'lucide-react';
+import {useCallback, useEffect, useState} from 'react';
 import {useForm} from 'react-hook-form';
 import {Link, useNavigate} from 'react-router-dom';
+import {twMerge} from 'tailwind-merge';
 import {z} from 'zod';
+import {useShallow} from 'zustand/react/shallow';
 
-const formSchema = z.object({
-    // firstName: z.string().min(1, 'First name is required'),
-    // lastName: z.string().min(1, 'Second name is required'),
-    email: z.string().email().min(5, 'Email is required').max(254),
-    password: z.string().min(4, 'Password is required').max(50),
-});
+import githubLogo from '../images/github-logo.svg';
+import googleLogo from '../images/google-logo.svg';
 
-export const Register = () => {
-    const {register, registerErrorMessage, registerSuccess} = useRegisterStore();
+const passwordLengthMessage = 'At least 8 characters';
+const passwordContainsNumberMessage = 'At least 1 number';
+const passwordContainsUppercaseMessage = 'At least 1 uppercase';
 
-    const form = useForm<z.infer<typeof formSchema>>({
-        defaultValues: {
-            // firstName: '',
-            // lastName: '',
-            email: '',
-            password: '',
-        },
-        resolver: zodResolver(formSchema),
+const formSchema = z
+    .object({
+        email: z.string().min(5, {message: 'Email is required'}).max(254),
+        password: z.string(),
+    })
+    .superRefine(({password}, checkPasswordComplexity) => {
+        const containsUppercase = (character: string) => /[A-Z]/.test(character);
+        const containsNumber = (char: string) => /\d/.test(char);
+
+        const passwordValidationCriteria = {
+            passwordLength: {message: passwordLengthMessage, validationPass: password.length >= 8},
+            totalNumbers: {message: passwordContainsNumberMessage, validationPass: [...password].some(containsNumber)},
+            upperCase: {
+                message: passwordContainsUppercaseMessage,
+                validationPass: [...password].some(containsUppercase),
+            },
+        };
+
+        if (
+            !passwordValidationCriteria.passwordLength.validationPass ||
+            !passwordValidationCriteria.upperCase.validationPass ||
+            !passwordValidationCriteria.totalNumbers.validationPass
+        ) {
+            checkPasswordComplexity.addIssue({
+                code: 'custom',
+                message: JSON.stringify(passwordValidationCriteria),
+                path: ['password'],
+            });
+        }
     });
+
+const Register = () => {
+    const [emailIsValid, setEmailIsValid] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
+
+    const {register, registerErrorMessage, registerSuccess, reset} = useRegisterStore(
+        useShallow((state) => ({
+            register: state.register,
+            registerErrorMessage: state.registerErrorMessage,
+            registerSuccess: state.registerSuccess,
+            reset: state.reset,
+        }))
+    );
+
+    const activationRequired = useApplicationInfoStore((state) => state.signUp.activationRequired);
+
+    const ff_1874 = useFeatureFlagsStore()('ff-1874');
+
+    const {captureUserSignedUp} = useAnalytics();
 
     const navigate = useNavigate();
 
-    function handleSubmit({email, password}: z.infer<typeof formSchema>) {
-        register(email, password);
-    }
+    const form = useForm<z.infer<typeof formSchema>>({
+        defaultValues: {
+            email: '',
+            password: '',
+        },
+
+        mode: 'onChange',
+
+        resolver: zodResolver(formSchema),
+    });
+
+    const {
+        formState: {errors, isSubmitting},
+        getValues,
+    } = form;
+
+    const handleValidateEmailInput = () => {
+        const email = form.watch('email');
+
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+        if (emailRegex.test(email)) {
+            setEmailIsValid(true);
+        }
+    };
+
+    const handleSubmit = useCallback(
+        async ({email, password}: z.infer<typeof formSchema>) => {
+            await register(email, password);
+
+            reset();
+        },
+        [register, reset]
+    );
+
+    useEffect(() => {
+        if (registerErrorMessage) {
+            navigate('/account-error', {state: {error: registerErrorMessage, fromInternalFlow: true}});
+        }
+
+        reset();
+    }, [registerErrorMessage, navigate, reset]);
 
     useEffect(() => {
         if (registerSuccess) {
-            navigate('/verify-email');
-        }
+            captureUserSignedUp(getValues().email);
 
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [registerSuccess]);
+            if (activationRequired) {
+                navigate('/verify-email', {
+                    state: {email: form.getValues().email, fromInternalFlow: true, password: form.getValues().password},
+                });
+            } else if (!activationRequired) {
+                navigate('/activate', {state: {fromInternalFlow: true}});
+            }
+
+            reset();
+        }
+    }, [registerSuccess, activationRequired, captureUserSignedUp, form, getValues, navigate, reset]);
 
     return (
         <PublicLayoutContainer>
-            <Card className="mx-auto w-full max-w-sm shadow-none">
-                <CardHeader>
-                    <CardTitle className="text-xl">Get Started</CardTitle>
+            <Card className="mx-auto max-w-sm rounded-xl p-6 text-start shadow-none">
+                <CardHeader className="p-0 pb-10">
+                    <CardTitle className="self-center text-xl font-semibold text-content-neutral-primary">
+                        Create your account
+                    </CardTitle>
 
-                    <CardDescription>Enter your information to create an account.</CardDescription>
+                    <CardDescription className="self-center text-content-neutral-secondary">
+                        Automate the work you do every day.
+                    </CardDescription>
                 </CardHeader>
 
-                <CardContent>
-                    {registerErrorMessage && (
-                        <Alert className="mb-4" variant="destructive">
-                            <AlertTitle>Error</AlertTitle>
+                <CardContent className="flex flex-col gap-6 p-0">
+                    {ff_1874 && (
+                        <>
+                            <div className="flex flex-col gap-4">
+                                <Button
+                                    icon={<img alt="Google logo" src={googleLogo} />}
+                                    label="Continue with Google"
+                                    onClick={() => {
+                                        window.location.href = '/oauth2/authorization/google';
+                                    }}
+                                    size="lg"
+                                    variant="outline"
+                                />
 
-                            <AlertDescription>{registerErrorMessage}</AlertDescription>
-                        </Alert>
+                                <Button
+                                    icon={<img alt="Github logo" src={githubLogo} />}
+                                    label="Continue with Github"
+                                    onClick={() => {
+                                        window.location.href = '/oauth2/authorization/github';
+                                    }}
+                                    size="lg"
+                                    variant="outline"
+                                />
+                            </div>
+
+                            <div className="flex items-center">
+                                <hr className="w-1/2 border-content-neutral-tertiary" />
+
+                                <p className="px-2 text-sm text-content-neutral-tertiary">or</p>
+
+                                <hr className="w-1/2 border-content-neutral-tertiary" />
+                            </div>
+                        </>
                     )}
 
                     <Form {...form}>
-                        <form className="grid gap-4" onSubmit={form.handleSubmit(handleSubmit)}>
-                            {/*<FormField*/}
-
-                            {/*    control={form.control}*/}
-
-                            {/*    name="firstName"*/}
-
-                            {/*    render={({field}) => (*/}
-
-                            {/*        <FormItem>*/}
-
-                            {/*            <FormLabel>First name</FormLabel>*/}
-
-                            {/*            <FormControl>*/}
-
-                            {/*                <Input placeholder="Max" {...field} />*/}
-
-                            {/*            </FormControl>*/}
-
-                            {/*            <FormMessage/>*/}
-
-                            {/*        </FormItem>*/}
-
-                            {/*    )}*/}
-
-                            {/*/>*/}
-
-                            {/*<FormField*/}
-
-                            {/*    control={form.control}*/}
-
-                            {/*    name="lastName"*/}
-
-                            {/*    render={({field}) => (*/}
-
-                            {/*        <FormItem>*/}
-
-                            {/*            <FormLabel>Last name</FormLabel>*/}
-
-                            {/*            <FormControl>*/}
-
-                            {/*                <Input placeholder="Robinson" {...field} />*/}
-
-                            {/*            </FormControl>*/}
-
-                            {/*            <FormMessage/>*/}
-
-                            {/*        </FormItem>*/}
-
-                            {/*    )}*/}
-
-                            {/*/>*/}
-
+                        <form className="flex flex-col gap-4" onSubmit={form.handleSubmit(handleSubmit)}>
                             <FormField
                                 control={form.control}
                                 name="email"
                                 render={({field}) => (
                                     <FormItem>
-                                        <FormLabel>Email</FormLabel>
+                                        <FormLabel className="text-content-neutral-primary">Email</FormLabel>
 
                                         <FormControl>
-                                            <Input placeholder="m@example.com" type="email" {...field} />
+                                            <Input
+                                                className="py-5 hover:border-stroke-brand-primary"
+                                                type="email"
+                                                {...field}
+                                            />
                                         </FormControl>
 
                                         <FormMessage />
@@ -133,46 +205,150 @@ export const Register = () => {
                                 )}
                             />
 
-                            <FormField
-                                control={form.control}
-                                name="password"
-                                render={({field}) => (
-                                    <FormItem>
-                                        <FormLabel>Password</FormLabel>
+                            {emailIsValid && (
+                                <>
+                                    <FormField
+                                        control={form.control}
+                                        name="password"
+                                        render={({field}) => (
+                                            <FormItem>
+                                                <FormLabel className="text-content-neutral-primary">Password</FormLabel>
 
-                                        <FormControl>
-                                            <Input type="password" {...field} />
-                                        </FormControl>
+                                                <FormControl>
+                                                    <div className="relative">
+                                                        <Input
+                                                            aria-label="Password"
+                                                            className="py-5 hover:border-stroke-brand-primary"
+                                                            type={showPassword ? 'text' : 'password'}
+                                                            {...field}
+                                                        />
 
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
+                                                        {getValues('password') !== '' && (
+                                                            <Button
+                                                                aria-label={
+                                                                    showPassword ? 'Hide Password' : 'Show Password'
+                                                                }
+                                                                className="absolute top-1 right-2 z-10"
+                                                                icon={showPassword ? <EyeOffIcon /> : <EyeIcon />}
+                                                                onClick={() => setShowPassword((show) => !show)}
+                                                                size="iconSm"
+                                                                type="button"
+                                                                variant="ghost"
+                                                            />
+                                                        )}
+                                                    </div>
+                                                </FormControl>
 
-                            <Button className="w-full" type="submit">
-                                Create an account
-                            </Button>
+                                                <ul className="space-y-1">
+                                                    {errors.password?.message &&
+                                                        getValues('password') !== '' &&
+                                                        Object.entries(JSON.parse(errors.password.message)).map(
+                                                            ([key, value]) => {
+                                                                const {message, validationPass} = value as {
+                                                                    message: string;
+                                                                    validationPass: boolean;
+                                                                };
 
-                            {/*<div className="py-1 text-center">OR</div>*/}
+                                                                return (
+                                                                    <li
+                                                                        className={twMerge(
+                                                                            'flex items-center gap-1 text-sm text-destructive',
+                                                                            validationPass && 'text-success'
+                                                                        )}
+                                                                        key={key}
+                                                                    >
+                                                                        {validationPass ? (
+                                                                            <CheckIcon size={15} />
+                                                                        ) : (
+                                                                            <XIcon size={15} />
+                                                                        )}
 
-                            {/*<Button className="w-full" variant="outline">*/}
+                                                                        <p>{message}</p>
+                                                                    </li>
+                                                                );
+                                                            }
+                                                        )}
 
-                            {/*    Sign up with Google*/}
+                                                    {getValues('password') === '' && (
+                                                        <>
+                                                            <li className="flex items-center gap-1 text-sm text-content-neutral-secondary">
+                                                                <DotIcon size={15} />
 
-                            {/*</Button>*/}
+                                                                <p>{passwordLengthMessage}</p>
+                                                            </li>
 
-                            {/*<Button className="w-full" variant="outline">*/}
+                                                            <li className="flex items-center gap-1 text-sm text-content-neutral-secondary">
+                                                                <DotIcon size={15} />
 
-                            {/*    Sign up with GitHub*/}
+                                                                <p>{passwordContainsNumberMessage}</p>
+                                                            </li>
 
-                            {/*</Button>*/}
+                                                            <li className="flex items-center gap-1 text-sm text-content-neutral-secondary">
+                                                                <DotIcon size={15} />
+
+                                                                <p>{passwordContainsUppercaseMessage}</p>
+                                                            </li>
+                                                        </>
+                                                    )}
+
+                                                    {!errors.password && getValues('password') !== '' && (
+                                                        <>
+                                                            <li className="flex items-center gap-1 text-sm text-success">
+                                                                <CheckIcon size={15} />
+
+                                                                <p>{passwordLengthMessage}</p>
+                                                            </li>
+
+                                                            <li className="flex items-center gap-1 text-sm text-success">
+                                                                <CheckIcon size={15} />
+
+                                                                <p>{passwordContainsNumberMessage}</p>
+                                                            </li>
+
+                                                            <li className="flex items-center gap-1 text-sm text-success">
+                                                                <CheckIcon size={15} />
+
+                                                                <p>{passwordContainsUppercaseMessage}</p>
+                                                            </li>
+                                                        </>
+                                                    )}
+                                                </ul>
+                                            </FormItem>
+                                        )}
+                                    />
+
+                                    <Button
+                                        className="w-full"
+                                        disabled={isSubmitting}
+                                        icon={
+                                            isSubmitting ? (
+                                                <div aria-label="loading icon">
+                                                    <LoadingIcon />
+                                                </div>
+                                            ) : undefined
+                                        }
+                                        label="Continue with password"
+                                        size="lg"
+                                        type="submit"
+                                    />
+                                </>
+                            )}
+
+                            {!emailIsValid && (
+                                <Button
+                                    className="w-full"
+                                    label="Continue"
+                                    onClick={handleValidateEmailInput}
+                                    size="lg"
+                                />
+                            )}
                         </form>
 
-                        <div className="mt-4 text-center text-sm">
-                            <span className="mr-1">Already have an account?</span>
+                        <div className="flex items-center justify-center gap-1 text-sm">
+                            <span className="text-content-neutral-secondary">Already have an account?</span>
 
-                            <Link className="underline" to="/login">
-                                Sign in
+                            <Link to="/login">
+                                <Button className="px-1" label="Log in" variant="link" />
                             </Link>
                         </div>
                     </Form>

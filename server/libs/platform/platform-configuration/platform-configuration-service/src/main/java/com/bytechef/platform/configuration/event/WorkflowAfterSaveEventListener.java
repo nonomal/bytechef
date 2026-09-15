@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,6 +25,9 @@ import org.springframework.data.relational.core.mapping.event.AbstractRelational
 import org.springframework.data.relational.core.mapping.event.AfterSaveEvent;
 import org.springframework.stereotype.Component;
 
+/**
+ * @author Ivica Cardic
+ */
 @Component
 public class WorkflowAfterSaveEventListener extends AbstractRelationalEventListener<Workflow> {
 

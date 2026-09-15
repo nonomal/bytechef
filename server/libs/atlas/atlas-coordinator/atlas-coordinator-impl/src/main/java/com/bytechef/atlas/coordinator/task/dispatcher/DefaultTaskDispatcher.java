@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * Modifications copyright (C) 2023 ByteChef Inc.
+ * Modifications copyright (C) 2025 ByteChef
  */
 
 package com.bytechef.atlas.coordinator.task.dispatcher;
@@ -34,7 +34,7 @@ import org.springframework.context.ApplicationEventPublisher;
  */
 public class DefaultTaskDispatcher implements TaskDispatcher<TaskExecution>, TaskDispatcherResolver {
 
-    private static final Logger logger = LoggerFactory.getLogger(DefaultTaskDispatcher.class);
+    private static final Logger log = LoggerFactory.getLogger(DefaultTaskDispatcher.class);
 
     private final ApplicationEventPublisher eventPublisher;
     private final List<TaskDispatcherPreSendProcessor> taskDispatcherPreSendProcessors;
@@ -54,10 +54,16 @@ public class DefaultTaskDispatcher implements TaskDispatcher<TaskExecution>, Tas
     public void dispatch(TaskExecution taskExecution) {
         taskExecution = preProcess(taskExecution);
 
+        if (taskExecution.getStatus() == TaskExecution.Status.CANCELLED) {
+            log.debug("Task id={} is not eligible for dispatching", taskExecution.getId());
+
+            return;
+        }
+
         TaskWorkerMessageRoute messageRoute = calculateQueueName(taskExecution);
 
-        if (logger.isDebugEnabled()) {
-            logger.debug(
+        if (log.isDebugEnabled()) {
+            log.debug(
                 "Task id={}, type='{}' sent to route='{}'", taskExecution.getId(), taskExecution.getType(),
                 messageRoute);
         }
@@ -84,7 +90,13 @@ public class DefaultTaskDispatcher implements TaskDispatcher<TaskExecution>, Tas
 
     private TaskExecution preProcess(TaskExecution taskExecution) {
         for (TaskDispatcherPreSendProcessor taskDispatcherPreSendProcessor : taskDispatcherPreSendProcessors) {
-            taskExecution = taskDispatcherPreSendProcessor.process(taskExecution);
+            if (taskDispatcherPreSendProcessor.canProcess(taskExecution)) {
+                taskExecution = taskDispatcherPreSendProcessor.process(taskExecution);
+
+                if (taskExecution.getStatus() == TaskExecution.Status.CANCELLED) {
+                    break;
+                }
+            }
         }
 
         return taskExecution;

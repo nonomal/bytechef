@@ -2,9 +2,16 @@ package com.bytechef.platform.configuration.web.rest.model;
 
 import java.net.URI;
 import java.util.Objects;
+import com.bytechef.platform.configuration.web.rest.model.ComponentCategoryModel;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import org.springframework.lang.Nullable;
 import org.openapitools.jackson.nullable.JsonNullable;
 import java.time.OffsetDateTime;
 import jakarta.validation.Valid;
@@ -21,20 +28,30 @@ import jakarta.annotation.Generated;
 
 @Schema(name = "ComponentDefinitionBasic", description = "A component contains a set of reusable code(actions) that accomplish specific tasks, triggers and connections if there is a need for a connection to an outside service.")
 @JsonTypeName("ComponentDefinitionBasic")
-@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2024-06-30T07:20:54.243996+02:00[Europe/Zagreb]", comments = "Generator version: 7.5.0")
+@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2026-07-03T17:58:15.504637+02:00[Europe/Zagreb]", comments = "Generator version: 7.22.0")
 public class ComponentDefinitionBasicModel {
 
-  private Integer actionsCount;
+  private @Nullable Integer actionsCount;
 
-  private String description;
+  @Valid
+  private Map<String, Integer> clusterElementsCount = new HashMap<>();
 
-  private String icon;
+  private @Nullable Boolean clusterRoot;
+
+  @Valid
+  private List<@Valid ComponentCategoryModel> componentCategories = new ArrayList<>();
+
+  private @Nullable String description;
+
+  private @Nullable String icon;
+
+  private @Nullable Integer inputsCount;
 
   private String name;
 
-  private String title;
+  private @Nullable String title;
 
-  private Integer triggersCount;
+  private @Nullable Integer triggersCount;
 
   private Integer version;
 
@@ -50,27 +67,107 @@ public class ComponentDefinitionBasicModel {
     this.version = version;
   }
 
-  public ComponentDefinitionBasicModel actionsCount(Integer actionsCount) {
+  public ComponentDefinitionBasicModel actionsCount(@Nullable Integer actionsCount) {
     this.actionsCount = actionsCount;
     return this;
   }
 
   /**
-   * Get actionsCount
+   * The number of actions a component has
    * @return actionsCount
-  */
+   */
   
-  @Schema(name = "actionsCount", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+  @Schema(name = "actionsCount", description = "The number of actions a component has", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("actionsCount")
-  public Integer getActionsCount() {
+  public @Nullable Integer getActionsCount() {
     return actionsCount;
   }
 
-  public void setActionsCount(Integer actionsCount) {
+  @JsonProperty("actionsCount")
+  public void setActionsCount(@Nullable Integer actionsCount) {
     this.actionsCount = actionsCount;
   }
 
-  public ComponentDefinitionBasicModel description(String description) {
+  public ComponentDefinitionBasicModel clusterElementsCount(Map<String, Integer> clusterElementsCount) {
+    this.clusterElementsCount = clusterElementsCount;
+    return this;
+  }
+
+  public ComponentDefinitionBasicModel putClusterElementsCountItem(String key, Integer clusterElementsCountItem) {
+    if (this.clusterElementsCount == null) {
+      this.clusterElementsCount = new HashMap<>();
+    }
+    this.clusterElementsCount.put(key, clusterElementsCountItem);
+    return this;
+  }
+
+  /**
+   * The number of cluster elements a component has
+   * @return clusterElementsCount
+   */
+  
+  @Schema(name = "clusterElementsCount", description = "The number of cluster elements a component has", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+  @JsonProperty("clusterElementsCount")
+  public Map<String, Integer> getClusterElementsCount() {
+    return clusterElementsCount;
+  }
+
+  @JsonProperty("clusterElementsCount")
+  public void setClusterElementsCount(Map<String, Integer> clusterElementsCount) {
+    this.clusterElementsCount = clusterElementsCount;
+  }
+
+  public ComponentDefinitionBasicModel clusterRoot(@Nullable Boolean clusterRoot) {
+    this.clusterRoot = clusterRoot;
+    return this;
+  }
+
+  /**
+   * Is the component cluster root.
+   * @return clusterRoot
+   */
+  
+  @Schema(name = "clusterRoot", description = "Is the component cluster root.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+  @JsonProperty("clusterRoot")
+  public @Nullable Boolean getClusterRoot() {
+    return clusterRoot;
+  }
+
+  @JsonProperty("clusterRoot")
+  public void setClusterRoot(@Nullable Boolean clusterRoot) {
+    this.clusterRoot = clusterRoot;
+  }
+
+  public ComponentDefinitionBasicModel componentCategories(List<@Valid ComponentCategoryModel> componentCategories) {
+    this.componentCategories = componentCategories;
+    return this;
+  }
+
+  public ComponentDefinitionBasicModel addComponentCategoriesItem(ComponentCategoryModel componentCategoriesItem) {
+    if (this.componentCategories == null) {
+      this.componentCategories = new ArrayList<>();
+    }
+    this.componentCategories.add(componentCategoriesItem);
+    return this;
+  }
+
+  /**
+   * The list of categories the component belongs to.
+   * @return componentCategories
+   */
+  @Valid 
+  @Schema(name = "componentCategories", description = "The list of categories the component belongs to.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+  @JsonProperty("componentCategories")
+  public List<@Valid ComponentCategoryModel> getComponentCategories() {
+    return componentCategories;
+  }
+
+  @JsonProperty("componentCategories")
+  public void setComponentCategories(List<@Valid ComponentCategoryModel> componentCategories) {
+    this.componentCategories = componentCategories;
+  }
+
+  public ComponentDefinitionBasicModel description(@Nullable String description) {
     this.description = description;
     return this;
   }
@@ -78,19 +175,20 @@ public class ComponentDefinitionBasicModel {
   /**
    * The description.
    * @return description
-  */
+   */
   
   @Schema(name = "description", description = "The description.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("description")
-  public String getDescription() {
+  public @Nullable String getDescription() {
     return description;
   }
 
-  public void setDescription(String description) {
+  @JsonProperty("description")
+  public void setDescription(@Nullable String description) {
     this.description = description;
   }
 
-  public ComponentDefinitionBasicModel icon(String icon) {
+  public ComponentDefinitionBasicModel icon(@Nullable String icon) {
     this.icon = icon;
     return this;
   }
@@ -98,16 +196,38 @@ public class ComponentDefinitionBasicModel {
   /**
    * The icon.
    * @return icon
-  */
+   */
   
   @Schema(name = "icon", description = "The icon.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("icon")
-  public String getIcon() {
+  public @Nullable String getIcon() {
     return icon;
   }
 
-  public void setIcon(String icon) {
+  @JsonProperty("icon")
+  public void setIcon(@Nullable String icon) {
     this.icon = icon;
+  }
+
+  public ComponentDefinitionBasicModel inputsCount(@Nullable Integer inputsCount) {
+    this.inputsCount = inputsCount;
+    return this;
+  }
+
+  /**
+   * The number of selectable workflow inputs a component declares
+   * @return inputsCount
+   */
+  
+  @Schema(name = "inputsCount", description = "The number of selectable workflow inputs a component declares", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+  @JsonProperty("inputsCount")
+  public @Nullable Integer getInputsCount() {
+    return inputsCount;
+  }
+
+  @JsonProperty("inputsCount")
+  public void setInputsCount(@Nullable Integer inputsCount) {
+    this.inputsCount = inputsCount;
   }
 
   public ComponentDefinitionBasicModel name(String name) {
@@ -118,7 +238,7 @@ public class ComponentDefinitionBasicModel {
   /**
    * The name of a component.
    * @return name
-  */
+   */
   @NotNull 
   @Schema(name = "name", description = "The name of a component.", requiredMode = Schema.RequiredMode.REQUIRED)
   @JsonProperty("name")
@@ -126,11 +246,12 @@ public class ComponentDefinitionBasicModel {
     return name;
   }
 
+  @JsonProperty("name")
   public void setName(String name) {
     this.name = name;
   }
 
-  public ComponentDefinitionBasicModel title(String title) {
+  public ComponentDefinitionBasicModel title(@Nullable String title) {
     this.title = title;
     return this;
   }
@@ -138,35 +259,37 @@ public class ComponentDefinitionBasicModel {
   /**
    * The title
    * @return title
-  */
+   */
   
   @Schema(name = "title", description = "The title", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("title")
-  public String getTitle() {
+  public @Nullable String getTitle() {
     return title;
   }
 
-  public void setTitle(String title) {
+  @JsonProperty("title")
+  public void setTitle(@Nullable String title) {
     this.title = title;
   }
 
-  public ComponentDefinitionBasicModel triggersCount(Integer triggersCount) {
+  public ComponentDefinitionBasicModel triggersCount(@Nullable Integer triggersCount) {
     this.triggersCount = triggersCount;
     return this;
   }
 
   /**
-   * Get triggersCount
+   * The number of triggers a component has
    * @return triggersCount
-  */
+   */
   
-  @Schema(name = "triggersCount", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+  @Schema(name = "triggersCount", description = "The number of triggers a component has", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("triggersCount")
-  public Integer getTriggersCount() {
+  public @Nullable Integer getTriggersCount() {
     return triggersCount;
   }
 
-  public void setTriggersCount(Integer triggersCount) {
+  @JsonProperty("triggersCount")
+  public void setTriggersCount(@Nullable Integer triggersCount) {
     this.triggersCount = triggersCount;
   }
 
@@ -178,7 +301,7 @@ public class ComponentDefinitionBasicModel {
   /**
    * The version of a component.
    * @return version
-  */
+   */
   @NotNull 
   @Schema(name = "version", description = "The version of a component.", requiredMode = Schema.RequiredMode.REQUIRED)
   @JsonProperty("version")
@@ -186,6 +309,7 @@ public class ComponentDefinitionBasicModel {
     return version;
   }
 
+  @JsonProperty("version")
   public void setVersion(Integer version) {
     this.version = version;
   }
@@ -200,8 +324,12 @@ public class ComponentDefinitionBasicModel {
     }
     ComponentDefinitionBasicModel componentDefinitionBasic = (ComponentDefinitionBasicModel) o;
     return Objects.equals(this.actionsCount, componentDefinitionBasic.actionsCount) &&
+        Objects.equals(this.clusterElementsCount, componentDefinitionBasic.clusterElementsCount) &&
+        Objects.equals(this.clusterRoot, componentDefinitionBasic.clusterRoot) &&
+        Objects.equals(this.componentCategories, componentDefinitionBasic.componentCategories) &&
         Objects.equals(this.description, componentDefinitionBasic.description) &&
         Objects.equals(this.icon, componentDefinitionBasic.icon) &&
+        Objects.equals(this.inputsCount, componentDefinitionBasic.inputsCount) &&
         Objects.equals(this.name, componentDefinitionBasic.name) &&
         Objects.equals(this.title, componentDefinitionBasic.title) &&
         Objects.equals(this.triggersCount, componentDefinitionBasic.triggersCount) &&
@@ -210,7 +338,7 @@ public class ComponentDefinitionBasicModel {
 
   @Override
   public int hashCode() {
-    return Objects.hash(actionsCount, description, icon, name, title, triggersCount, version);
+    return Objects.hash(actionsCount, clusterElementsCount, clusterRoot, componentCategories, description, icon, inputsCount, name, title, triggersCount, version);
   }
 
   @Override
@@ -218,8 +346,12 @@ public class ComponentDefinitionBasicModel {
     StringBuilder sb = new StringBuilder();
     sb.append("class ComponentDefinitionBasicModel {\n");
     sb.append("    actionsCount: ").append(toIndentedString(actionsCount)).append("\n");
+    sb.append("    clusterElementsCount: ").append(toIndentedString(clusterElementsCount)).append("\n");
+    sb.append("    clusterRoot: ").append(toIndentedString(clusterRoot)).append("\n");
+    sb.append("    componentCategories: ").append(toIndentedString(componentCategories)).append("\n");
     sb.append("    description: ").append(toIndentedString(description)).append("\n");
     sb.append("    icon: ").append(toIndentedString(icon)).append("\n");
+    sb.append("    inputsCount: ").append(toIndentedString(inputsCount)).append("\n");
     sb.append("    name: ").append(toIndentedString(name)).append("\n");
     sb.append("    title: ").append(toIndentedString(title)).append("\n");
     sb.append("    triggersCount: ").append(toIndentedString(triggersCount)).append("\n");
@@ -232,11 +364,8 @@ public class ComponentDefinitionBasicModel {
    * Convert the given object to string with each line indented by 4 spaces
    * (except the first line).
    */
-  private String toIndentedString(Object o) {
-    if (o == null) {
-      return "null";
-    }
-    return o.toString().replace("\n", "\n    ");
+  private String toIndentedString(@Nullable Object o) {
+    return o == null ? "null" : o.toString().replace("\n", "\n    ");
   }
 }
 

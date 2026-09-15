@@ -5,6 +5,7 @@ import java.util.Objects;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import org.springframework.lang.Nullable;
 import org.openapitools.jackson.nullable.JsonNullable;
 import java.time.OffsetDateTime;
 import jakarta.validation.Valid;
@@ -21,14 +22,14 @@ import jakarta.annotation.Generated;
 
 @Schema(name = "WorkflowTestExecution", description = "Contains information about test execution of a workflow.")
 @JsonTypeName("WorkflowTestExecution")
-@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2024-06-30T07:20:55.455981+02:00[Europe/Zagreb]", comments = "Generator version: 7.5.0")
+@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2026-07-03T17:58:15.495981+02:00[Europe/Zagreb]", comments = "Generator version: 7.22.0")
 public class WorkflowTestExecutionModel {
 
-  private com.bytechef.platform.workflow.execution.web.rest.model.JobModel job;
+  private @Nullable com.bytechef.platform.workflow.execution.web.rest.model.JobModel job;
 
-  private com.bytechef.platform.workflow.execution.web.rest.model.TriggerExecutionModel triggerExecution;
+  private @Nullable com.bytechef.platform.workflow.execution.web.rest.model.TriggerExecutionModel triggerExecution;
 
-  public WorkflowTestExecutionModel job(com.bytechef.platform.workflow.execution.web.rest.model.JobModel job) {
+  public WorkflowTestExecutionModel job(@Nullable com.bytechef.platform.workflow.execution.web.rest.model.JobModel job) {
     this.job = job;
     return this;
   }
@@ -36,19 +37,20 @@ public class WorkflowTestExecutionModel {
   /**
    * Get job
    * @return job
-  */
+   */
   @Valid 
   @Schema(name = "job", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("job")
-  public com.bytechef.platform.workflow.execution.web.rest.model.JobModel getJob() {
+  public @Nullable com.bytechef.platform.workflow.execution.web.rest.model.JobModel getJob() {
     return job;
   }
 
-  public void setJob(com.bytechef.platform.workflow.execution.web.rest.model.JobModel job) {
+  @JsonProperty("job")
+  public void setJob(@Nullable com.bytechef.platform.workflow.execution.web.rest.model.JobModel job) {
     this.job = job;
   }
 
-  public WorkflowTestExecutionModel triggerExecution(com.bytechef.platform.workflow.execution.web.rest.model.TriggerExecutionModel triggerExecution) {
+  public WorkflowTestExecutionModel triggerExecution(@Nullable com.bytechef.platform.workflow.execution.web.rest.model.TriggerExecutionModel triggerExecution) {
     this.triggerExecution = triggerExecution;
     return this;
   }
@@ -56,15 +58,16 @@ public class WorkflowTestExecutionModel {
   /**
    * Get triggerExecution
    * @return triggerExecution
-  */
+   */
   @Valid 
   @Schema(name = "triggerExecution", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("triggerExecution")
-  public com.bytechef.platform.workflow.execution.web.rest.model.TriggerExecutionModel getTriggerExecution() {
+  public @Nullable com.bytechef.platform.workflow.execution.web.rest.model.TriggerExecutionModel getTriggerExecution() {
     return triggerExecution;
   }
 
-  public void setTriggerExecution(com.bytechef.platform.workflow.execution.web.rest.model.TriggerExecutionModel triggerExecution) {
+  @JsonProperty("triggerExecution")
+  public void setTriggerExecution(@Nullable com.bytechef.platform.workflow.execution.web.rest.model.TriggerExecutionModel triggerExecution) {
     this.triggerExecution = triggerExecution;
   }
 
@@ -100,11 +103,8 @@ public class WorkflowTestExecutionModel {
    * Convert the given object to string with each line indented by 4 spaces
    * (except the first line).
    */
-  private String toIndentedString(Object o) {
-    if (o == null) {
-      return "null";
-    }
-    return o.toString().replace("\n", "\n    ");
+  private String toIndentedString(@Nullable Object o) {
+    return o == null ? "null" : o.toString().replace("\n", "\n    ");
   }
 }
 

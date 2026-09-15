@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,8 +16,8 @@
 
 package com.bytechef.component.intercom;
 
-import static com.bytechef.component.definition.ComponentDSL.component;
-import static com.bytechef.component.intercom.constant.IntercomConstants.INTERCOM;
+import static com.bytechef.component.definition.ComponentDsl.component;
+import static com.bytechef.component.definition.ComponentDsl.tool;
 
 import com.bytechef.component.ComponentHandler;
 import com.bytechef.component.definition.ComponentCategory;
@@ -34,17 +34,22 @@ import com.google.auto.service.AutoService;
 @AutoService(ComponentHandler.class)
 public class IntercomComponentHandler implements ComponentHandler {
 
-    private static final ComponentDefinition COMPONENT_DEFINITION = component(INTERCOM)
+    private static final ComponentDefinition COMPONENT_DEFINITION = component("intercom")
         .title("Intercom")
         .description(
             "Intercom is the complete AI-first customer service solution, giving exceptional experiences for support teams with AI agent, AI copilot, tickets, ...")
+        .customAction(true)
         .icon("path:assets/intercom.svg")
         .categories(ComponentCategory.CUSTOMER_SUPPORT)
         .connection(IntercomConnection.CONNECTION_DEFINITION)
         .actions(
             IntercomCreateContactAction.ACTION_DEFINITION,
             IntercomGetContactAction.ACTION_DEFINITION,
-            IntercomSendMessageAction.ACTION_DEFINITION);
+            IntercomSendMessageAction.ACTION_DEFINITION)
+        .clusterElements(
+            tool(IntercomCreateContactAction.ACTION_DEFINITION),
+            tool(IntercomGetContactAction.ACTION_DEFINITION),
+            tool(IntercomSendMessageAction.ACTION_DEFINITION));
 
     @Override
     public ComponentDefinition getDefinition() {

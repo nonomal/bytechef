@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,16 +16,14 @@
 
 package com.bytechef.component.capsule.crm.util;
 
-import static com.bytechef.component.capsule.crm.constant.CapsuleCRMConstants.BASE_URL;
 import static com.bytechef.component.capsule.crm.constant.CapsuleCRMConstants.NAME;
-import static com.bytechef.component.definition.ComponentDSL.option;
+import static com.bytechef.component.definition.ComponentDsl.option;
 
 import com.bytechef.component.definition.ActionContext;
-import com.bytechef.component.definition.Context.ContextFunction;
 import com.bytechef.component.definition.Context.Http;
-import com.bytechef.component.definition.Context.TypeReference;
 import com.bytechef.component.definition.Option;
 import com.bytechef.component.definition.Parameters;
+import com.bytechef.component.definition.TypeReference;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -38,15 +36,12 @@ public class CapsuleCRMUtils {
     private CapsuleCRMUtils() {
     }
 
-    protected static final ContextFunction<Http, Http.Executor> GET_COUNTRIES_CONTEXT_FUNCTION =
-        http -> http.get(BASE_URL + "/countries");
-
     public static List<Option<String>> getCountryOptions(
         Parameters inputParameters, Parameters connectionParameters, Map<String, String> dependencyPaths,
         String searchText, ActionContext context) {
 
         Map<String, List<Map<String, Object>>> body =
-            context.http(GET_COUNTRIES_CONTEXT_FUNCTION)
+            context.http(http -> http.get("/countries"))
                 .configuration(Http.responseType(Http.ResponseType.JSON))
                 .execute()
                 .getBody(new TypeReference<>() {});

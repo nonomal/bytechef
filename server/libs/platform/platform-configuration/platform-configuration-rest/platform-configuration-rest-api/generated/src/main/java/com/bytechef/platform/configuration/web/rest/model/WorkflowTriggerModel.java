@@ -2,7 +2,7 @@ package com.bytechef.platform.configuration.web.rest.model;
 
 import java.net.URI;
 import java.util.Objects;
-import com.bytechef.platform.configuration.web.rest.model.WorkflowConnectionModel;
+import com.bytechef.platform.configuration.web.rest.model.ComponentConnectionModel;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonTypeName;
@@ -11,6 +11,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.springframework.lang.Nullable;
 import org.openapitools.jackson.nullable.JsonNullable;
 import java.time.OffsetDateTime;
 import jakarta.validation.Valid;
@@ -27,15 +28,15 @@ import jakarta.annotation.Generated;
 
 @Schema(name = "WorkflowTrigger", description = "Represents a definition of a workflow trigger.")
 @JsonTypeName("WorkflowTrigger")
-@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2024-06-30T07:20:54.243996+02:00[Europe/Zagreb]", comments = "Generator version: 7.5.0")
+@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2026-07-03T17:58:15.504637+02:00[Europe/Zagreb]", comments = "Generator version: 7.22.0")
 public class WorkflowTriggerModel {
 
   @Valid
-  private List<@Valid WorkflowConnectionModel> connections = new ArrayList<>();
+  private List<@Valid ComponentConnectionModel> connections = new ArrayList<>();
 
-  private String description;
+  private @Nullable String description;
 
-  private String label;
+  private @Nullable String label;
 
   @Valid
   private Map<String, Object> metadata = new HashMap<>();
@@ -45,7 +46,7 @@ public class WorkflowTriggerModel {
   @Valid
   private Map<String, Object> parameters = new HashMap<>();
 
-  private String timeout;
+  private @Nullable String timeout;
 
   private String type;
 
@@ -61,12 +62,12 @@ public class WorkflowTriggerModel {
     this.type = type;
   }
 
-  public WorkflowTriggerModel connections(List<@Valid WorkflowConnectionModel> connections) {
+  public WorkflowTriggerModel connections(List<@Valid ComponentConnectionModel> connections) {
     this.connections = connections;
     return this;
   }
 
-  public WorkflowTriggerModel addConnectionsItem(WorkflowConnectionModel connectionsItem) {
+  public WorkflowTriggerModel addConnectionsItem(ComponentConnectionModel connectionsItem) {
     if (this.connections == null) {
       this.connections = new ArrayList<>();
     }
@@ -77,19 +78,20 @@ public class WorkflowTriggerModel {
   /**
    * Get connections
    * @return connections
-  */
+   */
   @Valid 
   @Schema(name = "connections", accessMode = Schema.AccessMode.READ_ONLY, requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("connections")
-  public List<@Valid WorkflowConnectionModel> getConnections() {
+  public List<@Valid ComponentConnectionModel> getConnections() {
     return connections;
   }
 
-  public void setConnections(List<@Valid WorkflowConnectionModel> connections) {
+  @JsonProperty("connections")
+  public void setConnections(List<@Valid ComponentConnectionModel> connections) {
     this.connections = connections;
   }
 
-  public WorkflowTriggerModel description(String description) {
+  public WorkflowTriggerModel description(@Nullable String description) {
     this.description = description;
     return this;
   }
@@ -97,19 +99,20 @@ public class WorkflowTriggerModel {
   /**
    * The description of the task.
    * @return description
-  */
+   */
   
   @Schema(name = "description", description = "The description of the task.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("description")
-  public String getDescription() {
+  public @Nullable String getDescription() {
     return description;
   }
 
-  public void setDescription(String description) {
+  @JsonProperty("description")
+  public void setDescription(@Nullable String description) {
     this.description = description;
   }
 
-  public WorkflowTriggerModel label(String label) {
+  public WorkflowTriggerModel label(@Nullable String label) {
     this.label = label;
     return this;
   }
@@ -117,15 +120,16 @@ public class WorkflowTriggerModel {
   /**
    * The human-readable description of the task.
    * @return label
-  */
+   */
   
   @Schema(name = "label", description = "The human-readable description of the task.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("label")
-  public String getLabel() {
+  public @Nullable String getLabel() {
     return label;
   }
 
-  public void setLabel(String label) {
+  @JsonProperty("label")
+  public void setLabel(@Nullable String label) {
     this.label = label;
   }
 
@@ -145,7 +149,7 @@ public class WorkflowTriggerModel {
   /**
    * Key-value map of metadata.
    * @return metadata
-  */
+   */
   
   @Schema(name = "metadata", description = "Key-value map of metadata.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("metadata")
@@ -153,6 +157,7 @@ public class WorkflowTriggerModel {
     return metadata;
   }
 
+  @JsonProperty("metadata")
   public void setMetadata(Map<String, Object> metadata) {
     this.metadata = metadata;
   }
@@ -165,7 +170,7 @@ public class WorkflowTriggerModel {
   /**
    * The identifier name of the task. Task names are used for assigning the output of one task so it can be later used by subsequent tasks.
    * @return name
-  */
+   */
   @NotNull 
   @Schema(name = "name", description = "The identifier name of the task. Task names are used for assigning the output of one task so it can be later used by subsequent tasks.", requiredMode = Schema.RequiredMode.REQUIRED)
   @JsonProperty("name")
@@ -173,6 +178,7 @@ public class WorkflowTriggerModel {
     return name;
   }
 
+  @JsonProperty("name")
   public void setName(String name) {
     this.name = name;
   }
@@ -193,7 +199,7 @@ public class WorkflowTriggerModel {
   /**
    * Key-value map of task parameters.
    * @return parameters
-  */
+   */
   
   @Schema(name = "parameters", description = "Key-value map of task parameters.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("parameters")
@@ -201,11 +207,12 @@ public class WorkflowTriggerModel {
     return parameters;
   }
 
+  @JsonProperty("parameters")
   public void setParameters(Map<String, Object> parameters) {
     this.parameters = parameters;
   }
 
-  public WorkflowTriggerModel timeout(String timeout) {
+  public WorkflowTriggerModel timeout(@Nullable String timeout) {
     this.timeout = timeout;
     return this;
   }
@@ -213,15 +220,16 @@ public class WorkflowTriggerModel {
   /**
    * The timeout expression which describes when a trigger should be deemed as timed-out.
    * @return timeout
-  */
+   */
   
   @Schema(name = "timeout", description = "The timeout expression which describes when a trigger should be deemed as timed-out.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("timeout")
-  public String getTimeout() {
+  public @Nullable String getTimeout() {
     return timeout;
   }
 
-  public void setTimeout(String timeout) {
+  @JsonProperty("timeout")
+  public void setTimeout(@Nullable String timeout) {
     this.timeout = timeout;
   }
 
@@ -233,7 +241,7 @@ public class WorkflowTriggerModel {
   /**
    * The type of the trigger.
    * @return type
-  */
+   */
   @NotNull 
   @Schema(name = "type", description = "The type of the trigger.", requiredMode = Schema.RequiredMode.REQUIRED)
   @JsonProperty("type")
@@ -241,6 +249,7 @@ public class WorkflowTriggerModel {
     return type;
   }
 
+  @JsonProperty("type")
   public void setType(String type) {
     this.type = type;
   }
@@ -289,11 +298,8 @@ public class WorkflowTriggerModel {
    * Convert the given object to string with each line indented by 4 spaces
    * (except the first line).
    */
-  private String toIndentedString(Object o) {
-    if (o == null) {
-      return "null";
-    }
-    return o.toString().replace("\n", "\n    ");
+  private String toIndentedString(@Nullable Object o) {
+    return o == null ? "null" : o.toString().replace("\n", "\n    ");
   }
 }
 

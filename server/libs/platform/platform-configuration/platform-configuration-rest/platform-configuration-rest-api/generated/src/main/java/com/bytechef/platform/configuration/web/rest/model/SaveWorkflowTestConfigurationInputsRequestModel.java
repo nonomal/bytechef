@@ -5,8 +5,10 @@ import java.util.Objects;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonTypeName;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.Arrays;
+import org.openapitools.jackson.nullable.JsonNullable;
+import org.springframework.lang.Nullable;
+import java.util.NoSuchElementException;
 import org.openapitools.jackson.nullable.JsonNullable;
 import java.time.OffsetDateTime;
 import jakarta.validation.Valid;
@@ -22,38 +24,52 @@ import jakarta.annotation.Generated;
  */
 
 @JsonTypeName("saveWorkflowTestConfigurationInputs_request")
-@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2024-06-30T07:20:54.243996+02:00[Europe/Zagreb]", comments = "Generator version: 7.5.0")
+@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2026-07-03T17:58:15.504637+02:00[Europe/Zagreb]", comments = "Generator version: 7.22.0")
 public class SaveWorkflowTestConfigurationInputsRequestModel {
 
-  @Valid
-  private Map<String, String> inputs = new HashMap<>();
+  private @Nullable String key;
 
-  public SaveWorkflowTestConfigurationInputsRequestModel inputs(Map<String, String> inputs) {
-    this.inputs = inputs;
-    return this;
-  }
+  private JsonNullable<Object> value = JsonNullable.<Object>undefined();
 
-  public SaveWorkflowTestConfigurationInputsRequestModel putInputsItem(String key, String inputsItem) {
-    if (this.inputs == null) {
-      this.inputs = new HashMap<>();
-    }
-    this.inputs.put(key, inputsItem);
+  public SaveWorkflowTestConfigurationInputsRequestModel key(@Nullable String key) {
+    this.key = key;
     return this;
   }
 
   /**
-   * The input parameters used as workflow input values.
-   * @return inputs
-  */
+   * Get key
+   * @return key
+   */
   
-  @Schema(name = "inputs", description = "The input parameters used as workflow input values.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
-  @JsonProperty("inputs")
-  public Map<String, String> getInputs() {
-    return inputs;
+  @Schema(name = "key", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+  @JsonProperty("key")
+  public @Nullable String getKey() {
+    return key;
   }
 
-  public void setInputs(Map<String, String> inputs) {
-    this.inputs = inputs;
+  @JsonProperty("key")
+  public void setKey(@Nullable String key) {
+    this.key = key;
+  }
+
+  public SaveWorkflowTestConfigurationInputsRequestModel value(Object value) {
+    this.value = JsonNullable.of(value);
+    return this;
+  }
+
+  /**
+   * The input value; a primitive for primitive inputs, or a nested object for component-property inputs.
+   * @return value
+   */
+  
+  @Schema(name = "value", description = "The input value; a primitive for primitive inputs, or a nested object for component-property inputs.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+  @JsonProperty("value")
+  public JsonNullable<Object> getValue() {
+    return value;
+  }
+
+  public void setValue(JsonNullable<Object> value) {
+    this.value = value;
   }
 
   @Override
@@ -65,19 +81,32 @@ public class SaveWorkflowTestConfigurationInputsRequestModel {
       return false;
     }
     SaveWorkflowTestConfigurationInputsRequestModel saveWorkflowTestConfigurationInputsRequest = (SaveWorkflowTestConfigurationInputsRequestModel) o;
-    return Objects.equals(this.inputs, saveWorkflowTestConfigurationInputsRequest.inputs);
+    return Objects.equals(this.key, saveWorkflowTestConfigurationInputsRequest.key) &&
+        equalsNullable(this.value, saveWorkflowTestConfigurationInputsRequest.value);
+  }
+
+  private static <T> boolean equalsNullable(JsonNullable<T> a, JsonNullable<T> b) {
+    return a == b || (a != null && b != null && a.isPresent() && b.isPresent() && Objects.deepEquals(a.get(), b.get()));
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(inputs);
+    return Objects.hash(key, hashCodeNullable(value));
+  }
+
+  private static <T> int hashCodeNullable(JsonNullable<T> a) {
+    if (a == null) {
+      return 1;
+    }
+    return a.isPresent() ? Arrays.deepHashCode(new Object[]{a.get()}) : 31;
   }
 
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
     sb.append("class SaveWorkflowTestConfigurationInputsRequestModel {\n");
-    sb.append("    inputs: ").append(toIndentedString(inputs)).append("\n");
+    sb.append("    key: ").append(toIndentedString(key)).append("\n");
+    sb.append("    value: ").append(toIndentedString(value)).append("\n");
     sb.append("}");
     return sb.toString();
   }
@@ -86,11 +115,8 @@ public class SaveWorkflowTestConfigurationInputsRequestModel {
    * Convert the given object to string with each line indented by 4 spaces
    * (except the first line).
    */
-  private String toIndentedString(Object o) {
-    if (o == null) {
-      return "null";
-    }
-    return o.toString().replace("\n", "\n    ");
+  private String toIndentedString(@Nullable Object o) {
+    return o == null ? "null" : o.toString().replace("\n", "\n    ");
   }
 }
 

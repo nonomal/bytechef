@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,8 @@
 
 package com.bytechef.component.discord;
 
-import static com.bytechef.component.definition.ComponentDSL.component;
+import static com.bytechef.component.definition.ComponentDsl.component;
+import static com.bytechef.component.definition.ComponentDsl.tool;
 
 import com.bytechef.component.OpenApiComponentHandler;
 import com.bytechef.component.definition.ComponentDefinition;
@@ -34,11 +35,14 @@ public abstract class AbstractDiscordComponentHandler implements OpenApiComponen
         component("discord")
             .title("Discord")
             .description(
-                "Discord is a communication platform designed for creating communities, chatting with friends, and connecting with others through text, voice, and video channels."))
-                    .actions(modifyActions(DiscordSendChannelMessageAction.ACTION_DEFINITION,
-                        DiscordCreateChannelAction.ACTION_DEFINITION))
-                    .connection(modifyConnection(DiscordConnection.CONNECTION_DEFINITION))
-                    .triggers(getTriggers());
+                "Discord is a communication platform designed for creating communities, chatting with friends, and connecting with others through text, voice, and video channels.")
+            .version(1))
+                .actions(modifyActions(DiscordCreateChannelAction.ACTION_DEFINITION,
+                    DiscordSendChannelMessageAction.ACTION_DEFINITION))
+                .connection(modifyConnection(DiscordConnection.CONNECTION_DEFINITION))
+                .clusterElements(modifyClusterElements(tool(DiscordCreateChannelAction.ACTION_DEFINITION),
+                    tool(DiscordSendChannelMessageAction.ACTION_DEFINITION)))
+                .triggers(getTriggers());
 
     @Override
     public ComponentDefinition getDefinition() {

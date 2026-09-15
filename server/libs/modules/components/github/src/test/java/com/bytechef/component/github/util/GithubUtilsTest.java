@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,144 +16,235 @@
 
 package com.bytechef.component.github.util;
 
-import static com.bytechef.component.definition.ComponentDSL.option;
+import static com.bytechef.component.definition.ComponentDsl.option;
 import static com.bytechef.component.github.constant.GithubConstants.ID;
+import static com.bytechef.component.github.constant.GithubConstants.NAME;
+import static com.bytechef.component.github.constant.GithubConstants.OWNER;
+import static com.bytechef.component.github.constant.GithubConstants.REPOSITORY;
+import static com.bytechef.component.github.constant.GithubConstants.TITLE;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.mockito.ArgumentCaptor.forClass;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.bytechef.component.definition.ActionContext;
+import com.bytechef.component.definition.Context;
+import com.bytechef.component.definition.Context.ContextFunction;
 import com.bytechef.component.definition.Context.Http;
-import com.bytechef.component.definition.Context.TypeReference;
+import com.bytechef.component.definition.Context.Http.Configuration;
+import com.bytechef.component.definition.Context.Http.Configuration.ConfigurationBuilder;
+import com.bytechef.component.definition.Context.Http.Executor;
+import com.bytechef.component.definition.Context.Http.Response;
+import com.bytechef.component.definition.Context.Http.ResponseType;
 import com.bytechef.component.definition.Option;
 import com.bytechef.component.definition.Parameters;
-import com.bytechef.component.definition.TriggerContext;
-import com.bytechef.component.definition.TriggerDefinition;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
+import com.bytechef.component.definition.TypeReference;
+import com.bytechef.component.test.definition.MockParametersFactory;
+import com.bytechef.component.test.definition.extension.MockContextSetupExtension;
 import java.util.List;
 import java.util.Map;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 
 /**
  * @author Luka Ljubic
  * @author Monika Kušter
  */
+@ExtendWith(MockContextSetupExtension.class)
 class GithubUtilsTest {
 
-    private final ArgumentCaptor<Http.Body> bodyArgumentCaptor = ArgumentCaptor.forClass(Http.Body.class);
-    private final ActionContext mockedActionContext = mock(ActionContext.class);
-    private final Http.Executor mockedExecutor = mock(Http.Executor.class);
-    private final Parameters mockedParameters = mock(Parameters.class);
-    private final Http.Response mockedResponse = mock(Http.Response.class);
-    private final TriggerContext mockedTriggerContext = mock(TriggerContext.class);
-    private final TriggerDefinition.WebhookBody mockedWebhookBody = mock(TriggerDefinition.WebhookBody.class);
+    private final Parameters mockedParameters = MockParametersFactory.create(
+        Map.of(OWNER, "testOwner", REPOSITORY, "testRepo"));
+    private final ArgumentCaptor<Object[]> objectsArgumentCaptor = forClass(Object[].class);
+    private final ArgumentCaptor<String> stringArgumentCaptor = forClass(String.class);
 
-    @BeforeEach()
-    void beforeEach() {
-        when(mockedActionContext.http(any()))
+    @Test
+    void testGetCollaborators(
+        Context mockedContext, Response mockedResponse, Executor mockedExecutor, Http mockedHttp,
+        ArgumentCaptor<ContextFunction<Http, Executor>> httpFunctionArgumentCaptor,
+        ArgumentCaptor<ConfigurationBuilder> configurationBuilderArgumentCaptor) {
+
+        when(mockedHttp.get(stringArgumentCaptor.capture()))
             .thenReturn(mockedExecutor);
-        when(mockedTriggerContext.http(any()))
+        when(mockedExecutor.queryParameters(objectsArgumentCaptor.capture()))
             .thenReturn(mockedExecutor);
-        when(mockedExecutor.body(bodyArgumentCaptor.capture()))
+        when(mockedResponse.getBody(any(TypeReference.class)))
+            .thenReturn(
+                Map.of("login", "user"),
+                List.of(Map.of(NAME, "John Doe", "login", "jdTest123")));
+
+        List<Option<String>> result = GithubUtils.getCollaborators(
+            mockedParameters, null, Map.of(), "", mockedContext);
+
+        assertEquals(List.of(option("John Doe", "jdTest123")), result);
+        assertNotNull(httpFunctionArgumentCaptor.getValue());
+
+        ConfigurationBuilder configurationBuilder = configurationBuilderArgumentCaptor.getValue();
+        Configuration configuration = configurationBuilder.build();
+
+        assertEquals(ResponseType.JSON, configuration.getResponseType());
+        assertEquals("/repos/user/testRepo/collaborators", stringArgumentCaptor.getValue());
+
+        Object[] expectedQuery = {
+            "per_page", 100, "page", 1
+        };
+
+        assertArrayEquals(expectedQuery, objectsArgumentCaptor.getValue());
+    }
+
+    @Test
+    void testGetIssueOptions(
+        Context mockedContext, Response mockedResponse, Executor mockedExecutor, Http mockedHttp,
+        ArgumentCaptor<ContextFunction<Http, Executor>> httpFunctionArgumentCaptor,
+        ArgumentCaptor<ConfigurationBuilder> configurationBuilderArgumentCaptor) {
+
+        when(mockedHttp.get(stringArgumentCaptor.capture()))
             .thenReturn(mockedExecutor);
-        when(mockedExecutor.configuration(any()))
+        when(mockedExecutor.queryParameters(objectsArgumentCaptor.capture()))
             .thenReturn(mockedExecutor);
-        when(mockedExecutor.execute())
-            .thenReturn(mockedResponse);
-    }
-
-    @Test
-    void testGetContent() {
-        Map<String, String> content = Map.of("action", "opened");
-
-        when(mockedWebhookBody.getContent(any(TypeReference.class)))
-            .thenReturn(content);
-
-        assertEquals(content, GithubUtils.getContent(mockedWebhookBody));
-    }
-
-    @Test
-    void testGetRepositoryOptions() {
-        List<Map<String, Object>> body = new ArrayList<>();
-        Map<String, Object> items = new LinkedHashMap<>();
-        items.put("name", "taskName");
-        items.put("id", "123");
-        body.add(items);
-
         when(mockedResponse.getBody(any(TypeReference.class)))
-            .thenReturn(body);
+            .thenReturn(
+                Map.of("login", "user"),
+                List.of(Map.of(TITLE, "taskName", "number", 123)));
 
-        List<Option<String>> expectedOptions = new ArrayList<>();
+        List<Option<String>> result = GithubUtils.getIssueOptions(mockedParameters, null, Map.of(), "", mockedContext);
 
-        expectedOptions.add(option("taskName", "taskName"));
+        assertEquals(List.of(option("123 - taskName", "123")), result);
+        assertNotNull(httpFunctionArgumentCaptor.getValue());
 
-        assertEquals(expectedOptions,
-            GithubUtils.getRepositoryOptions(mockedParameters, mockedParameters, Map.of(), "", mockedActionContext));
+        ConfigurationBuilder configurationBuilder = configurationBuilderArgumentCaptor.getValue();
+        Configuration configuration = configurationBuilder.build();
+
+        assertEquals(ResponseType.JSON, configuration.getResponseType());
+        assertEquals("/repos/testOwner/testRepo/issues", stringArgumentCaptor.getValue());
+
+        Object[] expectedQuery = {
+            "per_page", 100, "page", 1, "state", "open"
+        };
+
+        assertArrayEquals(expectedQuery, objectsArgumentCaptor.getValue());
     }
 
     @Test
-    void testGetIssueOptions() {
-        List<Map<String, Object>> body = new ArrayList<>();
-        Map<String, Object> items = new LinkedHashMap<>();
-        items.put("title", "taskName");
-        items.put("number", 123);
-        body.add(items);
+    void testGetLabels(
+        Context mockedContext, Response mockedResponse, Executor mockedExecutor, Http mockedHttp,
+        ArgumentCaptor<ContextFunction<Http, Executor>> httpFunctionArgumentCaptor,
+        ArgumentCaptor<ConfigurationBuilder> configurationBuilderArgumentCaptor) {
 
+        when(mockedHttp.get(stringArgumentCaptor.capture()))
+            .thenReturn(mockedExecutor);
+        when(mockedExecutor.queryParameters(objectsArgumentCaptor.capture()))
+            .thenReturn(mockedExecutor);
         when(mockedResponse.getBody(any(TypeReference.class)))
-            .thenReturn(body);
+            .thenReturn(
+                Map.of("login", "user"),
+                List.of(Map.of("name", "Bug", "id", "12323123")));
 
-        List<Option<String>> expectedOptions = new ArrayList<>();
+        List<Option<String>> result = GithubUtils.getLabels(mockedParameters, null, Map.of(), "", mockedContext);
 
-        expectedOptions.add(option("taskName", "123"));
+        assertEquals(List.of(option("Bug", "Bug")), result);
+        assertNotNull(httpFunctionArgumentCaptor.getValue());
 
-        assertEquals(expectedOptions,
-            GithubUtils.getIssueOptions(mockedParameters, mockedParameters, Map.of(), "", mockedActionContext));
+        ConfigurationBuilder configurationBuilder = configurationBuilderArgumentCaptor.getValue();
+        Configuration configuration = configurationBuilder.build();
+
+        assertEquals(ResponseType.JSON, configuration.getResponseType());
+        assertEquals("/repos/user/testRepo/labels", stringArgumentCaptor.getValue());
+
+        Object[] expectedQuery = {
+            "per_page", 100, "page", 1
+        };
+
+        assertArrayEquals(expectedQuery, objectsArgumentCaptor.getValue());
     }
 
     @Test
-    void testGetOwnerName() {
-        Map<String, Object> body = new LinkedHashMap<>();
-        body.put("login", "name");
+    void testGetOwnerName(
+        Context mockedContext, Response mockedResponse, Executor mockedExecutor, Http mockedHttp,
+        ArgumentCaptor<ContextFunction<Http, Executor>> httpFunctionArgumentCaptor,
+        ArgumentCaptor<ConfigurationBuilder> configurationBuilderArgumentCaptor) {
 
+        when(mockedHttp.get(stringArgumentCaptor.capture()))
+            .thenReturn(mockedExecutor);
+        when(mockedExecutor.queryParameters(objectsArgumentCaptor.capture()))
+            .thenReturn(mockedExecutor);
         when(mockedResponse.getBody(any(TypeReference.class)))
-            .thenReturn(body);
+            .thenReturn(Map.of("login", "name"));
 
-        String actualOwnerName = GithubUtils.getOwnerName(mockedActionContext);
-        String expectedOwnerName = "name";
+        String actualOwnerName = GithubUtils.getOwnerName(mockedContext);
 
-        assertEquals(expectedOwnerName, actualOwnerName);
+        assertEquals("name", actualOwnerName);
+        assertNotNull(httpFunctionArgumentCaptor.getValue());
+
+        ConfigurationBuilder configurationBuilder = configurationBuilderArgumentCaptor.getValue();
+        Configuration configuration = configurationBuilder.build();
+
+        assertEquals(ResponseType.JSON, configuration.getResponseType());
+        assertEquals("/user", stringArgumentCaptor.getValue());
     }
 
     @Test
-    void testSubscribeWebhook() {
+    void testGetRepositoryOptions(
+        Context mockedContext, Response mockedResponse, Executor mockedExecutor, Http mockedHttp,
+        ArgumentCaptor<ContextFunction<Http, Executor>> httpFunctionArgumentCaptor,
+        ArgumentCaptor<ConfigurationBuilder> configurationBuilderArgumentCaptor) {
+
+        when(mockedHttp.get(stringArgumentCaptor.capture()))
+            .thenReturn(mockedExecutor);
+        when(mockedExecutor.queryParameters(objectsArgumentCaptor.capture()))
+            .thenReturn(mockedExecutor);
         when(mockedResponse.getBody(any(TypeReference.class)))
-            .thenReturn(Map.of(ID, 123));
+            .thenReturn(List.of(Map.of(NAME, "taskName", ID, "123")));
 
-        Integer id = GithubUtils.subscribeWebhook("", "event", "webhookUrl", mockedTriggerContext);
+        List<Option<String>> result = GithubUtils.getRepositoryOptions(
+            mockedParameters, null, Map.of(), "", mockedContext);
 
-        assertEquals(123, id);
+        assertEquals(List.of(option("taskName", "taskName")), result);
+        assertNotNull(httpFunctionArgumentCaptor.getValue());
 
-        Http.Body body = bodyArgumentCaptor.getValue();
+        ConfigurationBuilder configurationBuilder = configurationBuilderArgumentCaptor.getValue();
+        Configuration configuration = configurationBuilder.build();
 
-        Map<String, Object> expectedBody = Map.of(
-            "events", List.of("event"),
-            "config", Map.of("url", "webhookUrl", "content_type", "json"));
+        assertEquals(ResponseType.JSON, configuration.getResponseType());
+        assertEquals("/user/repos", stringArgumentCaptor.getValue());
 
-        assertEquals(expectedBody, body.getContent());
+        Object[] expectedQuery = {
+            "per_page", 100, "page", 1
+        };
+
+        assertArrayEquals(expectedQuery, objectsArgumentCaptor.getValue());
     }
 
     @Test
-    void testUnsubscribeWebhook() {
-        GithubUtils.unsubscribeWebhook("", 123, mockedTriggerContext);
+    void testGetItemsWithNullResponse(
+        Context mockedContext, Response mockedResponse, Executor mockedExecutor, Http mockedHttp,
+        ArgumentCaptor<ContextFunction<Http, Executor>> httpFunctionArgumentCaptor,
+        ArgumentCaptor<ConfigurationBuilder> configurationBuilderArgumentCaptor) {
 
-        verify(mockedTriggerContext, times(1)).http(any());
-        verify(mockedExecutor, times(1)).configuration(any());
-        verify(mockedExecutor, times(1)).execute();
+        when(mockedHttp.get(stringArgumentCaptor.capture()))
+            .thenReturn(mockedExecutor);
+        when(mockedExecutor.queryParameters(objectsArgumentCaptor.capture()))
+            .thenReturn(mockedExecutor);
+        when(mockedResponse.getBody(any(TypeReference.class)))
+            .thenReturn(null);
+
+        List<Map<String, ?>> result = GithubUtils.getItems(mockedContext, "/test/url", false);
+
+        assertEquals(List.of(), result);
+        assertNotNull(httpFunctionArgumentCaptor.getValue());
+
+        ConfigurationBuilder configurationBuilder = configurationBuilderArgumentCaptor.getValue();
+        Configuration configuration = configurationBuilder.build();
+
+        assertEquals(ResponseType.JSON, configuration.getResponseType());
+        assertEquals("/test/url", stringArgumentCaptor.getValue());
+
+        Object[] expectedQuery = {
+            "per_page", 100, "page", 1
+        };
+
+        assertArrayEquals(expectedQuery, objectsArgumentCaptor.getValue());
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,11 +17,15 @@
 package com.bytechef.component.google.sheets.util;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentCaptor.forClass;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 
 import com.google.api.services.sheets.v4.Sheets;
+import com.google.api.services.sheets.v4.Sheets.Spreadsheets;
+import com.google.api.services.sheets.v4.Sheets.Spreadsheets.Values;
+import com.google.api.services.sheets.v4.Sheets.Spreadsheets.Values.BatchGet;
 import com.google.api.services.sheets.v4.model.BatchGetValuesResponse;
 import com.google.api.services.sheets.v4.model.ValueRange;
 import java.io.IOException;
@@ -31,60 +35,68 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.MockedStatic;
 
 /**
- * @author Monika Domiter
+ * @author Monika Kušter
  */
 class GoogleSheetRowUtilsTest {
 
+    private final ArgumentCaptor<Integer> integerArgumentCaptor = forClass(Integer.class);
+    @SuppressWarnings("rawtypes")
+    private final ArgumentCaptor<List> listArgumentCaptor = forClass(List.class);
+    private final BatchGet mockedBatchGet = mock(BatchGet.class);
     private final Sheets mockedSheets = mock(Sheets.class);
-    private final Sheets.Spreadsheets mockedSpreadsheets = mock(Sheets.Spreadsheets.class);
-    private final Sheets.Spreadsheets.Values mockedValues = mock(Sheets.Spreadsheets.Values.class);
+    private final Spreadsheets mockedSpreadsheets = mock(Spreadsheets.class);
+    private final Values mockedValues = mock(Values.class);
     private final ValueRange mockedValueRange = mock(ValueRange.class);
-    private final Sheets.Spreadsheets.Values.BatchGet mockedBatchGet = mock(Sheets.Spreadsheets.Values.BatchGet.class);
-    private final ArgumentCaptor<String> valueRenderOptionArgumentCaptor = ArgumentCaptor.forClass(String.class);
-    private final ArgumentCaptor<String> dateTimeRenderOptionArgumentCaptor = ArgumentCaptor.forClass(String.class);
-    private final ArgumentCaptor<String> majorDimensionArgumentCaptor = ArgumentCaptor.forClass(String.class);
+    private final ArgumentCaptor<String> stringArgumentCaptor = forClass(String.class);
 
     @Test
     void testGetRow() throws IOException {
-        String spreadSheetId = "spreadsheetId";
-        String sheetName = "sheetName";
-        Integer rowNumber = 1;
+        testTemplate(List.of("value1", "value2", "value3"));
+    }
+
+    @Test
+    void testGetRowEmptySheet() throws IOException {
+        testTemplate(null);
+    }
+
+    @SuppressWarnings("unchecked")
+    private void testTemplate(List<String> values) throws IOException {
         String range = "range";
 
         try (MockedStatic<GoogleSheetsUtils> googleSheetsUtilsMockedStatic = mockStatic(GoogleSheetsUtils.class)) {
             googleSheetsUtilsMockedStatic
-                .when(() -> GoogleSheetsUtils.createRange(sheetName, rowNumber))
+                .when(() -> GoogleSheetsUtils.createRange(
+                    stringArgumentCaptor.capture(), integerArgumentCaptor.capture()))
                 .thenReturn(range);
 
             when(mockedSheets.spreadsheets())
                 .thenReturn(mockedSpreadsheets);
             when(mockedSpreadsheets.values())
                 .thenReturn(mockedValues);
-            when(mockedValues.batchGet(spreadSheetId))
+            when(mockedValues.batchGet(stringArgumentCaptor.capture()))
                 .thenReturn(mockedBatchGet);
-            when(mockedBatchGet.setRanges(List.of(range)))
+            when(mockedBatchGet.setRanges(listArgumentCaptor.capture()))
                 .thenReturn(mockedBatchGet);
-            when(mockedBatchGet.setValueRenderOption(valueRenderOptionArgumentCaptor.capture()))
+            when(mockedBatchGet.setValueRenderOption(stringArgumentCaptor.capture()))
                 .thenReturn(mockedBatchGet);
-            when(mockedBatchGet.setDateTimeRenderOption(dateTimeRenderOptionArgumentCaptor.capture()))
+            when(mockedBatchGet.setDateTimeRenderOption(stringArgumentCaptor.capture()))
                 .thenReturn(mockedBatchGet);
-            when(mockedBatchGet.setMajorDimension(majorDimensionArgumentCaptor.capture()))
+            when(mockedBatchGet.setMajorDimension(stringArgumentCaptor.capture()))
                 .thenReturn(mockedBatchGet);
             when(mockedBatchGet.execute())
                 .thenReturn(new BatchGetValuesResponse().setValueRanges(List.of(mockedValueRange)));
 
-            List<String> values = List.of("value1", "value2", "value3");
-
             when(mockedValueRange.getValues())
-                .thenReturn(List.of(List.of(values)));
+                .thenReturn(values == null ? null : List.of(List.of(values)));
 
-            List<Object> result = GoogleSheetsRowUtils.getRowValues(mockedSheets, spreadSheetId, sheetName, rowNumber);
+            List<Object> result = GoogleSheetsRowUtils.getRowValues(mockedSheets, "spreadsheetId", "sheetName", 1);
 
-            assertEquals(List.of(values), result);
-            assertEquals("UNFORMATTED_VALUE", valueRenderOptionArgumentCaptor.getValue());
-            assertEquals("FORMATTED_STRING", dateTimeRenderOptionArgumentCaptor.getValue());
-            assertEquals("ROWS", majorDimensionArgumentCaptor.getValue());
-
+            assertEquals(values == null ? List.of() : List.of(values), result);
+            assertEquals(
+                List.of("spreadsheetId", "sheetName", "UNFORMATTED_VALUE", "FORMATTED_STRING", "ROWS"),
+                stringArgumentCaptor.getAllValues());
+            assertEquals(1, integerArgumentCaptor.getValue());
+            assertEquals(List.of(range), listArgumentCaptor.getValue());
         }
     }
 }

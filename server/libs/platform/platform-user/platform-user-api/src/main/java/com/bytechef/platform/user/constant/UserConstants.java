@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,11 +21,14 @@ package com.bytechef.platform.user.constant;
  */
 public final class UserConstants {
 
+    public static final String AUTH_PROVIDER_LOCAL = "LOCAL";
+    public static final String AUTH_PROVIDER_SAML = "SAML";
+
+    public static final String DEFAULT_LANGUAGE = "en";
+
     // Regex for acceptable logins
     public static final String LOGIN_REGEX =
         "^(?>[a-zA-Z0-9!$&*+=?^_`{|}~.-]+@[a-zA-Z0-9-]+(?:\\.[a-zA-Z0-9-]+)*)|(?>[_.@A-Za-z0-9-]+)$";
-
-    public static final String DEFAULT_LANGUAGE = "en";
 
     private UserConstants() {
     }

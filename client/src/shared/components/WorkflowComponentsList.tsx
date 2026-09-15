@@ -1,0 +1,107 @@
+import {Tooltip, TooltipContent, TooltipTrigger} from '@/components/ui/tooltip';
+import WorkflowComponentsIcon, {
+    WorkflowComponentIconDefinitionType,
+} from '@/pages/automation/project/components/projects-sidebar/components/WorkflowComponentsIcon';
+import {useMemo} from 'react';
+
+interface WorkflowComponentsListProps {
+    filteredComponentNames: string[];
+    maxIcons?: number;
+    workflowComponentDefinitions: Record<string, WorkflowComponentIconDefinitionType | undefined>;
+    workflowTaskDispatcherDefinitions: Record<string, WorkflowComponentIconDefinitionType | undefined>;
+}
+
+const WorkflowComponentsList = ({
+    filteredComponentNames,
+    maxIcons = 7,
+    workflowComponentDefinitions,
+    workflowTaskDispatcherDefinitions,
+}: WorkflowComponentsListProps) => {
+    const memoizedFilteredComponentNamesList = useMemo(
+        () => ({
+            icons: filteredComponentNames.slice(0, maxIcons),
+            remainingComponents: filteredComponentNames.slice(maxIcons),
+        }),
+        [filteredComponentNames, maxIcons]
+    );
+
+    return (
+        <div className="flex">
+            <div className="hidden 2xl:flex">
+                {memoizedFilteredComponentNamesList.icons.map((name) => (
+                    <WorkflowComponentsIcon
+                        key={name}
+                        name={name}
+                        workflowComponentDefinitions={workflowComponentDefinitions}
+                        workflowTaskDispatcherDefinitions={workflowTaskDispatcherDefinitions}
+                    />
+                ))}
+            </div>
+
+            {filteredComponentNames?.length > 0 && (
+                <>
+                    <div className="2xl:hidden">
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <div className="flex size-7 items-center justify-center self-center rounded-full border border-stroke-neutral-secondary bg-background p-1">
+                                    <span className="self-center text-xs font-medium text-content-neutral-secondary">
+                                        +{filteredComponentNames.length}
+                                    </span>
+                                </div>
+                            </TooltipTrigger>
+
+                            <TooltipContent className="mt-1 text-pretty" side="bottom">
+                                {filteredComponentNames.map((name) => (
+                                    <div className="flex items-center gap-1 py-0.5" key={name}>
+                                        <WorkflowComponentsIcon
+                                            key={name}
+                                            name={name}
+                                            workflowComponentDefinitions={workflowComponentDefinitions}
+                                            workflowTaskDispatcherDefinitions={workflowTaskDispatcherDefinitions}
+                                        />
+
+                                        <span className="block">{name}</span>
+                                    </div>
+                                ))}
+                            </TooltipContent>
+                        </Tooltip>
+                    </div>
+                    {filteredComponentNames?.length > maxIcons && (
+                        <>
+                            <div className="hidden 2xl:block">
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <div className="flex size-7 items-center justify-center self-center rounded-full border border-stroke-neutral-secondary bg-background p-1">
+                                            <span className="self-center text-xs font-medium text-content-neutral-secondary">
+                                                +{filteredComponentNames.length - maxIcons}
+                                            </span>
+                                        </div>
+                                    </TooltipTrigger>
+
+                                    <TooltipContent className="mt-1 text-pretty" side="bottom">
+                                        {memoizedFilteredComponentNamesList.remainingComponents.map((name) => (
+                                            <div className="flex items-center gap-1 py-0.5" key={name}>
+                                                <WorkflowComponentsIcon
+                                                    key={name}
+                                                    name={name}
+                                                    workflowComponentDefinitions={workflowComponentDefinitions}
+                                                    workflowTaskDispatcherDefinitions={
+                                                        workflowTaskDispatcherDefinitions
+                                                    }
+                                                />
+
+                                                <span className="block">{name}</span>
+                                            </div>
+                                        ))}
+                                    </TooltipContent>
+                                </Tooltip>
+                            </div>
+                        </>
+                    )}
+                </>
+            )}
+        </div>
+    );
+};
+
+export default WorkflowComponentsList;

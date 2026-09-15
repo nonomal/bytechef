@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,6 @@
 package com.bytechef.configuration;
 
 import com.bytechef.test.config.testcontainers.PostgreSQLContainerConfiguration;
-import com.bytechef.test.config.testcontainers.RedisContainerConfiguration;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
@@ -25,9 +24,9 @@ import org.springframework.context.annotation.Import;
 /**
  * @author Ivica Cardic
  */
-@SpringBootTest
+@SpringBootTest(classes = ConfigurationApplication.class)
 @Import({
-    PostgreSQLContainerConfiguration.class, RedisContainerConfiguration.class
+    PostgreSQLContainerConfiguration.class,
 })
 public class ConfigurationApplicationIntTest {
 

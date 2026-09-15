@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,20 +32,20 @@ import org.springframework.core.convert.converter.Converter;
  */
 public class WorkflowTaskMapper {
 
-    @Mapper(config = PlatformConfigurationMapperSpringConfig.class, implementationName = "Platform<CLASS_NAME>Impl")
+    @Mapper(config = PlatformConfigurationMapperSpringConfig.class)
     public interface WorkflowTaskToWorkflowTaskModelMapper extends Converter<WorkflowTask, WorkflowTaskModel> {
 
         @Named(value = "workflowTaskToWorkflowTaskModelMapper")
+        @Mapping(target = "clusterRoot", ignore = true)
+        @Mapping(target = "clusterElements", ignore = true)
         @Mapping(target = "connections", ignore = true)
-        @Mapping(target = "destination", ignore = true)
-        @Mapping(target = "source", ignore = true)
         WorkflowTaskModel convert(WorkflowTask workflowTask);
 
         @IterableMapping(qualifiedByName = "workflowTaskToWorkflowTaskModelMapper")
         List<WorkflowTaskModel> map(List<WorkflowTask> workflowTasks);
     }
 
-    @Mapper(config = PlatformConfigurationMapperSpringConfig.class, implementationName = "Platform<CLASS_NAME>Impl")
+    @Mapper(config = PlatformConfigurationMapperSpringConfig.class)
     public interface WorkflowTaskDTOToWorkflowTaskModelMapper extends Converter<WorkflowTaskDTO, WorkflowTaskModel> {
 
         @Named(value = "workflowTaskDTOToWorkflowTaskModelMapper")

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,34 +16,31 @@
 
 package com.bytechef.component.jira.action;
 
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.object;
+import static com.bytechef.component.definition.ComponentDsl.outputSchema;
+import static com.bytechef.component.definition.ComponentDsl.string;
 import static com.bytechef.component.jira.constant.JiraConstants.ASSIGNEE;
-import static com.bytechef.component.jira.constant.JiraConstants.CONTENT;
-import static com.bytechef.component.jira.constant.JiraConstants.CREATE_ISSUE;
 import static com.bytechef.component.jira.constant.JiraConstants.DESCRIPTION;
 import static com.bytechef.component.jira.constant.JiraConstants.FIELDS;
 import static com.bytechef.component.jira.constant.JiraConstants.ID;
 import static com.bytechef.component.jira.constant.JiraConstants.ISSUETYPE;
-import static com.bytechef.component.jira.constant.JiraConstants.ISSUE_OUTPUT_PROPERTY;
+import static com.bytechef.component.jira.constant.JiraConstants.KEY;
 import static com.bytechef.component.jira.constant.JiraConstants.PARENT;
 import static com.bytechef.component.jira.constant.JiraConstants.PRIORITY;
 import static com.bytechef.component.jira.constant.JiraConstants.PROJECT;
+import static com.bytechef.component.jira.constant.JiraConstants.SELF;
 import static com.bytechef.component.jira.constant.JiraConstants.SUMMARY;
-import static com.bytechef.component.jira.constant.JiraConstants.TEXT;
-import static com.bytechef.component.jira.constant.JiraConstants.TYPE;
-import static com.bytechef.component.jira.util.JiraUtils.getBaseUrl;
 
-import com.bytechef.component.definition.ActionContext;
-import com.bytechef.component.definition.ComponentDSL.ModifiableActionDefinition;
+import com.bytechef.component.definition.ActionDefinition.OptionsFunction;
+import com.bytechef.component.definition.ComponentDsl.ModifiableActionDefinition;
+import com.bytechef.component.definition.Context;
 import com.bytechef.component.definition.Context.Http;
-import com.bytechef.component.definition.Context.TypeReference;
-import com.bytechef.component.definition.OptionsDataSource.ActionOptionsFunction;
 import com.bytechef.component.definition.Parameters;
 import com.bytechef.component.definition.Property.ControlType;
 import com.bytechef.component.jira.util.JiraOptionsUtils;
+import com.bytechef.component.jira.util.JiraUtils;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -51,65 +48,69 @@ import java.util.Map;
  */
 public class JiraCreateIssueAction {
 
-    public static final ModifiableActionDefinition ACTION_DEFINITION = action(CREATE_ISSUE)
-        .title("Create issue")
+    public static final ModifiableActionDefinition ACTION_DEFINITION = action("createIssue")
+        .title("Create Issue")
         .description("Creates a new issue.")
+        .help("", "https://docs.bytechef.io/reference/components/jira_v1#create-issue")
         .properties(
             string(PROJECT)
-                .label("Project Name")
-                .description("The name of the project to create the issue in.")
-                .options((ActionOptionsFunction<String>) JiraOptionsUtils::getProjectIdOptions)
+                .label("Project ID")
+                .description("ID of the project to create the issue in.")
+                .options((OptionsFunction<String>) JiraOptionsUtils::getProjectIdOptions)
                 .required(true),
             string(SUMMARY)
                 .label("Summary")
                 .description("A brief summary of the issue.")
                 .required(true),
             string(ISSUETYPE)
-                .label("Issue type")
-                .description("The type of issue.")
-                .options((ActionOptionsFunction<String>) JiraOptionsUtils::getIssueTypesIdOptions)
+                .label("Issue Type ID")
+                .description("ID of the issue type.")
+                .options((OptionsFunction<String>) JiraOptionsUtils::getIssueTypesIdOptions)
                 .optionsLookupDependsOn(PROJECT)
                 .required(true),
             string(PARENT)
-                .label("Parent")
-                .description("")
+                .label("Parent Issue ID")
+                .description("ID of the parent issue.")
                 .displayCondition("%s == '%s'".formatted(ISSUETYPE, "10003"))
-                .options((ActionOptionsFunction<String>) JiraOptionsUtils::getIssueIdOptions)
+                .options((OptionsFunction<String>) JiraOptionsUtils::getIssueIdOptions)
                 .optionsLookupDependsOn(PROJECT)
                 .required(true),
             string(ASSIGNEE)
-                .label("Assignee")
-                .description("User who will be assigned to the issue.")
-                .options((ActionOptionsFunction<String>) JiraOptionsUtils::getUserIdOptions)
-                .optionsLookupDependsOn(PROJECT)
+                .label("Assignee ID")
+                .description("ID of the user who will be assigned to the issue.")
+                .options((OptionsFunction<String>) JiraOptionsUtils::getUserIdOptions)
                 .required(false),
             string(PRIORITY)
-                .label("Priority")
-                .description("Priority of the issue.")
-                .options((ActionOptionsFunction<String>) JiraOptionsUtils::getPriorityIdOptions)
+                .label("Priority ID")
+                .description("ID of the priority of the issue.")
+                .options((OptionsFunction<String>) JiraOptionsUtils::getPriorityIdOptions)
                 .required(false),
             string(DESCRIPTION)
                 .label("Description")
                 .description("Description of the issue.")
                 .controlType(ControlType.TEXT_AREA)
                 .required(false))
-        .outputSchema(ISSUE_OUTPUT_PROPERTY)
+        .output(
+            outputSchema(
+                object()
+                    .properties(
+                        string(ID)
+                            .description("The ID of the created issue or subtask."),
+                        string(KEY)
+                            .description("The key of the created issue or subtask."),
+                        string(SELF)
+                            .description("The URL of the created issue or subtask."))))
         .perform(JiraCreateIssueAction::perform);
 
     private JiraCreateIssueAction() {
     }
 
-    public static Object perform(
-        Parameters inputParameters, Parameters connectionParameters, ActionContext context) {
-
-        Http.Response execute = context
-            .http(http -> http.post(getBaseUrl(context) + "/issue"))
+    public static Object perform(Parameters inputParameters, Parameters connectionParameters, Context context) {
+        return context.http(http -> http.post("/issue"))
             .configuration(Http.responseType(Http.ResponseType.JSON))
             .body(Http.Body.of(FIELDS, getIssueFieldsMap(inputParameters)))
-            .execute();
-
-        return execute.getBody(new TypeReference<>() {});
-
+            .execute()
+            .getBody();
     }
 
     private static Map<String, Object> getIssueFieldsMap(Parameters inputParameters) {
@@ -122,7 +123,7 @@ public class JiraCreateIssueAction {
         addFieldIfNotNull(project, PARENT, inputParameters.getString(PARENT));
         addFieldIfNotNull(project, ASSIGNEE, inputParameters.getString(ASSIGNEE));
         addFieldIfNotNull(project, PRIORITY, inputParameters.getString(PRIORITY));
-        addDescriptionField(project, inputParameters.getString(DESCRIPTION));
+        JiraUtils.addDescriptionField(project, inputParameters.getString(DESCRIPTION));
 
         return project;
     }
@@ -130,21 +131,6 @@ public class JiraCreateIssueAction {
     private static void addFieldIfNotNull(Map<String, Object> project, String fieldName, String value) {
         if (value != null) {
             project.put(fieldName, Map.of(ID, value));
-        }
-    }
-
-    private static void addDescriptionField(Map<String, Object> project, String description) {
-        if (description != null) {
-            project.put(DESCRIPTION, Map.of(
-                CONTENT, List.of(
-                    Map.of(
-                        CONTENT, List.of(
-                            Map.of(
-                                TEXT, description,
-                                TYPE, TEXT)),
-                        TYPE, "paragraph")),
-                TYPE, "doc",
-                "version", 1));
         }
     }
 }

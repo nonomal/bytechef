@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,12 +17,13 @@
 package com.bytechef.component;
 
 import com.bytechef.component.definition.ActionDefinition;
-import com.bytechef.component.definition.ComponentDSL.ModifiableActionDefinition;
-import com.bytechef.component.definition.ComponentDSL.ModifiableComponentDefinition;
-import com.bytechef.component.definition.ComponentDSL.ModifiableConnectionDefinition;
-import com.bytechef.component.definition.ComponentDSL.ModifiableProperty;
-import com.bytechef.component.definition.ComponentDSL.ModifiableTriggerDefinition;
-import com.bytechef.component.definition.Context;
+import com.bytechef.component.definition.ComponentDsl.ModifiableActionDefinition;
+import com.bytechef.component.definition.ComponentDsl.ModifiableClusterElementDefinition;
+import com.bytechef.component.definition.ComponentDsl.ModifiableComponentDefinition;
+import com.bytechef.component.definition.ComponentDsl.ModifiableConnectionDefinition;
+import com.bytechef.component.definition.ComponentDsl.ModifiableProperty;
+import com.bytechef.component.definition.ComponentDsl.ModifiableTriggerDefinition;
+import com.bytechef.component.definition.Context.Http;
 import com.bytechef.component.definition.Property;
 import java.util.Arrays;
 import java.util.List;
@@ -46,7 +47,15 @@ public interface OpenApiComponentHandler extends ComponentHandler {
      *
      * @return
      */
-    default List<? extends ModifiableActionDefinition> getCustomActions() {
+    default List<ModifiableActionDefinition> getCustomActions() {
+        return List.of();
+    }
+
+    /**
+     *
+     * @return
+     */
+    default List<ModifiableClusterElementDefinition<?>> getCustomClusterElements() {
         return List.of();
     }
 
@@ -63,7 +72,7 @@ public interface OpenApiComponentHandler extends ComponentHandler {
      * @param actionDefinitions
      * @return
      */
-    default List<? extends ModifiableActionDefinition> modifyActions(ModifiableActionDefinition... actionDefinitions) {
+    default List<ModifiableActionDefinition> modifyActions(ModifiableActionDefinition... actionDefinitions) {
         return Stream.concat(Arrays.stream(actionDefinitions), getCustomActions().stream())
             .map(this::modifyAction)
             .map(actionDefinition -> {
@@ -86,6 +95,18 @@ public interface OpenApiComponentHandler extends ComponentHandler {
      */
     default ModifiableActionDefinition modifyAction(ModifiableActionDefinition modifiableActionDefinition) {
         return modifiableActionDefinition;
+    }
+
+    /**
+     *
+     * @param clusterElementDefinitions
+     * @return
+     */
+    default List<ModifiableClusterElementDefinition<?>> modifyClusterElements(
+        ModifiableClusterElementDefinition<?>... clusterElementDefinitions) {
+
+        return Stream.concat(Stream.of(clusterElementDefinitions), getCustomClusterElements().stream())
+            .toList();
     }
 
     /**
@@ -125,7 +146,7 @@ public interface OpenApiComponentHandler extends ComponentHandler {
      * @param response
      * @return
      */
-    default Context.Http.Response postExecute(String actionName, Context.Http.Response response) {
+    default Http.Response postExecute(String actionName, Http.Response response) {
         return response;
     }
 }

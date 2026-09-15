@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,60 +16,65 @@
 
 package com.bytechef.platform.workflow.task.dispatcher.test.workflow;
 
+import static com.bytechef.tenant.constant.TenantConstants.CURRENT_TENANT_ID;
+
 import com.bytechef.atlas.configuration.service.WorkflowService;
 import com.bytechef.atlas.coordinator.task.completion.TaskCompletionHandlerFactory;
 import com.bytechef.atlas.coordinator.task.dispatcher.TaskDispatcherResolverFactory;
 import com.bytechef.atlas.execution.domain.Job;
 import com.bytechef.atlas.execution.domain.TaskExecution;
-import com.bytechef.atlas.execution.dto.JobParameters;
+import com.bytechef.atlas.execution.dto.JobParametersDTO;
+import com.bytechef.atlas.execution.repository.memory.InMemoryContextRepository;
+import com.bytechef.atlas.execution.repository.memory.InMemoryCounterRepository;
+import com.bytechef.atlas.execution.repository.memory.InMemoryJobRepository;
+import com.bytechef.atlas.execution.repository.memory.InMemoryTaskExecutionRepository;
 import com.bytechef.atlas.execution.service.ContextService;
+import com.bytechef.atlas.execution.service.ContextServiceImpl;
 import com.bytechef.atlas.execution.service.CounterService;
+import com.bytechef.atlas.execution.service.CounterServiceImpl;
 import com.bytechef.atlas.execution.service.JobService;
+import com.bytechef.atlas.execution.service.JobServiceImpl;
 import com.bytechef.atlas.execution.service.TaskExecutionService;
+import com.bytechef.atlas.execution.service.TaskExecutionServiceImpl;
 import com.bytechef.atlas.file.storage.TaskFileStorage;
-import com.bytechef.atlas.sync.executor.JobSyncExecutor;
 import com.bytechef.atlas.worker.task.handler.TaskHandler;
 import com.bytechef.error.ExecutionError;
-import com.bytechef.message.broker.sync.SyncMessageBroker;
+import com.bytechef.evaluator.SpelEvaluator;
+import com.bytechef.message.broker.memory.AsyncMessageBroker;
 import com.bytechef.message.event.MessageEvent;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.bytechef.platform.job.sync.executor.JobSyncExecutor;
+import com.bytechef.tenant.TenantContext;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.core.env.Environment;
+import org.springframework.core.task.TaskExecutor;
+import tools.jackson.databind.ObjectMapper;
 
 public class TaskDispatcherJobTestExecutor {
 
-    private static final ExecutorService EXECUTOR_SERVICE = Executors.newCachedThreadPool();
-
-    private final ContextService contextService;
-    private final CounterService counterService;
-    private final JobService jobService;
+    private final Environment environment;
     private final ObjectMapper objectMapper;
-    private final TaskExecutionService taskExecutionService;
+    private final TaskExecutor taskExecutor;
     private final TaskFileStorage taskFileStorage;
     private final WorkflowService workflowService;
 
     @SuppressFBWarnings("EI")
     public TaskDispatcherJobTestExecutor(
-        ContextService contextService, CounterService counterService, JobService jobService,
-        ObjectMapper objectMapper, TaskExecutionService taskExecutionService,
-        TaskFileStorage taskFileStorage, WorkflowService workflowService) {
+        Environment environment, ObjectMapper objectMapper, TaskExecutor taskExecutor, TaskFileStorage taskFileStorage,
+        WorkflowService workflowService) {
 
-        this.contextService = contextService;
-        this.counterService = counterService;
-        this.jobService = jobService;
+        this.environment = environment;
         this.objectMapper = objectMapper;
-        this.taskExecutionService = taskExecutionService;
+        this.taskExecutor = taskExecutor;
         this.taskFileStorage = taskFileStorage;
         this.workflowService = workflowService;
     }
 
-    public Job execute(
+    public TaskDispatcherJobExecution execute(
         String workflowId, TaskCompletionHandlerFactoriesFunction taskCompletionHandlerFactoriesFunction,
         TaskDispatcherResolverFactoriesFunction taskDispatcherResolverFactoriesFunction,
         TaskHandlerMapSupplier taskHandlerMapSupplier) {
@@ -79,34 +84,76 @@ public class TaskDispatcherJobTestExecutor {
             taskHandlerMapSupplier);
     }
 
-    public Job execute(
+    public TaskDispatcherJobExecution execute(
         String workflowId, Map<String, Object> inputs,
         TaskCompletionHandlerFactoriesFunction taskCompletionHandlerFactoriesFunction,
         TaskDispatcherResolverFactoriesFunction taskDispatcherResolverFactoriesFunction,
         TaskHandlerMapSupplier taskHandlerMapSupplier) {
 
-        SyncMessageBroker syncMessageBroker = new SyncMessageBroker(objectMapper);
+        ContextService contextService = new ContextServiceImpl(new InMemoryContextRepository());
+        CounterService counterService = new CounterServiceImpl(new InMemoryCounterRepository());
+        AsyncMessageBroker asyncMessageBroker = new AsyncMessageBroker(environment);
+
+        InMemoryTaskExecutionRepository taskExecutionRepository = new InMemoryTaskExecutionRepository();
+
+        JobService jobService = new JobServiceImpl(new InMemoryJobRepository(taskExecutionRepository, objectMapper));
+        TaskExecutionService taskExecutionService = new TaskExecutionServiceImpl(taskExecutionRepository);
 
         JobSyncExecutor jobSyncExecutor = new JobSyncExecutor(
-            contextService, jobService, syncMessageBroker,
-            taskCompletionHandlerFactoriesFunction.apply(counterService, taskExecutionService), List.of(), List.of(),
+            contextService, SpelEvaluator.create(), jobService, -1, asyncMessageBroker, List.of(),
+            taskCompletionHandlerFactoriesFunction.apply(contextService, counterService, taskExecutionService),
+            List.of(), List.of(),
             taskDispatcherResolverFactoriesFunction.apply(
-                event -> syncMessageBroker.send(((MessageEvent<?>) event).getRoute(), event),
-                contextService, counterService, taskExecutionService),
-            taskExecutionService, EXECUTOR_SERVICE::execute, taskHandlerMapSupplier.get()::get, taskFileStorage,
+                createEventPublisher(asyncMessageBroker), contextService, counterService, taskExecutionService),
+            taskExecutionService, taskExecutor, taskHandlerMapSupplier.get()::get, taskFileStorage, -1,
             workflowService);
 
-        return jobSyncExecutor.execute(new JobParameters(workflowId, inputs));
+        Job job = jobSyncExecutor.execute(new JobParametersDTO(workflowId, inputs), true);
+
+        return new TaskDispatcherJobExecution(
+            job, taskExecutionService.getJobTaskExecutions(Objects.requireNonNull(job.getId())),
+            taskExecutionRepository.findAll());
+    }
+
+    private static ApplicationEventPublisher createEventPublisher(AsyncMessageBroker messageBroker) {
+        return event -> {
+            MessageEvent<?> messageEvent = (MessageEvent<?>) event;
+
+            messageEvent.putMetadata(CURRENT_TENANT_ID, TenantContext.getCurrentTenantId());
+
+            messageBroker.send(messageEvent.getRoute(), messageEvent);
+        };
+    }
+
+    @SuppressFBWarnings("EI")
+    public record TaskDispatcherJobExecution(
+        Job job, List<TaskExecution> jobTaskExecutions, List<TaskExecution> taskExecutions) {
+
+        public List<ExecutionError> getExecutionErrors() {
+            return jobTaskExecutions.stream()
+                .map(TaskExecution::getError)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+        }
+
+        public TaskExecution getTaskExecution(Long taskExecutionId) {
+            return taskExecutions.stream()
+                .filter(taskExecution -> Objects.equals(taskExecution.getId(), taskExecutionId))
+                .findFirst()
+                .orElseThrow();
+        }
     }
 
     @FunctionalInterface
     public interface TaskCompletionHandlerFactoriesFunction {
+
         List<TaskCompletionHandlerFactory> apply(
-            CounterService counterService, TaskExecutionService taskExecutionService);
+            ContextService contextService, CounterService counterService, TaskExecutionService taskExecutionService);
     }
 
     @FunctionalInterface
     public interface TaskDispatcherResolverFactoriesFunction {
+
         List<TaskDispatcherResolverFactory> apply(
             ApplicationEventPublisher eventPublisher, ContextService contextService,
             CounterService counterService, TaskExecutionService taskExecutionService);
@@ -114,15 +161,7 @@ public class TaskDispatcherJobTestExecutor {
 
     @FunctionalInterface
     public interface TaskHandlerMapSupplier {
+
         Map<String, TaskHandler<?>> get();
-    }
-
-    public List<ExecutionError> getExecutionErrors(long jobId) {
-        List<TaskExecution> jobTaskExecutions = taskExecutionService.getJobTaskExecutions(jobId);
-
-        return jobTaskExecutions.stream()
-            .map(TaskExecution::getError)
-            .filter(Objects::nonNull)
-            .collect(Collectors.toList());
     }
 }

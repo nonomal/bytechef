@@ -13,12 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * Modifications copyright (C) 2023 ByteChef Inc.
+ * Modifications copyright (C) 2025 ByteChef
  */
 
 package com.bytechef.atlas.execution.repository;
 
 import com.bytechef.atlas.execution.domain.Counter;
+import java.util.Optional;
 
 /**
  * A repository that can be used to update a counter value.
@@ -35,9 +36,51 @@ public interface CounterRepository {
      */
     void deleteById(Long id);
 
-    Iterable<Counter> findAll();
+    Optional<Long> findValueByIdForUpdate(Long id);
 
-    Long findValueByIdForUpdate(Long id);
+    /**
+     * Release the lock acquired by {@link #findValueByIdForUpdate(Long)} for the given id, if held by the current
+     * thread/context. Implementations that rely on transactional database locks may no-op here.
+     *
+     * @param id the id of the counter
+     */
+    default void unlockForUpdate(Long id) {
+    }
+
+    /**
+     * Atomically decrement the counter by 1 under a per-id lock/transaction and return the new value.
+     */
+    default long decrementAndGet(Long id) {
+        Long current = findValueByIdForUpdate(id)
+            .orElseThrow(() -> new IllegalArgumentException("Unable to locate counter with id: %s".formatted(id)));
+        try {
+            long next = current - 1;
+            update(id, next);
+            return next;
+        } finally {
+            unlockForUpdate(id);
+        }
+    }
+
+    /**
+     * Atomically set the counter to the given value under a per-id lock/transaction.
+     */
+    default void setAtomic(Long id, long value) {
+        Optional<Long> selected = findValueByIdForUpdate(id);
+
+        try {
+            if (selected.isEmpty()) {
+                Counter counter = new Counter();
+                counter.setId(id);
+                counter.setValue(value);
+                save(counter);
+            } else {
+                update(id, value);
+            }
+        } finally {
+            unlockForUpdate(id);
+        }
+    }
 
     Counter save(Counter counter);
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,14 +16,14 @@
 
 package com.bytechef.component.mailchimp.util;
 
-import static com.bytechef.component.definition.Authorization.ACCESS_TOKEN;
 import static com.bytechef.component.definition.Authorization.AUTHORIZATION;
-import static com.bytechef.component.definition.ComponentDSL.option;
+import static com.bytechef.component.definition.ComponentDsl.option;
 
 import com.bytechef.component.definition.Context;
 import com.bytechef.component.definition.Context.Http;
 import com.bytechef.component.definition.Option;
 import com.bytechef.component.definition.Parameters;
+import com.bytechef.component.definition.TypeReference;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -31,14 +31,17 @@ import java.util.Map;
 /**
  * @author Ivica Cardic
  */
-public class MailchimpUtils {
+public class MailchimpUtils extends AbstractMailchimpUtils {
+
+    private MailchimpUtils() {
+    }
 
     public static String getMailChimpServer(String accessToken, Context context) {
         Map<?, ?> response = context.http(http -> http.get("https://login.mailchimp.com/oauth2/metadata")
             .configuration(Http.responseType(Http.ResponseType.JSON))
             .header(AUTHORIZATION, "OAuth " + accessToken)
             .execute()
-            .getBody(new Context.TypeReference<>() {}));
+            .getBody(new TypeReference<>() {}));
 
         if (!response.containsKey("dc")) {
             throw new IllegalStateException(
@@ -48,29 +51,38 @@ public class MailchimpUtils {
         return (String) response.get("dc");
     }
 
-    @SuppressWarnings("unchecked")
-    public static List<Option<String>> getListIdOptions(Parameters connectionParameters, Context context) {
-        String accessToken = connectionParameters.getRequiredString(ACCESS_TOKEN);
-
-        String url = "https://%s.api.mailchimp.com/3.0/lists".formatted(getMailChimpServer(accessToken, context));
-
-        Map<String, ?> response = context
-            .http(http -> http.get(url))
-            .queryParameters(
-                Map.of(
-                    "fields", List.of("lists.id,lists.name,total_items"),
-                    "count", List.of("1000")))
-            .configuration(Http.responseType(Http.ResponseType.JSON))
-            .execute()
-            .getBody(new Context.TypeReference<>() {});
-
-        context.logger(logger -> logger.debug("Response for url='%s': %s".formatted(url, response)));
+    public static List<Option<String>> getListIdOptions(
+        Parameters inputParameters, Parameters connectionParameters, Map<String, String> lookupDependsOnPaths,
+        String searchText, Context context) {
 
         List<Option<String>> options = new ArrayList<>();
 
-        for (Map<?, ?> list : (List<Map<?, ?>>) response.get("lists")) {
-            options.add(option((String) list.get("name"), (String) list.get("id")));
-        }
+        int offset = 0;
+        int totalItems;
+
+        do {
+            Map<String, ?> response = context
+                .http(http -> http.get("/lists"))
+                .queryParameters(
+                    "fields", "lists.id,lists.name,total_items",
+                    "count", "1000",
+                    "offset", offset)
+                .configuration(Http.responseType(Http.ResponseType.JSON))
+                .execute()
+                .getBody(new TypeReference<>() {});
+
+            if (response.get("lists") instanceof List<?> lists) {
+                for (Object list : lists) {
+                    if (list instanceof Map<?, ?> map) {
+                        options.add(option((String) map.get("name"), (String) map.get("id")));
+
+                        offset++;
+                    }
+                }
+            }
+
+            totalItems = (Integer) response.get("total_items");
+        } while (totalItems > offset);
 
         return options;
     }

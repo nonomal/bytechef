@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,15 +17,18 @@
 package com.bytechef.component.pipedrive.action;
 
 import static com.bytechef.component.OpenApiComponentHandler.PropertyType;
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.array;
-import static com.bytechef.component.definition.ComponentDSL.integer;
-import static com.bytechef.component.definition.ComponentDSL.object;
-import static com.bytechef.component.definition.ComponentDSL.option;
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.array;
+import static com.bytechef.component.definition.ComponentDsl.integer;
+import static com.bytechef.component.definition.ComponentDsl.object;
+import static com.bytechef.component.definition.ComponentDsl.option;
+import static com.bytechef.component.definition.ComponentDsl.outputSchema;
+import static com.bytechef.component.definition.ComponentDsl.string;
 import static com.bytechef.component.definition.Context.Http.ResponseType;
 
-import com.bytechef.component.definition.ComponentDSL;
+import com.bytechef.component.definition.ActionDefinition;
+import com.bytechef.component.definition.ComponentDsl;
+import com.bytechef.component.pipedrive.util.PipedriveUtils;
 import java.util.Map;
 
 /**
@@ -34,8 +37,8 @@ import java.util.Map;
  * @generated
  */
 public class PipedriveGetDealsAction {
-    public static final ComponentDSL.ModifiableActionDefinition ACTION_DEFINITION = action("getDeals")
-        .title("Get deals")
+    public static final ComponentDsl.ModifiableActionDefinition ACTION_DEFINITION = action("getDeals")
+        .title("Get Deals")
         .description("Returns all deals.")
         .metadata(
             Map.of(
@@ -43,22 +46,25 @@ public class PipedriveGetDealsAction {
                 "path", "/deals"
 
             ))
-        .properties(integer("user_id").label("User")
+        .properties(integer("user_id").label("User ID")
             .description(
                 "Deals matching the given user will be returned. However, `filter_id` and `owned_by_you` takes precedence over `user_id` when supplied.")
             .required(false)
+            .options((ActionDefinition.OptionsFunction<Long>) PipedriveUtils::getUserIdOptions)
             .metadata(
                 Map.of(
                     "type", PropertyType.QUERY)),
-            integer("filter_id").label("Filter")
-                .description("Filter to use.")
+            integer("filter_id").label("Filter ID")
+                .description("ID of the filter to use.")
                 .required(false)
+                .options((ActionDefinition.OptionsFunction<Long>) PipedriveUtils::getFilterIdOptions)
                 .metadata(
                     Map.of(
                         "type", PropertyType.QUERY)),
-            integer("stage_id").label("Stage")
+            integer("stage_id").label("Stage ID")
                 .description("Deals within the given stage will be returned.")
                 .required(false)
+                .options((ActionDefinition.OptionsFunction<Long>) PipedriveUtils::getStageIdOptions)
                 .metadata(
                     Map.of(
                         "type", PropertyType.QUERY)),
@@ -77,26 +83,24 @@ public class PipedriveGetDealsAction {
                 .metadata(
                     Map.of(
                         "type", PropertyType.QUERY)))
-        .outputSchema(object()
-            .properties(object("body")
-                .properties(array("data")
-                    .items(object().properties(integer("id").required(false),
-                        object("user_id")
-                            .properties(integer("id").required(false), string("name").required(false),
-                                string("email").required(false))
-                            .required(false),
-                        object("person_id").properties(string("name").required(false))
-                            .required(false),
-                        object("org_id").properties(string("name").required(false), string("owner_id").required(false))
-                            .required(false),
-                        integer("stage_id").required(false), string("title").required(false),
-                        integer("value").required(false), string("currency").required(false),
-                        string("status").required(false)))
-                    .required(false))
+        .output(outputSchema(object()
+            .properties(array("data")
+                .items(object().properties(integer("id").required(false),
+                    object("user_id")
+                        .properties(integer("id").required(false), string("name").required(false),
+                            string("email").required(false))
+                        .required(false),
+                    object("person_id").properties(string("name").required(false))
+                        .required(false),
+                    object("org_id").properties(string("name").required(false), string("owner_id").required(false))
+                        .required(false),
+                    integer("stage_id").required(false), string("title").required(false),
+                    integer("value").required(false), string("currency").required(false),
+                    string("status").required(false)))
                 .required(false))
             .metadata(
                 Map.of(
-                    "responseType", ResponseType.JSON)));
+                    "responseType", ResponseType.JSON))));
 
     private PipedriveGetDealsAction() {
     }

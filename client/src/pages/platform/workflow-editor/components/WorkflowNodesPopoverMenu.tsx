@@ -1,112 +1,216 @@
-import {Input} from '@/components/ui/input';
-import {Popover, PopoverContent, PopoverTrigger} from '@/components/ui/popover';
-import {ComponentDefinitionBasicModel, TaskDispatcherDefinitionModel} from '@/shared/middleware/platform/configuration';
-import {PropsWithChildren, useEffect, useState} from 'react';
+import {Popover, PopoverAnchor, PopoverContent, PopoverTrigger} from '@/components/ui/popover';
+import {ComponentDefinition, ComponentDefinitionApi} from '@/shared/middleware/platform/configuration';
+import {ComponentDefinitionKeys} from '@/shared/queries/platform/componentDefinitions.queries';
+import {ClickedDefinitionType} from '@/shared/types';
+import {useQueryClient} from '@tanstack/react-query';
+import {MouseEvent, PropsWithChildren, useCallback, useEffect, useMemo, useState} from 'react';
+import {twMerge} from 'tailwind-merge';
+import {useShallow} from 'zustand/react/shallow';
 
+import {useWorkflowEditor} from '../providers/workflowEditorProvider';
 import useWorkflowDataStore from '../stores/useWorkflowDataStore';
-import WorkflowNodesPopoverMenuList from './WorkflowNodesPopoverMenuList';
+import getTaskDispatcherContext from '../utils/getTaskDispatcherContext';
+import handleTaskDispatcherClick from '../utils/handleTaskDispatcherClick';
+import {TASK_DISPATCHER_CONFIG} from '../utils/taskDispatcherConfig';
+import WorkflowNodesPopoverMenuComponentList from './WorkflowNodesPopoverMenuComponentList';
+import WorkflowNodesPopoverMenuOperationList from './WorkflowNodesPopoverMenuOperationList';
 
 interface WorkflowNodesPopoverMenuProps extends PropsWithChildren {
-    id?: string;
-    edge?: boolean;
+    clusterElementType?: string;
+    edgeId?: string;
     hideActionComponents?: boolean;
+    hideClusterElementComponents?: boolean;
     hideTriggerComponents?: boolean;
     hideTaskDispatchers?: boolean;
+    multipleClusterElementsNode?: boolean;
+    nodeIndex?: number;
+    onOpenChange?: (open: boolean) => void;
+    open?: boolean;
+    showPaste?: boolean;
+    sourceNodeId: string;
+    sourceNodeName?: string;
 }
 
 const WorkflowNodesPopoverMenu = ({
     children,
-    edge = false,
+    clusterElementType,
+    edgeId,
     hideActionComponents = false,
+    hideClusterElementComponents = false,
     hideTaskDispatchers = false,
     hideTriggerComponents = false,
-    id,
+    multipleClusterElementsNode = false,
+    nodeIndex,
+    onOpenChange: externalOnOpenChange,
+    open: externalOpen,
+    showPaste = false,
+    sourceNodeId,
+    sourceNodeName,
 }: WorkflowNodesPopoverMenuProps) => {
-    const [filter, setFilter] = useState('');
-    const [filteredActionComponentDefinitions, setFilteredActionComponentDefinitions] = useState<
-        Array<ComponentDefinitionBasicModel>
-    >([]);
-    const [filteredTaskDispatcherDefinitions, setFilteredTaskDispatcherDefinitions] = useState<
-        Array<TaskDispatcherDefinitionModel>
-    >([]);
-    const [filteredTriggerComponentDefinitions, setFilteredTriggerComponentDefinitions] = useState<
-        Array<ComponentDefinitionBasicModel>
-    >([]);
+    const [componentDefinitionToBeAdded, setComponentDefinitionToBeAdded] = useState<ComponentDefinition | null>(null);
+    const [internalOpen, setInternalOpen] = useState(false);
+    const [trigger, setTrigger] = useState(false);
 
-    const {componentDefinitions, taskDispatcherDefinitions} = useWorkflowDataStore();
+    const actionPanelOpen = !!componentDefinitionToBeAdded?.name;
+
+    const popoverOpen = externalOpen ?? internalOpen;
+    const setPopoverOpen = externalOnOpenChange ?? setInternalOpen;
+
+    const workflow = useWorkflowDataStore((state) => state.workflow);
+    const {edges, nodes} = useWorkflowDataStore(
+        useShallow((state) => ({
+            edges: state.edges,
+            nodes: state.nodes,
+        }))
+    );
+
+    const {updateWorkflowMutation} = useWorkflowEditor();
+
+    const queryClient = useQueryClient();
+
+    const sourceNode = useMemo(() => nodes.find((node) => node.id === sourceNodeId), [sourceNodeId, nodes]);
+
+    const handleActionPanelClose = useCallback(() => {
+        setComponentDefinitionToBeAdded(null);
+    }, []);
+
+    const handlePopoverOpenChange = useCallback(
+        (open: boolean) => {
+            setPopoverOpen(open);
+
+            if (!open) {
+                handleActionPanelClose();
+            }
+        },
+        [handleActionPanelClose, setPopoverOpen]
+    );
+
+    const handleStopPropagation = useCallback((event: MouseEvent) => event.stopPropagation(), []);
+
+    const handlePasteClose = useCallback(() => setPopoverOpen(false), [setPopoverOpen]);
+
+    const handleComponentClick = useCallback(
+        async (clickedItem: ClickedDefinitionType) => {
+            const {componentVersion, name, taskDispatcher, trigger, version} = clickedItem;
+
+            if (taskDispatcher) {
+                if (!updateWorkflowMutation) {
+                    return;
+                }
+
+                const edge = edges.find((edge) => edge.id === edgeId);
+
+                const taskDispatcherContext = getTaskDispatcherContext({
+                    edge: edge,
+                    node: edge?.type === 'workflow' ? undefined : sourceNode,
+                    nodes: nodes,
+                });
+
+                await handleTaskDispatcherClick({
+                    edge,
+                    queryClient,
+                    sourceNodeId,
+                    taskDispatcherContext,
+                    taskDispatcherDefinition: clickedItem,
+                    taskDispatcherName: name as keyof typeof TASK_DISPATCHER_CONFIG,
+                    updateWorkflowMutation,
+                    workflow,
+                });
+
+                setPopoverOpen(false);
+
+                return;
+            }
+
+            if (trigger) {
+                setTrigger(true);
+            }
+
+            const clickedComponentDefinition = await queryClient.fetchQuery({
+                queryFn: () =>
+                    new ComponentDefinitionApi().getComponentDefinition({
+                        componentName: name,
+                        componentVersion: componentVersion || version,
+                    }),
+                queryKey: ComponentDefinitionKeys.componentDefinition({
+                    componentName: name,
+                    componentVersion: componentVersion || version,
+                }),
+            });
+
+            if (clickedComponentDefinition) {
+                setComponentDefinitionToBeAdded(clickedComponentDefinition);
+            }
+        },
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        [sourceNodeId, nodeIndex]
+    );
 
     useEffect(() => {
-        if (taskDispatcherDefinitions) {
-            setFilteredTaskDispatcherDefinitions(
-                taskDispatcherDefinitions.filter(
-                    ({name, title}) =>
-                        name?.toLowerCase().includes(filter.toLowerCase()) ||
-                        title?.toLowerCase().includes(filter.toLowerCase())
-                )
-            );
-        }
-    }, [taskDispatcherDefinitions, filter, edge]);
-
-    useEffect(() => {
-        if (componentDefinitions) {
-            setFilteredActionComponentDefinitions(
-                componentDefinitions.filter(
-                    ({actionsCount, name, title}) =>
-                        actionsCount &&
-                        (name?.toLowerCase().includes(filter.toLowerCase()) ||
-                            title?.toLowerCase().includes(filter.toLowerCase()))
-                )
-            );
-
-            setFilteredTriggerComponentDefinitions(
-                componentDefinitions.filter(
-                    ({name, title, triggersCount}) =>
-                        triggersCount &&
-                        (name?.toLowerCase().includes(filter.toLowerCase()) ||
-                            title?.toLowerCase().includes(filter.toLowerCase()))
-                )
-            );
-        }
-    }, [componentDefinitions, filter, edge]);
+        return () => {
+            setComponentDefinitionToBeAdded(null);
+            setPopoverOpen(false);
+            setTrigger(false);
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     return (
-        <Popover>
-            <PopoverTrigger asChild>{children}</PopoverTrigger>
+        <Popover
+            key={`${sourceNodeId}-popoverMenu-${nodeIndex}`}
+            modal
+            onOpenChange={handlePopoverOpenChange}
+            open={popoverOpen}
+        >
+            {children ? (
+                <PopoverTrigger asChild onClick={handleStopPropagation}>
+                    {children}
+                </PopoverTrigger>
+            ) : (
+                <PopoverAnchor />
+            )}
 
             <PopoverContent
                 align="start"
-                className="w-workflow-nodes-popover-menu-width rounded-lg p-0 will-change-auto"
+                className={twMerge(
+                    'flex rounded-lg p-0 will-change-auto',
+                    actionPanelOpen ? 'w-workflow-nodes-popover-menu-width' : 'w-node-popover-width'
+                )}
+                onClick={handleStopPropagation}
+                onContextMenu={handleStopPropagation}
                 side="right"
                 sideOffset={-34}
             >
-                {id && (
-                    <div className="nowheel">
-                        {typeof componentDefinitions === 'undefined' ||
-                            (typeof taskDispatcherDefinitions === 'undefined' && (
-                                <div className="px-3 py-2 text-xs text-gray-500">Something went wrong.</div>
-                            ))}
+                <div className="nowheel flex w-full rounded-lg bg-surface-neutral-secondary">
+                    <WorkflowNodesPopoverMenuComponentList
+                        actionPanelOpen={actionPanelOpen}
+                        clusterElementType={clusterElementType}
+                        edgeId={edgeId}
+                        handleComponentClick={handleComponentClick}
+                        hideActionComponents={hideActionComponents}
+                        hideClusterElementComponents={hideClusterElementComponents}
+                        hideTaskDispatchers={hideTaskDispatchers}
+                        hideTriggerComponents={hideTriggerComponents}
+                        onPasteClose={handlePasteClose}
+                        selectedComponentName={componentDefinitionToBeAdded?.name}
+                        showPaste={showPaste}
+                        sourceNodeId={sourceNodeId}
+                        updateWorkflowMutation={updateWorkflowMutation}
+                    />
 
-                        <header className="p-3 text-center text-gray-600">
-                            <Input
-                                name="workflowNodeFilter"
-                                onChange={(event) => setFilter(event.target.value)}
-                                placeholder="Filter workflow nodes"
-                                value={filter}
-                            />
-                        </header>
-
-                        <WorkflowNodesPopoverMenuList
-                            actionComponentDefinitions={filteredActionComponentDefinitions}
-                            edge={edge}
-                            hideActionComponents={hideActionComponents}
-                            hideTaskDispatchers={hideTaskDispatchers}
-                            hideTriggerComponents={hideTriggerComponents}
-                            id={id}
-                            taskDispatcherDefinitions={filteredTaskDispatcherDefinitions}
-                            triggerComponentDefinitions={filteredTriggerComponentDefinitions}
+                    {actionPanelOpen && componentDefinitionToBeAdded && (
+                        <WorkflowNodesPopoverMenuOperationList
+                            clusterElementType={clusterElementType}
+                            componentDefinition={componentDefinitionToBeAdded}
+                            edgeId={edgeId}
+                            multipleClusterElementsNode={multipleClusterElementsNode}
+                            setPopoverOpen={setPopoverOpen}
+                            sourceNodeId={sourceNodeId}
+                            sourceNodeName={sourceNodeName}
+                            trigger={trigger}
                         />
-                    </div>
-                )}
+                    )}
+                </div>
             </PopoverContent>
         </Popover>
     );

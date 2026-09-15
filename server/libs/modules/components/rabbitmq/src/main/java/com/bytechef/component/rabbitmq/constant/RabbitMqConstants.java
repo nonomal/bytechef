@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,6 +26,5 @@ public class RabbitMqConstants {
     public static final String PASSWORD = "password";
     public static final String PORT = "port";
     public static final String QUEUE = "queue";
-    public static final String RABBIT_MQ = "rabbitMQ";
     public static final String USERNAME = "username";
 }

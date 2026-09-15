@@ -1,0 +1,17 @@
+query approvalTasks($environmentId: Int) {
+    approvalTasks(environmentId: $environmentId) {
+        assigneeId
+        createdBy
+        createdDate
+        description
+        dueDate
+        id
+        jobResumeId
+        lastModifiedBy
+        lastModifiedDate
+        name
+        priority
+        status
+        version
+    }
+}

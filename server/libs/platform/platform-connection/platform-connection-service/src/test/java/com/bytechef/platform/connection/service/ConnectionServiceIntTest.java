@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,10 +18,13 @@ package com.bytechef.platform.connection.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.bytechef.component.definition.Authorization.AuthorizationType;
+import com.bytechef.platform.configuration.domain.Environment;
 import com.bytechef.platform.connection.config.ConnectionIntTestConfiguration;
+import com.bytechef.platform.connection.config.ConnectionIntTestConfigurationSharedMocks;
 import com.bytechef.platform.connection.domain.Connection;
 import com.bytechef.platform.connection.repository.ConnectionRepository;
-import com.bytechef.platform.constant.AppType;
+import com.bytechef.platform.constant.PlatformType;
 import com.bytechef.platform.tag.domain.Tag;
 import com.bytechef.platform.tag.repository.TagRepository;
 import com.bytechef.test.config.testcontainers.PostgreSQLContainerConfiguration;
@@ -39,6 +42,7 @@ import org.springframework.context.annotation.Import;
  */
 @SpringBootTest(classes = ConnectionIntTestConfiguration.class)
 @Import(PostgreSQLContainerConfiguration.class)
+@ConnectionIntTestConfigurationSharedMocks
 public class ConnectionServiceIntTest {
 
     @Autowired
@@ -72,6 +76,51 @@ public class ConnectionServiceIntTest {
     }
 
     @Test
+    public void testCreateWithParameters() {
+        AuthorizationType authorizationType = AuthorizationType.BASIC_AUTH;
+        String componentName = "componentName";
+        int connectionVersion = 1;
+        Environment environment = Environment.PRODUCTION;
+        String name = "name";
+        Map<String, Object> parameters = Map.of("key1", "value1");
+        PlatformType type = PlatformType.AUTOMATION;
+
+        Connection connection = connectionService.create(
+            authorizationType, componentName, connectionVersion, environment.ordinal(), name, parameters, type);
+
+        assertThat(connection)
+            .hasFieldOrPropertyWithValue("authorizationType", authorizationType)
+            .hasFieldOrPropertyWithValue("componentName", componentName)
+            .hasFieldOrPropertyWithValue("connectionVersion", connectionVersion)
+            .hasFieldOrPropertyWithValue("environment", environment.ordinal())
+            .hasFieldOrPropertyWithValue("name", name)
+            .hasFieldOrPropertyWithValue("parameters", parameters)
+            .hasFieldOrPropertyWithValue("type", type);
+    }
+
+    @Test
+    public void testCreateWithAuthorizationTypNone() {
+        String componentName = "componentName";
+        int connectionVersion = 1;
+        Environment environment = Environment.PRODUCTION;
+        String name = "name";
+        Map<String, Object> parameters = Map.of("key1", "value1");
+        PlatformType type = PlatformType.AUTOMATION;
+
+        Connection connection = connectionService.create(
+            null, componentName, connectionVersion, environment.ordinal(), name, parameters, type);
+
+        assertThat(connection)
+            .hasFieldOrPropertyWithValue("authorizationType", connection.getAuthorizationType())
+            .hasFieldOrPropertyWithValue("componentName", componentName)
+            .hasFieldOrPropertyWithValue("connectionVersion", connectionVersion)
+            .hasFieldOrPropertyWithValue("environment", environment.ordinal())
+            .hasFieldOrPropertyWithValue("name", name)
+            .hasFieldOrPropertyWithValue("parameters", parameters)
+            .hasFieldOrPropertyWithValue("type", type);
+    }
+
+    @Test
     public void testDelete() {
         Connection connection = connectionRepository.save(getConnection());
 
@@ -93,33 +142,23 @@ public class ConnectionServiceIntTest {
         connection = connectionRepository.save(connection);
 
         assertThat(connectionService.getConnection(Validate.notNull(connection.getId(), "id"))).isEqualTo(connection);
-        assertThat(connectionService.getConnections(null, null, null, tag.getId(), AppType.AUTOMATION)).hasSize(1);
+        assertThat(connectionService.getConnections(null, null, tag.getId(), null, PlatformType.AUTOMATION)).hasSize(1);
     }
 
     @Test
     public void getGetConnections() {
         connectionRepository.save(getConnection());
 
-        assertThat(connectionService.getConnections(null, null, null, null, AppType.AUTOMATION)).hasSize(1);
-    }
-
-    @Test
-    public void testUpdate() {
-        Connection connection = connectionRepository.save(getConnection());
-
-        connection.setName("name2");
-
-        Connection updatedConnection = connectionService.update(connection);
-
-        assertThat(updatedConnection.getName()).isEqualTo("name2");
+        assertThat(connectionService.getConnections(null, null, null, null, PlatformType.AUTOMATION)).hasSize(1);
     }
 
     private static Connection getConnection() {
         return Connection.builder()
+            .authorizationType(AuthorizationType.BASIC_AUTH)
             .componentName("componentName")
             .name("name")
             .parameters(Map.of("key1", "value1"))
-            .type(AppType.AUTOMATION)
+            .type(PlatformType.AUTOMATION)
             .build();
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,27 +16,29 @@
 
 package com.bytechef.component.asana;
 
-import static com.bytechef.component.asana.constant.AsanaConstants.ASSIGNEE;
-import static com.bytechef.component.asana.constant.AsanaConstants.PROJECT;
-import static com.bytechef.component.asana.constant.AsanaConstants.TAGS;
-import static com.bytechef.component.asana.constant.AsanaConstants.TEAM;
-import static com.bytechef.component.asana.constant.AsanaConstants.WORKSPACE;
-import static com.bytechef.component.definition.ComponentDSL.string;
-
 import com.bytechef.component.OpenApiComponentHandler;
-import com.bytechef.component.asana.util.AsanaUtils;
+import com.bytechef.component.asana.trigger.AsanaNewTaskTrigger;
 import com.bytechef.component.definition.ActionDefinition;
+import com.bytechef.component.definition.Authorization;
+import com.bytechef.component.definition.Authorization.AuthorizationType;
+import com.bytechef.component.definition.Authorization.ScopesFunction;
 import com.bytechef.component.definition.ComponentCategory;
-import com.bytechef.component.definition.ComponentDSL.ModifiableArrayProperty;
-import com.bytechef.component.definition.ComponentDSL.ModifiableComponentDefinition;
-import com.bytechef.component.definition.ComponentDSL.ModifiableObjectProperty;
-import com.bytechef.component.definition.ComponentDSL.ModifiableProperty;
-import com.bytechef.component.definition.ComponentDSL.ModifiableStringProperty;
-import com.bytechef.component.definition.OptionsDataSource.ActionOptionsFunction;
+import com.bytechef.component.definition.ComponentDsl.ModifiableArrayProperty;
+import com.bytechef.component.definition.ComponentDsl.ModifiableAuthorization;
+import com.bytechef.component.definition.ComponentDsl.ModifiableComponentDefinition;
+import com.bytechef.component.definition.ComponentDsl.ModifiableConnectionDefinition;
+import com.bytechef.component.definition.ComponentDsl.ModifiableIntegerProperty;
+import com.bytechef.component.definition.ComponentDsl.ModifiableNumberProperty;
+import com.bytechef.component.definition.ComponentDsl.ModifiableObjectProperty;
+import com.bytechef.component.definition.ComponentDsl.ModifiableProperty;
+import com.bytechef.component.definition.ComponentDsl.ModifiableStringProperty;
+import com.bytechef.component.definition.ComponentDsl.ModifiableTriggerDefinition;
 import com.bytechef.component.definition.Property.ValueProperty;
 import com.bytechef.definition.BaseProperty;
 import com.google.auto.service.AutoService;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -47,49 +49,92 @@ import java.util.Optional;
 public class AsanaComponentHandler extends AbstractAsanaComponentHandler {
 
     @Override
+    public List<ModifiableTriggerDefinition> getTriggers() {
+        return List.of(AsanaNewTaskTrigger.TRIGGER_DEFINITION);
+    }
+
+    @Override
     public ModifiableComponentDefinition modifyComponent(ModifiableComponentDefinition modifiableComponentDefinition) {
         return modifiableComponentDefinition
             .customAction(true)
             .icon("path:assets/asana.svg")
-            .categories(ComponentCategory.PROJECT_MANAGEMENT);
+            .categories(ComponentCategory.PROJECT_MANAGEMENT)
+            .customActionHelp("Asana Web API documentation", "https://developers.asana.com/docs/api-explorer")
+            .version(1);
+    }
+
+    @Override
+    public ModifiableConnectionDefinition modifyConnection(
+        ModifiableConnectionDefinition modifiableConnectionDefinition) {
+
+        Optional<List<? extends Authorization>> optionalAuthorizations =
+            modifiableConnectionDefinition.getAuthorizations();
+
+        if (optionalAuthorizations.isPresent()) {
+            List<? extends Authorization> authorizations = optionalAuthorizations.get();
+
+            for (Authorization authorization : authorizations) {
+                AuthorizationType authorizationType = authorization.getType();
+                if (authorizationType.equals(AuthorizationType.OAUTH2_AUTHORIZATION_CODE)) {
+                    Optional<ScopesFunction> optionalScopesFunction = authorization.getScopes();
+
+                    optionalScopesFunction.ifPresent(scopesFunction -> ((ModifiableAuthorization) authorization)
+                        .scopes((connectionParameters, context) -> {
+
+                            Map<String, Boolean> scopes = new LinkedHashMap<>(
+                                scopesFunction.apply(connectionParameters, context));
+
+                            scopes.put("webhooks:read", true);
+                            scopes.put("webhooks:write", true);
+                            scopes.put("webhooks:delete", true);
+
+                            return scopes;
+                        }));
+                }
+            }
+        }
+
+        return modifiableConnectionDefinition
+            .help("", "https://docs.bytechef.io/reference/components/asana_v1#connection-setup")
+            .version(1);
     }
 
     @Override
     public ModifiableProperty<?> modifyProperty(
         ActionDefinition actionDefinition, ModifiableProperty<?> modifiableProperty) {
 
-        if (Objects.equals(modifiableProperty.getName(), "__item")) {
+        String actionDefinitionName = actionDefinition.getName();
+
+        if (actionDefinitionName.equals("createCustomField") && Objects.equals(modifiableProperty.getName(), "data")) {
             Optional<List<? extends ValueProperty<?>>> propertiesOptional =
                 ((ModifiableObjectProperty) modifiableProperty).getProperties();
 
             for (BaseProperty baseProperty : propertiesOptional.get()) {
-                if (Objects.equals(baseProperty.getName(), "data")) {
-                    Optional<List<? extends ValueProperty<?>>> propertiesOptional2 =
-                        ((ModifiableObjectProperty) baseProperty).getProperties();
+                if (Objects.equals(baseProperty.getName(), "text_value")) {
+                    ((ModifiableStringProperty) baseProperty)
+                        .displayCondition("%s == '%s'".formatted("data.resource_subtype", "text"));
+                } else if (Objects.equals(baseProperty.getName(), "enum_options")) {
+                    ((ModifiableArrayProperty) baseProperty)
+                        .displayCondition(
+                            "%s == '%s' || %s == '%s'".formatted(
+                                "data.resource_subtype", "enum", "data.resource_subtype", "multi_enum"));
+                } else if (Objects.equals(baseProperty.getName(), "number_value")) {
+                    ((ModifiableNumberProperty) baseProperty)
+                        .displayCondition("%s == '%s'".formatted("data.resource_subtype", "number"));
+                } else if (Objects.equals(baseProperty.getName(), "precision")) {
+                    ((ModifiableIntegerProperty) baseProperty)
+                        .displayCondition("%s == '%s'".formatted("data.resource_subtype", "number"));
+                }
 
-                    for (BaseProperty baseProperty2 : propertiesOptional2.get()) {
-                        if (Objects.equals(baseProperty2.getName(), WORKSPACE)) {
-                            ((ModifiableStringProperty) baseProperty2)
-                                .options((ActionOptionsFunction<String>) AsanaUtils::getWorkspaceIdOptions);
-                        } else if (Objects.equals(baseProperty2.getName(), PROJECT)) {
-                            ((ModifiableStringProperty) baseProperty2)
-                                .optionsLookupDependsOn(WORKSPACE)
-                                .options((ActionOptionsFunction<String>) AsanaUtils::getProjectIdOptions);
-                        } else if (Objects.equals(baseProperty2.getName(), ASSIGNEE)) {
-                            ((ModifiableStringProperty) baseProperty2)
-                                .optionsLookupDependsOn(WORKSPACE)
-                                .options((ActionOptionsFunction<String>) AsanaUtils::getAssigneeOptions);
-                        } else if (Objects.equals(baseProperty2.getName(), TEAM)) {
-                            ((ModifiableStringProperty) baseProperty2)
-                                .optionsLookupDependsOn("__item.data." + WORKSPACE)
-                                .options((ActionOptionsFunction<String>) AsanaUtils::getTeamOptions);
-                        } else if (Objects.equals(baseProperty2.getName(), TAGS)) {
-                            ((ModifiableArrayProperty) baseProperty2)
-                                .items(
-                                    string()
-                                        .options((ActionOptionsFunction<String>) AsanaUtils::getTagOptions));
-                        }
-                    }
+                else if (Objects.equals(baseProperty.getName(), "date_value")) {
+                    ((ModifiableObjectProperty) baseProperty)
+                        .displayCondition("%s == '%s'".formatted("data.resource_subtype", "date"));
+                } else if (Objects.equals(baseProperty.getName(), "people_value")) {
+                    ((ModifiableArrayProperty) baseProperty)
+                        .displayCondition("%s == '%s'".formatted("data.resource_subtype", "people"));
+                } else if (Objects.equals(baseProperty.getName(), "reference_value")) {
+                    ((ModifiableArrayProperty) baseProperty)
+                        .displayCondition("%s == '%s'".formatted("data.resource_subtype", "reference"));
                 }
             }
         }

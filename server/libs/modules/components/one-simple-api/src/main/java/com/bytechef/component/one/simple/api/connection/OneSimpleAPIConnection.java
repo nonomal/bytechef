@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,32 +17,36 @@
 package com.bytechef.component.one.simple.api.connection;
 
 import static com.bytechef.component.definition.Authorization.AuthorizationType.CUSTOM;
-import static com.bytechef.component.definition.ComponentDSL.authorization;
-import static com.bytechef.component.definition.ComponentDSL.connection;
-import static com.bytechef.component.definition.ComponentDSL.string;
-import static com.bytechef.component.one.simple.api.constants.OneSimpleAPIConstants.ACCESS_TOKEN;
+import static com.bytechef.component.definition.ComponentDsl.authorization;
+import static com.bytechef.component.definition.ComponentDsl.connection;
+import static com.bytechef.component.definition.ComponentDsl.string;
+import static com.bytechef.component.one.simple.api.constants.OneSimpleAPIConstants.TOKEN;
 
-import com.bytechef.component.definition.ComponentDSL.ModifiableConnectionDefinition;
+import com.bytechef.component.definition.Authorization.ApplyResponse;
+import com.bytechef.component.definition.ComponentDsl.ModifiableConnectionDefinition;
 import java.util.List;
+import java.util.Map;
 
 /**
  * @author Luka Ljubić
+ * @author Monika Kušter
  */
 public class OneSimpleAPIConnection {
 
     public static final ModifiableConnectionDefinition CONNECTION_DEFINITION = connection()
+        .baseUri((connectionParameters, context) -> "https://onesimpleapi.com/api")
         .authorizations(
             authorization(CUSTOM)
-                .title("One Simple API Connection")
                 .properties(
-                    string(ACCESS_TOKEN)
-                        .label("Access Token")
-                        .description("Access Token that is given to you when you create a API Token in OneSimpleApi")
+                    string(TOKEN)
+                        .label("API Token")
                         .required(true))
-                .scopes((connection, context) -> List.of(
-                    "shortener",
-                    "exchange_rate",
-                    "page_info")));
+                .apply((connectionParameters, context) -> ApplyResponse.ofQueryParameters(
+                    Map.of(
+                        TOKEN, List.of(connectionParameters.getRequiredString(TOKEN)),
+                        "output", List.of("json")))))
+        .help("", "https://docs.bytechef.io/reference/components/one-simple-api_v1#connection-setup")
+        .version(1);
 
     private OneSimpleAPIConnection() {
     }

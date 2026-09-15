@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,9 +18,9 @@ package com.bytechef.platform.configuration.domain;
 
 import com.bytechef.commons.data.jdbc.wrapper.MapWrapper;
 import com.bytechef.commons.util.MapUtils;
-import com.bytechef.platform.component.registry.domain.Output;
-import com.bytechef.platform.component.registry.domain.Property;
-import java.time.LocalDateTime;
+import com.bytechef.platform.domain.BaseProperty;
+import com.bytechef.platform.domain.OutputResponse;
+import java.time.Instant;
 import java.util.Map;
 import java.util.Objects;
 import org.springframework.data.annotation.CreatedBy;
@@ -38,33 +38,17 @@ import org.springframework.data.relational.core.mapping.Table;
 @Table("workflow_node_test_output")
 public class WorkflowNodeTestOutput {
 
-    @Column("component_name")
-    private String componentName;
-
-    @Column("component_operation_name")
-    private String componentOperationName;
-
-    @Column("component_version")
-    private int componentVersion;
-
-    @CreatedBy
-    @Column("created_by")
-    private String createdBy;
-
-    @Column("created_date")
-    @CreatedDate
-    private LocalDateTime createdDate;
-
     @Id
     private Long id;
 
-    @Column("last_modified_by")
-    @LastModifiedBy
-    private String lastModifiedBy;
+    @Column("type_name")
+    private String typeName;
 
-    @Column("last_modified_date")
-    @LastModifiedDate
-    private LocalDateTime lastModifiedDate;
+    @Column("type_operation_name")
+    private String typeOperationName;
+
+    @Column("type_version")
+    private int typeVersion;
 
     @Column("output_schema")
     private MapWrapper outputSchema;
@@ -75,11 +59,30 @@ public class WorkflowNodeTestOutput {
     @Column("workflow_node_name")
     private String workflowNodeName;
 
-    @Version
-    private int version;
-
     @Column("workflow_id")
     private String workflowId;
+
+    @Column("environment")
+    private Long environmentId;
+
+    @CreatedBy
+    @Column("created_by")
+    private String createdBy;
+
+    @Column("created_date")
+    @CreatedDate
+    private Instant createdDate;
+
+    @Column("last_modified_by")
+    @LastModifiedBy
+    private String lastModifiedBy;
+
+    @Column("last_modified_date")
+    @LastModifiedDate
+    private Instant lastModifiedDate;
+
+    @Version
+    private int version;
 
     @Override
     public boolean equals(Object o) {
@@ -100,24 +103,28 @@ public class WorkflowNodeTestOutput {
         return getClass().hashCode();
     }
 
-    public String getComponentName() {
-        return componentName;
+    public String getTypeName() {
+        return typeName;
     }
 
-    public String getComponentOperationName() {
-        return componentOperationName;
+    public String getTypeOperationName() {
+        return typeOperationName;
     }
 
-    public int getComponentVersion() {
-        return componentVersion;
+    public int getTypeVersion() {
+        return typeVersion;
     }
 
     public String getCreatedBy() {
         return createdBy;
     }
 
-    public LocalDateTime getCreatedDate() {
+    public Instant getCreatedDate() {
         return createdDate;
+    }
+
+    public Long getEnvironmentId() {
+        return environmentId;
     }
 
     public Long getId() {
@@ -128,16 +135,16 @@ public class WorkflowNodeTestOutput {
         return lastModifiedBy;
     }
 
-    public LocalDateTime getLastModifiedDate() {
+    public Instant getLastModifiedDate() {
         return lastModifiedDate;
     }
 
-    public Output getOutput() {
-        return new Output(getOutputSchema(), getSampleOutput());
+    public OutputResponse getOutput(Class<? extends BaseProperty> typeClass) {
+        return new OutputResponse(getOutputSchema(typeClass), getSampleOutput());
     }
 
-    public Property getOutputSchema() {
-        return MapUtils.get(outputSchema.getMap(), "outputSchema", Property.class);
+    public BaseProperty getOutputSchema(Class<? extends BaseProperty> typeClass) {
+        return MapUtils.get(outputSchema.getMap(), "outputSchema", typeClass);
     }
 
     public Object getSampleOutput() {
@@ -156,28 +163,32 @@ public class WorkflowNodeTestOutput {
         return workflowNodeName;
     }
 
-    public void setComponentName(String componentName) {
-        this.componentName = componentName;
-    }
-
-    public void setComponentOperationName(String componentOperationName) {
-        this.componentOperationName = componentOperationName;
-    }
-
-    public void setComponentVersion(int componentVersion) {
-        this.componentVersion = componentVersion;
+    public void setEnvironmentId(Long environmentId) {
+        this.environmentId = environmentId;
     }
 
     public void setId(Long id) {
         this.id = id;
     }
 
-    public void setOutputSchema(Property outputSchema) {
+    public void setOutputSchema(BaseProperty outputSchema) {
         this.outputSchema = new MapWrapper(Map.of("outputSchema", outputSchema));
     }
 
     public void setSampleOutput(Object sampleOutput) {
         this.sampleOutput = new MapWrapper(Map.of("sampleOutput", sampleOutput));
+    }
+
+    public void setTypeName(String typeName) {
+        this.typeName = typeName;
+    }
+
+    public void setTypeOperationName(String typeOperationName) {
+        this.typeOperationName = typeOperationName;
+    }
+
+    public void setTypeVersion(int typeVersion) {
+        this.typeVersion = typeVersion;
     }
 
     public void setVersion(int version) {
@@ -195,19 +206,20 @@ public class WorkflowNodeTestOutput {
     @Override
     public String toString() {
         return "WorkflowTestNodeOutput{" +
-            "componentName='" + componentName + '\'' +
-            ", componentOperationName='" + componentOperationName + '\'' +
-            ", componentVersion=" + componentVersion +
-            ", createdBy='" + createdBy + '\'' +
-            ", createdDate=" + createdDate +
-            ", id=" + id +
-            ", lastModifiedBy='" + lastModifiedBy + '\'' +
-            ", lastModifiedDate=" + lastModifiedDate +
+            "id=" + id +
+            ", workflowId='" + workflowId + '\'' +
+            ", workflowNodeName='" + workflowNodeName + '\'' +
+            ", environmentId=" + environmentId +
+            ", typeName='" + typeName + '\'' +
+            ", typeOperationName='" + typeOperationName + '\'' +
+            ", typeVersion=" + typeVersion +
             ", outputSchema=" + outputSchema +
             ", sampleOutput=" + sampleOutput +
-            ", workflowNodeName='" + workflowNodeName + '\'' +
+            ", createdBy='" + createdBy + '\'' +
+            ", createdDate=" + createdDate +
+            ", lastModifiedBy='" + lastModifiedBy + '\'' +
+            ", lastModifiedDate=" + lastModifiedDate +
             ", version=" + version +
-            ", workflowId='" + workflowId + '\'' +
             '}';
     }
 }

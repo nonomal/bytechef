@@ -6,7 +6,6 @@ val generateOpenAPISpring by tasks.registering(org.openapitools.generator.gradle
     apiPackage.set("com.bytechef.automation.configuration.web.rest")
     configOptions.set(
         mapOf(
-            "dateLibrary" to "java8-localdatetime",
             "interfaceOnly" to "true",
             "useSpringBoot3" to "true",
             "useTags" to "true"
@@ -19,7 +18,6 @@ val generateOpenAPISpring by tasks.registering(org.openapitools.generator.gradle
     outputDir.set("$projectDir/../automation-configuration-rest-api/generated")
     schemaMappings.set(
         mapOf(
-            "DataStreamComponent" to "com.bytechef.platform.configuration.web.rest.model.DataStreamComponentModel",
             "Page" to "org.springframework.data.domain.Page",
             "WorkflowConnection" to "com.bytechef.platform.configuration.web.rest.model.WorkflowConnectionModel",
             "WorkflowFormat" to "com.bytechef.platform.configuration.web.rest.model.WorkflowFormatModel",
@@ -42,13 +40,7 @@ val generateOpenAPISpring by tasks.registering(org.openapitools.generator.gradle
 val generateOpenAPITypeScriptFetch by tasks.registering(org.openapitools.generator.gradle.plugin.tasks.GenerateTask::class) {
     generatorName.set("typescript-fetch")
     inputSpec.set("$projectDir/openapi.yaml")
-    modelNameSuffix.set("Model")
     outputDir.set("$rootDir/client/src/shared/middleware/automation/configuration")
-    typeMappings.set(
-        mapOf(
-            "DateTime" to "Date"
-        )
-    )
 }
 
 tasks.register("generateOpenAPI") {
@@ -59,11 +51,18 @@ dependencies {
     implementation("org.apache.commons:commons-lang3")
     implementation("org.springframework:spring-web")
     implementation("org.springframework.boot:spring-boot-autoconfigure")
-    implementation(project(":server:libs:core:annotation-api"))
+    implementation(project(":server:libs:atlas:atlas-configuration:atlas-configuration-api"))
+    implementation(project(":server:libs:atlas:atlas-coordinator:atlas-coordinator-api"))
+    implementation(project(":server:libs:atlas:atlas-execution:atlas-execution-api"))
     implementation(project(":server:libs:core:commons:commons-util"))
+    implementation(project(":server:libs:core:rest:rest-api"))
     implementation(project(":server:libs:automation:automation-configuration:automation-configuration-rest:automation-configuration-rest-api"))
     implementation(project(":server:libs:platform:platform-api"))
+    implementation(project(":server:libs:platform:platform-configuration:platform-configuration-rest:platform-configuration-rest-api"))
+    implementation(project(":server:libs:platform:platform-security-web:platform-security-web-api"))
+    implementation(project(":server:libs:platform:platform-workflow:platform-workflow-execution:platform-workflow-execution-api"))
 
     testImplementation("org.springframework:spring-webflux")
-    testImplementation("org.springframework.boot:spring-boot-starter-web")
+    testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
+    testImplementation(project(":server:libs:test:test-int-support"))
 }

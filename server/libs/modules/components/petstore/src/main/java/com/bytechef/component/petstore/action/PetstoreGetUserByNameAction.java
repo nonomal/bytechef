@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,12 +17,13 @@
 package com.bytechef.component.petstore.action;
 
 import static com.bytechef.component.OpenApiComponentHandler.PropertyType;
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.object;
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.object;
+import static com.bytechef.component.definition.ComponentDsl.outputSchema;
+import static com.bytechef.component.definition.ComponentDsl.string;
 import static com.bytechef.component.definition.Context.Http.ResponseType;
 
-import com.bytechef.component.definition.ComponentDSL;
+import com.bytechef.component.definition.ComponentDsl;
 import com.bytechef.component.petstore.property.PetstoreUserProperties;
 import java.util.Map;
 
@@ -32,7 +33,7 @@ import java.util.Map;
  * @generated
  */
 public class PetstoreGetUserByNameAction {
-    public static final ComponentDSL.ModifiableActionDefinition ACTION_DEFINITION = action("getUserByName")
+    public static final ComponentDsl.ModifiableActionDefinition ACTION_DEFINITION = action("getUserByName")
         .title("Get user by user name")
         .description("")
         .metadata(
@@ -47,10 +48,10 @@ public class PetstoreGetUserByNameAction {
             .metadata(
                 Map.of(
                     "type", PropertyType.PATH)))
-        .outputSchema(object().properties(PetstoreUserProperties.PROPERTIES)
+        .output(outputSchema(object().properties(PetstoreUserProperties.PROPERTIES)
             .metadata(
                 Map.of(
-                    "responseType", ResponseType.JSON)));
+                    "responseType", ResponseType.JSON))));
 
     private PetstoreGetUserByNameAction() {
     }

@@ -1,0 +1,201 @@
+---
+title: "Couchbase"
+description: "Couchbase is a distributed, JSON document database, with all the desired capabilities of a relational DBMS."
+---
+
+
+Categories: Artificial Intelligence
+
+
+Type: couchbase/v1
+
+<hr />
+
+
+
+
+## Connections
+
+Version: 1
+
+
+### custom
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| connectionString | Connection String | STRING | A couchbase connection string | true |
+| username | Username | STRING | Username for authentication with Couchbase. | true |
+| password | Password | STRING | Password for authentication with Couchbase. | true |
+| indexName | Index Name | STRING | The name of the index to store the vectors. | false |
+| bucketName | Bucket Name | STRING | The name of the Couchbase Bucket, parent of the scope. | false |
+| scopeName | Scope Name | STRING | The name of the Couchbase scope, parent of the collection. Search queries will be executed in the scope context. | false |
+| collectionName | Collection Name | STRING | The name of the Couchbase collection to store the Documents. | false |
+| dimensions | Dimensions | INTEGER | The number of dimensions in the vector. | false |
+| similarity | Similarity | STRING <details> <summary> Options </summary> <span>l2_norm</span>, <span>dot_product</span> </details> | The similarity function to use. | true |
+| optimization | Optimization | STRING <details> <summary> Options </summary> <span>latency</span>, <span>recall</span> </details> | The index optimization strategy to use. | false |
+| initializeSchema | Initialize Schema | BOOLEAN <details> <summary> Options </summary> <span>true</span>, <span>false</span> </details> | Whether to initialize the schema. | false |
+
+
+
+## Connection Setup
+
+[Official documentation](https://docs.couchbase.com/cloud/get-started/connect.html)
+
+Step-by-step guide:
+
+1. Create a Cluster, click on it
+2. Go to Buckets, Create a Bucket
+3. Go to Settings → Networking → Allow IP Addresses, Allow your current IP address
+4. Go to Settings → Security, Create Access (username and password)
+5. Go to Data Tools → Search, Create a Search Index
+6. Go to Connect, Copy Public Connection String
+
+Now you have Public Connection String, Username, Password, Index Name and can create a connection
+
+
+
+
+<hr />
+
+
+## Actions
+
+
+### Delete Documents
+Name: delete
+
+`Delete documents from the vector store by metadata`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| metadataFilter | Metadata Filter | ARRAY <details> <summary> Items </summary> [&#123;&#125;] </details> | List of metadata key-value pairs to filter by. Entries within a group are ANDed; groups are ORed. | false |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Delete Documents",
+  "name" : "delete",
+  "parameters" : {
+    "metadataFilter" : [ { } ]
+  },
+  "type" : "couchbase/v1/delete"
+}
+```
+
+#### Output
+
+This action does not produce any output.
+
+
+
+
+
+
+### Load Documents
+Name: load
+
+`Loads documents into the vector store using LLM embeddings.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| metadataFilter | Metadata Filter | ARRAY <details> <summary> Items </summary> [&#123;&#125;] </details> | List of metadata key-value pairs to filter by. Entries within a group are ANDed; groups are ORed. | false |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Load Documents",
+  "name" : "load",
+  "parameters" : {
+    "metadataFilter" : [ { } ]
+  },
+  "type" : "couchbase/v1/load"
+}
+```
+
+#### Output
+
+This action does not produce any output.
+
+
+
+
+
+
+### Search Documents
+Name: search
+
+`Query documents from the vector store using LLM embeddings.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| query | Query | STRING | The query to be executed. | true |
+| metadataFilter | Metadata Filter | ARRAY <details> <summary> Items </summary> [&#123;&#125;] </details> | List of metadata key-value pairs to filter by. Entries within a group are ANDed; groups are ORed. | false |
+| topK | Top K | INTEGER | The top 'k' similar results to return. | false |
+| similarityThreshold | Similarity Threshold | NUMBER | Similarity threshold score to filter the search response by. Only documents with similarity score equal or greater than the threshold will be returned. A threshold value of 0 means any similarity is accepted. A threshold value of 1 means an exact match is required. | false |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Search Documents",
+  "name" : "search",
+  "parameters" : {
+    "query" : "",
+    "metadataFilter" : [ { } ],
+    "topK" : 1,
+    "similarityThreshold" : 0.0
+  },
+  "type" : "couchbase/v1/search"
+}
+```
+
+#### Output
+
+The output for this action is dynamic and may vary depending on the input parameters. To determine the exact structure of the output, you need to execute the action.
+
+
+
+
+
+
+### Update Documents
+Name: update
+
+`Updates documents in the vector store by deleting existing ones matching the metadata filter and loading new ones using LLM embeddings.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| metadataFilter | Metadata Filter | ARRAY <details> <summary> Items </summary> [&#123;&#125;] </details> | List of metadata key-value pairs to filter by. Entries within a group are ANDed; groups are ORed. | false |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Update Documents",
+  "name" : "update",
+  "parameters" : {
+    "metadataFilter" : [ { } ]
+  },
+  "type" : "couchbase/v1/update"
+}
+```
+
+#### Output
+
+This action does not produce any output.
+
+
+
+
+
+
+
+

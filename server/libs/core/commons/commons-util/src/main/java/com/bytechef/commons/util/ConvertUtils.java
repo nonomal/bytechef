@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,21 +16,28 @@
 
 package com.bytechef.commons.util;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.type.TypeFactory;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.lang.reflect.Type;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeParseException;
+import java.util.List;
+import java.util.function.Function;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.type.TypeFactory;
 
 /**
  * @author Ivica Cardic
+ * @author Igor Beslic
  */
-@Component
 public class ConvertUtils {
 
-    @SuppressFBWarnings("MS_PKGPROTECT")
-    protected static ObjectMapper objectMapper;
+    private static final Logger log = LoggerFactory.getLogger(ConvertUtils.class);
+
+    private static ObjectMapper objectMapper;
 
     public static boolean canConvert(Object fromValue, Class<?> toValueType) {
         try {
@@ -53,9 +60,64 @@ public class ConvertUtils {
         return objectMapper.convertValue(fromValue, typeFactory.constructType(type));
     }
 
-    @Autowired
-    @SuppressFBWarnings("ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD")
-    void setObjectMapper(ObjectMapper objectMapper) {
+    public static <T> T convertValue(Object fromValue, TypeReference<T> toValueTypeRef) {
+        return objectMapper.convertValue(fromValue, toValueTypeRef);
+    }
+
+    /**
+     * Converts the string value given with parameter to typed value. Conversion rellies on parse method of Integer,
+     * Long, Double, LocalDateTime and LocalDate methods. Boolean values are derived from case unsensitive true and
+     * false variants of value.
+     *
+     * @param str String representation of value
+     * @return value as Integer, Long, Double, LocalDateTime, LocalDate, Boolean, String or null if received method
+     *         argument is null
+     */
+    public static Object convertString(String str) {
+        if (str == null) {
+            return null;
+        }
+
+        String trimmedString = str.trim();
+
+        Object value = null;
+
+        for (Function<String, Object> transformerFunction : parseFunctions) {
+            try {
+                value = transformerFunction.apply(trimmedString);
+            } catch (NumberFormatException | DateTimeParseException exception) {
+                if (log.isTraceEnabled()) {
+                    log.trace(exception.getMessage(), exception);
+                }
+
+                continue;
+            }
+
+            if (value != null) {
+                return value;
+            }
+        }
+
+        if (trimmedString.equalsIgnoreCase("true")) {
+            return Boolean.TRUE;
+        }
+
+        if (trimmedString.equalsIgnoreCase("false")) {
+            return Boolean.FALSE;
+        }
+
+        return str;
+    }
+
+    private static final List<Function<String, Object>> parseFunctions;
+
+    static {
+        parseFunctions = List.of(
+            Integer::parseInt, Long::parseLong, Double::parseDouble, LocalDateTime::parse, LocalDate::parse);
+    }
+
+    @SuppressFBWarnings("EI")
+    public static void setObjectMapper(ObjectMapper objectMapper) {
         ConvertUtils.objectMapper = objectMapper;
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,76 +16,72 @@
 
 package com.bytechef.component.accelo.action;
 
-import static com.bytechef.component.accelo.constant.AcceloConstants.COMMENTS;
-import static com.bytechef.component.accelo.constant.AcceloConstants.CREATE_COMPANY;
-import static com.bytechef.component.accelo.constant.AcceloConstants.NAME;
-import static com.bytechef.component.accelo.constant.AcceloConstants.PHONE;
-import static com.bytechef.component.accelo.constant.AcceloConstants.WEBSITE;
-import static com.bytechef.component.accelo.util.AcceloUtils.createUrl;
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.object;
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.OpenApiComponentHandler.PropertyType;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.object;
+import static com.bytechef.component.definition.ComponentDsl.outputSchema;
+import static com.bytechef.component.definition.ComponentDsl.string;
+import static com.bytechef.component.definition.Context.Http.BodyContentType;
+import static com.bytechef.component.definition.Context.Http.ResponseType;
 
-import com.bytechef.component.definition.ActionContext;
-import com.bytechef.component.definition.ComponentDSL.ModifiableActionDefinition;
-import com.bytechef.component.definition.Context.Http;
-import com.bytechef.component.definition.Context.TypeReference;
-import com.bytechef.component.definition.Parameters;
+import com.bytechef.component.definition.ComponentDsl;
+import java.util.Map;
 
 /**
- * @author Monika Domiter
+ * Provides a list of the component actions.
+ *
+ * @generated
  */
 public class AcceloCreateCompanyAction {
+    public static final ComponentDsl.ModifiableActionDefinition ACTION_DEFINITION = action("createCompany")
+        .title("Create Company")
+        .description("Creates a new company.")
+        .metadata(
+            Map.of(
+                "method", "POST",
+                "path", "/companies", "bodyContentType", BodyContentType.JSON, "mimeType", "application/json"
 
-    public static final ModifiableActionDefinition ACTION_DEFINITION = action(CREATE_COMPANY)
-        .title("Create company")
-        .description("Creates a new company")
-        .properties(
-            string(NAME)
-                .label("Name")
-                .description("The name of the company")
-                .required(true),
-            string(WEBSITE)
+            ))
+        .properties(string("name").metadata(
+            Map.of(
+                "type", PropertyType.BODY))
+            .label("Name")
+            .description("The name of the company.")
+            .required(true),
+            string("website").metadata(
+                Map.of(
+                    "type", PropertyType.BODY))
                 .label("Website")
                 .description("The company's website.")
                 .required(false),
-            string(PHONE)
+            string("phone").metadata(
+                Map.of(
+                    "type", PropertyType.BODY))
                 .label("Phone")
                 .description("A contact phone number for the company.")
                 .required(false),
-            string(COMMENTS)
+            string("comments").metadata(
+                Map.of(
+                    "type", PropertyType.BODY))
                 .label("Comments")
                 .description("Any comments or notes made against the company.")
                 .required(false))
-        .outputSchema(
-            object()
+        .output(
+            outputSchema(object()
                 .properties(
-                    object("response")
-                        .properties(
-                            string("id"),
-                            string(NAME)),
+                    object("response").properties(string("id").description("The ID of the newly created company.")
+                        .required(false),
+                        string("name").description("The name of the newly created company.")
+                            .required(false))
+                        .required(false),
                     object("meta")
-                        .properties(
-                            string("more_info"),
-                            string("status"),
-                            string("message"))))
-        .perform(AcceloCreateCompanyAction::perform);
+                        .properties(string("more_info").required(false), string("status").required(false),
+                            string("message").required(false))
+                        .required(false))
+                .metadata(
+                    Map.of(
+                        "responseType", ResponseType.JSON))));
 
     private AcceloCreateCompanyAction() {
-    }
-
-    public static Object perform(
-        Parameters inputParameters, Parameters connectionParameters, ActionContext actionContext) {
-
-        return actionContext.http(http -> http.post(createUrl(connectionParameters, "companies")))
-            .body(
-                Http.Body.of(
-                    NAME, inputParameters.getRequiredString(NAME),
-                    WEBSITE, inputParameters.getString(WEBSITE),
-                    PHONE, inputParameters.getString(PHONE),
-                    COMMENTS, inputParameters.getString(COMMENTS)))
-            .configuration(Http.responseType(Http.ResponseType.JSON))
-            .execute()
-            .getBody(new TypeReference<>() {});
     }
 }

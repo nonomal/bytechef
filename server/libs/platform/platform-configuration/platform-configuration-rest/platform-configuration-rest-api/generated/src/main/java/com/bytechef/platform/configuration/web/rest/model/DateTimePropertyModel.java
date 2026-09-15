@@ -14,11 +14,14 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.annotation.JsonValue;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.lang.Nullable;
 import org.openapitools.jackson.nullable.JsonNullable;
 import java.time.OffsetDateTime;
 import jakarta.validation.Valid;
@@ -35,19 +38,19 @@ import jakarta.annotation.Generated;
 
 @Schema(name = "DateTimeProperty", description = "A date-time property type.")
 
-@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2024-06-30T07:20:54.243996+02:00[Europe/Zagreb]", comments = "Generator version: 7.5.0")
+@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2026-07-03T17:58:15.504637+02:00[Europe/Zagreb]", comments = "Generator version: 7.22.0")
 public class DateTimePropertyModel extends ValuePropertyModel {
 
   @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
-  private LocalDateTime defaultValue;
+  private @Nullable OffsetDateTime defaultValue;
 
   @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
-  private LocalDateTime exampleValue;
+  private @Nullable OffsetDateTime exampleValue;
 
   @Valid
   private List<@Valid OptionModel> options = new ArrayList<>();
 
-  private OptionsDataSourceModel optionsDataSource;
+  private @Nullable OptionsDataSourceModel optionsDataSource;
 
   public DateTimePropertyModel() {
     super();
@@ -60,7 +63,7 @@ public class DateTimePropertyModel extends ValuePropertyModel {
     super(controlType, type);
   }
 
-  public DateTimePropertyModel defaultValue(LocalDateTime defaultValue) {
+  public DateTimePropertyModel defaultValue(@Nullable OffsetDateTime defaultValue) {
     this.defaultValue = defaultValue;
     return this;
   }
@@ -68,19 +71,20 @@ public class DateTimePropertyModel extends ValuePropertyModel {
   /**
    * The property default value.
    * @return defaultValue
-  */
+   */
   @Valid 
   @Schema(name = "defaultValue", description = "The property default value.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("defaultValue")
-  public LocalDateTime getDefaultValue() {
+  public @Nullable OffsetDateTime getDefaultValue() {
     return defaultValue;
   }
 
-  public void setDefaultValue(LocalDateTime defaultValue) {
+  @JsonProperty("defaultValue")
+  public void setDefaultValue(@Nullable OffsetDateTime defaultValue) {
     this.defaultValue = defaultValue;
   }
 
-  public DateTimePropertyModel exampleValue(LocalDateTime exampleValue) {
+  public DateTimePropertyModel exampleValue(@Nullable OffsetDateTime exampleValue) {
     this.exampleValue = exampleValue;
     return this;
   }
@@ -88,15 +92,16 @@ public class DateTimePropertyModel extends ValuePropertyModel {
   /**
    * The property sample value.
    * @return exampleValue
-  */
+   */
   @Valid 
   @Schema(name = "exampleValue", description = "The property sample value.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("exampleValue")
-  public LocalDateTime getExampleValue() {
+  public @Nullable OffsetDateTime getExampleValue() {
     return exampleValue;
   }
 
-  public void setExampleValue(LocalDateTime exampleValue) {
+  @JsonProperty("exampleValue")
+  public void setExampleValue(@Nullable OffsetDateTime exampleValue) {
     this.exampleValue = exampleValue;
   }
 
@@ -116,7 +121,7 @@ public class DateTimePropertyModel extends ValuePropertyModel {
   /**
    * The list of valid property options.
    * @return options
-  */
+   */
   @Valid 
   @Schema(name = "options", description = "The list of valid property options.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("options")
@@ -124,11 +129,12 @@ public class DateTimePropertyModel extends ValuePropertyModel {
     return options;
   }
 
+  @JsonProperty("options")
   public void setOptions(List<@Valid OptionModel> options) {
     this.options = options;
   }
 
-  public DateTimePropertyModel optionsDataSource(OptionsDataSourceModel optionsDataSource) {
+  public DateTimePropertyModel optionsDataSource(@Nullable OptionsDataSourceModel optionsDataSource) {
     this.optionsDataSource = optionsDataSource;
     return this;
   }
@@ -136,15 +142,16 @@ public class DateTimePropertyModel extends ValuePropertyModel {
   /**
    * Get optionsDataSource
    * @return optionsDataSource
-  */
+   */
   @Valid 
   @Schema(name = "optionsDataSource", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("optionsDataSource")
-  public OptionsDataSourceModel getOptionsDataSource() {
+  public @Nullable OptionsDataSourceModel getOptionsDataSource() {
     return optionsDataSource;
   }
 
-  public void setOptionsDataSource(OptionsDataSourceModel optionsDataSource) {
+  @JsonProperty("optionsDataSource")
+  public void setOptionsDataSource(@Nullable OptionsDataSourceModel optionsDataSource) {
     this.optionsDataSource = optionsDataSource;
   }
 
@@ -186,6 +193,16 @@ public class DateTimePropertyModel extends ValuePropertyModel {
 
   public DateTimePropertyModel hidden(Boolean hidden) {
     super.hidden(hidden);
+    return this;
+  }
+
+  public DateTimePropertyModel metadata(Map<String, Object> metadata) {
+    super.metadata(metadata);
+    return this;
+  }
+
+  public DateTimePropertyModel putMetadataItem(String key, Object metadataItem) {
+    super.putMetadataItem(key, metadataItem);
     return this;
   }
 
@@ -241,11 +258,8 @@ public class DateTimePropertyModel extends ValuePropertyModel {
    * Convert the given object to string with each line indented by 4 spaces
    * (except the first line).
    */
-  private String toIndentedString(Object o) {
-    if (o == null) {
-      return "null";
-    }
-    return o.toString().replace("\n", "\n    ");
+  private String toIndentedString(@Nullable Object o) {
+    return o == null ? "null" : o.toString().replace("\n", "\n    ");
   }
 }
 

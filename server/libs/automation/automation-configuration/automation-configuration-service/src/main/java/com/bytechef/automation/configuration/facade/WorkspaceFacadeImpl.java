@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,18 +17,11 @@
 package com.bytechef.automation.configuration.facade;
 
 import com.bytechef.automation.configuration.domain.Workspace;
-import com.bytechef.automation.configuration.domain.WorkspaceUser;
+import com.bytechef.automation.configuration.service.PermissionService;
 import com.bytechef.automation.configuration.service.WorkspaceService;
-import com.bytechef.automation.configuration.service.WorkspaceUserService;
-import com.bytechef.commons.util.CollectionUtils;
-import com.bytechef.platform.user.constant.AuthorityConstants;
-import com.bytechef.platform.user.domain.Authority;
-import com.bytechef.platform.user.domain.User;
-import com.bytechef.platform.user.service.AuthorityService;
-import com.bytechef.platform.user.service.UserService;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.List;
-import java.util.Objects;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,47 +32,27 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 public class WorkspaceFacadeImpl implements WorkspaceFacade {
 
-    private final AuthorityService authorityService;
-    private final UserService userService;
+    private final PermissionService permissionService;
     private final WorkspaceService workspaceService;
-    private final WorkspaceUserService workspaceUserService;
 
     @SuppressFBWarnings("EI")
-    public WorkspaceFacadeImpl(
-        AuthorityService authorityService, UserService userService, WorkspaceService workspaceService,
-        WorkspaceUserService workspaceUserService) {
-
-        this.authorityService = authorityService;
-        this.userService = userService;
+    public WorkspaceFacadeImpl(PermissionService permissionService, WorkspaceService workspaceService) {
+        this.permissionService = permissionService;
         this.workspaceService = workspaceService;
-        this.workspaceUserService = workspaceUserService;
     }
 
     @Override
     @Transactional(readOnly = true)
+    @PreAuthorize("isTenantAdmin() or isCurrentUser(#id)")
     public List<Workspace> getUserWorkspaces(long id) {
-        List<Authority> authorities = authorityService.getAuthorities();
-        User user = userService.getUser(id);
         List<Workspace> workspaces = workspaceService.getWorkspaces();
 
-        List<String> userAuthorityNames = user.getAuthorityIds()
-            .stream()
-            .map(authorityId -> CollectionUtils.getFirst(
-                authorities, authority -> Objects.equals(authority.getId(), authorityId)))
-            .map(Authority::getName)
-            .toList();
-
-        if (!userAuthorityNames.contains(AuthorityConstants.ADMIN)) {
-            List<Long> userWorkspaceIds = workspaceUserService.getUserWorkspaceUsers(id)
-                .stream()
-                .map(WorkspaceUser::getWorkspaceId)
-                .toList();
-
-            workspaces = workspaces.stream()
-                .filter(workspace -> userWorkspaceIds.contains(workspace.getId()))
-                .toList();
+        if (permissionService.isTenantAdmin()) {
+            return workspaces;
         }
 
-        return workspaces;
+        return workspaces.stream()
+            .filter(workspace -> permissionService.getMyWorkspaceRole(workspace.getId()) != null)
+            .toList();
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,8 +20,8 @@ import static com.bytechef.component.logger.constant.LoggerConstants.LOGGER;
 
 import com.bytechef.component.ComponentHandler;
 import com.bytechef.component.definition.ComponentCategory;
-import com.bytechef.component.definition.ComponentDSL;
 import com.bytechef.component.definition.ComponentDefinition;
+import com.bytechef.component.definition.ComponentDsl;
 import com.bytechef.component.logger.action.LoggerDebugAction;
 import com.bytechef.component.logger.action.LoggerErrorAction;
 import com.bytechef.component.logger.action.LoggerInfoAction;
@@ -34,12 +34,14 @@ import com.google.auto.service.AutoService;
 @AutoService(ComponentHandler.class)
 public class LoggerComponentHandler implements ComponentHandler {
 
-    private static final ComponentDefinition COMPONENT_DEFINITION = ComponentDSL.component(LOGGER)
+    private static final ComponentDefinition COMPONENT_DEFINITION = ComponentDsl.component(LOGGER)
         .title("Logger")
         .description("Logs a value to the system log.")
         .icon("path:assets/logger.svg")
         .categories(ComponentCategory.HELPERS)
-        .actions(LoggerDebugAction.ACTION_DEFINITION, LoggerErrorAction.ACTION_DEFINITION,
+        .actions(
+            LoggerDebugAction.ACTION_DEFINITION,
+            LoggerErrorAction.ACTION_DEFINITION,
             LoggerInfoAction.ACTION_DEFINITION,
             LoggerWarnAction.ACTION_DEFINITION);
 

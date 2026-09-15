@@ -15,12 +15,12 @@ plugins {
     pmd
 }
 
+//https://melix.github.io/blog/2021/03/version-catalogs-faq.html#_can_i_use_the_version_catalog_in_buildsrc
+val libs = rootProject.extensions.getByType<VersionCatalogsExtension>().named("libs")
+
 configurations.implementation {
     exclude(group = "org.slf4j", module = "slf4j-simple")
 }
-
-//https://melix.github.io/blog/2021/03/version-catalogs-faq.html#_can_i_use_the_version_catalog_in_buildsrc
-val libs = rootProject.extensions.getByType<VersionCatalogsExtension>().named("libs")
 
 checkstyle {
     toolVersion = "${libs.findVersion("checkstyle").get()}"
@@ -31,7 +31,7 @@ val cleanResources by tasks.registering(Delete::class) {
     delete("build/resources")
 }
 
-val compileJava by tasks.existing(JavaCompile::class) {
+tasks.withType(JavaCompile::class) {
     options.compilerArgs.add("-parameters")
 }
 
@@ -40,6 +40,11 @@ idea {
         excludeDirs.addAll(files("node_modules"))
         sourceDirs.add(file("build/generated/sources/annotationProcessor/java/main"))
         generatedSourceDirs.add(file("build/generated/sources/annotationProcessor/java/main"))
+
+        // Use JAR outputs instead of exploded class directories for the faster IntelliJ startup
+        // This is especially important for component modules loaded via ServiceLoader
+        // isDownloadSources = true
+        // isDownloadJavadoc = false
     }
 }
 
@@ -66,7 +71,9 @@ java {
 
 pmd {
     toolVersion = "${libs.findVersion("pmd").get()}"
-    ruleSetFiles = files("${rootDir}/config/pmd/pmd-ruleset.xml")
+    ruleSetFiles = files(
+        "${rootDir}/config/pmd/pmd-ruleset.xml",
+        "${rootDir}/config/pmd/pmd-ruleset-bytechef.xml")
     ruleSets()
 }
 
@@ -80,11 +87,14 @@ publishing {
 
 repositories {
     mavenLocal()
-
     mavenCentral()
 
     maven {
-        url = uri("https://repo.spring.io/release")
+        url = uri("https://build.shibboleth.net/maven/releases/")
+        content {
+            includeGroupByRegex("net\\.shibboleth.*")
+            includeGroupByRegex("org\\.opensaml.*")
+        }
     }
 }
 
@@ -113,7 +123,7 @@ spotless {
         target("*.gradle", "*.md", ".gitignore")
 
         trimTrailingWhitespace()
-        indentWithSpaces(4)
+        leadingTabsToSpaces(4)
         endWithNewline()
     }
     java {
@@ -121,7 +131,7 @@ spotless {
 
         licenseHeader(
             "/*\n" +
-                " * Copyright 2023-present ByteChef Inc.\n" +
+                " * Copyright 2025 ByteChef\n" +
                 " *\n" +
                 " * Licensed under the Apache License, Version 2.0 (the \"License\");\n" +
                 " * you may not use this file except in compliance with the License.\n" +
@@ -154,7 +164,7 @@ spotless {
                 " * See the License for the specific language governing permissions and\n" +
                 " * limitations under the License.\n" +
                 " *\n" +
-                " * Modifications copyright (C) 2023 ByteChef Inc.\n" +
+                " * Modifications copyright (C) 2025 ByteChef\n" +
                 " */\n\n"
         ).named(
             "original"
@@ -163,7 +173,7 @@ spotless {
         )
         licenseHeader(
             "/*\n" +
-                " * Copyright 2023-present ByteChef Inc.\n" +
+                " * Copyright 2025 ByteChef\n" +
                 " *\n" +
                 " * Licensed under the ByteChef Enterprise license (the \"Enterprise License\");\n" +
                 " * you may not use this file except in compliance with the Enterprise License.\n" +
@@ -177,72 +187,39 @@ spotless {
         importOrder()
         removeUnusedImports()
         trimTrailingWhitespace()
-        indentWithSpaces(4)
+        leadingTabsToSpaces(4)
         endWithNewline()
     }
     yaml {
-        target("cli/**/src/**/*.yaml", "server/**/src/**/*.yaml")
+        target(
+            // All YAML files under standard source/resource directories
+            "src/**/*.yaml"
+        )
 
+        // Pretty-print YAML using Jackson
         jackson()
     }
     json {
-        target("cli/**/src/**/*.json", "server/**/src/**/*.json")
+        target(
+            // All JSON files under standard source/resource directories
+            "src/**/*.json"
+        )
 
+        // Pretty-print JSON using Jackson
         jackson()
     }
 }
 
 val spotlessCheck by tasks.existing
 
-val check by tasks.existing {//mozda ovdje dodati task delete
+val check by tasks.existing {
     dependsOn(spotlessCheck)
-
-    doLast {
-        if (System.getenv("GITHUB_ACTIONS_BUILD")?.toBoolean() == true) {
-            println("\n..............> Last action in check set for...> " + project.name)
-
-
-            if (!project.name.contains("component-api") &&
-                !project.name.contains("definition-api") &&
-                !project.name.contains("evaluator") &&
-                !project.name.contains("commons-data") &&
-                !project.name.contains("commons-util") &&
-                !project.name.contains("atlas-configuration") &&
-                !project.name.contains("atlas-coordinator-api") &&
-                !project.name.contains("atlas-coordinator-impl") && // ovo korisiti CSV integracijski test
-                !project.name.contains("atlas-sync-executor") &&
-                !project.name.contains("atlas-execution") &&
-                !project.name.contains("atlas-worker-api") &&
-                !project.name.contains("atlas-worker-impl") && // ovo korisiti CSV integracijski test
-                !project.name.contains("encryption-") && // ovo korisiti CSV integracijski test
-                !project.name.contains("embedded-configuration-api") &&
-                !project.name.contains("file-storage") && // REFINE: this includes all, probably it can be reduced
-                !project.name.contains("google-commons") && // REFINE: this includes all, probably it can be reduced
-                !project.name.contains("http-client") && // REFINE: this includes all, probably it can be reduced
-                !project.name.contains("message-") && // REFINE: this includes all, probably it can be reduced
-                !project.name.contains("platform-") && // HARD: many uses this
-                !project.name.contains("platform-user-api") &&
-                !project.name.contains("platform-workflow-execution-api") &&
-                !project.name.contains("test-int-support") &&
-                !project.name.contains("tenant-") &&
-                !project.name.contains("test-support") &&
-                !project.name.contains("error-api") &&
-                !project.name.contains("condition") && // ovo koriste loop testovi
-                !project.name.contains("cli-app") &&
-                !project.name.contains("-config") &&
-                !project.name.contains("petstore")) {
-
-                delete("build")
-
-                println("\n..............> DELETED...> " + layout.buildDirectory.get())
-            }
-        }
-    }
 }
 
 val test by tasks.existing(Test::class) {
     useJUnitPlatform()
     exclude("**/*IntTest*")
+    failOnNoDiscoveredTests.set(false)
     testLogging {
         events("standardOut", "skipped", "failed")
         showExceptions = true
@@ -250,7 +227,7 @@ val test by tasks.existing(Test::class) {
         showCauses = true
         showStackTraces = true
     }
-    jvmArgs("-Djava.security.egd=file:/dev/./urandom -Xmx256m")
+    jvmArgs("-Djava.security.egd=file:/dev/./urandom", "-Xmx256m", "-XX:+EnableDynamicAgentLoading")
     // uncomment if the tests reports are not generated
     // ignoreFailures = true
     reports.html.required.set(true)
@@ -276,7 +253,12 @@ val testIntegration by tasks.registering(Test::class) {
     useJUnitPlatform()
     description = "Execute integration tests."
     group = "verification"
+    testClassesDirs = sourceSets.test.get().output.classesDirs
+    classpath = sourceSets.test.get().runtimeClasspath
+    dependsOn(tasks.testClasses)
+    failOnNoDiscoveredTests.set(false)
     include("**/*IntTest*")
+    mustRunAfter(tasks.test)
     testLogging {
         events("standardOut", "skipped", "failed")
         showExceptions = true
@@ -284,7 +266,7 @@ val testIntegration by tasks.registering(Test::class) {
         showCauses = true
         showStackTraces = true
     }
-    jvmArgs("-Djava.security.egd=file:/dev/./urandom -Xmx256m")
+    jvmArgs("-Djava.security.egd=file:/dev/./urandom", "-Xmx256m", "-XX:+EnableDynamicAgentLoading")
 
     environment["spring.profiles.active"] = "testint"
 
@@ -311,6 +293,7 @@ val testIntegration by tasks.registering(Test::class) {
 }
 
 check {
+    dependsOn(test)
     dependsOn(testIntegration)
 }
 

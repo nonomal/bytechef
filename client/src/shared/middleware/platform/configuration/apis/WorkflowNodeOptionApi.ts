@@ -12,20 +12,29 @@
  * Do not edit the class manually.
  */
 
-
 import * as runtime from '../runtime';
-import type {
-  OptionModel,
-} from '../models/index';
 import {
-    OptionModelFromJSON,
-    OptionModelToJSON,
-} from '../models/index';
+    type Option,
+    OptionFromJSON,
+    OptionToJSON,
+} from '../models/Option';
+
+export interface GetClusterElementNodeOptionsRequest {
+    id: string;
+    workflowNodeName: string;
+    clusterElementType: string;
+    clusterElementWorkflowNodeName: string;
+    propertyName: string;
+    environmentId: number;
+    lookupDependsOnPaths?: Array<string>;
+    searchText?: string;
+}
 
 export interface GetWorkflowNodeOptionsRequest {
     id: string;
     workflowNodeName: string;
     propertyName: string;
+    environmentId: number;
     lookupDependsOnPaths?: Array<string>;
     searchText?: string;
 }
@@ -36,10 +45,107 @@ export interface GetWorkflowNodeOptionsRequest {
 export class WorkflowNodeOptionApi extends runtime.BaseAPI {
 
     /**
-     * Get an action or trigger property options shown in the editor.
-     * Get an action or trigger property options shown in the editor
+     * Creates request options for getClusterElementNodeOptions without sending the request
      */
-    async getWorkflowNodeOptionsRaw(requestParameters: GetWorkflowNodeOptionsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<OptionModel>>> {
+    async getClusterElementNodeOptionsRequestOpts(requestParameters: GetClusterElementNodeOptionsRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['id'] == null) {
+            throw new runtime.RequiredError(
+                'id',
+                'Required parameter "id" was null or undefined when calling getClusterElementNodeOptions().'
+            );
+        }
+
+        if (requestParameters['workflowNodeName'] == null) {
+            throw new runtime.RequiredError(
+                'workflowNodeName',
+                'Required parameter "workflowNodeName" was null or undefined when calling getClusterElementNodeOptions().'
+            );
+        }
+
+        if (requestParameters['clusterElementType'] == null) {
+            throw new runtime.RequiredError(
+                'clusterElementType',
+                'Required parameter "clusterElementType" was null or undefined when calling getClusterElementNodeOptions().'
+            );
+        }
+
+        if (requestParameters['clusterElementWorkflowNodeName'] == null) {
+            throw new runtime.RequiredError(
+                'clusterElementWorkflowNodeName',
+                'Required parameter "clusterElementWorkflowNodeName" was null or undefined when calling getClusterElementNodeOptions().'
+            );
+        }
+
+        if (requestParameters['propertyName'] == null) {
+            throw new runtime.RequiredError(
+                'propertyName',
+                'Required parameter "propertyName" was null or undefined when calling getClusterElementNodeOptions().'
+            );
+        }
+
+        if (requestParameters['environmentId'] == null) {
+            throw new runtime.RequiredError(
+                'environmentId',
+                'Required parameter "environmentId" was null or undefined when calling getClusterElementNodeOptions().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        if (requestParameters['lookupDependsOnPaths'] != null) {
+            queryParameters['lookupDependsOnPaths'] = requestParameters['lookupDependsOnPaths'];
+        }
+
+        if (requestParameters['searchText'] != null) {
+            queryParameters['searchText'] = requestParameters['searchText'];
+        }
+
+        if (requestParameters['environmentId'] != null) {
+            queryParameters['environmentId'] = requestParameters['environmentId'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+
+        let urlPath = `/workflows/{id}/workflow-nodes/{workflowNodeName}/cluster-elements/{clusterElementType}/{clusterElementWorkflowNodeName}/options/{propertyName}`;
+        urlPath = urlPath.replace('{id}', encodeURIComponent(String(requestParameters['id'])));
+        urlPath = urlPath.replace('{workflowNodeName}', encodeURIComponent(String(requestParameters['workflowNodeName'])));
+        urlPath = urlPath.replace('{clusterElementType}', encodeURIComponent(String(requestParameters['clusterElementType'])));
+        urlPath = urlPath.replace('{clusterElementWorkflowNodeName}', encodeURIComponent(String(requestParameters['clusterElementWorkflowNodeName'])));
+        urlPath = urlPath.replace('{propertyName}', encodeURIComponent(String(requestParameters['propertyName'])));
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Get a cluster element property options shown in the editor.
+     * Get a cluster element property options shown in the editor
+     */
+    async getClusterElementNodeOptionsRaw(requestParameters: GetClusterElementNodeOptionsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<Option>>> {
+        const requestOptions = await this.getClusterElementNodeOptionsRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => jsonValue.map(OptionFromJSON));
+    }
+
+    /**
+     * Get a cluster element property options shown in the editor.
+     * Get a cluster element property options shown in the editor
+     */
+    async getClusterElementNodeOptions(requestParameters: GetClusterElementNodeOptionsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<Option>> {
+        const response = await this.getClusterElementNodeOptionsRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for getWorkflowNodeOptions without sending the request
+     */
+    async getWorkflowNodeOptionsRequestOpts(requestParameters: GetWorkflowNodeOptionsRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['id'] == null) {
             throw new runtime.RequiredError(
                 'id',
@@ -61,6 +167,13 @@ export class WorkflowNodeOptionApi extends runtime.BaseAPI {
             );
         }
 
+        if (requestParameters['environmentId'] == null) {
+            throw new runtime.RequiredError(
+                'environmentId',
+                'Required parameter "environmentId" was null or undefined when calling getWorkflowNodeOptions().'
+            );
+        }
+
         const queryParameters: any = {};
 
         if (requestParameters['lookupDependsOnPaths'] != null) {
@@ -71,23 +184,42 @@ export class WorkflowNodeOptionApi extends runtime.BaseAPI {
             queryParameters['searchText'] = requestParameters['searchText'];
         }
 
+        if (requestParameters['environmentId'] != null) {
+            queryParameters['environmentId'] = requestParameters['environmentId'];
+        }
+
         const headerParameters: runtime.HTTPHeaders = {};
 
-        const response = await this.request({
-            path: `/workflows/{id}/properties/{workflowNodeName}/options/{propertyName}`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))).replace(`{${"workflowNodeName"}}`, encodeURIComponent(String(requestParameters['workflowNodeName']))).replace(`{${"propertyName"}}`, encodeURIComponent(String(requestParameters['propertyName']))),
+
+        let urlPath = `/workflows/{id}/workflow-nodes/{workflowNodeName}/options/{propertyName}`;
+        urlPath = urlPath.replace('{id}', encodeURIComponent(String(requestParameters['id'])));
+        urlPath = urlPath.replace('{workflowNodeName}', encodeURIComponent(String(requestParameters['workflowNodeName'])));
+        urlPath = urlPath.replace('{propertyName}', encodeURIComponent(String(requestParameters['propertyName'])));
+
+        return {
+            path: urlPath,
             method: 'GET',
             headers: headerParameters,
             query: queryParameters,
-        }, initOverrides);
-
-        return new runtime.JSONApiResponse(response, (jsonValue) => jsonValue.map(OptionModelFromJSON));
+        };
     }
 
     /**
      * Get an action or trigger property options shown in the editor.
      * Get an action or trigger property options shown in the editor
      */
-    async getWorkflowNodeOptions(requestParameters: GetWorkflowNodeOptionsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<OptionModel>> {
+    async getWorkflowNodeOptionsRaw(requestParameters: GetWorkflowNodeOptionsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<Option>>> {
+        const requestOptions = await this.getWorkflowNodeOptionsRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => jsonValue.map(OptionFromJSON));
+    }
+
+    /**
+     * Get an action or trigger property options shown in the editor.
+     * Get an action or trigger property options shown in the editor
+     */
+    async getWorkflowNodeOptions(requestParameters: GetWorkflowNodeOptionsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<Option>> {
         const response = await this.getWorkflowNodeOptionsRaw(requestParameters, initOverrides);
         return await response.value();
     }

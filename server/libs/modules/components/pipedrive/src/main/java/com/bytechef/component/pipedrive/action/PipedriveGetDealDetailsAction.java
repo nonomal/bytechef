@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,13 +17,16 @@
 package com.bytechef.component.pipedrive.action;
 
 import static com.bytechef.component.OpenApiComponentHandler.PropertyType;
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.integer;
-import static com.bytechef.component.definition.ComponentDSL.object;
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.integer;
+import static com.bytechef.component.definition.ComponentDsl.object;
+import static com.bytechef.component.definition.ComponentDsl.outputSchema;
+import static com.bytechef.component.definition.ComponentDsl.string;
 import static com.bytechef.component.definition.Context.Http.ResponseType;
 
-import com.bytechef.component.definition.ComponentDSL;
+import com.bytechef.component.definition.ActionDefinition;
+import com.bytechef.component.definition.ComponentDsl;
+import com.bytechef.component.pipedrive.util.PipedriveUtils;
 import java.util.Map;
 
 /**
@@ -32,40 +35,39 @@ import java.util.Map;
  * @generated
  */
 public class PipedriveGetDealDetailsAction {
-    public static final ComponentDSL.ModifiableActionDefinition ACTION_DEFINITION = action("getDealDetails")
-        .title("Get details of a deal")
+    public static final ComponentDsl.ModifiableActionDefinition ACTION_DEFINITION = action("getDealDetails")
+        .title("Get Details of Deal")
         .description("Returns the details of a specific deal.")
         .metadata(
             Map.of(
                 "method", "GET",
-                "path", "/deals/{id}"
+                "path", "/deals/{deal_id}"
 
             ))
-        .properties(integer("id").label("Deal")
+        .properties(integer("deal_id").label("Deal ID")
             .required(true)
+            .options((ActionDefinition.OptionsFunction<Long>) PipedriveUtils::getDealIdOptions)
             .metadata(
                 Map.of(
                     "type", PropertyType.PATH)))
-        .outputSchema(object()
-            .properties(object("body")
-                .properties(object("data")
-                    .properties(
-                        integer("id").required(false), object("user_id")
-                            .properties(integer("id").required(false), string("name").required(false),
-                                string("email").required(false))
-                            .required(false),
-                        object("person_id").properties(string("name").required(false))
-                            .required(false),
-                        object("org_id").properties(string("name").required(false), string("owner_id").required(false))
-                            .required(false),
-                        integer("stage_id").required(false), string("title").required(false),
-                        integer("value").required(false), string("currency").required(false),
-                        string("status").required(false))
-                    .required(false))
+        .output(outputSchema(object()
+            .properties(object("data")
+                .properties(integer("id").required(false),
+                    object("user_id")
+                        .properties(integer("id").required(false), string("name").required(false),
+                            string("email").required(false))
+                        .required(false),
+                    object("person_id").properties(string("name").required(false))
+                        .required(false),
+                    object("org_id").properties(string("name").required(false), string("owner_id").required(false))
+                        .required(false),
+                    integer("stage_id").required(false), string("title").required(false),
+                    integer("value").required(false), string("currency").required(false),
+                    string("status").required(false))
                 .required(false))
             .metadata(
                 Map.of(
-                    "responseType", ResponseType.JSON)));
+                    "responseType", ResponseType.JSON))));
 
     private PipedriveGetDealDetailsAction() {
     }

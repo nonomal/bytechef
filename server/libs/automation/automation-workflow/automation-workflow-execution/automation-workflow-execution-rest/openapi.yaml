@@ -4,12 +4,35 @@ info:
   title: "The Automation Execution Internal API"
   version: "1"
 servers:
-- url: "/api/automation/internal"
+  - url: "/api/automation/internal"
 tags:
-- name: "workflow-execution"
-  description: "The Automation Workflow Execution Internal API"
+  - name: "workflow-execution"
+    description: "The Automation Workflow Execution Internal API"
+  - name: "trigger-form"
+    description: "The Automation Trigger Form Internal API"
 paths:
-  /workflow-executions:
+  /trigger-form/{id}:
+    get:
+      description: "Get a trigger form."
+      summary: "Get a trigger form"
+      tags:
+        - "trigger-form"
+      operationId: "getTriggerForm"
+      parameters:
+        - name: "id"
+          description: "The id of a trigger form."
+          required: true
+          in: "path"
+          schema:
+            type: "string"
+      responses:
+        "200":
+          description: "Successful operation."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TriggerForm"
+  /workspaces/{id}/workflow-executions:
     get:
       description: "Get project workflow executions."
       summary: "Get project workflow executions"
@@ -17,12 +40,26 @@ paths:
       - "workflow-execution"
       operationId: "getWorkflowExecutionsPage"
       parameters:
-      - name: "environment"
-        description: "The environment."
+      - name: "id"
+        description: "The id of a workspace."
+        in: "path"
+        required: true
+        schema:
+          type: "integer"
+          format: "int64"
+      - name: "embedded"
+        description: "If embedded automation workflows executions should be filtered."
         in: "query"
         required: false
         schema:
-          $ref: "#/components/schemas/Environment"
+          type: "boolean"
+      - name: "environmentId"
+        description: "The id of an environment."
+        in: "query"
+        required: false
+        schema:
+          type: "integer"
+          format: "int64"
       - name: "jobStatus"
         description: "The status of an executed job"
         in: "query"
@@ -56,8 +93,8 @@ paths:
         schema:
           type: "integer"
           format: "int64"
-      - name: "projectInstanceId"
-        description: "The id of a project instance."
+      - name: "projectDeploymentId"
+        description: "The id of a project deployment."
         in: "query"
         required: false
         schema:
@@ -106,42 +143,69 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/WorkflowExecution"
+  /workflow-executions/trigger-executions/{triggerExecutionId}:
+    get:
+      description: "Get the execution view of a trigger execution that produced no job, such as a failed webhook or poll."
+      summary: "Get a trigger execution's workflow execution"
+      tags:
+      - "workflow-execution"
+      operationId: "getTriggerExecutionWorkflowExecution"
+      parameters:
+      - name: "triggerExecutionId"
+        description: "The id of a trigger execution."
+        in: "path"
+        required: true
+        schema:
+          type: "integer"
+          format: "int64"
+      responses:
+        "200":
+          description: "The execution object, without a job."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkflowExecution"
+  /workflow-executions/{id}/task-executions/{taskExecutionId}:
+    get:
+      description: "Get a single task execution's input and output by id."
+      summary: "Get a task execution by id"
+      tags:
+      - "workflow-execution"
+      operationId: "getWorkflowExecutionTaskExecution"
+      parameters:
+      - name: "id"
+        description: "The id of an execution."
+        in: "path"
+        required: true
+        schema:
+          type: "integer"
+          format: "int64"
+      - name: "taskExecutionId"
+        description: "The id of a task execution."
+        in: "path"
+        required: true
+        schema:
+          type: "integer"
+          format: "int64"
+      responses:
+        "200":
+          description: "The task execution object."
+          content:
+            application/json:
+              schema:
+                $ref: "../../../../platform/platform-workflow/platform-workflow-execution/platform-workflow-execution-rest//platform-workflow-execution-rest-impl/openapi.yaml#/components/schemas/TaskExecution"
 components:
   schemas:
-    Environment:
-      description: "The environment of a project."
-      type: "string"
-      enum:
-        - "TEST"
-        - "PRODUCTION"
     Page:
-      description: "A sublist of a list of objects. It allows gain information about\
-        \ the position of it in the containing entire list."
-      type: "object"
-      properties:
-        number:
-          description: "The current page."
-          type: "integer"
-        size:
-          description: "The size of the page."
-          type: "integer"
-        numberOfElements:
-          description: "The number of elements."
-          type: "integer"
-        totalPages:
-          description: "The total number of pages."
-          type: "integer"
-        totalElements:
-          description: "The total number of elements."
-          type: "integer"
-        content:
-          description: "The list of elements."
-          type: "array"
-          items:
-            type: "object"
+      $ref: "../../../../platform/platform-rest/openapi/components/schemas/objects/page.yaml"
     WorkflowExecution:
       description: "Contains information about execution of a project workflow."
       type: "object"
+      required:
+        - "id"
+        - "project"
+        - "projectDeployment"
+        - "workflow"
       properties:
         id:
           description: "The id of a workflow execution."
@@ -152,15 +216,77 @@ components:
           $ref: "../../../../platform/platform-workflow/platform-workflow-execution/platform-workflow-execution-rest//platform-workflow-execution-rest-impl/openapi.yaml#/components/schemas/Job"
         project:
           $ref: "../../../automation-configuration/automation-configuration-rest/automation-configuration-rest-impl/openapi.yaml#/components/schemas/ProjectBasic"
-        projectInstance:
-          $ref: "../../../automation-configuration/automation-configuration-rest/automation-configuration-rest-impl/openapi.yaml#/components/schemas/ProjectInstanceBasic"
+        projectDeployment:
+          $ref: "../../../automation-configuration/automation-configuration-rest/automation-configuration-rest-impl/openapi.yaml#/components/schemas/ProjectDeploymentBasic"
         triggerExecution:
           $ref: "../../../../platform/platform-workflow/platform-workflow-execution/platform-workflow-execution-rest//platform-workflow-execution-rest-impl/openapi.yaml#/components/schemas/TriggerExecution"
         workflow:
           $ref: "../../../automation-configuration/automation-configuration-rest/automation-configuration-rest-impl/openapi.yaml#/components/schemas/WorkflowBasic"
+    TriggerForm:
+      type: "object"
+      properties:
+        buttonLabel:
+          type: "string"
+        customFormStyling:
+          type: "string"
+        formDescription:
+          type: "string"
+        formPath:
+          type: "string"
+        formTitle:
+          type: "string"
+        appendAttribution:
+          type: "boolean"
+        ignoreBots:
+          type: "boolean"
+        useWorkflowTimezone:
+          type: "boolean"
+        inputs:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/TriggerFormInput"
+    FieldOption:
+      type: "object"
+      properties:
+        label:
+          type: "string"
+        value:
+          type: "string"
+    TriggerFormInput:
+      type: "object"
+      properties:
+        defaultValue:
+          type: "string"
+        fieldDescription:
+          type: "string"
+        fieldLabel:
+          type: "string"
+        fieldName:
+          type: "string"
+        fieldOptions:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/FieldOption"
+        fieldType:
+          type: "integer"
+        maxSelection:
+          type: "integer"
+        minSelection:
+          type: "integer"
+        multipleChoice:
+          type: "boolean"
+        placeholder:
+          type: "string"
+        required:
+          type: "boolean"
     WorkflowExecutionBasic:
       description: "Contains information about execution of a Integration workflow."
       type: "object"
+      required:
+        - "id"
+        - "project"
+        - "projectDeployment"
+        - "workflow"
       properties:
         id:
           description: "The id of a workflow execution."
@@ -169,9 +295,11 @@ components:
           readOnly: true
         project:
           $ref: "../../../automation-configuration/automation-configuration-rest/automation-configuration-rest-impl/openapi.yaml#/components/schemas/ProjectBasic"
-        projectInstance:
-          $ref: "../../../automation-configuration/automation-configuration-rest/automation-configuration-rest-impl/openapi.yaml#/components/schemas/ProjectInstanceBasic"
+        projectDeployment:
+          $ref: "../../../automation-configuration/automation-configuration-rest/automation-configuration-rest-impl/openapi.yaml#/components/schemas/ProjectDeploymentBasic"
         job:
           $ref: "../../../../platform/platform-workflow/platform-workflow-execution/platform-workflow-execution-rest//platform-workflow-execution-rest-impl/openapi.yaml#/components/schemas/JobBasic"
+        triggerExecution:
+          $ref: "../../../../platform/platform-workflow/platform-workflow-execution/platform-workflow-execution-rest//platform-workflow-execution-rest-impl/openapi.yaml#/components/schemas/TriggerExecution"
         workflow:
           $ref: "../../../automation-configuration/automation-configuration-rest/automation-configuration-rest-impl/openapi.yaml#/components/schemas/WorkflowBasic"

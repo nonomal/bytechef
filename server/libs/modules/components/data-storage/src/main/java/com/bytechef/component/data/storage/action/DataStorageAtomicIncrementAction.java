@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,13 +20,14 @@ import static com.bytechef.component.data.storage.constant.DataStorageConstants.
 import static com.bytechef.component.data.storage.constant.DataStorageConstants.SCOPE;
 import static com.bytechef.component.data.storage.constant.DataStorageConstants.SCOPE_OPTIONS;
 import static com.bytechef.component.data.storage.constant.DataStorageConstants.VALUE_TO_ADD;
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.integer;
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.integer;
+import static com.bytechef.component.definition.ComponentDsl.outputSchema;
+import static com.bytechef.component.definition.ComponentDsl.string;
 
 import com.bytechef.component.definition.ActionContext;
 import com.bytechef.component.definition.ActionContext.Data.Scope;
-import com.bytechef.component.definition.ComponentDSL.ModifiableActionDefinition;
+import com.bytechef.component.definition.ComponentDsl.ModifiableActionDefinition;
 import com.bytechef.component.definition.Parameters;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
@@ -43,7 +44,8 @@ public class DataStorageAtomicIncrementAction {
     public static final ModifiableActionDefinition ACTION_DEFINITION = action("atomicIncrement")
         .title("Atomic Increment")
         .description(
-            "The numeric value can be incremented atomically, and the action can be used concurrently from multiple executions.")
+            "The numeric value can be incremented atomically, and the action can be used concurrently from " +
+                "multiple executions.")
         .properties(
             string(KEY)
                 .label("Key")
@@ -55,11 +57,12 @@ public class DataStorageAtomicIncrementAction {
                 .options(SCOPE_OPTIONS)
                 .required(true),
             integer(VALUE_TO_ADD)
-                .label("Value to add")
+                .label("Value to Add")
                 .description(
                     "The value that can be added to the existing numeric value, which may have a negative value.")
-                .defaultValue(1))
-        .outputSchema(integer())
+                .defaultValue(1)
+                .required(true))
+        .output(outputSchema(integer()))
         .perform(DataStorageAtomicIncrementAction::perform);
 
     protected static Integer perform(
@@ -73,7 +76,7 @@ public class DataStorageAtomicIncrementAction {
 
                 if (value != null) {
                     context.data(
-                        data -> data.setValue(
+                        data -> data.put(
                             Scope.valueOf(inputParameters.getRequiredString(SCOPE)),
                             inputParameters.getRequiredString(KEY), value));
 
@@ -81,7 +84,7 @@ public class DataStorageAtomicIncrementAction {
                 }
             }
         } catch (InterruptedException e) {
-            context.logger(logger -> logger.error(e.getMessage(), e));
+            context.log(log -> log.error(e.getMessage(), e));
         } finally {
             LOCK.unlock();
         }
@@ -93,7 +96,7 @@ public class DataStorageAtomicIncrementAction {
         int number;
 
         Optional<Object> optionalList = context.data(
-            data -> data.fetchValue(
+            data -> data.fetch(
                 Scope.valueOf(inputParameters.getRequiredString(SCOPE)),
                 inputParameters.getRequiredString(KEY)));
         if (optionalList.isPresent() && optionalList.get() instanceof Number cuNumber) {

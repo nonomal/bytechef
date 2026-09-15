@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,18 +16,18 @@
 
 package com.bytechef.component.file.storage.action;
 
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.fileEntry;
-import static com.bytechef.component.definition.ComponentDSL.string;
-import static com.bytechef.component.file.storage.constant.FileStorageConstants.DOWNLOAD;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.fileEntry;
+import static com.bytechef.component.definition.ComponentDsl.outputSchema;
+import static com.bytechef.component.definition.ComponentDsl.string;
 import static com.bytechef.component.file.storage.constant.FileStorageConstants.FILENAME;
 
 import com.bytechef.component.definition.ActionContext;
-import com.bytechef.component.definition.ComponentDSL.ModifiableActionDefinition;
+import com.bytechef.component.definition.ComponentDsl.ModifiableActionDefinition;
 import com.bytechef.component.definition.FileEntry;
 import com.bytechef.component.definition.Parameters;
-import com.bytechef.component.exception.ComponentConfigurationException;
 import com.bytechef.component.file.storage.constant.FileStorageConstants;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -41,16 +41,17 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
-import java.util.Map;
 import java.util.function.Consumer;
 
 /**
+ * File storage download action for workflow automation. Downloads files from URLs.
+ *
  * @author Ivica Cardic
  */
 public class FileStorageDownloadAction {
 
-    public static final ModifiableActionDefinition ACTION_DEFINITION = action(DOWNLOAD)
-        .title("Download file")
+    public static final ModifiableActionDefinition ACTION_DEFINITION = action("download")
+        .title("Download File")
         .description("Download a file from the URL.")
         .properties(
             string(FileStorageConstants.URL)
@@ -59,15 +60,23 @@ public class FileStorageDownloadAction {
                 .required(true),
             string(FILENAME)
                 .label("Filename")
-                .description(
-                    "Filename to set for data. By default, \"file.txt\" will be used.")
+                .description("Filename to set for data. By default, \"file.txt\" will be used.")
                 .defaultValue("file.txt"))
-        .outputSchema(fileEntry())
+        .output(outputSchema(fileEntry().description("Downloaded file.")))
         .perform(FileStorageDownloadAction::perform);
 
     /**
-     * performs the download of a file (given its URL).
+     * Performs the download of a file from the given URL.
+     *
+     * <p>
+     * <b>Security Note:</b> SSRF (Server-Side Request Forgery) is intentional for this component. The File Storage
+     * component is designed to allow workflow creators to download files from user-specified URLs as part of their
+     * automation workflows. Access to this component should be restricted through workflow-level permissions and proper
+     * access control. The URL is provided by the workflow creator, not end users.
      */
+    @SuppressFBWarnings({
+        "SSRF", "URLCONNECTION_SSRF_FD"
+    })
     protected static FileEntry perform(
         Parameters inputParameters, Parameters connectionParameters, ActionContext context) throws IOException {
 
@@ -118,7 +127,7 @@ public class FileStorageDownloadAction {
 
             return uri.toURL();
         } catch (URISyntaxException | MalformedURLException e) {
-            throw new ComponentConfigurationException("Unable to create URL", e, Map.of("URL", fileUrl));
+            throw new IllegalArgumentException("Unable to create url: =%s".formatted(fileUrl), e);
         }
     }
 

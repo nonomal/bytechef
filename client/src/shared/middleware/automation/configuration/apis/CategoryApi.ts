@@ -12,15 +12,16 @@
  * Do not edit the class manually.
  */
 
-
 import * as runtime from '../runtime';
-import type {
-  CategoryModel,
-} from '../models/index';
 import {
-    CategoryModelFromJSON,
-    CategoryModelToJSON,
-} from '../models/index';
+    type Category,
+    CategoryFromJSON,
+    CategoryToJSON,
+} from '../models/Category';
+
+export interface GetProjectCategoriesRequest {
+    id: number;
+}
 
 /**
  * 
@@ -28,30 +29,49 @@ import {
 export class CategoryApi extends runtime.BaseAPI {
 
     /**
-     * Get categories.
-     * Get categories
+     * Creates request options for getProjectCategories without sending the request
      */
-    async getProjectCategoriesRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<CategoryModel>>> {
+    async getProjectCategoriesRequestOpts(requestParameters: GetProjectCategoriesRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['id'] == null) {
+            throw new runtime.RequiredError(
+                'id',
+                'Required parameter "id" was null or undefined when calling getProjectCategories().'
+            );
+        }
+
         const queryParameters: any = {};
 
         const headerParameters: runtime.HTTPHeaders = {};
 
-        const response = await this.request({
-            path: `/projects/categories`,
+
+        let urlPath = `/workspaces/{id}/project-categories`;
+        urlPath = urlPath.replace('{id}', encodeURIComponent(String(requestParameters['id'])));
+
+        return {
+            path: urlPath,
             method: 'GET',
             headers: headerParameters,
             query: queryParameters,
-        }, initOverrides);
-
-        return new runtime.JSONApiResponse(response, (jsonValue) => jsonValue.map(CategoryModelFromJSON));
+        };
     }
 
     /**
-     * Get categories.
-     * Get categories
+     * Get project categories for a workspace.
+     * Get project categories
      */
-    async getProjectCategories(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<CategoryModel>> {
-        const response = await this.getProjectCategoriesRaw(initOverrides);
+    async getProjectCategoriesRaw(requestParameters: GetProjectCategoriesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<Category>>> {
+        const requestOptions = await this.getProjectCategoriesRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => jsonValue.map(CategoryFromJSON));
+    }
+
+    /**
+     * Get project categories for a workspace.
+     * Get project categories
+     */
+    async getProjectCategories(requestParameters: GetProjectCategoriesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<Category>> {
+        const response = await this.getProjectCategoriesRaw(requestParameters, initOverrides);
         return await response.value();
     }
 

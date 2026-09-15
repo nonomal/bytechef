@@ -1,0 +1,105 @@
+/*
+ * Copyright 2025 ByteChef
+ *
+ * Licensed under the ByteChef Enterprise license (the "Enterprise License");
+ * you may not use this file except in compliance with the Enterprise License.
+ */
+
+package com.bytechef.ee.platform.ai.skill.remote.client.facade;
+
+import com.bytechef.platform.ai.skill.domain.AiSkill;
+import com.bytechef.platform.ai.skill.facade.AiSkillFacade;
+import com.bytechef.platform.annotation.ConditionalOnEEVersion;
+import com.bytechef.platform.tag.domain.Tag;
+import java.util.List;
+import java.util.Map;
+import org.jspecify.annotations.Nullable;
+import org.springframework.stereotype.Component;
+
+/**
+ * @version ee
+ *
+ * @author Ivica Cardic
+ */
+@Component
+@ConditionalOnEEVersion
+public class RemoteAiSkillFacadeClient implements AiSkillFacade {
+
+    @Override
+    public AiSkill createAiSkill(String name, String description, String filename, byte[] bytes) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public AiSkill createAiSkillFromInstructions(
+        String name, @Nullable String description, String instructions,
+        @Nullable Map<String, String> additionalFiles) {
+
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public AiSkill createAdditionalFilesInSkill(long id, Map<String, String> additionalFiles) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void deleteAiSkill(long id) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public AiSkill getAiSkill(long id) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public byte[] getAiSkillDownload(long id) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public AiSkillDownload getAiSkillWithDownload(long id) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public String getAiSkillFileContent(long id, String path) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public List<String> getAiSkillFilePaths(long id) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public List<AiSkill> getAiSkills() {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public List<Tag> getTags(List<Long> tagIds) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public AiSkill removeFileInSkill(long id, String path) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public AiSkill updateAiSkill(long id, String name, String description) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public AiSkill updateAiSkillContent(long id, String path, String content) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public AiSkill updateAiSkillTags(long id, List<Tag> tags) {
+        throw new UnsupportedOperationException();
+    }
+}

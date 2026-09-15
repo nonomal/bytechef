@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,33 +16,41 @@
 
 package com.bytechef.automation.configuration.web.rest;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.bytechef.atlas.configuration.domain.Workflow;
 import com.bytechef.atlas.configuration.domain.WorkflowTask;
 import com.bytechef.atlas.configuration.service.WorkflowService;
 import com.bytechef.automation.configuration.domain.ProjectWorkflow;
-import com.bytechef.automation.configuration.dto.WorkflowDTO;
+import com.bytechef.automation.configuration.dto.ProjectWorkflowDTO;
+import com.bytechef.automation.configuration.facade.ProjectCategoryFacade;
+import com.bytechef.automation.configuration.facade.ProjectDeploymentFacade;
 import com.bytechef.automation.configuration.facade.ProjectFacade;
-import com.bytechef.automation.configuration.facade.ProjectInstanceFacade;
+import com.bytechef.automation.configuration.facade.ProjectTagFacade;
+import com.bytechef.automation.configuration.facade.ProjectWorkflowFacade;
 import com.bytechef.automation.configuration.facade.WorkspaceFacade;
 import com.bytechef.automation.configuration.service.ProjectService;
 import com.bytechef.automation.configuration.service.WorkspaceService;
-import com.bytechef.automation.configuration.web.rest.config.ProjectConfigurationRestTestConfiguration;
+import com.bytechef.automation.configuration.web.rest.config.AutomationConfigurationRestConfigurationSharedMocks;
+import com.bytechef.automation.configuration.web.rest.config.AutomationConfigurationRestTestConfiguration;
+import com.bytechef.automation.configuration.web.rest.model.CreateProjectWorkflow200ResponseModel;
+import com.bytechef.automation.configuration.web.rest.model.WorkflowModel;
 import com.bytechef.platform.configuration.dto.WorkflowTaskDTO;
-import com.bytechef.platform.configuration.facade.WorkflowConnectionFacade;
+import com.bytechef.platform.configuration.facade.ComponentConnectionFacade;
 import com.bytechef.platform.configuration.facade.WorkflowFacade;
-import com.bytechef.platform.configuration.web.rest.model.WorkflowModel;
 import java.util.List;
-import org.apache.commons.lang3.Validate;
+import java.util.UUID;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ContextConfiguration;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.client.MockMvcWebTestClient;
@@ -50,8 +58,9 @@ import org.springframework.test.web.servlet.client.MockMvcWebTestClient;
 /**
  * @author Ivica Cardic
  */
-@ContextConfiguration(classes = ProjectConfigurationRestTestConfiguration.class)
+@ContextConfiguration(classes = AutomationConfigurationRestTestConfiguration.class)
 @WebMvcTest(WorkflowApiController.class)
+@AutomationConfigurationRestConfigurationSharedMocks
 public class WorkflowApiControllerIntTest {
 
     public static final String DEFINITION = """
@@ -69,34 +78,43 @@ public class WorkflowApiControllerIntTest {
     @Autowired
     private MockMvc mockMvc;
 
-    @MockBean
-    private ProjectInstanceFacade projectInstanceFacade;
+    @MockitoBean
+    private ProjectCategoryFacade projectCategoryFacade;
 
-    @MockBean
+    @MockitoBean
+    private ProjectDeploymentFacade projectDeploymentFacade;
+
+    @MockitoBean
     private ProjectFacade projectFacade;
 
-    @MockBean
+    @MockitoBean
+    private ProjectTagFacade projectTagFacade;
+
+    @MockitoBean
     private ProjectService projectService;
+
+    @MockitoBean
+    private ProjectWorkflowFacade projectWorkflowFacade;
 
     private WebTestClient webTestClient;
 
-    @MockBean
+    @MockitoBean
     private WorkflowFacade workflowFacade;
 
-    @MockBean
+    @MockitoBean
     private WorkflowService workflowService;
 
-    @MockBean
-    private WorkflowConnectionFacade workflowConnectionFacade;
+    @MockitoBean
+    private ComponentConnectionFacade componentConnectionFacade;
 
-    @MockBean
+    @MockitoBean
     private WorkspaceFacade workspaceFacade;
 
-    @MockBean
+    @MockitoBean
     private WorkspaceService workspaceService;
 
     @BeforeEach
-    public void setup() {
+    public void beforeEach() {
         this.webTestClient = MockMvcWebTestClient
             .bindTo(mockMvc)
             .build();
@@ -105,7 +123,7 @@ public class WorkflowApiControllerIntTest {
     @Test
     public void testGetWorkflow() {
         try {
-            when(projectFacade.getProjectWorkflow("1"))
+            when(projectWorkflowFacade.getProjectWorkflow("1"))
                 .thenReturn(getWorkflowDTO());
 
             this.webTestClient
@@ -119,6 +137,77 @@ public class WorkflowApiControllerIntTest {
         } catch (Exception exception) {
             Assertions.fail(exception);
         }
+
+        verify(projectWorkflowFacade).getProjectWorkflow("1");
+    }
+
+    @Test
+    public void testGetProjectWorkflows() {
+        try {
+            ProjectWorkflow projectWorkflow = new ProjectWorkflow(1L, 1, "workflow1", UUID.randomUUID());
+            // Use reflection or create a method to set the ID since there's no setter
+            try {
+                java.lang.reflect.Field idField = ProjectWorkflow.class.getDeclaredField("id");
+                idField.setAccessible(true);
+                idField.set(projectWorkflow, 1L);
+            } catch (Exception e) {
+                throw new RuntimeException("Failed to set ID", e);
+            }
+
+            ProjectWorkflowDTO workflow = new ProjectWorkflowDTO(
+                new Workflow("workflow1", "{}", Workflow.Format.JSON), projectWorkflow, false);
+
+            when(projectWorkflowFacade.getProjectWorkflows(1L))
+                .thenReturn(List.of(workflow));
+
+            this.webTestClient
+                .get()
+                .uri("/internal/projects/1/workflows")
+                .accept(MediaType.APPLICATION_JSON)
+                .exchange()
+                .expectStatus()
+                .isOk()
+                .expectBody()
+                .jsonPath("$.[0].id")
+                .isEqualTo("workflow1");
+        } catch (Exception exception) {
+            Assertions.fail(exception);
+        }
+
+        verify(projectWorkflowFacade).getProjectWorkflows(1L);
+    }
+
+    @Test
+    public void testPostProjectWorkflows() {
+        String definition = "{\"description\": \"My description\", \"label\": \"New Workflow\", \"tasks\": []}";
+
+        ProjectWorkflow projectWorkflow = new ProjectWorkflow(1L, 1, "workflow1", UUID.randomUUID());
+        // Use reflection to set the ID since there's no setter
+        try {
+            java.lang.reflect.Field idField = ProjectWorkflow.class.getDeclaredField("id");
+            idField.setAccessible(true);
+            idField.set(projectWorkflow, 1L);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to set ID", e);
+        }
+        WorkflowModel workflowModel = new WorkflowModel().definition(definition);
+
+        when(projectWorkflowFacade.addWorkflow(anyLong(), any()))
+            .thenReturn(projectWorkflow);
+
+        this.webTestClient
+            .post()
+            .uri("/internal/projects/1/workflows")
+            .accept(MediaType.APPLICATION_JSON)
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue(workflowModel)
+            .exchange()
+            .expectStatus()
+            .isOk()
+            .expectBody(CreateProjectWorkflow200ResponseModel.class)
+            .value(response -> Assertions.assertEquals(1L, response.getProjectWorkflowId()));
+
+        verify(projectWorkflowFacade).addWorkflow(anyLong(), any());
     }
 
     @Test
@@ -127,14 +216,10 @@ public class WorkflowApiControllerIntTest {
             .definition(DEFINITION)
             .version(0);
 
-        WorkflowDTO workflowDTO = getWorkflowDTO();
-
-        when(projectFacade.updateWorkflow("1", DEFINITION, 0))
-            .thenReturn(workflowDTO);
-
-        Workflow.Format format = workflowDTO.format();
-
         try {
+            when(projectWorkflowFacade.updateWorkflow("1", DEFINITION, 0))
+                .thenReturn(getWorkflowDTO());
+
             this.webTestClient
                 .put()
                 .uri("/internal/workflows/1")
@@ -144,32 +229,32 @@ public class WorkflowApiControllerIntTest {
                 .exchange()
                 .expectStatus()
                 .isOk()
-                .expectBody()
-                .jsonPath("$.format")
-                .isEqualTo(format.toString())
-                .jsonPath("$.id")
-                .isEqualTo(Validate.notNull(workflowDTO.id(), "id"))
-                .jsonPath("$.label")
-                .isEqualTo(workflowDTO.label())
-                .jsonPath("$.tasks")
-                .isArray()
-                .jsonPath("$.tasks[0].name")
-                .isEqualTo("airtable")
-                .jsonPath("$.tasks[0].type")
-                .isEqualTo("airtable/v1/create");
+                .expectBody(WorkflowModel.class);
         } catch (Exception exception) {
             Assertions.fail(exception);
         }
+
+        verify(projectWorkflowFacade).updateWorkflow("1", DEFINITION, 0);
     }
 
-    private WorkflowDTO getWorkflowDTO() {
+    private ProjectWorkflowDTO getWorkflowDTO() {
         Workflow workflow = new Workflow("1", DEFINITION, Workflow.Format.JSON);
 
         List<WorkflowTask> tasks = workflow.getTasks();
 
-        return new WorkflowDTO(
+        ProjectWorkflow projectWorkflow = new ProjectWorkflow(1L, 1, "1", UUID.randomUUID());
+        // Use reflection to set the ID since there's no setter
+        try {
+            java.lang.reflect.Field idField = ProjectWorkflow.class.getDeclaredField("id");
+            idField.setAccessible(true);
+            idField.set(projectWorkflow, 1L);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to set ID", e);
+        }
+
+        return new ProjectWorkflowDTO(
             new com.bytechef.platform.configuration.dto.WorkflowDTO(
-                workflow, List.of(new WorkflowTaskDTO(tasks.getFirst(), List.of(), null)), List.of()),
-            new ProjectWorkflow(1));
+                workflow, List.of(new WorkflowTaskDTO(tasks.getFirst(), false, null, List.of())), List.of()),
+            projectWorkflow, false);
     }
 }

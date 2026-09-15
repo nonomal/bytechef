@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,26 +16,22 @@
 
 package com.bytechef.component.microsoft.share.point.action;
 
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.dynamicProperties;
-import static com.bytechef.component.definition.ComponentDSL.object;
-import static com.bytechef.component.definition.ComponentDSL.string;
-import static com.bytechef.component.microsoft.share.point.constant.MicrosoftSharePointConstants.BASE_URL;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.dynamicProperties;
+import static com.bytechef.component.definition.ComponentDsl.string;
 import static com.bytechef.component.microsoft.share.point.constant.MicrosoftSharePointConstants.COLUMNS;
-import static com.bytechef.component.microsoft.share.point.constant.MicrosoftSharePointConstants.CREATE_LIST_ITEM;
 import static com.bytechef.component.microsoft.share.point.constant.MicrosoftSharePointConstants.FIELDS;
-import static com.bytechef.component.microsoft.share.point.constant.MicrosoftSharePointConstants.ID;
 import static com.bytechef.component.microsoft.share.point.constant.MicrosoftSharePointConstants.LIST_ID;
 import static com.bytechef.component.microsoft.share.point.constant.MicrosoftSharePointConstants.SITE_ID;
 import static com.bytechef.component.microsoft.share.point.constant.MicrosoftSharePointConstants.SITE_ID_PROPERTY;
 
 import com.bytechef.component.definition.ActionContext;
-import com.bytechef.component.definition.ComponentDSL.ModifiableActionDefinition;
+import com.bytechef.component.definition.ActionDefinition.OptionsFunction;
+import com.bytechef.component.definition.ComponentDsl.ModifiableActionDefinition;
 import com.bytechef.component.definition.Context.Http;
-import com.bytechef.component.definition.Context.TypeReference;
-import com.bytechef.component.definition.OptionsDataSource.ActionOptionsFunction;
 import com.bytechef.component.definition.Parameters;
 import com.bytechef.component.microsoft.share.point.util.MicrosoftSharePointUtils;
+import com.bytechef.microsoft.commons.MicrosoftUtils;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -45,30 +41,30 @@ import java.util.Map;
  */
 public class MicrosoftSharePointCreateListItemAction {
 
-    public static final ModifiableActionDefinition ACTION_DEFINITION = action(CREATE_LIST_ITEM)
-        .title("Create list item")
+    public static final ModifiableActionDefinition ACTION_DEFINITION = action("createListItem")
+        .title("Create List Item")
         .description("Creates a new item in a list.")
         .properties(
             SITE_ID_PROPERTY,
             string(LIST_ID)
-                .label("List")
+                .label("List ID")
                 .optionsLookupDependsOn(SITE_ID)
-                .options((ActionOptionsFunction<String>) MicrosoftSharePointUtils::getListIdOptions)
+                .options((OptionsFunction<String>) MicrosoftSharePointUtils::getListIdOptions)
                 .required(true),
             dynamicProperties(COLUMNS)
                 .propertiesLookupDependsOn(SITE_ID, LIST_ID)
                 .properties(MicrosoftSharePointUtils::createPropertiesForListItem))
-        .outputSchema(
-            object()
-                .properties(
-                    string(ID)))
-        .perform(MicrosoftSharePointCreateListItemAction::perform);
+        .output()
+        .perform(MicrosoftSharePointCreateListItemAction::perform)
+        .help(
+            "",
+            "https://docs.bytechef.io/reference/components/microsoft-share-point_v1#create-list-item")
+        .processErrorResponse(MicrosoftUtils::processErrorResponse);
 
     private MicrosoftSharePointCreateListItemAction() {
     }
 
     public static Object perform(Parameters inputParameters, Parameters connectionParameters, ActionContext context) {
-
         Map<String, ?> map = inputParameters.getMap(COLUMNS, Map.of());
 
         List<Object> objects = new ArrayList<>();
@@ -80,11 +76,11 @@ public class MicrosoftSharePointCreateListItemAction {
 
         return context
             .http(http -> http.post(
-                BASE_URL + "/" + inputParameters.getRequiredString(SITE_ID) + "/lists/" +
+                "/sites/" + inputParameters.getRequiredString(SITE_ID) + "/lists/" +
                     inputParameters.getRequiredString(LIST_ID) + "/items"))
             .configuration(Http.responseType(Http.ResponseType.JSON))
             .body(Http.Body.of(FIELDS, objects.toArray()))
             .execute()
-            .getBody(new TypeReference<>() {});
+            .getBody();
     }
 }

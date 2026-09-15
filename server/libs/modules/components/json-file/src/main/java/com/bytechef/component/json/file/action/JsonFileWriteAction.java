@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,24 +16,23 @@
 
 package com.bytechef.component.json.file.action;
 
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.array;
-import static com.bytechef.component.definition.ComponentDSL.fileEntry;
-import static com.bytechef.component.definition.ComponentDSL.integer;
-import static com.bytechef.component.definition.ComponentDSL.object;
-import static com.bytechef.component.definition.ComponentDSL.option;
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.array;
+import static com.bytechef.component.definition.ComponentDsl.fileEntry;
+import static com.bytechef.component.definition.ComponentDsl.object;
+import static com.bytechef.component.definition.ComponentDsl.option;
+import static com.bytechef.component.definition.ComponentDsl.outputSchema;
+import static com.bytechef.component.definition.ComponentDsl.string;
 import static com.bytechef.component.json.file.constant.JsonFileConstants.FILENAME;
 import static com.bytechef.component.json.file.constant.JsonFileConstants.FILE_TYPE;
 import static com.bytechef.component.json.file.constant.JsonFileConstants.SOURCE;
 import static com.bytechef.component.json.file.constant.JsonFileConstants.TYPE;
-import static com.bytechef.component.json.file.constant.JsonFileConstants.WRITE;
 
-import com.bytechef.component.definition.ActionContext;
-import com.bytechef.component.definition.ComponentDSL.ModifiableActionDefinition;
+import com.bytechef.component.definition.ComponentDsl.ModifiableActionDefinition;
+import com.bytechef.component.definition.Context;
 import com.bytechef.component.definition.FileEntry;
 import com.bytechef.component.definition.Parameters;
-import com.bytechef.component.json.file.constant.JsonFileConstants;
+import com.bytechef.component.json.file.constant.FileType;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -48,33 +47,41 @@ import java.util.Map;
  */
 public class JsonFileWriteAction {
 
-    public static final ModifiableActionDefinition ACTION_DEFINITION = action(WRITE)
-        .title("Write to file")
-        .description("Writes the data to a JSON file.")
+    private enum ValueType {
+
+        OBJECT, ARRAY;
+    }
+
+    public static final ModifiableActionDefinition ACTION_DEFINITION = action("write")
+        .title("Write to File")
+        .description(
+            "Writes workflow data to a JSON or JSONL file. Source Data is the object or array to serialize (typically a data pill), not a file path.")
         .properties(
             string(FILE_TYPE)
                 .label("File Type")
                 .description("The file type to choose.")
                 .options(
-                    option("JSON", JsonFileConstants.FileType.JSON.name()),
-                    option("JSON Line", JsonFileConstants.FileType.JSONL.name()))
-                .defaultValue(JsonFileConstants.FileType.JSON.name())
+                    option("JSON", FileType.JSON.name()),
+                    option("JSON Line", FileType.JSONL.name()))
+                .defaultValue(FileType.JSON.name())
                 .required(true),
-            integer(TYPE)
+            string(TYPE)
                 .label("Type")
-                .description("The value type.")
+                .description("Whether Source Data is a JSON object or a JSON array.")
                 .options(
-                    option("Object", 1),
-                    option("Array", 2)),
+                    option("Object", ValueType.OBJECT.name()),
+                    option("Array", ValueType.ARRAY.name())),
             object(SOURCE)
-                .label("Source")
-                .description("The object to write to the file.")
-                .displayCondition("type == 1")
+                .label("Source Data")
+                .description(
+                    "The JSON object to write. Map this from a previous step with a data pill. This is the data itself, not a file path.")
+                .displayCondition("type == '%s'".formatted(ValueType.OBJECT))
                 .required(true),
             array(SOURCE)
-                .label("Source")
-                .description("The array to write to the file.")
-                .displayCondition("type == 2")
+                .label("Source Data")
+                .description(
+                    "The JSON array (list of objects) to write. Map this from a previous step with a data pill. For JSON, the file contains one JSON array. For JSONL, each item is written as one JSON object per line.")
+                .displayCondition("type == '%s'".formatted(ValueType.ARRAY))
                 .required(true),
             string(FILENAME)
                 .label("Filename")
@@ -83,25 +90,25 @@ public class JsonFileWriteAction {
                 .required(true)
                 .defaultValue("file.json")
                 .advancedOption(true))
-        .outputSchema(fileEntry())
+        .output(outputSchema(fileEntry()))
         .perform(JsonFileWriteAction::perform);
 
-    private static String getDefaultFileName(JsonFileConstants.FileType fileType, String defaultFilename) {
+    private static String getDefaultFileName(FileType fileType, String defaultFilename) {
         return defaultFilename == null
-            ? "file." + (fileType == JsonFileConstants.FileType.JSON ? "json" : "jsonl")
+            ? "file." + (fileType == FileType.JSON ? "json" : "jsonl")
             : defaultFilename;
     }
 
     @SuppressWarnings("unchecked")
     protected static FileEntry perform(
-        Parameters inputParameters, Parameters connectionParameters, ActionContext context) throws IOException {
+        Parameters inputParameters, Parameters connectionParameters, Context context) throws IOException {
 
-        JsonFileConstants.FileType fileType = JsonFileReadAction.getFileType(inputParameters);
+        FileType fileType = JsonFileReadAction.getFileType(inputParameters);
         Object source = inputParameters.getRequired(SOURCE);
 
         ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
 
-        if (fileType == JsonFileConstants.FileType.JSON) {
+        if (fileType == FileType.JSON) {
             try (PrintWriter printWriter = new PrintWriter(byteArrayOutputStream, false, StandardCharsets.UTF_8)) {
                 printWriter.println((String) context.json(json -> json.write(source)));
             }

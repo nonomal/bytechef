@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,13 +17,14 @@
 package com.bytechef.component.teamwork.action;
 
 import static com.bytechef.component.OpenApiComponentHandler.PropertyType;
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.object;
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.object;
+import static com.bytechef.component.definition.ComponentDsl.outputSchema;
+import static com.bytechef.component.definition.ComponentDsl.string;
 import static com.bytechef.component.definition.Context.Http.BodyContentType;
 import static com.bytechef.component.definition.Context.Http.ResponseType;
 
-import com.bytechef.component.definition.ComponentDSL;
+import com.bytechef.component.definition.ComponentDsl;
 import java.util.Map;
 
 /**
@@ -32,19 +33,20 @@ import java.util.Map;
  * @generated
  */
 public class TeamworkCreateCompanyAction {
-    public static final ComponentDSL.ModifiableActionDefinition ACTION_DEFINITION = action("createCompany")
-        .title("Creates a company")
-        .description("Create a new company")
+    public static final ComponentDsl.ModifiableActionDefinition ACTION_DEFINITION = action("createCompany")
+        .title("Create Company")
+        .description("Creates a new company.")
         .metadata(
             Map.of(
                 "method", "POST",
                 "path", "/companies.json", "bodyContentType", BodyContentType.JSON, "mimeType", "application/json"
 
             ))
-        .properties(object("__item").properties(object("company").properties(string("name").label("Name")
-            .description("The name of the company")
+        .properties(object("company").properties(string("name").label("Name")
+            .description("The name of the company.")
             .required(false),
             string("emailOne").label("Email")
+                .description("Email address of the company.")
                 .required(false),
             string("phone").label("Phone")
                 .description("Phone number for the company.")
@@ -52,20 +54,23 @@ public class TeamworkCreateCompanyAction {
             string("website").label("Website")
                 .description("The company's website.")
                 .required(false))
-            .label("Company")
-            .required(false))
-            .label("Company")
             .metadata(
                 Map.of(
-                    "type", PropertyType.BODY)))
-        .outputSchema(object()
-            .properties(object("body")
-                .properties(string("name").required(false), string("emailOne").required(false),
-                    string("phone").required(false), string("website").required(false))
+                    "type", PropertyType.BODY))
+            .label("Company")
+            .required(false))
+        .output(outputSchema(object().properties(string("name").description("The name of the company.")
+            .required(false),
+            string("emailOne").description("Email address of the company.")
+                .required(false),
+            string("phone").description("Phone number for the company.")
+                .required(false),
+            string("website").description("The company's website.")
                 .required(false))
             .metadata(
                 Map.of(
-                    "responseType", ResponseType.JSON)));
+                    "responseType", ResponseType.JSON))))
+        .help("", "https://docs.bytechef.io/reference/components/teamwork_v1#create-company");
 
     private TeamworkCreateCompanyAction() {
     }

@@ -1,0 +1,406 @@
+import useProjectsLeftSidebarStore from '@/pages/automation/project/stores/useProjectsLeftSidebarStore';
+import updateCachedProjectWorkflowVersion from '@/pages/automation/project/utils/updateCachedProjectWorkflowVersion';
+import {Type} from '@/pages/automation/projects/Projects';
+import {useWorkspaceStore} from '@/pages/automation/stores/useWorkspaceStore';
+import {RequestI} from '@/pages/platform/workflow-editor/providers/workflowEditorProvider';
+import useDataPillPanelStore from '@/pages/platform/workflow-editor/stores/useDataPillPanelStore';
+import useWorkflowDataStore, {
+    clearWorkflowHistory,
+    setWorkflowWithoutHistory,
+} from '@/pages/platform/workflow-editor/stores/useWorkflowDataStore';
+import useWorkflowEditorStore from '@/pages/platform/workflow-editor/stores/useWorkflowEditorStore';
+import useWorkflowNodeDetailsPanelStore from '@/pages/platform/workflow-editor/stores/useWorkflowNodeDetailsPanelStore';
+import useWorkflowTestChatStore from '@/pages/platform/workflow-editor/stores/useWorkflowTestChatStore';
+import useCopilotPanelStore from '@/shared/components/copilot/stores/useCopilotPanelStore';
+import {useUpdateWorkflowMutation} from '@/shared/mutations/automation/workflows.mutations';
+import {
+    useDeleteClusterElementParameterMutation,
+    useDeleteWorkflowNodeParameterMutation,
+    useUpdateClusterElementParameterMutation,
+    useUpdateWorkflowNodeParameterMutation,
+} from '@/shared/mutations/platform/workflowNodeParameters.mutations';
+import useUpdatePlatformWorkflowMutation from '@/shared/mutations/platform/workflows.mutations';
+import {useGetComponentDefinitionsQuery as useGetComponentDefinitionsBaseQuery} from '@/shared/queries/automation/componentDefinitions.queries';
+import {useGetWorkspaceConnectionsQuery} from '@/shared/queries/automation/connections.queries';
+import {useGetProjectCategoriesQuery} from '@/shared/queries/automation/projectCategories.queries';
+import {useGetProjectTagsQuery} from '@/shared/queries/automation/projectTags.queries';
+import {
+    ProjectWorkflowKeys,
+    useGetProjectWorkflowQuery,
+    useGetProjectWorkflowsQuery,
+} from '@/shared/queries/automation/projectWorkflows.queries';
+import {WorkflowKeys} from '@/shared/queries/automation/workflows.queries';
+import {GetComponentDefinitionsRequestI} from '@/shared/queries/platform/componentDefinitions.queries';
+import {WorkflowNodeDescriptionKeys} from '@/shared/queries/platform/workflowNodeDescriptions.queries';
+import {WorkflowNodeOutputKeys} from '@/shared/queries/platform/workflowNodeOutputs.queries';
+import {WorkflowNodeParameterKeys} from '@/shared/queries/platform/workflowNodeParameters.queries';
+import {useEnvironmentStore} from '@/shared/stores/useEnvironmentStore';
+import {useQueryClient} from '@tanstack/react-query';
+import {useCallback, useEffect, useRef, useState} from 'react';
+import {PanelImperativeHandle} from 'react-resizable-panels';
+import {useNavigate, useParams, useSearchParams} from 'react-router-dom';
+import {useShallow} from 'zustand/react/shallow';
+
+export const useProject = () => {
+    const {setIsWorkflowLoaded, workflow} = useWorkflowDataStore(
+        useShallow((state) => ({
+            setIsWorkflowLoaded: state.setIsWorkflowLoaded,
+            workflow: state.workflow,
+        }))
+    );
+    const setCopilotPanelOpen = useCopilotPanelStore((state) => state.setCopilotPanelOpen);
+    const setDataPillPanelOpen = useDataPillPanelStore((state) => state.setDataPillPanelOpen);
+    const currentEnvironmentId = useEnvironmentStore((state) => state.currentEnvironmentId);
+    const projectLeftSidebarOpen = useProjectsLeftSidebarStore((state) => state.projectLeftSidebarOpen);
+    const {setShowBottomPanelOpen, setShowEditWorkflowDialog, setShowWorkflowCodeEditorSheet, showBottomPanel} =
+        useWorkflowEditorStore(
+            useShallow((state) => ({
+                setShowBottomPanelOpen: state.setShowBottomPanelOpen,
+                setShowEditWorkflowDialog: state.setShowEditWorkflowDialog,
+                setShowWorkflowCodeEditorSheet: state.setShowWorkflowCodeEditorSheet,
+                showBottomPanel: state.showBottomPanel,
+            }))
+        );
+    const setWorkflowNodeDetailsPanelOpen = useWorkflowNodeDetailsPanelStore(
+        (state) => state.setWorkflowNodeDetailsPanelOpen
+    );
+    const setWorkflowTestChatPanelOpen = useWorkflowTestChatStore((state) => state.setWorkflowTestChatPanelOpen);
+    const currentWorkspaceId = useWorkspaceStore((state) => state.currentWorkspaceId);
+
+    const [sidebarLoaded, setSidebarLoaded] = useState(false);
+
+    const bottomResizablePanelRef = useRef<PanelImperativeHandle>(null);
+    const sidebarLoadedRef = useRef(false);
+
+    const {projectId, projectWorkflowId} = useParams();
+    const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+
+    const filterData = {
+        id: searchParams.get('categoryId')
+            ? parseInt(searchParams.get('categoryId')!)
+            : searchParams.get('tagId')
+              ? parseInt(searchParams.get('tagId')!)
+              : undefined,
+        type: searchParams.get('tagId') ? Type.Tag : Type.Category,
+    };
+
+    const {data: currentWorkflow, isLoading: isWorkflowLoading} = useGetProjectWorkflowQuery(
+        +projectId!,
+        +projectWorkflowId!,
+        !!projectId && !!projectWorkflowId
+    );
+
+    const {data: projectWorkflows} = useGetProjectWorkflowsQuery(+projectId!, !!projectId);
+
+    const useGetComponentDefinitionsQuery = (request: GetComponentDefinitionsRequestI, enabled?: boolean) => {
+        return useGetComponentDefinitionsBaseQuery(request, enabled);
+    };
+
+    const useGetConnectionsQuery = (request: RequestI, enabled?: boolean) => {
+        return useGetWorkspaceConnectionsQuery(
+            {
+                environmentId: currentEnvironmentId,
+                id: currentWorkspaceId!,
+                ...request,
+            },
+            enabled
+        );
+    };
+
+    const {data: categories} = useGetProjectCategoriesQuery(currentWorkspaceId!);
+
+    const {data: tags} = useGetProjectTagsQuery();
+
+    const queryClient = useQueryClient();
+
+    const deleteWorkflowNodeParameterMutation = useDeleteWorkflowNodeParameterMutation({
+        onSuccess: (result, variables) =>
+            updateCachedProjectWorkflowVersion(queryClient, {
+                projectId: +projectId!,
+                version: result.version,
+                workflowId: variables.id,
+            }),
+    });
+
+    const deleteClusterElementParameterMutation = useDeleteClusterElementParameterMutation({
+        onSuccess: (result, variables) =>
+            updateCachedProjectWorkflowVersion(queryClient, {
+                projectId: +projectId!,
+                version: result.version,
+                workflowId: variables.id,
+            }),
+    });
+
+    const updateWorkflowEditorMutation = useUpdatePlatformWorkflowMutation({
+        onSuccess: (updatedWorkflow) =>
+            updateCachedProjectWorkflowVersion(queryClient, {
+                projectId: +projectId!,
+                version: updatedWorkflow.version,
+                workflowId: updatedWorkflow.id,
+            }),
+        useUpdateWorkflowMutation,
+        workflowId: workflow.id!,
+        workflowKeys: WorkflowKeys,
+    });
+
+    const updateWorkflowMutation = useUpdatePlatformWorkflowMutation({
+        onSuccess: () => {
+            queryClient.invalidateQueries({
+                queryKey: ProjectWorkflowKeys.projectWorkflows(+projectId!),
+            });
+
+            queryClient.invalidateQueries({
+                queryKey: ProjectWorkflowKeys.workflows,
+            });
+
+            setShowEditWorkflowDialog(false);
+        },
+        useUpdateWorkflowMutation,
+        workflowId: workflow.id!,
+        workflowKeys: WorkflowKeys,
+    });
+
+    const updateWorkflowNodeParameterMutation = useUpdateWorkflowNodeParameterMutation({
+        onSuccess: (result, variables) => {
+            updateCachedProjectWorkflowVersion(queryClient, {
+                projectId: +projectId!,
+                version: result.version,
+                workflowId: variables.id,
+            });
+
+            queryClient.invalidateQueries({
+                queryKey: WorkflowNodeDescriptionKeys.workflowNodeDescription({
+                    environmentId: variables.environmentId,
+                    id: variables.id,
+                    workflowNodeName: variables.workflowNodeName,
+                }),
+            });
+
+            queryClient.invalidateQueries({
+                queryKey: WorkflowNodeParameterKeys.propertyWorkflowNodeParameterDisplayConditions({
+                    environmentId: variables.environmentId,
+                    id: variables.id,
+                    workflowNodeName: variables.workflowNodeName,
+                }),
+            });
+
+            queryClient.invalidateQueries({
+                queryKey: WorkflowNodeOutputKeys.workflowNodeOutputs,
+            });
+        },
+    });
+
+    const updateClusterElementParameterMutation = useUpdateClusterElementParameterMutation({
+        onSuccess: (result, variables) =>
+            updateCachedProjectWorkflowVersion(queryClient, {
+                projectId: +projectId!,
+                version: result.version,
+                workflowId: variables.id,
+            }),
+    });
+
+    const cancelWorkflowQueries = () => {
+        const queryKey = ProjectWorkflowKeys.projectWorkflows(+projectId!);
+
+        return queryClient.cancelQueries({queryKey});
+    };
+
+    const invalidateWorkflowQueries = () => {
+        const queryKey = ProjectWorkflowKeys.projectWorkflows(+projectId!);
+
+        return queryClient.invalidateQueries({
+            queryKey,
+        });
+    };
+
+    const handleEditSubflowClick = useCallback(
+        (workflowUuid: string) => {
+            const matchingWorkflow = projectWorkflows?.find((workflow) => workflow.workflowUuid === workflowUuid);
+
+            if (matchingWorkflow?.projectWorkflowId) {
+                if (String(matchingWorkflow.projectWorkflowId) === projectWorkflowId) {
+                    return;
+                }
+
+                const newSearchParams = new URLSearchParams(searchParams.toString());
+
+                const fromSubflowParam = newSearchParams.get('fromSubflow');
+
+                if (fromSubflowParam === 'true') {
+                    const existingParentChain = newSearchParams.get('parentChain');
+                    const existingParentProjectWorkflowId = newSearchParams.get('parentProjectWorkflowId');
+
+                    const newChain = existingParentChain
+                        ? `${existingParentChain},${existingParentProjectWorkflowId}`
+                        : existingParentProjectWorkflowId;
+
+                    if (newChain) {
+                        newSearchParams.set('parentChain', newChain);
+                    }
+                }
+
+                newSearchParams.set('fromSubflow', 'true');
+                newSearchParams.set('parentProjectWorkflowId', projectWorkflowId!);
+
+                if (showBottomPanel) {
+                    newSearchParams.set('restoreExecutionPanel', 'true');
+                }
+
+                const {parentWorkflowTestExecution, setParentWorkflowTestExecution, workflowTestExecution} =
+                    useWorkflowEditorStore.getState();
+
+                if (!parentWorkflowTestExecution) {
+                    setParentWorkflowTestExecution(workflowTestExecution);
+                }
+
+                setShowBottomPanelOpen(false);
+                setShowWorkflowCodeEditorSheet(false);
+
+                if (bottomResizablePanelRef.current) {
+                    bottomResizablePanelRef.current.resize(0);
+                }
+
+                navigate(
+                    `/automation/projects/${projectId}/project-workflows/${matchingWorkflow.projectWorkflowId}?${newSearchParams}`
+                );
+            }
+        },
+        [
+            bottomResizablePanelRef,
+            navigate,
+            projectId,
+            projectWorkflowId,
+            projectWorkflows,
+            searchParams,
+            setShowBottomPanelOpen,
+            setShowWorkflowCodeEditorSheet,
+            showBottomPanel,
+        ]
+    );
+
+    const handleProjectClick = useCallback(
+        (projectId: number, projectWorkflowId: number) => {
+            const newSearchParams = new URLSearchParams(searchParams.toString());
+
+            newSearchParams.delete('fromSubflow');
+            newSearchParams.delete('parentChain');
+            newSearchParams.delete('parentProjectWorkflowId');
+            newSearchParams.delete('restoreExecutionPanel');
+
+            navigate(`/automation/projects/${projectId}/project-workflows/${projectWorkflowId}?${newSearchParams}`);
+        },
+        [navigate, searchParams]
+    );
+
+    const handleWorkflowExecutionsTestOutputCloseClick = useCallback(() => {
+        setShowBottomPanelOpen(false);
+
+        if (bottomResizablePanelRef.current) {
+            bottomResizablePanelRef.current.resize(0);
+        }
+    }, [bottomResizablePanelRef, setShowBottomPanelOpen]);
+
+    useEffect(() => {
+        // Reset state when the component unmounts
+        return () => {
+            setCopilotPanelOpen(false);
+            setWorkflowWithoutHistory({}, {clearHistory: true});
+        };
+
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    useEffect(() => {
+        setDataPillPanelOpen(false);
+        setWorkflowNodeDetailsPanelOpen(false);
+        setWorkflowTestChatPanelOpen(false);
+
+        useWorkflowNodeDetailsPanelStore.getState().reset();
+
+        useWorkflowNodeDetailsPanelStore.getState().clearPendingSaveNodeNames();
+
+        const restorePanelParam = searchParams.get('restoreExecutionPanel');
+        const fromSubflowParam = searchParams.get('fromSubflow');
+
+        const isReturningFromSubflow = restorePanelParam === 'true' && fromSubflowParam !== 'true';
+
+        if (isReturningFromSubflow) {
+            const {parentWorkflowTestExecution, setParentWorkflowTestExecution, setWorkflowTestExecution} =
+                useWorkflowEditorStore.getState();
+
+            setWorkflowTestExecution(parentWorkflowTestExecution);
+            setParentWorkflowTestExecution(undefined);
+        }
+
+        const storedExecution = useWorkflowEditorStore.getState().workflowTestExecution;
+
+        const shouldRestorePanel = isReturningFromSubflow && !!storedExecution;
+
+        if (shouldRestorePanel) {
+            setShowBottomPanelOpen(true);
+
+            if (bottomResizablePanelRef.current) {
+                bottomResizablePanelRef.current.resize(350);
+            }
+        } else {
+            setShowBottomPanelOpen(false);
+
+            if (bottomResizablePanelRef.current) {
+                bottomResizablePanelRef.current.resize(0);
+            }
+        }
+
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [projectWorkflowId]);
+
+    useEffect(() => {
+        if (projectLeftSidebarOpen && !sidebarLoadedRef.current) {
+            sidebarLoadedRef.current = true;
+
+            setSidebarLoaded(true);
+        }
+    }, [projectLeftSidebarOpen]);
+
+    // Reset loading state and undo history when workflow ID changes
+    useEffect(() => {
+        setIsWorkflowLoaded(false);
+
+        clearWorkflowHistory();
+    }, [projectWorkflowId, setIsWorkflowLoaded]);
+
+    // Handle workflow updates with proper synchronization
+    useEffect(() => {
+        if (currentWorkflow && !isWorkflowLoading) {
+            const timeoutId = setTimeout(() => {
+                setWorkflowWithoutHistory({...currentWorkflow});
+            }, 0);
+
+            return () => clearTimeout(timeoutId);
+        }
+    }, [currentWorkflow, isWorkflowLoading]);
+
+    return {
+        bottomResizablePanelRef,
+        cancelWorkflowQueries,
+        categories,
+        deleteClusterElementParameterMutation,
+        deleteWorkflowNodeParameterMutation,
+        filterData,
+        handleEditSubflowClick,
+        handleProjectClick,
+        handleWorkflowExecutionsTestOutputCloseClick,
+        invalidateWorkflowQueries,
+        projectId: parseInt(projectId!),
+        projectLeftSidebarOpen,
+        projectWorkflowId: parseInt(projectWorkflowId!),
+        sidebarLoaded,
+        tags,
+        updateClusterElementParameterMutation,
+        updateWorkflowEditorMutation,
+        updateWorkflowMutation,
+        updateWorkflowNodeParameterMutation,
+        useGetComponentDefinitionsQuery,
+        useGetConnectionsQuery,
+    };
+};

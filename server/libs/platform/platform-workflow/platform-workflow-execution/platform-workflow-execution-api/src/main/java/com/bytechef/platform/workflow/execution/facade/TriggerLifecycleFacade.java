@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@
 package com.bytechef.platform.workflow.execution.facade;
 
 import com.bytechef.platform.definition.WorkflowNodeType;
-import com.bytechef.platform.workflow.execution.WorkflowExecutionId;
+import com.bytechef.platform.workflow.WorkflowExecutionId;
 import java.util.Map;
 
 /**
@@ -31,5 +31,5 @@ public interface TriggerLifecycleFacade {
 
     void executeTriggerEnable(
         String workflowId, WorkflowExecutionId workflowExecutionId, WorkflowNodeType triggerWorkflowNodeType,
-        Map<String, ?> triggerParameters, Long connectionId, String webhookUrl);
+        Map<String, ?> triggerParameters, Long connectionId, String webhookUrl, long environmentId);
 }

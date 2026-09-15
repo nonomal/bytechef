@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,11 +16,11 @@
 
 package com.bytechef.component.xlsx.file.action;
 
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.bool;
-import static com.bytechef.component.definition.ComponentDSL.fileEntry;
-import static com.bytechef.component.definition.ComponentDSL.integer;
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.bool;
+import static com.bytechef.component.definition.ComponentDsl.fileEntry;
+import static com.bytechef.component.definition.ComponentDsl.integer;
+import static com.bytechef.component.definition.ComponentDsl.string;
 import static com.bytechef.component.xlsx.file.constant.XlsxFileConstants.FILE_ENTRY;
 import static com.bytechef.component.xlsx.file.constant.XlsxFileConstants.HEADER_ROW;
 import static com.bytechef.component.xlsx.file.constant.XlsxFileConstants.INCLUDE_EMPTY_CELLS;
@@ -30,11 +30,10 @@ import static com.bytechef.component.xlsx.file.constant.XlsxFileConstants.READ_A
 import static com.bytechef.component.xlsx.file.constant.XlsxFileConstants.SHEET_NAME;
 
 import com.bytechef.component.definition.ActionContext;
-import com.bytechef.component.definition.ComponentDSL.ModifiableActionDefinition;
+import com.bytechef.component.definition.ComponentDsl.ModifiableActionDefinition;
 import com.bytechef.component.definition.Context;
 import com.bytechef.component.definition.FileEntry;
 import com.bytechef.component.definition.Parameters;
-import com.bytechef.component.xlsx.file.constant.XlsxFileConstants;
 import com.bytechef.component.xlsx.file.constant.XlsxFileConstants.FileFormat;
 import java.io.IOException;
 import java.io.InputStream;
@@ -42,6 +41,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import org.apache.commons.lang3.BooleanUtils;
@@ -59,14 +59,13 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
  */
 public class XlsxFileReadAction {
 
-    public static final ModifiableActionDefinition ACTION_DEFINITION = action(XlsxFileConstants.READ)
-        .title("Read from file")
+    public static final ModifiableActionDefinition ACTION_DEFINITION = action("read")
+        .title("Read from File")
         .description("Reads data from a XLS/XLSX file.")
         .properties(
             fileEntry(FILE_ENTRY)
-                .label("File")
-                .description(
-                    "The object property which contains a reference to the XLS/XLSX file to read from.")
+                .label("File Entry")
+                .description("The object property which contains a reference to the XLS/XLSX file to read from.")
                 .required(true),
             string(SHEET_NAME)
                 .label("Sheet Name")
@@ -81,8 +80,7 @@ public class XlsxFileReadAction {
                 .advancedOption(true),
             bool(INCLUDE_EMPTY_CELLS)
                 .label("Include Empty Cells")
-                .description(
-                    "When reading from file the empty cells will be filled with an empty string.")
+                .description("When reading from file the empty cells will be filled with an empty string.")
                 .defaultValue(false)
                 .advancedOption(true),
             integer(PAGE_SIZE)
@@ -96,7 +94,8 @@ public class XlsxFileReadAction {
             bool(READ_AS_STRING)
                 .label("Read As String")
                 .description(
-                    "In some cases and file formats, it is necessary to read data specifically as string, otherwise some special characters are interpreted the wrong way.")
+                    "In some cases and file formats, it is necessary to read data specifically as string, otherwise " +
+                        "some special characters are interpreted the wrong way.")
                 .defaultValue(false)
                 .advancedOption(true))
         .output()
@@ -113,7 +112,7 @@ public class XlsxFileReadAction {
         boolean readAsString = inputParameters.getBoolean(READ_AS_STRING, false);
         String sheetName = inputParameters.getString(SHEET_NAME);
 
-        try (InputStream inputStream = context.file(file -> file.getStream(fileEntry))) {
+        try (InputStream inputStream = context.file(file -> file.getInputStream(fileEntry))) {
             String extension = fileEntry.getExtension();
 
             FileFormat fileFormat = FileFormat.valueOf(extension.toUpperCase());
@@ -195,13 +194,13 @@ public class XlsxFileReadAction {
 
                     rows.add(map);
                 } else {
-                    Map<String, Object> map = new HashMap<>();
+                    Map<String, Object> map = new LinkedHashMap<>();
 
                     for (int i = 0; i < lastColumn; i++) {
                         Cell cell = row.getCell(i, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL);
 
                         map.put(
-                            "column_" + (i + 1),
+                            "column_" + columnToLabel(i + 1),
                             processValue(
                                 cell, configuration.includeEmptyCells(), configuration.readAsString(), context));
                     }
@@ -283,14 +282,14 @@ public class XlsxFileReadAction {
         try {
             value = Integer.parseInt(string);
         } catch (NumberFormatException nfe) {
-            context.logger(logger -> logger.trace(nfe.getMessage(), nfe));
+            context.log(log -> log.trace(nfe.getMessage(), nfe));
         }
 
         if (value == null) {
             try {
                 value = Long.parseLong(string);
             } catch (NumberFormatException nfe) {
-                context.logger(logger -> logger.trace(nfe.getMessage(), nfe));
+                context.log(log -> log.trace(nfe.getMessage(), nfe));
             }
         }
 
@@ -298,7 +297,7 @@ public class XlsxFileReadAction {
             try {
                 value = Double.parseDouble(string);
             } catch (NumberFormatException nfe) {
-                context.logger(logger -> logger.trace(nfe.getMessage(), nfe));
+                context.log(log -> log.trace(nfe.getMessage(), nfe));
             }
         }
 
@@ -311,6 +310,18 @@ public class XlsxFileReadAction {
         }
 
         return value;
+    }
+
+    private static String columnToLabel(int columnNumber) {
+        StringBuilder columnName = new StringBuilder();
+
+        while (columnNumber > 0) {
+            int modulo = (columnNumber - 1) % 26;
+            columnName.insert(0, (char) (65 + modulo));
+            columnNumber = (columnNumber - modulo) / 26;
+        }
+
+        return columnName.toString();
     }
 
     protected record ReadConfiguration(

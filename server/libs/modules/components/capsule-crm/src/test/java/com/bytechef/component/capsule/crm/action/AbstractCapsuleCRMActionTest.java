@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,41 +16,39 @@
 
 package com.bytechef.component.capsule.crm.action;
 
-import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentCaptor.forClass;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import com.bytechef.component.definition.ActionContext;
-import com.bytechef.component.definition.Context;
+import com.bytechef.component.definition.Context.Http;
+import com.bytechef.component.definition.Context.Http.Body;
+import com.bytechef.component.definition.Context.Http.Executor;
+import com.bytechef.component.definition.Context.Http.Response;
 import com.bytechef.component.definition.Parameters;
+import com.bytechef.component.test.definition.extension.MockContextSetupExtension;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 
 /**
  * @author Monika Domiter
  */
+@ExtendWith(MockContextSetupExtension.class)
 public abstract class AbstractCapsuleCRMActionTest {
 
-    protected ArgumentCaptor<Context.Http.Body> bodyArgumentCaptor =
-        ArgumentCaptor.forClass(Context.Http.Body.class);
-    protected ActionContext mockedContext = mock(ActionContext.class);
-    protected Context.Http.Executor mockedExecutor = mock(Context.Http.Executor.class);
+    protected ArgumentCaptor<Body> bodyArgumentCaptor = forClass(Body.class);
+    protected ArgumentCaptor<String> stringArgumentCaptor = forClass(String.class);
     protected Parameters mockedParameters = mock(Parameters.class);
-    protected Context.Http.Response mockedResponse = mock(Context.Http.Response.class);
-    protected Map<String, Object> responeseMap = Map.of("key", "value");
+    protected Map<String, Object> responseMap = Map.of("key", "value");
 
     @BeforeEach
-    public void beforeEach() {
-        when(mockedContext.http(any()))
+    public void beforeEach(Executor mockedExecutor, Http mockedHttp, Response mockedResponse) {
+        when(mockedHttp.post(stringArgumentCaptor.capture()))
             .thenReturn(mockedExecutor);
         when(mockedExecutor.body(bodyArgumentCaptor.capture()))
             .thenReturn(mockedExecutor);
-        when(mockedExecutor.configuration(any()))
-            .thenReturn(mockedExecutor);
-        when(mockedExecutor.execute())
-            .thenReturn(mockedResponse);
-        when(mockedResponse.getBody(any(Context.TypeReference.class)))
-            .thenReturn(responeseMap);
+        when(mockedResponse.getBody())
+            .thenReturn(responseMap);
     }
 }

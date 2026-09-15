@@ -2,9 +2,11 @@ package com.bytechef.platform.configuration.web.rest.model;
 
 import java.net.URI;
 import java.util.Objects;
+import com.bytechef.platform.configuration.web.rest.model.ComponentInputReferenceModel;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import org.springframework.lang.Nullable;
 import org.openapitools.jackson.nullable.JsonNullable;
 import java.time.OffsetDateTime;
 import jakarta.validation.Valid;
@@ -20,16 +22,22 @@ import jakarta.annotation.Generated;
  */
 
 @JsonTypeName("WorkflowInput")
-@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2024-06-30T07:20:54.243996+02:00[Europe/Zagreb]", comments = "Generator version: 7.5.0")
+@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2026-07-03T17:58:15.504637+02:00[Europe/Zagreb]", comments = "Generator version: 7.22.0")
 public class WorkflowInputModel {
 
-  private String label;
+  private Boolean internalOnly = false;
+
+  private @Nullable String label;
 
   private String name;
+
+  private @Nullable String objectName;
 
   private Boolean required = false;
 
   private String type = "string";
+
+  private @Nullable ComponentInputReferenceModel componentReference;
 
   public WorkflowInputModel() {
     super();
@@ -42,7 +50,28 @@ public class WorkflowInputModel {
     this.name = name;
   }
 
-  public WorkflowInputModel label(String label) {
+  public WorkflowInputModel internalOnly(Boolean internalOnly) {
+    this.internalOnly = internalOnly;
+    return this;
+  }
+
+  /**
+   * If true, the input is configured in the admin integration instance configuration; if false (default), it is rendered in the end-user connect dialog.
+   * @return internalOnly
+   */
+  
+  @Schema(name = "internalOnly", description = "If true, the input is configured in the admin integration instance configuration; if false (default), it is rendered in the end-user connect dialog.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+  @JsonProperty("internalOnly")
+  public Boolean getInternalOnly() {
+    return internalOnly;
+  }
+
+  @JsonProperty("internalOnly")
+  public void setInternalOnly(Boolean internalOnly) {
+    this.internalOnly = internalOnly;
+  }
+
+  public WorkflowInputModel label(@Nullable String label) {
     this.label = label;
     return this;
   }
@@ -50,15 +79,16 @@ public class WorkflowInputModel {
   /**
    * The descriptive name of an input
    * @return label
-  */
+   */
   
   @Schema(name = "label", description = "The descriptive name of an input", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("label")
-  public String getLabel() {
+  public @Nullable String getLabel() {
     return label;
   }
 
-  public void setLabel(String label) {
+  @JsonProperty("label")
+  public void setLabel(@Nullable String label) {
     this.label = label;
   }
 
@@ -70,7 +100,7 @@ public class WorkflowInputModel {
   /**
    * The name of an input
    * @return name
-  */
+   */
   @NotNull 
   @Schema(name = "name", description = "The name of an input", requiredMode = Schema.RequiredMode.REQUIRED)
   @JsonProperty("name")
@@ -78,8 +108,30 @@ public class WorkflowInputModel {
     return name;
   }
 
+  @JsonProperty("name")
   public void setName(String name) {
     this.name = name;
+  }
+
+  public WorkflowInputModel objectName(@Nullable String objectName) {
+    this.objectName = objectName;
+    return this;
+  }
+
+  /**
+   * For field_mapping inputs, the name of the object whose fields are being mapped.
+   * @return objectName
+   */
+  
+  @Schema(name = "objectName", description = "For field_mapping inputs, the name of the object whose fields are being mapped.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+  @JsonProperty("objectName")
+  public @Nullable String getObjectName() {
+    return objectName;
+  }
+
+  @JsonProperty("objectName")
+  public void setObjectName(@Nullable String objectName) {
+    this.objectName = objectName;
   }
 
   public WorkflowInputModel required(Boolean required) {
@@ -90,7 +142,7 @@ public class WorkflowInputModel {
   /**
    * If an input is required, or not
    * @return required
-  */
+   */
   
   @Schema(name = "required", description = "If an input is required, or not", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("required")
@@ -98,6 +150,7 @@ public class WorkflowInputModel {
     return required;
   }
 
+  @JsonProperty("required")
   public void setRequired(Boolean required) {
     this.required = required;
   }
@@ -110,7 +163,7 @@ public class WorkflowInputModel {
   /**
    * The type of an input, for example \\\"string\\\"
    * @return type
-  */
+   */
   
   @Schema(name = "type", description = "The type of an input, for example \\\"string\\\"", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("type")
@@ -118,8 +171,30 @@ public class WorkflowInputModel {
     return type;
   }
 
+  @JsonProperty("type")
   public void setType(String type) {
     this.type = type;
+  }
+
+  public WorkflowInputModel componentReference(@Nullable ComponentInputReferenceModel componentReference) {
+    this.componentReference = componentReference;
+    return this;
+  }
+
+  /**
+   * Get componentReference
+   * @return componentReference
+   */
+  @Valid 
+  @Schema(name = "componentReference", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+  @JsonProperty("componentReference")
+  public @Nullable ComponentInputReferenceModel getComponentReference() {
+    return componentReference;
+  }
+
+  @JsonProperty("componentReference")
+  public void setComponentReference(@Nullable ComponentInputReferenceModel componentReference) {
+    this.componentReference = componentReference;
   }
 
   @Override
@@ -131,25 +206,31 @@ public class WorkflowInputModel {
       return false;
     }
     WorkflowInputModel workflowInput = (WorkflowInputModel) o;
-    return Objects.equals(this.label, workflowInput.label) &&
+    return Objects.equals(this.internalOnly, workflowInput.internalOnly) &&
+        Objects.equals(this.label, workflowInput.label) &&
         Objects.equals(this.name, workflowInput.name) &&
+        Objects.equals(this.objectName, workflowInput.objectName) &&
         Objects.equals(this.required, workflowInput.required) &&
-        Objects.equals(this.type, workflowInput.type);
+        Objects.equals(this.type, workflowInput.type) &&
+        Objects.equals(this.componentReference, workflowInput.componentReference);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(label, name, required, type);
+    return Objects.hash(internalOnly, label, name, objectName, required, type, componentReference);
   }
 
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
     sb.append("class WorkflowInputModel {\n");
+    sb.append("    internalOnly: ").append(toIndentedString(internalOnly)).append("\n");
     sb.append("    label: ").append(toIndentedString(label)).append("\n");
     sb.append("    name: ").append(toIndentedString(name)).append("\n");
+    sb.append("    objectName: ").append(toIndentedString(objectName)).append("\n");
     sb.append("    required: ").append(toIndentedString(required)).append("\n");
     sb.append("    type: ").append(toIndentedString(type)).append("\n");
+    sb.append("    componentReference: ").append(toIndentedString(componentReference)).append("\n");
     sb.append("}");
     return sb.toString();
   }
@@ -158,11 +239,8 @@ public class WorkflowInputModel {
    * Convert the given object to string with each line indented by 4 spaces
    * (except the first line).
    */
-  private String toIndentedString(Object o) {
-    if (o == null) {
-      return "null";
-    }
-    return o.toString().replace("\n", "\n    ");
+  private String toIndentedString(@Nullable Object o) {
+    return o == null ? "null" : o.toString().replace("\n", "\n    ");
   }
 }
 

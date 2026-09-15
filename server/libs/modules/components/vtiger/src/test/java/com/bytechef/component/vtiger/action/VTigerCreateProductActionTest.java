@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,74 +19,64 @@ package com.bytechef.component.vtiger.action;
 import static com.bytechef.component.vtiger.constant.VTigerConstants.PRODUCT_NAME;
 import static com.bytechef.component.vtiger.constant.VTigerConstants.PRODUCT_TYPE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.ArgumentMatchers.any;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.mockito.ArgumentCaptor.forClass;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.bytechef.component.definition.ActionContext;
-import com.bytechef.component.definition.Context;
+import com.bytechef.component.definition.Context.ContextFunction;
+import com.bytechef.component.definition.Context.Http;
+import com.bytechef.component.definition.Context.Http.Body;
+import com.bytechef.component.definition.Context.Http.Configuration;
+import com.bytechef.component.definition.Context.Http.Configuration.ConfigurationBuilder;
+import com.bytechef.component.definition.Context.Http.Executor;
+import com.bytechef.component.definition.Context.Http.Response;
+import com.bytechef.component.definition.Context.Http.ResponseType;
 import com.bytechef.component.definition.Parameters;
-import java.util.LinkedHashMap;
+import com.bytechef.component.test.definition.MockParametersFactory;
+import com.bytechef.component.test.definition.extension.MockContextSetupExtension;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 
 /**
  * @author Luka Ljubić
+ * @author Monika Kušter
  */
+@ExtendWith(MockContextSetupExtension.class)
 class VTigerCreateProductActionTest {
 
-    private final ArgumentCaptor<Context.Http.Body> bodyArgumentCaptor =
-        ArgumentCaptor.forClass(Context.Http.Body.class);
-    private final ActionContext mockedContext = mock(ActionContext.class);
-    private final Context.Http.Executor mockedExecutor = mock(Context.Http.Executor.class);
-    private final Parameters mockedParameters = mock(Parameters.class);
-    private final Context.Http.Response mockedResponse = mock(Context.Http.Response.class);
-    private final Map<String, Object> responseMap = Map.of("key", "value");
+    private final ArgumentCaptor<Body> bodyArgumentCaptor = forClass(Body.class);
+    private final ArgumentCaptor<String> stringArgumentCaptor = forClass(String.class);
+    private final Map<String, Object> elementMap = Map.of(PRODUCT_TYPE, "Solo", PRODUCT_NAME, "name");
+    private final Object mockedObject = mock(Object.class);
+    private final Parameters mockedParameters = MockParametersFactory.create(elementMap);
 
     @Test
-    void testPerform() {
-        when(mockedContext.http(any()))
+    void testPerform(
+        ActionContext mockedContext, Response mockedResponse, Executor mockedExecutor, Http mockedHttp,
+        ArgumentCaptor<ContextFunction<Http, Executor>> httpFunctionArgumentCaptor,
+        ArgumentCaptor<ConfigurationBuilder> configurationBuilderArgumentCaptor) {
+
+        when(mockedHttp.post(stringArgumentCaptor.capture()))
             .thenReturn(mockedExecutor);
         when(mockedExecutor.body(bodyArgumentCaptor.capture()))
             .thenReturn(mockedExecutor);
-        when(mockedExecutor.configuration(any()))
-            .thenReturn(mockedExecutor);
-        when(mockedExecutor.execute())
-            .thenReturn(mockedResponse);
-        when(mockedResponse.getBody(any(Context.TypeReference.class)))
-            .thenReturn(responseMap);
+        when(mockedResponse.getBody())
+            .thenReturn(mockedObject);
 
-        Map<String, Object> propertyStubsMap = createPropertyStubsMap();
+        Object result = VTigerCreateProductAction.perform(mockedParameters, null, mockedContext);
 
-        when(mockedParameters.getString("elementType"))
-            .thenReturn((String) propertyStubsMap.get("elementType"));
-        when(mockedParameters.getRequired("element"))
-            .thenReturn(propertyStubsMap.get("element"));
-        when(mockedParameters.getRequiredString(PRODUCT_NAME))
-            .thenReturn((String) propertyStubsMap.get(PRODUCT_NAME));
-        when(mockedParameters.getRequiredString(PRODUCT_TYPE))
-            .thenReturn((String) propertyStubsMap.get(PRODUCT_TYPE));
+        assertEquals(mockedObject, result);
+        assertNotNull(httpFunctionArgumentCaptor.getValue());
 
-        Object result = VTigerCreateProductAction.perform(mockedParameters, mockedParameters, mockedContext);
+        ConfigurationBuilder configurationBuilder = configurationBuilderArgumentCaptor.getValue();
+        Configuration configuration = configurationBuilder.build();
 
-        assertEquals(responseMap, result);
-
-        Context.Http.Body body = bodyArgumentCaptor.getValue();
-
-        assertEquals(propertyStubsMap, body.getContent());
-    }
-
-    private static Map<String, Object> createPropertyStubsMap() {
-        Map<String, Object> propertyStubsMap = new LinkedHashMap<>();
-        Map<String, String> bodyMap = new LinkedHashMap<>();
-
-        bodyMap.put(PRODUCT_TYPE, null);
-        bodyMap.put(PRODUCT_NAME, null);
-
-        propertyStubsMap.put("elementType", "Products");
-        propertyStubsMap.put("element", bodyMap);
-
-        return propertyStubsMap;
+        assertEquals(ResponseType.JSON, configuration.getResponseType());
+        assertEquals("/create", stringArgumentCaptor.getValue());
+        assertEquals(Body.of(Map.of("elementType", "Products", "element", elementMap)), bodyArgumentCaptor.getValue());
     }
 }

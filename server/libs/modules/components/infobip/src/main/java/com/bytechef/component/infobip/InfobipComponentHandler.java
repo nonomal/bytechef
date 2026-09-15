@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,34 +16,43 @@
 
 package com.bytechef.component.infobip;
 
-import static com.bytechef.component.definition.ComponentDSL.component;
-import static com.bytechef.component.infobip.constant.InfobipConstants.INFOBIP;
+import static com.bytechef.component.definition.ComponentDsl.component;
 
 import com.bytechef.component.ComponentHandler;
 import com.bytechef.component.definition.ComponentCategory;
 import com.bytechef.component.definition.ComponentDefinition;
 import com.bytechef.component.infobip.action.InfobipSendSMSAction;
-import com.bytechef.component.infobip.action.InfobipSendWhatsappTextMesageAction;
+import com.bytechef.component.infobip.action.InfobipSendWhatsAppTemplateMessageAction;
+import com.bytechef.component.infobip.action.InfobipSendWhatsappTextMessageAction;
 import com.bytechef.component.infobip.connection.InfobipConnection;
+import com.bytechef.component.infobip.trigger.InfobipNewSMSTrigger;
+import com.bytechef.component.infobip.trigger.InfobipNewWhatsAppMessageTrigger;
 import com.google.auto.service.AutoService;
 
 /**
- * @author Monika Domiter
+ * @author Monika Kušter
  */
 @AutoService(ComponentHandler.class)
 public class InfobipComponentHandler implements ComponentHandler {
 
-    private static final ComponentDefinition COMPONENT_DEFINITION = component(INFOBIP)
+    private static final ComponentDefinition COMPONENT_DEFINITION = component("infobip")
         .title("Infobip")
         .description(
             "Infobip is a global communications platform that provide cloud-based messaging and omnichannel " +
                 "communication solutions for businesses.")
+        .customAction(true)
+        .customActionHelp("", "https://www.infobip.com/docs/api/channels")
+        .version(1)
         .icon("path:assets/infobip.svg")
         .categories(ComponentCategory.COMMUNICATION)
         .connection(InfobipConnection.CONNECTION_DEFINITION)
         .actions(
             InfobipSendSMSAction.ACTION_DEFINITION,
-            InfobipSendWhatsappTextMesageAction.ACTION_DEFINITION);
+            InfobipSendWhatsAppTemplateMessageAction.ACTION_DEFINITION,
+            InfobipSendWhatsappTextMessageAction.ACTION_DEFINITION)
+        .triggers(
+            InfobipNewSMSTrigger.TRIGGER_DEFINITION,
+            InfobipNewWhatsAppMessageTrigger.TRIGGER_DEFINITION);
 
     @Override
     public ComponentDefinition getDefinition() {

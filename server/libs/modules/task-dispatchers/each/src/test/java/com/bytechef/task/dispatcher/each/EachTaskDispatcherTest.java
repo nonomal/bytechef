@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * Modifications copyright (C) 2023 ByteChef Inc.
+ * Modifications copyright (C) 2025 ByteChef
  */
 
 package com.bytechef.task.dispatcher.each;
@@ -29,6 +29,7 @@ import com.bytechef.atlas.configuration.constant.WorkflowConstants;
 import com.bytechef.atlas.configuration.domain.Task;
 import com.bytechef.atlas.configuration.domain.WorkflowTask;
 import com.bytechef.atlas.coordinator.event.TaskExecutionCompleteEvent;
+import com.bytechef.atlas.coordinator.event.TaskExecutionErrorEvent;
 import com.bytechef.atlas.coordinator.task.dispatcher.TaskDispatcher;
 import com.bytechef.atlas.execution.domain.Context;
 import com.bytechef.atlas.execution.domain.TaskExecution;
@@ -39,21 +40,23 @@ import com.bytechef.atlas.file.storage.TaskFileStorage;
 import com.bytechef.atlas.file.storage.TaskFileStorageImpl;
 import com.bytechef.commons.util.JsonUtils;
 import com.bytechef.commons.util.MapUtils;
+import com.bytechef.evaluator.Evaluator;
+import com.bytechef.evaluator.SpelEvaluator;
 import com.bytechef.file.storage.base64.service.Base64FileStorageService;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.ApplicationEventPublisher;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * @author Arik Cohen
  */
 public class EachTaskDispatcherTest {
+
+    private static final Evaluator EVALUATOR = SpelEvaluator.create();
 
     private final ApplicationEventPublisher eventPublisher = mock(ApplicationEventPublisher.class);
     private final ContextService contextService = mock(ContextService.class);
@@ -63,37 +66,27 @@ public class EachTaskDispatcherTest {
     private final TaskExecutionService taskExecutionService = mock(TaskExecutionService.class);
     private final TaskFileStorage taskFileStorage = new TaskFileStorageImpl(new Base64FileStorageService());
 
-    @BeforeAll
-    @SuppressFBWarnings("RV_RETURN_VALUE_IGNORED_NO_SIDE_EFFECT")
-    public static void beforeAll() {
-        class JsonUtilsMock extends JsonUtils {
-            static {
-                objectMapper = new ObjectMapper();
-            }
-        }
+    static {
+        ObjectMapper objectMapper = JsonMapper.builder()
+            .build();
 
-        new JsonUtilsMock();
-
-        class MapUtilsMock extends MapUtils {
-            static {
-                objectMapper = new ObjectMapper();
-            }
-        }
-
-        new MapUtilsMock();
+        JsonUtils.setObjectMapper(objectMapper);
+        MapUtils.setObjectMapper(objectMapper);
     }
 
     @Test
-    public void testDispatch1() {
-        Assertions.assertThrows(NullPointerException.class, () -> {
-            EachTaskDispatcher dispatcher = new EachTaskDispatcher(
-                eventPublisher, contextService, counterService, taskDispatcher, taskExecutionService,
-                taskFileStorage);
+    public void testEachTaskDispatcherWhenMissingRequiredParameter() {
+        EachTaskDispatcher dispatcher = new EachTaskDispatcher(
+            contextService, counterService, EVALUATOR, eventPublisher, taskDispatcher, taskExecutionService,
+            taskFileStorage);
 
-            dispatcher.dispatch(TaskExecution.builder()
-                .workflowTask(new WorkflowTask(Map.of(WorkflowConstants.NAME, "name", WorkflowConstants.TYPE, "type")))
+        dispatcher.dispatch(
+            TaskExecution.builder()
+                .workflowTask(
+                    new WorkflowTask(Map.of(WorkflowConstants.NAME, "name", WorkflowConstants.TYPE, "type")))
                 .build());
-        });
+
+        verify(eventPublisher, times(1)).publishEvent(any(TaskExecutionErrorEvent.class));
     }
 
     @Test
@@ -101,20 +94,23 @@ public class EachTaskDispatcherTest {
         when(contextService.peek(anyLong(), any()))
             .thenReturn(taskFileStorage.storeContextValue(1, Context.Classname.TASK_EXECUTION, Map.of()));
         when(taskExecutionService.create(any()))
-            .thenReturn(TaskExecution.builder().id(1L).build());
+            .thenReturn(TaskExecution.builder()
+                .id(1L)
+                .build());
 
         EachTaskDispatcher dispatcher = new EachTaskDispatcher(
-            eventPublisher, contextService, counterService, taskDispatcher, taskExecutionService,
-            taskFileStorage);
-        TaskExecution taskExecution = TaskExecution.builder().workflowTask(
-            new WorkflowTask(
-                Map.of(
-                    WorkflowConstants.NAME, "name",
-                    WorkflowConstants.TYPE, "type",
-                    WorkflowConstants.PARAMETERS,
+            contextService, counterService, EVALUATOR, eventPublisher, taskDispatcher,
+            taskExecutionService, taskFileStorage);
+        TaskExecution taskExecution = TaskExecution.builder()
+            .workflowTask(
+                new WorkflowTask(
                     Map.of(
-                        "list", Arrays.asList(1, 2, 3),
-                        "iteratee", new WorkflowTask(Map.of(WorkflowConstants.NAME, "name", "type", "print"))))))
+                        WorkflowConstants.NAME, "name",
+                        WorkflowConstants.TYPE, "type",
+                        WorkflowConstants.PARAMETERS,
+                        Map.of(
+                            "items", Arrays.asList(1, 2, 3),
+                            "iteratee", new WorkflowTask(Map.of(WorkflowConstants.NAME, "name", "type", "print"))))))
             .build();
 
         taskExecution.setId(1L);
@@ -132,8 +128,8 @@ public class EachTaskDispatcherTest {
     @Test
     public void testDispatch3() {
         EachTaskDispatcher dispatcher = new EachTaskDispatcher(
-            eventPublisher, contextService, counterService, taskDispatcher, taskExecutionService,
-            taskFileStorage);
+            contextService, counterService, EVALUATOR, eventPublisher, taskDispatcher,
+            taskExecutionService, taskFileStorage);
         TaskExecution taskExecution = TaskExecution.builder()
             .id(
                 1L)
@@ -144,7 +140,7 @@ public class EachTaskDispatcherTest {
                         WorkflowConstants.TYPE, "type",
                         WorkflowConstants.PARAMETERS,
                         Map.of(
-                            "list", List.of(),
+                            "items", List.of(),
                             "iteratee", new WorkflowTask(Map.of(WorkflowConstants.NAME, "name", "type", "print"))))))
             .build();
 

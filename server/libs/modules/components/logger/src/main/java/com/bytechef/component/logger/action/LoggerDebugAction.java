@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,13 +16,13 @@
 
 package com.bytechef.component.logger.action;
 
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.string;
 import static com.bytechef.component.logger.constant.LoggerConstants.DEBUG;
 import static com.bytechef.component.logger.constant.LoggerConstants.TEXT;
 
 import com.bytechef.component.definition.ActionContext;
-import com.bytechef.component.definition.ComponentDSL.ModifiableActionDefinition;
+import com.bytechef.component.definition.ComponentDsl.ModifiableActionDefinition;
 import com.bytechef.component.definition.Parameters;
 
 /**
@@ -38,9 +38,9 @@ public class LoggerDebugAction {
     protected static Object perform(
         Parameters inputParameters, Parameters connectionParameters, ActionContext context) {
 
-        Object text = inputParameters.getRequired(TEXT);
+        Object text = inputParameters.get(TEXT);
 
-        context.logger(logger -> logger.debug(text.toString()));
+        context.log(log -> log.debug(text == null ? "" : String.valueOf(text)));
 
         return null;
     }

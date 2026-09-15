@@ -1,0 +1,18 @@
+{
+  "$schema": "../../../.source/json-schema/docs.meta.json",
+  "title": "Platform",
+  "description": "The platform guide",
+  "root": true,
+  "icon": "Layers",
+  "pages": [
+    "index",
+    "what-is-bytechef",
+    "glossary",
+    "use-bytechef",
+    "automation",
+    "embedded",
+    "settings",
+    "your-account",
+    "enterprise/index"
+  ]
+}

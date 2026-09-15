@@ -16,7 +16,10 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.annotation.JsonValue;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import org.springframework.lang.Nullable;
 import org.openapitools.jackson.nullable.JsonNullable;
 import java.time.OffsetDateTime;
 import jakarta.validation.Valid;
@@ -33,21 +36,21 @@ import jakarta.annotation.Generated;
 
 @Schema(name = "IntegerProperty", description = "An integer property type.")
 
-@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2024-06-30T07:20:54.243996+02:00[Europe/Zagreb]", comments = "Generator version: 7.5.0")
+@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2026-07-03T17:58:15.504637+02:00[Europe/Zagreb]", comments = "Generator version: 7.22.0")
 public class IntegerPropertyModel extends ValuePropertyModel {
 
-  private Long defaultValue;
+  private @Nullable Long defaultValue;
 
-  private Long exampleValue;
+  private @Nullable Long exampleValue;
 
-  private Long maxValue;
+  private @Nullable Long maxValue;
 
-  private Long minValue;
+  private @Nullable Long minValue;
 
   @Valid
   private List<@Valid OptionModel> options = new ArrayList<>();
 
-  private OptionsDataSourceModel optionsDataSource;
+  private @Nullable OptionsDataSourceModel optionsDataSource;
 
   public IntegerPropertyModel() {
     super();
@@ -60,7 +63,7 @@ public class IntegerPropertyModel extends ValuePropertyModel {
     super(controlType, type);
   }
 
-  public IntegerPropertyModel defaultValue(Long defaultValue) {
+  public IntegerPropertyModel defaultValue(@Nullable Long defaultValue) {
     this.defaultValue = defaultValue;
     return this;
   }
@@ -68,19 +71,20 @@ public class IntegerPropertyModel extends ValuePropertyModel {
   /**
    * The property default value.
    * @return defaultValue
-  */
+   */
   
   @Schema(name = "defaultValue", description = "The property default value.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("defaultValue")
-  public Long getDefaultValue() {
+  public @Nullable Long getDefaultValue() {
     return defaultValue;
   }
 
-  public void setDefaultValue(Long defaultValue) {
+  @JsonProperty("defaultValue")
+  public void setDefaultValue(@Nullable Long defaultValue) {
     this.defaultValue = defaultValue;
   }
 
-  public IntegerPropertyModel exampleValue(Long exampleValue) {
+  public IntegerPropertyModel exampleValue(@Nullable Long exampleValue) {
     this.exampleValue = exampleValue;
     return this;
   }
@@ -88,19 +92,20 @@ public class IntegerPropertyModel extends ValuePropertyModel {
   /**
    * The property sample value.
    * @return exampleValue
-  */
+   */
   
   @Schema(name = "exampleValue", description = "The property sample value.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("exampleValue")
-  public Long getExampleValue() {
+  public @Nullable Long getExampleValue() {
     return exampleValue;
   }
 
-  public void setExampleValue(Long exampleValue) {
+  @JsonProperty("exampleValue")
+  public void setExampleValue(@Nullable Long exampleValue) {
     this.exampleValue = exampleValue;
   }
 
-  public IntegerPropertyModel maxValue(Long maxValue) {
+  public IntegerPropertyModel maxValue(@Nullable Long maxValue) {
     this.maxValue = maxValue;
     return this;
   }
@@ -108,19 +113,20 @@ public class IntegerPropertyModel extends ValuePropertyModel {
   /**
    * The maximum property value.
    * @return maxValue
-  */
+   */
   
   @Schema(name = "maxValue", description = "The maximum property value.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("maxValue")
-  public Long getMaxValue() {
+  public @Nullable Long getMaxValue() {
     return maxValue;
   }
 
-  public void setMaxValue(Long maxValue) {
+  @JsonProperty("maxValue")
+  public void setMaxValue(@Nullable Long maxValue) {
     this.maxValue = maxValue;
   }
 
-  public IntegerPropertyModel minValue(Long minValue) {
+  public IntegerPropertyModel minValue(@Nullable Long minValue) {
     this.minValue = minValue;
     return this;
   }
@@ -128,15 +134,16 @@ public class IntegerPropertyModel extends ValuePropertyModel {
   /**
    * The minimum property value.
    * @return minValue
-  */
+   */
   
   @Schema(name = "minValue", description = "The minimum property value.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("minValue")
-  public Long getMinValue() {
+  public @Nullable Long getMinValue() {
     return minValue;
   }
 
-  public void setMinValue(Long minValue) {
+  @JsonProperty("minValue")
+  public void setMinValue(@Nullable Long minValue) {
     this.minValue = minValue;
   }
 
@@ -156,7 +163,7 @@ public class IntegerPropertyModel extends ValuePropertyModel {
   /**
    * The list of valid property options.
    * @return options
-  */
+   */
   @Valid 
   @Schema(name = "options", description = "The list of valid property options.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("options")
@@ -164,11 +171,12 @@ public class IntegerPropertyModel extends ValuePropertyModel {
     return options;
   }
 
+  @JsonProperty("options")
   public void setOptions(List<@Valid OptionModel> options) {
     this.options = options;
   }
 
-  public IntegerPropertyModel optionsDataSource(OptionsDataSourceModel optionsDataSource) {
+  public IntegerPropertyModel optionsDataSource(@Nullable OptionsDataSourceModel optionsDataSource) {
     this.optionsDataSource = optionsDataSource;
     return this;
   }
@@ -176,15 +184,16 @@ public class IntegerPropertyModel extends ValuePropertyModel {
   /**
    * Get optionsDataSource
    * @return optionsDataSource
-  */
+   */
   @Valid 
   @Schema(name = "optionsDataSource", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("optionsDataSource")
-  public OptionsDataSourceModel getOptionsDataSource() {
+  public @Nullable OptionsDataSourceModel getOptionsDataSource() {
     return optionsDataSource;
   }
 
-  public void setOptionsDataSource(OptionsDataSourceModel optionsDataSource) {
+  @JsonProperty("optionsDataSource")
+  public void setOptionsDataSource(@Nullable OptionsDataSourceModel optionsDataSource) {
     this.optionsDataSource = optionsDataSource;
   }
 
@@ -226,6 +235,16 @@ public class IntegerPropertyModel extends ValuePropertyModel {
 
   public IntegerPropertyModel hidden(Boolean hidden) {
     super.hidden(hidden);
+    return this;
+  }
+
+  public IntegerPropertyModel metadata(Map<String, Object> metadata) {
+    super.metadata(metadata);
+    return this;
+  }
+
+  public IntegerPropertyModel putMetadataItem(String key, Object metadataItem) {
+    super.putMetadataItem(key, metadataItem);
     return this;
   }
 
@@ -285,11 +304,8 @@ public class IntegerPropertyModel extends ValuePropertyModel {
    * Convert the given object to string with each line indented by 4 spaces
    * (except the first line).
    */
-  private String toIndentedString(Object o) {
-    if (o == null) {
-      return "null";
-    }
-    return o.toString().replace("\n", "\n    ");
+  private String toIndentedString(@Nullable Object o) {
+    return o == null ? "null" : o.toString().replace("\n", "\n    ");
   }
 }
 

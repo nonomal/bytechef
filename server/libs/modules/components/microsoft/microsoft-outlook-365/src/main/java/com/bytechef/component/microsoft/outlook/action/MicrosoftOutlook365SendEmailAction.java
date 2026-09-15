@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,97 +16,127 @@
 
 package com.bytechef.component.microsoft.outlook.action;
 
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.array;
-import static com.bytechef.component.definition.ComponentDSL.object;
-import static com.bytechef.component.definition.ComponentDSL.string;
-import static com.bytechef.component.microsoft.outlook.constant.MicrosoftOutlook365Constants.BASE_URL;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.array;
+import static com.bytechef.component.definition.ComponentDsl.fileEntry;
+import static com.bytechef.component.definition.ComponentDsl.object;
+import static com.bytechef.component.definition.ComponentDsl.option;
+import static com.bytechef.component.definition.ComponentDsl.string;
+import static com.bytechef.component.microsoft.outlook.constant.MicrosoftOutlook365Constants.ADDRESS;
+import static com.bytechef.component.microsoft.outlook.constant.MicrosoftOutlook365Constants.ATTACHMENTS;
 import static com.bytechef.component.microsoft.outlook.constant.MicrosoftOutlook365Constants.BCC_RECIPIENTS;
 import static com.bytechef.component.microsoft.outlook.constant.MicrosoftOutlook365Constants.BODY;
 import static com.bytechef.component.microsoft.outlook.constant.MicrosoftOutlook365Constants.CC_RECIPIENTS;
-import static com.bytechef.component.microsoft.outlook.constant.MicrosoftOutlook365Constants.CONTENT_PROPERTY;
-import static com.bytechef.component.microsoft.outlook.constant.MicrosoftOutlook365Constants.CONTENT_TYPE_PROPERTY;
+import static com.bytechef.component.microsoft.outlook.constant.MicrosoftOutlook365Constants.CONTENT;
+import static com.bytechef.component.microsoft.outlook.constant.MicrosoftOutlook365Constants.CONTENT_TYPE;
+import static com.bytechef.component.microsoft.outlook.constant.MicrosoftOutlook365Constants.EMAIL_ADDRESS;
 import static com.bytechef.component.microsoft.outlook.constant.MicrosoftOutlook365Constants.FROM;
-import static com.bytechef.component.microsoft.outlook.constant.MicrosoftOutlook365Constants.RECIPIENT_PROPERTY;
 import static com.bytechef.component.microsoft.outlook.constant.MicrosoftOutlook365Constants.REPLY_TO;
-import static com.bytechef.component.microsoft.outlook.constant.MicrosoftOutlook365Constants.SEND_EMAIL;
 import static com.bytechef.component.microsoft.outlook.constant.MicrosoftOutlook365Constants.SUBJECT;
 import static com.bytechef.component.microsoft.outlook.constant.MicrosoftOutlook365Constants.TO_RECIPIENTS;
+import static com.bytechef.component.microsoft.outlook.util.MicrosoftOutlook365Utils.createRecipientList;
+import static com.bytechef.component.microsoft.outlook.util.MicrosoftOutlook365Utils.getAttachments;
 
-import com.bytechef.component.definition.ActionContext;
-import com.bytechef.component.definition.ComponentDSL.ModifiableActionDefinition;
+import com.bytechef.component.definition.ComponentDsl.ModifiableActionDefinition;
+import com.bytechef.component.definition.Context;
 import com.bytechef.component.definition.Context.Http;
+import com.bytechef.component.definition.FileEntry;
 import com.bytechef.component.definition.Parameters;
+import com.bytechef.component.definition.Property.ControlType;
+import com.bytechef.component.microsoft.outlook.constant.ContentType;
+import com.bytechef.microsoft.commons.MicrosoftUtils;
+import java.util.Map;
 
 /**
- * @author Monika Domiter
+ * @author Monika Kušter
  */
 public class MicrosoftOutlook365SendEmailAction {
 
-    public static final ModifiableActionDefinition ACTION_DEFINITION = action(SEND_EMAIL)
+    public static final ModifiableActionDefinition ACTION_DEFINITION = action("sendEmail")
         .title("Send Email")
-        .description("Send the message.")
+        .description("Sends a new email message.")
+        .help("", "https://docs.bytechef.io/reference/components/microsoft-outlook-365_v1#send-email")
         .properties(
-            object(FROM)
+            string(FROM)
                 .label("From")
-                .description(
-                    "The owner of the mailbox from which the message is sent. In most cases, this value is " +
-                        "the same as the sender property, except for sharing or delegation scenarios. The " +
-                        "value must correspond to the actual mailbox used.")
-                .properties(RECIPIENT_PROPERTY),
+                .description("The email address sending the mail.")
+                .controlType(ControlType.EMAIL)
+                .required(true),
             array(TO_RECIPIENTS)
-                .label("To recipients")
+                .label("To Recipients")
                 .description("The To: recipients for the message.")
-                .items(RECIPIENT_PROPERTY)
+                .items(string().controlType(ControlType.EMAIL))
                 .required(true),
             string(SUBJECT)
                 .label("Subject")
                 .description("The subject of the message.")
                 .required(true),
             array(BCC_RECIPIENTS)
-                .label("Bcc recipients")
+                .label("Bcc Recipients")
                 .description("The Bcc recipients for the message.")
-                .items(RECIPIENT_PROPERTY)
+                .items(string().controlType(ControlType.EMAIL))
                 .required(false),
             array(CC_RECIPIENTS)
-                .label("Cc recipients")
+                .label("Cc Recipients")
                 .description("The Cc recipients for the message.")
-                .items(RECIPIENT_PROPERTY)
+                .items(string().controlType(ControlType.EMAIL))
                 .required(false),
             array(REPLY_TO)
-                .label("Reply to")
+                .label("Reply To")
                 .description("The email addresses to use when replying.")
-                .items(RECIPIENT_PROPERTY)
+                .items(string().controlType(ControlType.EMAIL))
                 .required(false),
             object(BODY)
                 .label("Body")
                 .description("The body of the message. It can be in HTML or text format.")
                 .properties(
-                    CONTENT_PROPERTY,
-                    CONTENT_TYPE_PROPERTY)
-                .required(true))
-        .perform(MicrosoftOutlook365SendEmailAction::perform);
+                    string(CONTENT_TYPE)
+                        .label("Content Type")
+                        .description("The type of the content.")
+                        .options(
+                            option("Text", ContentType.TEXT.name()),
+                            option("HTML", ContentType.HTML.name()))
+                        .defaultValue(ContentType.TEXT.name())
+                        .required(false),
+                    string(CONTENT)
+                        .label("HTML Content")
+                        .description("The content of the item.")
+                        .controlType(ControlType.RICH_TEXT)
+                        .displayCondition("body.contentType == '%s'".formatted(ContentType.HTML))
+                        .required(false),
+                    string(CONTENT)
+                        .label("Text Content")
+                        .description("The content of the item.")
+                        .controlType(ControlType.TEXT_AREA)
+                        .displayCondition("body.contentType == '%s'".formatted(ContentType.TEXT))
+                        .required(false))
+                .required(true),
+            array(ATTACHMENTS)
+                .label("Attachments")
+                .description("A list of attachments to send with the email.")
+                .items(fileEntry())
+                .required(false))
+        .perform(MicrosoftOutlook365SendEmailAction::perform)
+        .processErrorResponse(MicrosoftUtils::processErrorResponse);
 
     private MicrosoftOutlook365SendEmailAction() {
     }
 
-    public static Object perform(
-        Parameters inputParameters, Parameters connectionParameters, ActionContext actionContext) {
-
-        actionContext.http(http -> http.post(BASE_URL + "/sendMail"))
+    public static Object perform(Parameters inputParameters, Parameters connectionParameters, Context context) {
+        context.http(http -> http.post("/me/sendMail"))
             .body(
                 Http.Body.of(
                     "message",
                     new Object[] {
-                        FROM, inputParameters.get(FROM),
+                        FROM, Map.of(EMAIL_ADDRESS, Map.of(ADDRESS, inputParameters.getRequiredString(FROM))),
                         SUBJECT, inputParameters.getRequiredString(SUBJECT),
                         BODY, inputParameters.get(BODY),
-                        TO_RECIPIENTS, inputParameters.getArray(TO_RECIPIENTS),
-                        CC_RECIPIENTS, inputParameters.getArray(CC_RECIPIENTS),
-                        BCC_RECIPIENTS, inputParameters.getArray(BCC_RECIPIENTS),
-                        REPLY_TO, inputParameters.getArray(REPLY_TO)
+                        TO_RECIPIENTS, createRecipientList(inputParameters.getList(TO_RECIPIENTS, String.class)),
+                        CC_RECIPIENTS, createRecipientList(inputParameters.getList(CC_RECIPIENTS, String.class)),
+                        BCC_RECIPIENTS, createRecipientList(inputParameters.getList(BCC_RECIPIENTS, String.class)),
+                        REPLY_TO, createRecipientList(inputParameters.getList(REPLY_TO, String.class)),
+                        ATTACHMENTS, getAttachments(context, inputParameters.getList(ATTACHMENTS, FileEntry.class))
                     }))
-            .configuration(Http.responseType(Http.ResponseType.JSON))
             .execute();
 
         return null;

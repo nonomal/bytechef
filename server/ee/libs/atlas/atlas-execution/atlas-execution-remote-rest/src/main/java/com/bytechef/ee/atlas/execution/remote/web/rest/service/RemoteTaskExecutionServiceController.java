@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the ByteChef Enterprise license (the "Enterprise License");
  * you may not use this file except in compliance with the Enterprise License.
@@ -57,6 +57,16 @@ public class RemoteTaskExecutionServiceController {
         })
     public ResponseEntity<TaskExecution> getTaskExecution(@PathVariable long id) {
         return ResponseEntity.ok(taskExecutionService.getTaskExecution(id));
+    }
+
+    @RequestMapping(
+        method = RequestMethod.GET,
+        value = "/get-task-execution-for-update/{id}",
+        produces = {
+            "application/json"
+        })
+    public ResponseEntity<TaskExecution> getTaskExecutionForUpdate(@PathVariable long id) {
+        return ResponseEntity.ok(taskExecutionService.getTaskExecutionForUpdate(id));
     }
 
     @RequestMapping(

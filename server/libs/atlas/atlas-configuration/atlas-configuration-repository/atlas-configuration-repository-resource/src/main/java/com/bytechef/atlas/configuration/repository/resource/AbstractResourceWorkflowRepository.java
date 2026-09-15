@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -41,7 +41,7 @@ import org.springframework.core.io.support.ResourcePatternResolver;
  */
 public abstract class AbstractResourceWorkflowRepository implements WorkflowRepository {
 
-    private static final Logger logger = LoggerFactory.getLogger(AbstractResourceWorkflowRepository.class);
+    private static final Logger log = LoggerFactory.getLogger(AbstractResourceWorkflowRepository.class);
 
     private final String locationPattern;
     private final String protocol;
@@ -92,7 +92,7 @@ public abstract class AbstractResourceWorkflowRepository implements WorkflowRepo
 
         return readWorkflow(
             new WorkflowResource(
-                EncodingUtils.encodeBase64ToString(substring), Map.of(WorkflowConstants.PATH, uri), resource,
+                EncodingUtils.base64EncodeToString(substring), Map.of(WorkflowConstants.PATH, uri), resource,
                 Workflow.Format.parse(uri)));
     }
 
@@ -100,8 +100,8 @@ public abstract class AbstractResourceWorkflowRepository implements WorkflowRepo
         try {
             return WorkflowReader.readWorkflow(workflowResource);
         } catch (Exception e) {
-            if (logger.isDebugEnabled()) {
-                logger.debug(e.getMessage());
+            if (log.isDebugEnabled()) {
+                log.debug(e.getMessage());
             }
         }
 

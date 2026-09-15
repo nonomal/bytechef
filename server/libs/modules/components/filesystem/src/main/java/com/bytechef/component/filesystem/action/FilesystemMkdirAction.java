@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,24 +16,28 @@
 
 package com.bytechef.component.filesystem.action;
 
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.string;
-import static com.bytechef.component.filesystem.constant.FilesystemConstants.MKDIR;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.outputSchema;
+import static com.bytechef.component.definition.ComponentDsl.sampleOutput;
+import static com.bytechef.component.definition.ComponentDsl.string;
 import static com.bytechef.component.filesystem.constant.FilesystemConstants.PATH;
 
-import com.bytechef.component.definition.ActionContext;
-import com.bytechef.component.definition.ComponentDSL.ModifiableActionDefinition;
+import com.bytechef.component.definition.ComponentDsl.ModifiableActionDefinition;
+import com.bytechef.component.definition.Context;
 import com.bytechef.component.definition.Parameters;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
 /**
+ * Filesystem mkdir action for workflow automation. Creates directories at a specified path.
+ *
  * @author Ivica Cardic
  */
 public class FilesystemMkdirAction {
 
-    public static final ModifiableActionDefinition ACTION_DEFINITION = action(MKDIR)
+    public static final ModifiableActionDefinition ACTION_DEFINITION = action("mkdir")
         .title("Create")
         .description("Creates a directory.")
         .properties(
@@ -41,21 +45,22 @@ public class FilesystemMkdirAction {
                 .label("Path")
                 .description("The path of a directory.")
                 .required(true))
-        .outputSchema(string())
-        .sampleOutput("/sample_data")
+        .output(
+            outputSchema(string().description("The full path of the created directory.")),
+            sampleOutput("/sample_data"))
         .perform(FilesystemMkdirAction::perform);
 
     private FilesystemMkdirAction() {
     }
 
     /**
-     * Creates a directory by creating all nonexistent parent directories first.
-     *
-     * <p>
-     * An exception is not thrown if the directory could not be created because it already exists.
+     * Security Note: PATH_TRAVERSAL_IN - Path traversal is intentional. The Filesystem component allows workflow
+     * creators to create directories. Access is controlled through workflow-level permissions. The path is provided by
+     * the workflow creator, not end users.
      */
+    @SuppressFBWarnings("PATH_TRAVERSAL_IN")
     protected static String perform(
-        Parameters inputParameters, Parameters connectionParameters, ActionContext context) throws IOException {
+        Parameters inputParameters, Parameters connectionParameters, Context context) throws IOException {
 
         return String.valueOf(Files.createDirectories(Paths.get(inputParameters.getRequiredString(PATH))));
     }

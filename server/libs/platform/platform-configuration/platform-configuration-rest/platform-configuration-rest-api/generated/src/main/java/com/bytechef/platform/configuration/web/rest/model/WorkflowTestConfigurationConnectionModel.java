@@ -5,6 +5,7 @@ import java.util.Objects;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import org.springframework.lang.Nullable;
 import org.openapitools.jackson.nullable.JsonNullable;
 import java.time.OffsetDateTime;
 import jakarta.validation.Valid;
@@ -21,7 +22,7 @@ import jakarta.annotation.Generated;
 
 @Schema(name = "WorkflowTestConfigurationConnection", description = "The connection used in a particular action task or trigger.")
 @JsonTypeName("WorkflowTestConfigurationConnection")
-@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2024-06-30T07:20:54.243996+02:00[Europe/Zagreb]", comments = "Generator version: 7.5.0")
+@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2026-07-03T17:58:15.504637+02:00[Europe/Zagreb]", comments = "Generator version: 7.22.0")
 public class WorkflowTestConfigurationConnectionModel {
 
   private Long connectionId;
@@ -51,7 +52,7 @@ public class WorkflowTestConfigurationConnectionModel {
   /**
    * The connection id
    * @return connectionId
-  */
+   */
   @NotNull 
   @Schema(name = "connectionId", description = "The connection id", requiredMode = Schema.RequiredMode.REQUIRED)
   @JsonProperty("connectionId")
@@ -59,6 +60,7 @@ public class WorkflowTestConfigurationConnectionModel {
     return connectionId;
   }
 
+  @JsonProperty("connectionId")
   public void setConnectionId(Long connectionId) {
     this.connectionId = connectionId;
   }
@@ -71,7 +73,7 @@ public class WorkflowTestConfigurationConnectionModel {
   /**
    * The connection key under which a connection is defined in a workflow definition.
    * @return workflowConnectionKey
-  */
+   */
   @NotNull 
   @Schema(name = "workflowConnectionKey", description = "The connection key under which a connection is defined in a workflow definition.", requiredMode = Schema.RequiredMode.REQUIRED)
   @JsonProperty("workflowConnectionKey")
@@ -79,6 +81,7 @@ public class WorkflowTestConfigurationConnectionModel {
     return workflowConnectionKey;
   }
 
+  @JsonProperty("workflowConnectionKey")
   public void setWorkflowConnectionKey(String workflowConnectionKey) {
     this.workflowConnectionKey = workflowConnectionKey;
   }
@@ -91,7 +94,7 @@ public class WorkflowTestConfigurationConnectionModel {
   /**
    * The action/trigger name to which a connection belongs.
    * @return workflowNodeName
-  */
+   */
   @NotNull 
   @Schema(name = "workflowNodeName", description = "The action/trigger name to which a connection belongs.", requiredMode = Schema.RequiredMode.REQUIRED)
   @JsonProperty("workflowNodeName")
@@ -99,6 +102,7 @@ public class WorkflowTestConfigurationConnectionModel {
     return workflowNodeName;
   }
 
+  @JsonProperty("workflowNodeName")
   public void setWorkflowNodeName(String workflowNodeName) {
     this.workflowNodeName = workflowNodeName;
   }
@@ -137,11 +141,8 @@ public class WorkflowTestConfigurationConnectionModel {
    * Convert the given object to string with each line indented by 4 spaces
    * (except the first line).
    */
-  private String toIndentedString(Object o) {
-    if (o == null) {
-      return "null";
-    }
-    return o.toString().replace("\n", "\n    ");
+  private String toIndentedString(@Nullable Object o) {
+    return o == null ? "null" : o.toString().replace("\n", "\n    ");
   }
 }
 

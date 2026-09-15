@@ -1,0 +1,57 @@
+
+# AiProvider
+
+An AI provider.
+
+## Properties
+
+Name | Type
+------------ | -------------
+`id` | number
+`name` | string
+`icon` | string
+`apiKey` | string
+`url` | string
+`enabled` | boolean
+`requiresApiKey` | boolean
+`requiresEndpoint` | boolean
+`supportsText` | boolean
+`supportsImage` | boolean
+`supportsEmbeddings` | boolean
+`copilotDocsProvider` | boolean
+
+## Example
+
+```typescript
+import type { AiProvider } from ''
+
+// TODO: Update the object below with actual values
+const example = {
+  "id": null,
+  "name": null,
+  "icon": null,
+  "apiKey": null,
+  "url": null,
+  "enabled": null,
+  "requiresApiKey": null,
+  "requiresEndpoint": null,
+  "supportsText": null,
+  "supportsImage": null,
+  "supportsEmbeddings": null,
+  "copilotDocsProvider": null,
+} satisfies AiProvider
+
+console.log(example)
+
+// Convert the instance to a JSON string
+const exampleJSON: string = JSON.stringify(example)
+console.log(exampleJSON)
+
+// Parse the JSON string back to an object
+const exampleParsed = JSON.parse(exampleJSON) as AiProvider
+console.log(exampleParsed)
+```
+
+[[Back to top]](#) [[Back to API list]](../README.md#api-endpoints) [[Back to Model list]](../README.md#models) [[Back to README]](../README.md)
+
+

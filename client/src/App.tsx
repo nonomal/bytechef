@@ -1,61 +1,94 @@
-import {Toaster} from '@/components/ui/toaster';
+import {SidebarInset, SidebarProvider} from '@/components/ui/sidebar';
+import {Toaster} from '@/components/ui/sonner';
 import useFetchInterceptor from '@/config/useFetchInterceptor';
-import {DesktopSidebar} from '@/shared/layout/DesktopSidebar';
-import {MobileSidebar} from '@/shared/layout/MobileSidebar';
+import {useUserGuiding} from '@/hooks/useUserGuiding';
+import {PlatformType, usePlatformTypeStore} from '@/pages/home/stores/usePlatformTypeStore';
+import useCopilotPanelStore from '@/shared/components/copilot/stores/useCopilotPanelStore';
+import {DEVELOPMENT_ENVIRONMENT} from '@/shared/constants';
+import {useAnalytics} from '@/shared/hooks/useAnalytics';
+import {useHelpHub} from '@/shared/hooks/useHelpHub';
 import {MobileTopNavigation} from '@/shared/layout/MobileTopNavigation';
-import {useApplicationInfoStore} from '@/shared/stores/useApplicationInfoStore';
+import {TrialBanner} from '@/shared/layout/TrialBanner';
+import {AppSidebar} from '@/shared/layout/app-sidebar/AppSidebar';
+import {EditionType, useApplicationInfoStore} from '@/shared/stores/useApplicationInfoStore';
 import {useAuthenticationStore} from '@/shared/stores/useAuthenticationStore';
+import {useEnvironmentStore} from '@/shared/stores/useEnvironmentStore';
+import {useFeatureFlagsStore} from '@/shared/stores/useFeatureFlagsStore';
+import {useQueryClient} from '@tanstack/react-query';
 import {
     ActivityIcon,
+    CircleIcon,
     FolderIcon,
     Layers3Icon,
+    LayoutTemplateIcon,
     Link2Icon,
     LucideIcon,
+    MessagesSquareIcon,
+    ServerIcon,
     Settings2Icon,
     SquareIcon,
+    Table2Icon,
+    UnplugIcon,
     UsersIcon,
+    VectorSquareIcon,
+    Workflow,
     ZapIcon,
 } from 'lucide-react';
-import {useEffect, useState} from 'react';
-import {Outlet, useLocation, useNavigate} from 'react-router-dom';
+import {Suspense, lazy, useEffect, useState} from 'react';
+import {Outlet, useLocation} from 'react-router-dom';
+import {useShallow} from 'zustand/react/shallow';
 
-import {TooltipProvider} from './components/ui/tooltip';
+const CopilotPanel = lazy(() => import('@/shared/components/copilot/CopilotPanel'));
+const GlobalSearchDialog = lazy(() => import('@/components/GlobalSearch/GlobalSearchDialog'));
 
-const user = {
-    email: 'emily.selman@example.com',
-    imageUrl:
-        'https://images.unsplash.com/photo-1502685104226-ee32379fefbe?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80',
-    name: 'Emily Selman',
-};
-
-const automationNavigation: {
+type NavigationType = {
     name: string;
     href: string;
     icon: LucideIcon;
-}[] = [
+};
+
+const automationNavigation: NavigationType[] = [
     {
         href: '/automation/projects',
         icon: FolderIcon,
         name: 'Projects',
     },
     {
-        href: '/automation/instances',
+        href: '/automation/deployments',
         icon: Layers3Icon,
-        name: 'Project Instances',
+        name: 'Project Deployments',
     },
-    {href: '/automation/connections', icon: Link2Icon, name: 'Connections'},
+    {
+        href: '/automation/api-platform',
+        icon: LayoutTemplateIcon,
+        name: 'API Collections',
+    },
+    {
+        href: '/automation/mcp-servers',
+        icon: ServerIcon,
+        name: 'MCP Servers',
+    },
     {
         href: '/automation/executions',
         icon: ActivityIcon,
-        name: 'Workflow Execution History',
+        name: 'Workflow Executions',
     },
+    {href: '/automation/connections', icon: Link2Icon, name: 'Connections'},
+    {
+        href: '/automation/datatables',
+        icon: Table2Icon,
+        name: 'Data Tables',
+    },
+    {
+        href: '/automation/knowledge-bases',
+        icon: VectorSquareIcon,
+        name: 'Knowledge Base',
+    },
+    {href: '/automation/chats', icon: MessagesSquareIcon, name: 'Chats'},
+    {href: '/automation/approval-tasks', icon: CircleIcon, name: 'Approval Tasks'},
 ];
 
-const embeddedNavigation: {
-    name: string;
-    href: string;
-    icon: LucideIcon;
-}[] = [
+const embeddedNavigation: NavigationType[] = [
     {
         href: '/embedded/integrations',
         icon: SquareIcon,
@@ -66,91 +99,222 @@ const embeddedNavigation: {
         icon: Settings2Icon,
         name: 'Integration Configurations',
     },
+    {href: '/embedded/mcp-servers', icon: ServerIcon, name: 'MCP Servers'},
+    {href: '/embedded/app-events', icon: ZapIcon, name: 'App Events'},
+    {
+        href: '/embedded/automation-workflows',
+        icon: Workflow,
+        name: 'Automations',
+    },
     {
         href: '/embedded/connected-users',
         icon: UsersIcon,
         name: 'Connected Users',
     },
-    {href: '/embedded/app-events', icon: ZapIcon, name: 'App Events'},
-    {href: '/embedded/connections', icon: Link2Icon, name: 'Connections'},
     {
         href: '/embedded/executions',
         icon: ActivityIcon,
-        name: 'Workflow Execution History',
+        name: 'Workflow Executions',
+    },
+    {href: '/embedded/connections', icon: Link2Icon, name: 'Connections'},
+];
+
+const platformNavigation = [
+    {
+        href: '/platform/connectors',
+        icon: UnplugIcon,
+        name: 'Connectors',
     },
 ];
 
 function App() {
-    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+    const [searchOpen, setSearchOpen] = useState(false);
 
-    const {getApplicationInfo} = useApplicationInfoStore();
-    const {authenticated, getAccount, sessionHasBeenFetched, showLogin} = useAuthenticationStore();
+    const {ai, billingEnabled, edition} = useApplicationInfoStore(
+        useShallow((state) => ({
+            ai: state.ai,
+            billingEnabled: state.billing.enabled,
+            edition: state.application?.edition,
+        }))
+    );
+    const {
+        account,
+        authenticated,
+        reset: resetAuthentication,
+    } = useAuthenticationStore(
+        useShallow((state) => ({
+            account: state.account,
+            authenticated: state.authenticated,
+            reset: state.reset,
+        }))
+    );
+    const copilotPanelOpen = useCopilotPanelStore((state) => state.copilotPanelOpen);
+    const currentEnvironmentId = useEnvironmentStore((state) => state.currentEnvironmentId);
+    const {currentType, setCurrentType} = usePlatformTypeStore(
+        useShallow((state) => ({
+            currentType: state.currentType,
+            setCurrentType: state.setCurrentType,
+        }))
+    );
 
+    const analytics = useAnalytics();
+    const helpHub = useHelpHub();
     const location = useLocation();
-
-    const navigate = useNavigate();
+    const queryClient = useQueryClient();
+    const userGuiding = useUserGuiding();
 
     useFetchInterceptor();
 
+    const ff_1023 = useFeatureFlagsStore()('ff-1023');
+    const ff_2446 = useFeatureFlagsStore()('ff-2446');
+    const ff_2396 = useFeatureFlagsStore()('ff-2396');
+
+    const filteredAutomationNavigation = automationNavigation.filter((navItem) => {
+        if (
+            currentEnvironmentId !== DEVELOPMENT_ENVIRONMENT &&
+            edition === EditionType.EE &&
+            navItem.href === '/automation/projects'
+        ) {
+            return false;
+        }
+
+        if (navItem.href === '/automation/api-platform') {
+            return ff_1023;
+        }
+
+        if (navItem.href === '/automation/knowledge-bases') {
+            return ai.knowledgeBase.enabled;
+        }
+
+        return true;
+    });
+
+    const filteredEmbeddedNavigation = embeddedNavigation.filter((navItem) => {
+        if (currentEnvironmentId !== 0 && navItem.href === '/embedded/integrations') {
+            return false;
+        }
+
+        if (navItem.href === '/embedded/mcp-servers') {
+            return ff_2446;
+        }
+
+        return true;
+    });
+
+    let navigation: NavigationType[] = [];
+
+    if (location.pathname.includes('/automation/')) {
+        navigation = filteredAutomationNavigation;
+    } else if (location.pathname.includes('/embedded/')) {
+        navigation = filteredEmbeddedNavigation;
+    }
+
+    useEffect(() => {
+        if (account) {
+            helpHub.boot(account);
+            helpHub.addRouter();
+            userGuiding.identify(account);
+        }
+    }, [account, helpHub, userGuiding]);
+
     useEffect(() => {
         document.title =
-            [...automationNavigation, ...embeddedNavigation].find((navItem) => navItem.href === location.pathname)
-                ?.name ?? 'ByteChef';
+            [...automationNavigation, ...embeddedNavigation, ...platformNavigation].find(
+                (navItem) => navItem.href === location.pathname
+            )?.name ?? 'ByteChef';
     }, [location]);
 
     useEffect(() => {
-        getAccount();
-    }, [getAccount]);
+        if (!authenticated) {
+            analytics.reset();
 
-    useEffect(() => {
-        getApplicationInfo();
-    }, [getApplicationInfo]);
+            helpHub.shutdown();
+            userGuiding.shutdown();
 
-    useEffect(() => {
-        if (showLogin) {
-            navigate('/login');
+            resetAuthentication();
+
+            queryClient.resetQueries();
         }
-    }, [showLogin, navigate]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [authenticated]);
 
     useEffect(() => {
-        if (sessionHasBeenFetched && !authenticated) {
-            navigate('/login');
+        let type;
+
+        if (location.pathname.includes('/automation/')) {
+            type = PlatformType.AUTOMATION;
+        } else if (location.pathname.includes('/embedded/')) {
+            type = PlatformType.EMBEDDED;
         }
-    }, [authenticated, sessionHasBeenFetched, navigate]);
 
-    if (!authenticated) {
-        return <></>;
-    }
+        if (type !== undefined && type !== currentType) {
+            setCurrentType(type);
+        }
+    }, [currentType, location, setCurrentType]);
 
-    return (
-        <div className="flex h-full">
-            <TooltipProvider>
-                <MobileSidebar
-                    mobileMenuOpen={mobileMenuOpen}
-                    navigation={automationNavigation}
-                    setMobileMenuOpen={setMobileMenuOpen}
-                    user={user}
-                />
+    useEffect(() => {
+        if (!ff_2396) {
+            return;
+        }
 
-                <DesktopSidebar
-                    navigation={
-                        location.pathname.includes('automation')
-                            ? automationNavigation
-                            : location.pathname.includes('embedded')
-                              ? embeddedNavigation
-                              : []
-                    }
-                />
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (event.defaultPrevented) {
+                return;
+            }
 
-                <div className="flex min-w-0 flex-1 flex-col">
-                    <MobileTopNavigation setMobileMenuOpen={setMobileMenuOpen} />
+            if ((event.metaKey || event.ctrlKey) && event.key === 'k') {
+                event.preventDefault();
+                setSearchOpen(true);
+            }
+        };
 
-                    <Outlet />
-                </div>
-            </TooltipProvider>
+        document.addEventListener('keydown', handleKeyDown);
 
-            <Toaster />
+        return () => {
+            document.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [ff_2396]);
+
+    return authenticated ? (
+        <div className="flex h-full flex-col">
+            {billingEnabled && location.pathname.includes('/automation/') && <TrialBanner />}
+
+            {/* transform-gpu gives fixed-position descendants (page sidebars) a containing
+                block scoped to this element, so they render below the banner instead of
+                anchoring to the viewport top and overlapping it. */}
+
+            <SidebarProvider className="min-h-0 flex-1 transform-gpu" defaultOpen={false}>
+                <AppSidebar navigation={navigation} />
+
+                <SidebarInset className="flex h-full min-w-0 flex-col">
+                    <MobileTopNavigation />
+
+                    <div className="flex size-full">
+                        <div className="flex h-full min-w-0 flex-1">
+                            <Outlet />
+                        </div>
+
+                        {ai.copilot.enabled && (
+                            <aside className="h-full shrink-0">
+                                <Suspense fallback={null}>
+                                    <CopilotPanel open={copilotPanelOpen} />
+                                </Suspense>
+                            </aside>
+                        )}
+                    </div>
+                </SidebarInset>
+
+                <Toaster />
+
+                {ff_2396 && searchOpen && (
+                    <Suspense fallback={null}>
+                        <GlobalSearchDialog onOpenChange={setSearchOpen} open={searchOpen} />
+                    </Suspense>
+                )}
+            </SidebarProvider>
         </div>
+    ) : (
+        <Outlet />
     );
 }
 

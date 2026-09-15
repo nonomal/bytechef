@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,13 +16,13 @@
 
 package com.bytechef.component.encharge;
 
-import static com.bytechef.component.definition.ComponentDSL.component;
+import static com.bytechef.component.definition.ComponentDsl.component;
 
 import com.bytechef.component.OpenApiComponentHandler;
 import com.bytechef.component.definition.ComponentDefinition;
 import com.bytechef.component.encharge.action.EnchargeAddTagAction;
-import com.bytechef.component.encharge.action.EnchargeCreateEmailAction;
-import com.bytechef.component.encharge.action.EnchargeCreatePeopleAction;
+import com.bytechef.component.encharge.action.EnchargeCreateEmailTemplateAction;
+import com.bytechef.component.encharge.action.EnchargeCreatePersonAction;
 import com.bytechef.component.encharge.connection.EnchargeConnection;
 
 /**
@@ -35,11 +35,12 @@ public abstract class AbstractEnchargeComponentHandler implements OpenApiCompone
         component("encharge")
             .title("Encharge")
             .description(
-                "Encharge is a marketing automation platform that helps businesses automate their customer communication and marketing campaigns."))
-                    .actions(modifyActions(EnchargeCreateEmailAction.ACTION_DEFINITION,
-                        EnchargeCreatePeopleAction.ACTION_DEFINITION, EnchargeAddTagAction.ACTION_DEFINITION))
-                    .connection(modifyConnection(EnchargeConnection.CONNECTION_DEFINITION))
-                    .triggers(getTriggers());
+                "Encharge is a marketing automation platform that helps businesses automate their customer communication and marketing campaigns.")
+            .version(1))
+                .actions(modifyActions(EnchargeAddTagAction.ACTION_DEFINITION,
+                    EnchargeCreateEmailTemplateAction.ACTION_DEFINITION, EnchargeCreatePersonAction.ACTION_DEFINITION))
+                .connection(modifyConnection(EnchargeConnection.CONNECTION_DEFINITION))
+                .triggers(getTriggers());
 
     @Override
     public ComponentDefinition getDefinition() {

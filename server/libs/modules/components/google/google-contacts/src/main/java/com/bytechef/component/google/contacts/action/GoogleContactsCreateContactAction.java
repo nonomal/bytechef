@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,131 +16,106 @@
 
 package com.bytechef.component.google.contacts.action;
 
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.array;
-import static com.bytechef.component.definition.ComponentDSL.object;
-import static com.bytechef.component.definition.ComponentDSL.string;
-import static com.bytechef.component.google.contacts.constant.GoogleContactsConstants.COMPANY;
-import static com.bytechef.component.google.contacts.constant.GoogleContactsConstants.CREATE_CONTACT;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.outputSchema;
+import static com.bytechef.component.definition.ComponentDsl.string;
+import static com.bytechef.component.definition.Context.Http.responseType;
+import static com.bytechef.component.google.contacts.constant.GoogleContactsConstants.CONTACT_OUTPUT_PROPERTY;
 import static com.bytechef.component.google.contacts.constant.GoogleContactsConstants.EMAIL;
-import static com.bytechef.component.google.contacts.constant.GoogleContactsConstants.FIRST_NAME;
-import static com.bytechef.component.google.contacts.constant.GoogleContactsConstants.JOB_TITLE;
-import static com.bytechef.component.google.contacts.constant.GoogleContactsConstants.LAST_NAME;
+import static com.bytechef.component.google.contacts.constant.GoogleContactsConstants.EMAIL_ADDRESSES;
+import static com.bytechef.component.google.contacts.constant.GoogleContactsConstants.FAMILY_NAME;
+import static com.bytechef.component.google.contacts.constant.GoogleContactsConstants.GIVEN_NAME;
 import static com.bytechef.component.google.contacts.constant.GoogleContactsConstants.MIDDLE_NAME;
+import static com.bytechef.component.google.contacts.constant.GoogleContactsConstants.NAME;
+import static com.bytechef.component.google.contacts.constant.GoogleContactsConstants.NAMES;
+import static com.bytechef.component.google.contacts.constant.GoogleContactsConstants.ORGANIZATIONS;
+import static com.bytechef.component.google.contacts.constant.GoogleContactsConstants.PERSON_FIELDS;
 import static com.bytechef.component.google.contacts.constant.GoogleContactsConstants.PHONE_NUMBER;
+import static com.bytechef.component.google.contacts.constant.GoogleContactsConstants.PHONE_NUMBERS;
+import static com.bytechef.component.google.contacts.constant.GoogleContactsConstants.TITLE;
+import static com.bytechef.component.google.contacts.constant.GoogleContactsConstants.TYPE;
+import static com.bytechef.component.google.contacts.constant.GoogleContactsConstants.VALUE;
 
-import com.bytechef.component.definition.ActionContext;
-import com.bytechef.component.definition.ComponentDSL.ModifiableActionDefinition;
+import com.bytechef.component.definition.ComponentDsl.ModifiableActionDefinition;
+import com.bytechef.component.definition.Context;
+import com.bytechef.component.definition.Context.Http;
 import com.bytechef.component.definition.Parameters;
-import com.bytechef.component.definition.Property;
-import com.bytechef.google.commons.GoogleServices;
-import com.google.api.services.people.v1.PeopleService;
-import com.google.api.services.people.v1.model.EmailAddress;
-import com.google.api.services.people.v1.model.Name;
-import com.google.api.services.people.v1.model.Organization;
-import com.google.api.services.people.v1.model.Person;
-import com.google.api.services.people.v1.model.PhoneNumber;
-import java.io.IOException;
+import com.bytechef.component.definition.Property.ControlType;
 import java.util.List;
+import java.util.Map;
 
 /**
- * @author Monika Domiter
+ * @author Monika Kušter
+ * @author Nikolina Spehar
  */
 public class GoogleContactsCreateContactAction {
 
-    public static final ModifiableActionDefinition ACTION_DEFINITION = action(CREATE_CONTACT)
-        .title("Create contact")
-        .description("Creates a new contact")
+    public static final ModifiableActionDefinition ACTION_DEFINITION = action("createContact")
+        .title("Create Contact")
+        .description("Creates a new contact.")
         .properties(
-            string(FIRST_NAME)
-                .label("First name")
-                .description("The first name of the contact")
+            string(GIVEN_NAME)
+                .label("First Name")
+                .description("The first name of the contact.")
                 .required(true),
             string(MIDDLE_NAME)
-                .label("Middle name")
-                .description("The middle name of the contact")
+                .label("Middle Name")
+                .description("The middle name of the contact.")
                 .required(false),
-            string(LAST_NAME)
-                .label("Last name")
-                .description("The last name of the contact")
+            string(FAMILY_NAME)
+                .label("Last Name")
+                .description("The last name of the contact.")
                 .required(true),
-            string(JOB_TITLE)
-                .label("Job title")
-                .description("The job title of the contact")
+            string(TITLE)
+                .label("Job Title")
+                .description("The job title of the contact.")
                 .required(false),
-            string(COMPANY)
+            string(NAME)
                 .label("Company")
-                .description("The company of the contact")
+                .description("The company of the contact.")
                 .required(false),
             string(EMAIL)
                 .label("Email")
-                .description("The email addresses of the contact")
-                .controlType(Property.ControlType.EMAIL)
+                .description("The email addresses of the contact.")
+                .controlType(ControlType.EMAIL)
                 .required(false),
             string(PHONE_NUMBER)
-                .label("Phone number")
-                .description("The phone numbers of the contact")
-                .controlType(Property.ControlType.PHONE)
+                .label("Phone Number")
+                .description("The phone numbers of the contact.")
+                .controlType(ControlType.PHONE)
                 .required(false))
-        .outputSchema(
-            object()
-                .properties(
-                    array("names")
-                        .items(
-                            object()
-                                .properties(
-                                    string(FIRST_NAME),
-                                    string(MIDDLE_NAME),
-                                    string(LAST_NAME))),
-                    array("organizations")
-                        .items(
-                            object()
-                                .properties(
-                                    string(COMPANY),
-                                    string(JOB_TITLE))),
-                    array("emailAddresses")
-                        .items(
-                            object()
-                                .properties(
-                                    string("value"))),
-                    array("phoneNumbers")
-                        .items(
-                            object()
-                                .properties(
-                                    string("value")))))
+        .output(outputSchema(CONTACT_OUTPUT_PROPERTY))
+        .help("", "https://docs.bytechef.io/reference/components/google-contacts_v1#create-contact")
         .perform(GoogleContactsCreateContactAction::perform);
 
     private GoogleContactsCreateContactAction() {
     }
 
-    public static Person perform(
-        Parameters inputParameters, Parameters connectionParameters, ActionContext actionContext) throws IOException {
-
-        PeopleService peopleService = GoogleServices.getPeopleService(connectionParameters);
-
-        Person person = new Person()
-            .setNames(List.of(createName(inputParameters)))
-            .setEmailAddresses(List.of(new EmailAddress().setValue(inputParameters.getString(EMAIL))))
-            .setPhoneNumbers(List.of(new PhoneNumber().setValue(inputParameters.getString(PHONE_NUMBER))))
-            .setOrganizations(List.of(createOrganization(inputParameters)));
-
-        return peopleService
-            .people()
-            .createContact(person)
-            .execute();
+    public static Object perform(Parameters inputParameters, Parameters connectionParameters, Context context) {
+        return context.http(http -> http.post("/people:createContact"))
+            .configuration(responseType(Http.ResponseType.JSON))
+            .queryParameter(PERSON_FIELDS, "emailAddresses,names,phoneNumbers,organizations")
+            .body(
+                Http.Body.of(
+                    NAMES, List.of(
+                        Map.of(
+                            GIVEN_NAME, inputParameters.getRequiredString(GIVEN_NAME),
+                            MIDDLE_NAME, inputParameters.getString(MIDDLE_NAME, ""),
+                            FAMILY_NAME, inputParameters.getRequiredString(FAMILY_NAME))),
+                    ORGANIZATIONS, List.of(
+                        Map.of(
+                            NAME, inputParameters.getString(NAME, ""),
+                            TITLE, inputParameters.getString(TITLE, ""),
+                            TYPE, "work")),
+                    EMAIL_ADDRESSES, List.of(
+                        Map.of(
+                            VALUE, inputParameters.getString(EMAIL, ""),
+                            TYPE, "work")),
+                    PHONE_NUMBERS, List.of(
+                        Map.of(
+                            VALUE, inputParameters.getString(PHONE_NUMBER, ""),
+                            TYPE, "mobile"))))
+            .execute()
+            .getBody();
     }
-
-    private static Organization createOrganization(Parameters inputParameters) {
-        return new Organization()
-            .setName(inputParameters.getString(COMPANY))
-            .setTitle(inputParameters.getString(JOB_TITLE));
-    }
-
-    private static Name createName(Parameters inputParameters) {
-        return new Name()
-            .setGivenName(inputParameters.getRequiredString(FIRST_NAME))
-            .setMiddleName(inputParameters.getString(MIDDLE_NAME))
-            .setFamilyName(inputParameters.getRequiredString(LAST_NAME));
-    }
-
 }

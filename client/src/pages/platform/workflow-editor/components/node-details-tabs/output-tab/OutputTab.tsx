@@ -1,0 +1,228 @@
+/// <reference types="vite-plugin-svgr/client" />
+
+import Button from '@/components/Button/Button';
+import {Input} from '@/components/Input/Input';
+import LoadingIcon from '@/components/LoadingIcon';
+import {Alert, AlertDescription, AlertTitle} from '@/components/ui/alert';
+import OutputSchemaCreationControls from '@/pages/platform/workflow-editor/components/node-details-tabs/output-tab/OutputSchemaCreationControls';
+import OutputSchemaDisplay from '@/pages/platform/workflow-editor/components/node-details-tabs/output-tab/OutputSchemaDisplay';
+import OutputTabSampleDataDialog from '@/pages/platform/workflow-editor/components/node-details-tabs/output-tab/OutputTabSampleDataDialog';
+import DialogLoader from '@/shared/components/DialogLoader';
+import {TriggerType} from '@/shared/middleware/platform/configuration';
+import {NodeDataType, PropertyAllType} from '@/shared/types';
+import {AlertCircleIcon, ClipboardIcon} from 'lucide-react';
+import {Suspense} from 'react';
+import {twMerge} from 'tailwind-merge';
+
+import useOutputTab from './hooks/useOutputTab';
+
+interface OutputTabProps {
+    clusterElementType?: string;
+    connectionMissing: boolean;
+    currentNode: NodeDataType;
+    currentOperationProperties?: PropertyAllType[];
+    outputDefined?: boolean;
+    outputFunctionDefined?: boolean;
+    parentWorkflowNodeName?: string;
+    resumePerformFunctionDefined?: boolean;
+    variablePropertiesDefined?: boolean;
+    workflowId: string;
+}
+
+const OutputTab = ({
+    clusterElementType,
+    connectionMissing,
+    currentNode,
+    currentOperationProperties,
+    outputDefined,
+    outputFunctionDefined,
+    parentWorkflowNodeName,
+    resumePerformFunctionDefined = false,
+    variablePropertiesDefined = false,
+    workflowId,
+}: OutputTabProps) => {
+    const {
+        copiedValue,
+        copyToClipboard,
+        handleClusterElementTestSubmit,
+        handlePredefinedOutputSchemaClick,
+        handleSampleDataDialogUpload,
+        handleTestCancelClick,
+        handleTestOperationClick,
+        hasClusterElementProperties,
+        outputSchema,
+        placeholder,
+        sampleOutput,
+        saveClusterElementTestOutputMutationPending,
+        saveWorkflowNodeTestOutputMutation,
+        saveWorkflowNodeTestOutputMutationPending,
+        setShowUploadDialog,
+        showUploadDialog,
+        testing,
+        uploadSampleOutputRequestMutationPending,
+        variableOutputSchema,
+        variableSampleOutput,
+        webhookTestCancelEnabled,
+        webhookTestUrl,
+        workflowNodeOutputIsFetching,
+    } = useOutputTab({
+        clusterElementType,
+        currentNode,
+        currentOperationProperties,
+        parentWorkflowNodeName,
+        workflowId,
+    });
+
+    if (!testing && workflowNodeOutputIsFetching) {
+        return <></>;
+    }
+
+    if (!testing && outputFunctionDefined && !outputSchema && !variableOutputSchema) {
+        return <div className="p-4 text-sm text-muted-foreground">No output schema to show.</div>;
+    }
+
+    return (
+        <div className="h-full p-4">
+            {!testing && (outputSchema || variableOutputSchema) && (
+                <div className="h-full">
+                    <OutputSchemaDisplay
+                        clusterElementType={clusterElementType}
+                        connectionMissing={connectionMissing}
+                        copiedValue={copiedValue}
+                        copyToClipboard={copyToClipboard}
+                        currentNode={currentNode}
+                        currentOperationProperties={currentOperationProperties}
+                        handleClusterElementTestSubmit={handleClusterElementTestSubmit}
+                        handlePredefinedOutputSchemaClick={handlePredefinedOutputSchemaClick}
+                        handleTestOperationClick={handleTestOperationClick}
+                        isClusterElement={!!clusterElementType}
+                        outputDefined={outputDefined}
+                        outputSchema={outputSchema}
+                        resumePerformFunctionDefined={resumePerformFunctionDefined}
+                        sampleOutput={sampleOutput}
+                        saveClusterElementTestOutputMutationPending={saveClusterElementTestOutputMutationPending}
+                        saveWorkflowNodeTestOutputMutation={saveWorkflowNodeTestOutputMutation}
+                        setShowUploadDialog={setShowUploadDialog}
+                        showClusterElementTestButton={hasClusterElementProperties}
+                        variableOutputSchema={variableOutputSchema}
+                        variablePropertiesDefined={variablePropertiesDefined}
+                        variableSampleOutput={variableSampleOutput}
+                    />
+                </div>
+            )}
+
+            {!testing && !outputSchema && !variablePropertiesDefined && (
+                <div className="absolute inset-0 flex items-center justify-center px-4">
+                    <OutputSchemaCreationControls
+                        clusterElementType={clusterElementType}
+                        connectionMissing={connectionMissing}
+                        currentNode={currentNode}
+                        currentOperationProperties={currentOperationProperties}
+                        handleClusterElementTestSubmit={handleClusterElementTestSubmit}
+                        handleTestOperationClick={handleTestOperationClick}
+                        outputDefined={outputDefined}
+                        saveClusterElementTestOutputMutationPending={saveClusterElementTestOutputMutationPending}
+                        saveWorkflowNodeTestOutputMutationPending={saveWorkflowNodeTestOutputMutationPending}
+                        setShowUploadDialog={setShowUploadDialog}
+                        showClusterElementTestButton={hasClusterElementProperties}
+                        showUploadSampleOutputButton={outputDefined}
+                        trigger={currentNode.trigger}
+                        uploadSampleOutputRequestMutationPending={uploadSampleOutputRequestMutationPending}
+                    />
+                </div>
+            )}
+
+            {testing && (
+                <Suspense
+                    fallback={
+                        <div className="flex items-center justify-center p-4">
+                            <LoadingIcon />
+
+                            <span>Loading Testing UI...</span>
+                        </div>
+                    }
+                >
+                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-6 px-4">
+                        <div
+                            className={twMerge(
+                                'flex',
+                                currentNode.trigger &&
+                                    currentNode.triggerType !== TriggerType.Polling &&
+                                    currentNode.triggerType !== TriggerType.Hybrid &&
+                                    'w-full justify-between pl-2',
+                                (currentNode.triggerType === TriggerType.Polling ||
+                                    currentNode.triggerType === TriggerType.Hybrid) &&
+                                    'flex-col gap-2'
+                            )}
+                        >
+                            <div className="mt-1 flex items-center justify-center">
+                                <LoadingIcon />
+
+                                <span className="text-lg">{`Testing ${clusterElementType === 'tools' ? 'Tool' : currentNode.trigger ? 'Trigger' : 'Action'}`}</span>
+                            </div>
+
+                            {currentNode.trigger &&
+                                currentNode.triggerType !== TriggerType.Polling &&
+                                currentNode.triggerType !== TriggerType.Hybrid && (
+                                    <Button
+                                        className="flex items-center gap-2"
+                                        disabled={!webhookTestCancelEnabled}
+                                        label="Cancel"
+                                        onClick={handleTestCancelClick}
+                                        size="sm"
+                                        variant="outline"
+                                    />
+                                )}
+                        </div>
+
+                        {currentNode.trigger &&
+                            currentNode.triggerType !== TriggerType.Polling &&
+                            currentNode.triggerType !== TriggerType.Hybrid && (
+                                <Alert>
+                                    <AlertCircleIcon className="size-4" />
+
+                                    <AlertTitle>Action Required</AlertTitle>
+
+                                    <AlertDescription className="flex flex-col gap-1">
+                                        {currentNode.triggerType === TriggerType.StaticWebhook ? (
+                                            <>
+                                                <div>Please call the following webhook test URL</div>
+                                                <div className="relative">
+                                                    <Input className="pr-8" disabled value={webhookTestUrl} />
+
+                                                    <ClipboardIcon
+                                                        aria-hidden="true"
+                                                        className="absolute top-2.5 right-0 mx-2 size-4 cursor-pointer text-gray-400 group-hover:visible hover:text-gray-800"
+                                                        onClick={() => copyToClipboard(webhookTestUrl!)}
+                                                    />
+                                                </div>
+                                                <div>by sending sample data</div>{' '}
+                                            </>
+                                        ) : (
+                                            <div>
+                                                Please go to your service and make an action that will activate this
+                                                trigger
+                                            </div>
+                                        )}
+                                    </AlertDescription>
+                                </Alert>
+                            )}
+                    </div>
+                </Suspense>
+            )}
+
+            {showUploadDialog && (
+                <Suspense fallback={<DialogLoader />}>
+                    <OutputTabSampleDataDialog
+                        onClose={() => setShowUploadDialog(false)}
+                        onUpload={handleSampleDataDialogUpload}
+                        open={showUploadDialog}
+                        placeholder={placeholder || sampleOutput}
+                    />
+                </Suspense>
+            )}
+        </div>
+    );
+};
+
+export default OutputTab;

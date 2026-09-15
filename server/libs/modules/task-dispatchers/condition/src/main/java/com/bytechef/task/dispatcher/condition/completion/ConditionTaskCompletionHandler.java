@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,14 +30,15 @@ import com.bytechef.atlas.execution.service.ContextService;
 import com.bytechef.atlas.execution.service.TaskExecutionService;
 import com.bytechef.atlas.file.storage.TaskFileStorage;
 import com.bytechef.commons.util.MapUtils;
+import com.bytechef.evaluator.Evaluator;
 import com.bytechef.task.dispatcher.condition.util.ConditionTaskUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import java.time.LocalDateTime;
-import java.util.Collections;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import org.apache.commons.lang3.Validate;
+import java.util.Objects;
+import tools.jackson.core.type.TypeReference;
 
 /**
  * @author Matija Petanjek
@@ -45,6 +46,7 @@ import org.apache.commons.lang3.Validate;
 public class ConditionTaskCompletionHandler implements TaskCompletionHandler {
 
     private final ContextService contextService;
+    private final Evaluator evaluator;
     private final TaskCompletionHandler taskCompletionHandler;
     private final TaskDispatcher<? super Task> taskDispatcher;
     private final TaskExecutionService taskExecutionService;
@@ -52,11 +54,12 @@ public class ConditionTaskCompletionHandler implements TaskCompletionHandler {
 
     @SuppressFBWarnings("EI")
     public ConditionTaskCompletionHandler(
-        ContextService contextService, TaskCompletionHandler taskCompletionHandler,
+        ContextService contextService, Evaluator evaluator, TaskCompletionHandler taskCompletionHandler,
         TaskDispatcher<? super Task> taskDispatcher, TaskExecutionService taskExecutionService,
         TaskFileStorage taskFileStorage) {
 
         this.contextService = contextService;
+        this.evaluator = evaluator;
         this.taskCompletionHandler = taskCompletionHandler;
         this.taskDispatcher = taskDispatcher;
         this.taskExecutionService = taskExecutionService;
@@ -85,23 +88,24 @@ public class ConditionTaskCompletionHandler implements TaskCompletionHandler {
         taskExecution = taskExecutionService.update(taskExecution);
 
         TaskExecution conditionTaskExecution = taskExecutionService.getTaskExecution(
-            Validate.notNull(taskExecution.getParentId(), "parentId"));
+            Objects.requireNonNull(taskExecution.getParentId()));
 
-        if (taskExecution.getOutput() != null && taskExecution.getName() != null) {
+        long id = Objects.requireNonNull(conditionTaskExecution.getId());
+
+        if (taskExecution.getName() != null) {
             Map<String, Object> newContext = new HashMap<>(
-                taskFileStorage.readContextValue(
-                    contextService.peek(
-                        Validate.notNull(conditionTaskExecution.getId(), "id"), Context.Classname.TASK_EXECUTION)));
+                taskFileStorage.readContextValue(contextService.peek(id, Context.Classname.TASK_EXECUTION)));
 
-            newContext.put(
-                taskExecution.getName(),
-                taskFileStorage.readTaskExecutionOutput(taskExecution.getOutput()));
+            if (taskExecution.getOutput() != null) {
+                newContext.put(
+                    taskExecution.getName(), taskFileStorage.readTaskExecutionOutput(taskExecution.getOutput()));
+            } else {
+                newContext.put(taskExecution.getName(), null);
+            }
 
             contextService.push(
-                Validate.notNull(conditionTaskExecution.getId(), "id"), Context.Classname.TASK_EXECUTION,
-                taskFileStorage.storeContextValue(
-                    Validate.notNull(conditionTaskExecution.getId(), "id"), Context.Classname.TASK_EXECUTION,
-                    newContext));
+                id, Context.Classname.TASK_EXECUTION,
+                taskFileStorage.storeContextValue(id, Context.Classname.TASK_EXECUTION, newContext));
         }
 
         List<WorkflowTask> subWorkflowTasks;
@@ -117,6 +121,7 @@ public class ConditionTaskCompletionHandler implements TaskCompletionHandler {
 
             TaskExecution subTaskExecution = TaskExecution.builder()
                 .jobId(conditionTaskExecution.getJobId())
+                .maxRetries(subWorkflowTask.getMaxRetries())
                 .parentId(conditionTaskExecution.getId())
                 .priority(conditionTaskExecution.getPriority())
                 .taskNumber(taskExecution.getTaskNumber() + 1)
@@ -124,30 +129,36 @@ public class ConditionTaskCompletionHandler implements TaskCompletionHandler {
                 .build();
 
             Map<String, ?> context = taskFileStorage.readContextValue(
-                contextService.peek(
-                    Validate.notNull(conditionTaskExecution.getId(), "id"), Context.Classname.TASK_EXECUTION));
+                contextService.peek(id, Context.Classname.TASK_EXECUTION));
 
-            subTaskExecution.evaluate(context);
+            subTaskExecution.evaluate(context, evaluator);
 
             subTaskExecution = taskExecutionService.create(subTaskExecution);
 
+            long subTaskExecutionId = Objects.requireNonNull(subTaskExecution.getId());
+
             contextService.push(
-                Validate.notNull(subTaskExecution.getId(), "id"), Context.Classname.TASK_EXECUTION,
-                taskFileStorage.storeContextValue(
-                    Validate.notNull(subTaskExecution.getId(), "id"), Context.Classname.TASK_EXECUTION, context));
+                subTaskExecutionId, Context.Classname.TASK_EXECUTION,
+                taskFileStorage.storeContextValue(subTaskExecutionId, Context.Classname.TASK_EXECUTION, context));
 
             taskDispatcher.dispatch(subTaskExecution);
         }
         // no more tasks to execute -- complete the condition
         else {
-            conditionTaskExecution.setEndDate(LocalDateTime.now());
+            conditionTaskExecution.setEndDate(Instant.now());
+
+            conditionTaskExecution = taskExecutionService.update(conditionTaskExecution);
 
             taskCompletionHandler.handle(conditionTaskExecution);
         }
     }
 
     private static List<WorkflowTask> getSubWorkflowTasks(TaskExecution conditionTaskExecution, String caseTrue) {
-        return MapUtils.getList(
-            conditionTaskExecution.getParameters(), caseTrue, WorkflowTask.class, Collections.emptyList());
+        return MapUtils
+            .getList(
+                conditionTaskExecution.getParameters(), caseTrue, new TypeReference<Map<String, ?>>() {}, List.of())
+            .stream()
+            .map(WorkflowTask::new)
+            .toList();
     }
 }

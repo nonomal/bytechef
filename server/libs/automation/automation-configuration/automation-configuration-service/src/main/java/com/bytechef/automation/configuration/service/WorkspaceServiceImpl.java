@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,12 +17,9 @@
 package com.bytechef.automation.configuration.service;
 
 import com.bytechef.automation.configuration.domain.Workspace;
-import com.bytechef.automation.configuration.exception.WorkspaceErrorType;
 import com.bytechef.automation.configuration.repository.WorkspaceRepository;
-import com.bytechef.commons.util.OptionalUtils;
-import com.bytechef.platform.exception.PlatformException;
+import com.bytechef.platform.annotation.ConditionalOnCEVersion;
 import java.util.List;
-import org.apache.commons.lang3.Validate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,6 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
  */
 @Service
 @Transactional
+@ConditionalOnCEVersion
 public class WorkspaceServiceImpl implements WorkspaceService {
 
     private final WorkspaceRepository workspaceRepository;
@@ -40,49 +38,7 @@ public class WorkspaceServiceImpl implements WorkspaceService {
     }
 
     @Override
-    public Workspace create(Workspace workspace) {
-        Validate.notNull(workspace, "'workspace' must not be null");
-        Validate.isTrue(workspace.getId() == null, "'workspace.id' must be null");
-
-        return workspaceRepository.save(workspace);
-    }
-
-    @Override
-    public void delete(long id) {
-        if (id == Workspace.DEFAULT_WORKSPACE_ID) {
-            throw new PlatformException(
-                "Default workspace cannot be deleted", WorkspaceErrorType.DELETE_DEFAULT_WORKSPACE);
-        }
-
-        workspaceRepository.deleteById(id);
-    }
-
-    @Override
     public List<Workspace> getWorkspaces() {
         return workspaceRepository.findAll();
-    }
-
-    @Override
-    public Workspace getWorkspace(long id) {
-        return OptionalUtils.get(workspaceRepository.findById(id));
-    }
-
-    @Override
-    public Workspace update(Workspace workspace) {
-        Validate.notNull(workspace, "'workspace' must not be null");
-        Validate.isTrue(workspace.getId() != null, "'workspace.id' must not be null");
-
-        if (workspace.getId() == Workspace.DEFAULT_WORKSPACE_ID) {
-            throw new PlatformException(
-                "Default workspace cannot be updated", WorkspaceErrorType.UPDATE_DEFAULT_WORKSPACE);
-        }
-
-        Workspace curWorkspace = OptionalUtils.get(workspaceRepository.findById(workspace.getId()));
-
-        curWorkspace.setDescription(workspace.getDescription());
-        curWorkspace.setName(workspace.getName());
-        curWorkspace.setVersion(workspace.getVersion());
-
-        return workspaceRepository.save(curWorkspace);
     }
 }

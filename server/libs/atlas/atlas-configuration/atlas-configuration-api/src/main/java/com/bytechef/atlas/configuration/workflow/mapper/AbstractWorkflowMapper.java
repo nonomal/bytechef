@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,49 +20,59 @@ import com.bytechef.atlas.configuration.constant.WorkflowConstants;
 import com.bytechef.atlas.configuration.domain.Workflow;
 import com.bytechef.atlas.configuration.workflow.contributor.WorkflowReservedWordContributor;
 import com.bytechef.commons.util.CollectionUtils;
-import com.bytechef.commons.util.FileCopyUtils;
-import com.bytechef.commons.util.LocalDateTimeUtils;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.ServiceConfigurationError;
 import java.util.ServiceLoader;
-import org.apache.commons.lang3.Validate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.io.Resource;
+import org.springframework.util.Assert;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * @author Matija Petanjek
  */
 abstract class AbstractWorkflowMapper implements WorkflowMapper {
 
-    private static final Logger logger = LoggerFactory.getLogger(AbstractWorkflowMapper.class);
+    private static final Logger log = LoggerFactory.getLogger(AbstractWorkflowMapper.class);
 
-    private static final List<String> additionalWorkflowReservedWords = new ArrayList<>();
+    private static volatile List<String> additionalWorkflowReservedWords;
 
-    static {
-        try {
-            ServiceLoader<WorkflowReservedWordContributor> serviceLoader = ServiceLoader.load(
-                WorkflowReservedWordContributor.class);
+    private static List<String> getAdditionalWorkflowReservedWords() {
+        if (additionalWorkflowReservedWords == null) {
+            synchronized (AbstractWorkflowMapper.class) {
+                if (additionalWorkflowReservedWords == null) {
+                    List<String> reservedWords = new ArrayList<>();
 
-            for (WorkflowReservedWordContributor workflowReservedWordContributor : serviceLoader) {
-                additionalWorkflowReservedWords.addAll(workflowReservedWordContributor.getReservedWords());
-            }
-        } catch (ServiceConfigurationError e) {
-            if (logger.isDebugEnabled()) {
-                logger.debug(e.getMessage(), e);
+                    try {
+                        ServiceLoader<WorkflowReservedWordContributor> serviceLoader = ServiceLoader.load(
+                            WorkflowReservedWordContributor.class,
+                            WorkflowReservedWordContributor.class.getClassLoader());
+
+                        for (WorkflowReservedWordContributor workflowReservedWordContributor : serviceLoader) {
+                            reservedWords.addAll(workflowReservedWordContributor.getReservedWords());
+                        }
+                    } catch (ServiceConfigurationError serviceConfigurationError) {
+                        if (log.isDebugEnabled()) {
+                            log.debug(serviceConfigurationError.getMessage(), serviceConfigurationError);
+                        }
+                    }
+
+                    additionalWorkflowReservedWords = reservedWords;
+                }
             }
         }
+
+        return additionalWorkflowReservedWords;
     }
 
     private final Workflow.Format format;
@@ -91,12 +101,12 @@ abstract class AbstractWorkflowMapper implements WorkflowMapper {
     protected Workflow doReadWorkflow(WorkflowResource workflowResource) throws IOException {
         return new Workflow(
             workflowResource.getId(), readDefinition(workflowResource), workflowResource.getWorkflowFormat(),
-            LocalDateTimeUtils.toLocalDateTime(new Date(workflowResource.lastModified())),
+            Instant.ofEpochMilli(workflowResource.lastModified()),
             workflowResource.getMetadata());
     }
 
     @SuppressWarnings("unchecked")
-    private Map<String, Object> parse(String workflow) throws JsonProcessingException {
+    private Map<String, Object> parse(String workflow) {
         Map<String, Object> workflowMap = objectMapper.readValue(workflow, new TypeReference<>() {});
 
         validate(workflowMap);
@@ -126,7 +136,8 @@ abstract class AbstractWorkflowMapper implements WorkflowMapper {
 
     private String readDefinition(Resource resource) throws IOException {
         try (InputStream in = resource.getInputStream()) {
-            return FileCopyUtils.copyToString(new InputStreamReader(in, StandardCharsets.UTF_8));
+            return org.springframework.util.FileCopyUtils.copyToString(
+                new InputStreamReader(in, StandardCharsets.UTF_8));
         }
     }
 
@@ -142,8 +153,8 @@ abstract class AbstractWorkflowMapper implements WorkflowMapper {
         for (int i = 0; outputs != null && i < outputs.size(); i++) {
             Map<String, Object> output = outputs.get(i);
 
-            Validate.notNull(output.get(WorkflowConstants.NAME), "output definition must specify a 'name'");
-            Validate.notNull(output.get(WorkflowConstants.VALUE), "output definition must specify a 'value'");
+            Assert.notNull(output.get(WorkflowConstants.NAME), "output definition must specify a 'name'");
+            Assert.notNull(output.get(WorkflowConstants.VALUE), "output definition must specify a 'value'");
         }
     }
 
@@ -153,10 +164,10 @@ abstract class AbstractWorkflowMapper implements WorkflowMapper {
             String k = entry.getKey();
             Object v = entry.getValue();
 
-            Validate.isTrue(
+            Assert.isTrue(
                 CollectionUtils.contains(
                     CollectionUtils.concat(
-                        WorkflowConstants.WORKFLOW_DEFINITION_CONSTANTS, additionalWorkflowReservedWords),
+                        WorkflowConstants.WORKFLOW_DEFINITION_CONSTANTS, getAdditionalWorkflowReservedWords()),
                     k),
                 "unknown workflow definition property: " + k);
 

@@ -1,0 +1,245 @@
+---
+openapi: "3.0.1"
+info:
+  title: "Stripe"
+  description: "Stripe is a payment processing platform that allows businesses to accept online payments and manage transactions securely."
+  version: "v1"
+servers:
+  - url: "https://api.stripe.com/v1"
+paths:
+  /customers:
+    post:
+      summary: "Create Customer"
+      description: "Creates a new customer."
+      operationId: "createCustomer"
+      x-help: "https://docs.bytechef.io/reference/components/stripe_v1#create-customer"
+      x-ai-agent-tool: true
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              title: "Customer"
+              type: "object"
+              properties:
+                email:
+                  type: "string"
+                  description: "The customer’s email address."
+                  maxLength: 512
+                name:
+                  type: "string"
+                  description: "The customer's full name."
+                description:
+                  type: "string"
+                  description: "A description of the customer."
+                phone:
+                  type: "string"
+                  description: "The customer’s phone number."
+                address:
+                  type: "object"
+                  description: "The customer's address."
+                  properties:
+                    city:
+                      type: "string"
+                      description: "City."
+                    country:
+                      type: "string"
+                      description: "Country."
+                    line1:
+                      type: "string"
+                      title: "Address Line 1"
+                      description: "Address line 1."
+                    line2:
+                      type: "string"
+                      title: "Address Line 2"
+                      description: "Address line 2."
+                    postal_code:
+                      type: "string"
+                      title: "Postal Code"
+                      description: "Postal code."
+                    state:
+                      type: "string"
+                      description: "State, country, province or region."
+      responses:
+        200:
+          description: "Successful operation."
+          content:
+            application/json:
+              schema:
+                type: "object"
+                properties:
+                  id:
+                    type: "string"
+                    description: "ID of the customer."
+                  description:
+                    type: "string"
+                    description: "Description of the customer."
+                  email:
+                    type: "string"
+                    description: "Email address of the customer."
+                  name:
+                    type: "string"
+                    description: "The customer's full name."
+                  phone:
+                    type: "string"
+                    description: "Phone number of the customer."
+                  address:
+                    type: "object"
+                    description: "Customer's address."
+                    properties:
+                      city:
+                        type: "string"
+                        description: "City, district, suburb, town, or village."
+                      country:
+                        type: "string"
+                        description: "Country."
+                      line1:
+                        type: "string"
+                        description: "Address line 1 (e.g., street, PO Box, or company name)."
+                      line2:
+                        type: "string"
+                        description: "Address line 2 (e.g., apartment, suite, unit, or building)."
+                      postal_code:
+                        type: "string"
+                        description: "ZIP or postal code."
+                      state:
+                        type: "string"
+                        description: "State, country, province, or region."
+  /invoices:
+    post:
+      summary: "Create Invoice"
+      description: "Creates a new invoice."
+      operationId: "createInvoice"
+      x-help: "https://docs.bytechef.io/reference/components/stripe_v1#create-invoice"
+      x-ai-agent-tool: true
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              title: "Invoice"
+              type: "object"
+              required:
+                - "customer"
+                - "currency"
+              properties:
+                customer:
+                  type: "string"
+                  title: "Customer ID"
+                  description: "ID of the customer who will be billed."
+                  x-dynamic-options: true
+                currency:
+                  type: "string"
+                  description: "Currency used for invoice."
+                description:
+                  type: "string"
+                  description: "Description for the invoice."
+      responses:
+        200:
+          description: "Successful operation."
+          content:
+            application/json:
+              schema:
+                type: "object"
+                properties:
+                  id:
+                    type: "string"
+                    description: "ID of the invoice."
+                  customer:
+                    type: "string"
+                    description: "ID of the customer who will be billed."
+                  currency:
+                    type: "string"
+                    description: "Currency used for invoice."
+                  description:
+                    type: "string"
+                    description: "Description for the invoice."
+  /payouts:
+    post:
+      summary: "Create Payout"
+      description: "Create a payout."
+      operationId: "createPayout"
+      x-help: "https://docs.bytechef.io/reference/components/stripe_v1#create-payout"
+      x-ai-agent-tool: true
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              title: "Payout"
+              type: "object"
+              required:
+                - "amount"
+                - "currency"
+              properties:
+                amount:
+                  type: "integer"
+                  title: "Amount"
+                  description: "A positive integer in cents representing how much to payout."
+                currency:
+                  type: "string"
+                  title: "Currency"
+                  description: "Three-letter ISO currency code in lowercase. Must be a currency supported by Stripe."
+                method:
+                  type: "string"
+                  title: "Method"
+                  description: "The method used to send this payout, which is `standard` or `instant`."
+                  maxLength: 5000
+                  enum:
+                    - "instant"
+                    - "standard"
+                metadata:
+                  type: "object"
+                  additionalProperties:
+                    type: "string"
+                  title: "Metadata"
+                  description: "Set of key-value pairs that you can attach to an object. This can be useful for storing additional information about the object in a structured format."
+      responses:
+        200:
+          description: "Successful operation."
+          content:
+            application/json:
+              schema:
+                type: "object"
+                properties:
+                  amount:
+                    type: "integer"
+                    description: "The amount (in cents (or local equivalent)) that transfers to your bank account or debit card."
+                  arrival_date:
+                    type: "integer"
+                    description: "Date that you can expect the payout to arrive in the bank. This factors in delays to account for weekends or bank holidays."
+                  automatic:
+                    type: "boolean"
+                    description: "Returns `true` if the payout is created by an automated payout schedule and `false` if it's requested manually."
+                  created:
+                    type: "integer"
+                    description: "Time at which the object was created."
+                  currency:
+                    type: "string"
+                    description: "Three-letter ISO currency code in lowercase."
+                  id:
+                    type: "string"
+                    description: "Unique identifier for the object."
+                  livemode:
+                    type: "boolean"
+                    description: "If the object exists in live mode, the value is `true`. If the object exists in test mode, the value is `false`."
+                  method:
+                    type: "string"
+                    description: "The method used to send this payout, which can be `standard` or `instant`."
+                  object:
+                    type: "string"
+                    description: "String representing the object's type. Objects of the same type share the same value."
+                  reconciliation_status:
+                    type: "string"
+                    description: "If `completed`, you can use the Balance Transactions API to list all balance transactions that are paid out in this payout."
+                  source_type:
+                    type: "string"
+                    description: "The source balance this payout came from, which can be one of the following: `card`, `fpx` or `bank_account`."
+                  status:
+                    type: "string"
+                    description: "Current status of the payout."
+                  type:
+                    type: "string"
+                    description: "Can be `bank_account` or `card`."
+components:
+  securitySchemes:
+    bearerAuth:
+      scheme: "bearer"
+      type: "http"

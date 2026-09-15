@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,20 +16,19 @@
 
 package com.bytechef.component.freshsales.action;
 
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.number;
-import static com.bytechef.component.definition.ComponentDSL.object;
-import static com.bytechef.component.definition.ComponentDSL.string;
-import static com.bytechef.component.freshsales.constant.FreshsalesConstants.CREATE_LEAD;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.number;
+import static com.bytechef.component.definition.ComponentDsl.object;
+import static com.bytechef.component.definition.ComponentDsl.outputSchema;
+import static com.bytechef.component.definition.ComponentDsl.string;
 import static com.bytechef.component.freshsales.constant.FreshsalesConstants.EMAIL;
 import static com.bytechef.component.freshsales.constant.FreshsalesConstants.FIRST_NAME;
+import static com.bytechef.component.freshsales.constant.FreshsalesConstants.ID;
 import static com.bytechef.component.freshsales.constant.FreshsalesConstants.LAST_NAME;
-import static com.bytechef.component.freshsales.util.FreshsalesUtils.getUrl;
 
 import com.bytechef.component.definition.ActionContext;
-import com.bytechef.component.definition.ComponentDSL.ModifiableActionDefinition;
+import com.bytechef.component.definition.ComponentDsl.ModifiableActionDefinition;
 import com.bytechef.component.definition.Context.Http;
-import com.bytechef.component.definition.Context.TypeReference;
 import com.bytechef.component.definition.Parameters;
 import com.bytechef.component.definition.Property.ControlType;
 
@@ -38,30 +37,38 @@ import com.bytechef.component.definition.Property.ControlType;
  */
 public class FreshsalesCreateLeadAction {
 
-    public static final ModifiableActionDefinition ACTION_DEFINITION = action(CREATE_LEAD)
-        .title("Create lead")
-        .description("Creates a new lead")
+    public static final ModifiableActionDefinition ACTION_DEFINITION = action("createLead")
+        .title("Create Lead")
+        .description("Creates a new lead.")
+        .help("", "https://docs.bytechef.io/reference/components/freshsales_v1#create-lead")
         .properties(
             string(FIRST_NAME)
-                .label("First name")
-                .description("First name of the lead")
+                .label("First Name")
+                .description("First name of the lead.")
                 .required(false),
             string(LAST_NAME)
-                .label("Last name")
-                .description("Last name of the lead")
+                .label("Last Name")
+                .description("Last name of the lead.")
                 .required(false),
             string(EMAIL)
                 .label("Email")
-                .description("Primary email address of the lead")
+                .description("Primary email address of the lead.")
                 .controlType(ControlType.EMAIL)
                 .required(true))
-        .outputSchema(
-            object()
-                .properties(
-                    number("id"),
-                    string(EMAIL),
-                    string(FIRST_NAME),
-                    string(LAST_NAME)))
+        .output(
+            outputSchema(
+                object()
+                    .properties(
+                        object("lead")
+                            .properties(
+                                number(ID)
+                                    .description("ID of the lead."),
+                                string(EMAIL)
+                                    .description("Primary email address of the lead."),
+                                string(FIRST_NAME)
+                                    .description("First name of the lead."),
+                                string(LAST_NAME)
+                                    .description("Last name of the lead.")))))
         .perform(FreshsalesCreateLeadAction::perform);
 
     private FreshsalesCreateLeadAction() {
@@ -70,7 +77,7 @@ public class FreshsalesCreateLeadAction {
     public static Object perform(
         Parameters inputParameters, Parameters connectionParameters, ActionContext actionContext) {
 
-        return actionContext.http(http -> http.post(getUrl(connectionParameters, "leads")))
+        return actionContext.http(http -> http.post("/leads"))
             .body(
                 Http.Body.of(
                     FIRST_NAME, inputParameters.getString(FIRST_NAME),
@@ -78,7 +85,6 @@ public class FreshsalesCreateLeadAction {
                     EMAIL, inputParameters.getRequiredString(EMAIL)))
             .configuration(Http.responseType(Http.ResponseType.JSON))
             .execute()
-            .getBody(new TypeReference<>() {});
-
+            .getBody();
     }
 }

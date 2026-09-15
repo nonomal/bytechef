@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,33 +16,34 @@
 
 package com.bytechef.platform.connection.dto;
 
+import com.bytechef.component.definition.Authorization.AuthorizationType;
 import com.bytechef.platform.connection.domain.Connection;
 import com.bytechef.platform.connection.domain.Connection.CredentialStatus;
-import com.bytechef.platform.connection.domain.ConnectionEnvironment;
 import com.bytechef.platform.tag.domain.Tag;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import org.jspecify.annotations.Nullable;
 
 /**
  * @author Ivica Cardic
  */
 @SuppressFBWarnings("EI")
 public record ConnectionDTO(
-    boolean active, String authorizationName, Map<String, ?> authorizationParameters, String componentName,
-    Map<String, ?> connectionParameters, int connectionVersion, String createdBy, LocalDateTime createdDate,
-    CredentialStatus credentialStatus, ConnectionEnvironment environment, Long id, String lastModifiedBy,
-    LocalDateTime lastModifiedDate, String name, Map<String, ?> parameters, List<Tag> tags, int version) {
+    boolean active, @Nullable AuthorizationType authorizationType, Map<String, ?> authorizationParameters,
+    String baseUri, String componentName, Map<String, ?> connectionParameters, int connectionVersion, String createdBy,
+    Instant createdDate, CredentialStatus credentialStatus, int environmentId, Long id, String lastModifiedBy,
+    Instant lastModifiedDate, String name, Map<String, ?> parameters, List<Tag> tags, int version) {
 
     public ConnectionDTO(
-        boolean active, Map<String, ?> authorizationParameters, Connection connection,
+        boolean active, Map<String, ?> authorizationParameters, String baseUri, Connection connection,
         Map<String, ?> connectionParameters, List<Tag> tags) {
 
         this(
-            active, connection.getAuthorizationName(), authorizationParameters, connection.getComponentName(),
+            active, connection.getAuthorizationType(), authorizationParameters, baseUri, connection.getComponentName(),
             connectionParameters, connection.getConnectionVersion(), connection.getCreatedBy(),
-            connection.getCreatedDate(), connection.getCredentialStatus(), connection.getEnvironment(),
+            connection.getCreatedDate(), connection.getCredentialStatus(), connection.getEnvironmentId(),
             connection.getId(), connection.getLastModifiedBy(), connection.getLastModifiedDate(), connection.getName(),
             connection.getParameters(), tags, connection.getVersion());
     }
@@ -50,10 +51,10 @@ public record ConnectionDTO(
     public Connection toConnection() {
         Connection connection = new Connection();
 
-        connection.setAuthorizationName(authorizationName);
+        connection.setAuthorizationType(authorizationType);
         connection.setComponentName(componentName);
         connection.setConnectionVersion(connectionVersion);
-        connection.setEnvironment(environment);
+        connection.setEnvironmentId(environmentId);
         connection.setId(id);
         connection.setName(name);
         connection.setParameters(parameters);
@@ -67,19 +68,19 @@ public record ConnectionDTO(
         return new Builder();
     }
 
-    @SuppressFBWarnings("EI")
     public static final class Builder {
         private boolean active;
-        private String authorizationName;
+        private AuthorizationType authorizationType;
+        private String baseUri;
         private String componentName;
         private int connectionVersion;
         private String createdBy;
-        private LocalDateTime createdDate;
+        private Instant createdDate;
         private CredentialStatus credentialStatus;
-        private ConnectionEnvironment environment;
+        private int environmentId;
         private Long id;
         private String lastModifiedBy;
-        private LocalDateTime lastModifiedDate;
+        private Instant lastModifiedDate;
         private String name;
         private Map<String, Object> parameters;
         private List<Tag> tags;
@@ -94,14 +95,21 @@ public record ConnectionDTO(
             return this;
         }
 
-        public Builder authorizationName(String authorizationName) {
-            this.authorizationName = authorizationName;
+        public Builder authorizationType(AuthorizationType authorizationType) {
+            this.authorizationType = authorizationType;
+
+            return this;
+        }
+
+        public Builder baseUri(String baseUri) {
+            this.baseUri = baseUri;
 
             return this;
         }
 
         public Builder componentName(String componentName) {
             this.componentName = componentName;
+
             return this;
         }
 
@@ -117,7 +125,7 @@ public record ConnectionDTO(
             return this;
         }
 
-        public Builder createdDate(LocalDateTime createdDate) {
+        public Builder createdDate(Instant createdDate) {
             this.createdDate = createdDate;
 
             return this;
@@ -129,8 +137,8 @@ public record ConnectionDTO(
             return this;
         }
 
-        public Builder environment(ConnectionEnvironment environment) {
-            this.environment = environment;
+        public Builder environmentId(int environmentId) {
+            this.environmentId = environmentId;
 
             return this;
         }
@@ -147,7 +155,7 @@ public record ConnectionDTO(
             return this;
         }
 
-        public Builder lastModifiedDate(LocalDateTime lastModifiedDate) {
+        public Builder lastModifiedDate(Instant lastModifiedDate) {
             this.lastModifiedDate = lastModifiedDate;
 
             return this;
@@ -178,8 +186,9 @@ public record ConnectionDTO(
 
         public ConnectionDTO build() {
             return new ConnectionDTO(
-                active, authorizationName, Map.of(), componentName, Map.of(), connectionVersion, createdBy, createdDate,
-                credentialStatus, environment, id, lastModifiedBy, lastModifiedDate, name, parameters, tags, version);
+                active, authorizationType, Map.of(), baseUri, componentName, Map.of(), connectionVersion, createdBy,
+                createdDate, credentialStatus, environmentId, id, lastModifiedBy, lastModifiedDate, name, parameters,
+                tags, version);
         }
     }
 }

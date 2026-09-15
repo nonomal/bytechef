@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,13 +17,15 @@
 package com.bytechef.component.hubspot.action;
 
 import static com.bytechef.component.OpenApiComponentHandler.PropertyType;
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.object;
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.object;
+import static com.bytechef.component.definition.ComponentDsl.outputSchema;
+import static com.bytechef.component.definition.ComponentDsl.string;
 import static com.bytechef.component.definition.Context.Http.BodyContentType;
 import static com.bytechef.component.definition.Context.Http.ResponseType;
 
-import com.bytechef.component.definition.ComponentDSL;
+import com.bytechef.component.definition.ComponentDsl;
+import com.bytechef.component.hubspot.property.HubspotContactProperties;
 import java.util.Map;
 
 /**
@@ -32,7 +34,7 @@ import java.util.Map;
  * @generated
  */
 public class HubspotCreateContactAction {
-    public static final ComponentDSL.ModifiableActionDefinition ACTION_DEFINITION = action("createContact")
+    public static final ComponentDsl.ModifiableActionDefinition ACTION_DEFINITION = action("createContact")
         .title("Create Contact")
         .description("Create a contact with the given properties.")
         .metadata(
@@ -42,39 +44,29 @@ public class HubspotCreateContactAction {
                 "application/json"
 
             ))
-        .properties(object("__item")
-            .properties(object("properties").properties(string("firstname").label("First   Name")
+        .properties(object("properties").properties(string("firstname").label("First Name")
+            .required(false),
+            string("lastname").label("Last Name")
                 .required(false),
-                string("lastname").label("Last   Name")
-                    .required(false),
-                string("email").label("Email   Address")
-                    .required(false),
-                string("phone").label("Phone   Number")
-                    .required(false),
-                string("company").label("Company")
-                    .description("Company contact belongs to.")
-                    .required(false),
-                string("website").label("Website")
-                    .description("Website of the contact.")
-                    .required(false))
-                .label("Properties")
-                .required(false))
-            .label("Contact")
-            .metadata(
-                Map.of(
-                    "type", PropertyType.BODY)))
-        .outputSchema(object()
-            .properties(object("body")
-                .properties(string("id").required(false),
-                    object("properties")
-                        .properties(string("firstname").required(false), string("lastname").required(false),
-                            string("email").required(false), string("phone").required(false),
-                            string("company").required(false), string("website").required(false))
-                        .required(false))
+            string("email").label("Email Address")
+                .required(false),
+            string("phone").label("Phone Number")
+                .required(false),
+            string("company").label("Company")
+                .description("Company contact belongs to.")
+                .required(false),
+            string("website").label("Website")
+                .description("Website of the contact.")
                 .required(false))
             .metadata(
                 Map.of(
-                    "responseType", ResponseType.JSON)));
+                    "type", PropertyType.BODY))
+            .label("Properties")
+            .required(false))
+        .output(outputSchema(object().properties(HubspotContactProperties.PROPERTIES)
+            .metadata(
+                Map.of(
+                    "responseType", ResponseType.JSON))));
 
     private HubspotCreateContactAction() {
     }

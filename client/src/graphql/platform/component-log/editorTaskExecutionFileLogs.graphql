@@ -1,0 +1,14 @@
+query editorTaskExecutionFileLogs($jobId: ID!, $taskExecutionId: ID!) {
+    editorTaskExecutionFileLogs(jobId: $jobId, taskExecutionId: $taskExecutionId) {
+        timestamp
+        level
+        componentName
+        componentOperationName
+        taskExecutionId
+        triggerExecutionId
+        message
+        exceptionType
+        exceptionMessage
+        stackTrace
+    }
+}

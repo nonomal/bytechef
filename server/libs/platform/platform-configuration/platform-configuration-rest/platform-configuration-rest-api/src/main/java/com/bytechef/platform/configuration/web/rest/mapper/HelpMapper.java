@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 
 package com.bytechef.platform.configuration.web.rest.mapper;
 
-import com.bytechef.platform.component.registry.domain.Help;
+import com.bytechef.platform.component.domain.Help;
 import com.bytechef.platform.configuration.web.rest.mapper.config.PlatformConfigurationMapperSpringConfig;
 import com.bytechef.platform.configuration.web.rest.model.HelpModel;
 import org.mapstruct.Mapper;
@@ -36,9 +36,9 @@ public class HelpMapper {
 
     @Mapper(config = PlatformConfigurationMapperSpringConfig.class)
     interface TaskDispatcherHelpMapper
-        extends Converter<com.bytechef.platform.workflow.task.dispatcher.registry.domain.Help, HelpModel> {
+        extends Converter<com.bytechef.platform.workflow.task.dispatcher.domain.Help, HelpModel> {
 
         @Override
-        HelpModel convert(com.bytechef.platform.workflow.task.dispatcher.registry.domain.Help help);
+        HelpModel convert(com.bytechef.platform.workflow.task.dispatcher.domain.Help help);
     }
 }

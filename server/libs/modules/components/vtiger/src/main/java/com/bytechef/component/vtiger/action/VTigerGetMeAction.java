@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,60 +16,80 @@
 
 package com.bytechef.component.vtiger.action;
 
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.object;
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.bool;
+import static com.bytechef.component.definition.ComponentDsl.object;
+import static com.bytechef.component.definition.ComponentDsl.outputSchema;
+import static com.bytechef.component.definition.ComponentDsl.string;
+import static com.bytechef.component.definition.Context.Http.ResponseType;
 import static com.bytechef.component.definition.Context.Http.responseType;
-import static com.bytechef.component.vtiger.constant.VTigerConstants.GET_ME;
-import static com.bytechef.component.vtiger.constant.VTigerConstants.INSTANCE_URL;
 
 import com.bytechef.component.definition.ActionContext;
-import com.bytechef.component.definition.ComponentDSL.ModifiableActionDefinition;
-import com.bytechef.component.definition.Context.Http.ResponseType;
-import com.bytechef.component.definition.Context.TypeReference;
+import com.bytechef.component.definition.ComponentDsl.ModifiableActionDefinition;
 import com.bytechef.component.definition.Parameters;
 
 /**
  * @author Luka Ljubić
+ * @author Monika Kušter
  */
 public class VTigerGetMeAction {
 
-    public static final ModifiableActionDefinition ACTION_DEFINITION = action(GET_ME)
+    public static final ModifiableActionDefinition ACTION_DEFINITION = action("getMe")
         .title("Get Me")
-        .description("Get more information about yourself")
-        .outputSchema(
-            object()
-                .properties(
-                    object("result")
-                        .properties(
-                            string("id"),
-                            string("user_name"),
-                            string("user_type"),
-                            string("email"),
-                            string("phone_home"),
-                            string("phone_work"),
-                            string("phone_mobile"),
-                            string("userlable"),
-                            string("address_street"),
-                            string("address_city"),
-                            string("address_state"),
-                            string("address_country"),
-                            string("roleid"),
-                            string("language"),
-                            string("is_admin"),
-                            string("is_owner"),
-                            string("status"))))
+        .description("Get more information about yourself.")
+        .help("", "https://docs.bytechef.io/reference/components/vtiger_v1#get-me")
+        .output(
+            outputSchema(
+                object()
+                    .properties(
+                        object("result")
+                            .properties(
+                                string("id")
+                                    .description("ID of the user."),
+                                string("user_name")
+                                    .description("Username of the user."),
+                                string("user_type")
+                                    .description("Type of the user."),
+                                string("email")
+                                    .description("Email address of the user."),
+                                string("phone_home")
+                                    .description("Home phone number of the user."),
+                                string("phone_work")
+                                    .description("Work phone number of the user."),
+                                string("phone_mobile")
+                                    .description("Mobile phone number of the user."),
+                                string("userlable")
+                                    .description("Label of the user."),
+                                string("address_street")
+                                    .description("Street address of the user."),
+                                string("address_city")
+                                    .description("City of the user."),
+                                string("address_state")
+                                    .description("State of the user."),
+                                string("address_country")
+                                    .description("Country of the user."),
+                                string("roleid")
+                                    .description("Role ID of the user."),
+                                string("language")
+                                    .description("Language of the user."),
+                                bool("is_admin")
+                                    .description("Indicates if the user is an admin."),
+                                bool("is_owner")
+                                    .description("Indicates if the user is an owner."),
+                                string("status")
+                                    .description("Status of the user.")))))
         .perform(VTigerGetMeAction::perform);
 
     private VTigerGetMeAction() {
     }
 
-    public static Object perform(Parameters inputParameters, Parameters connectionParameters, ActionContext context) {
-        return context
-            .http(http -> http.get(
-                connectionParameters.getRequiredString(INSTANCE_URL) + "/restapi/v1/vtiger/default/me"))
+    protected static Object perform(
+        Parameters inputParameters, Parameters connectionParameters, ActionContext actionContext) {
+
+        return actionContext
+            .http(http -> http.get("/me"))
             .configuration(responseType(ResponseType.JSON))
             .execute()
-            .getBody(new TypeReference<>() {});
+            .getBody();
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,35 +16,64 @@
 
 package com.bytechef.component.shopify.action;
 
-import static com.bytechef.component.OpenApiComponentHandler.PropertyType;
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.integer;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.object;
+import static com.bytechef.component.definition.ComponentDsl.outputSchema;
+import static com.bytechef.component.definition.ComponentDsl.string;
+import static com.bytechef.component.shopify.constant.ShopifyConstants.ORDER_ID;
+import static com.bytechef.component.shopify.constant.ShopifyConstants.USER_ERRORS_PROPERTY;
+import static com.bytechef.component.shopify.util.ShopifyUtils.executeGraphQlOperation;
 
-import com.bytechef.component.definition.ComponentDSL;
+import com.bytechef.component.definition.ActionDefinition.OptionsFunction;
+import com.bytechef.component.definition.ComponentDsl.ModifiableActionDefinition;
+import com.bytechef.component.definition.Context;
+import com.bytechef.component.definition.Parameters;
+import com.bytechef.component.shopify.util.ShopifyOptionsUtils;
 import java.util.Map;
 
 /**
- * Provides a list of the component actions.
- *
- * @generated
+ * @author Monika Domiter
+ * @author Nikolina Spehar
  */
 public class ShopifyDeleteOrderAction {
-    public static final ComponentDSL.ModifiableActionDefinition ACTION_DEFINITION = action("deleteOrder")
-        .title("Delete an order")
-        .description("Deletes an order. Orders that interact with an online gateway can't be deleted.")
-        .metadata(
-            Map.of(
-                "method", "DELETE",
-                "path", "/orders/{orderId}.json"
 
-            ))
-        .properties(integer("orderId").label("Order Id")
-            .description("The order id.")
-            .required(true)
-            .metadata(
-                Map.of(
-                    "type", PropertyType.PATH)));
+    public static final ModifiableActionDefinition ACTION_DEFINITION = action("deleteOrder")
+        .title("Delete Order")
+        .description("Deletes an order. Orders that interact with an online gateway can't be deleted.")
+        .properties(
+            string(ORDER_ID)
+                .label("Order ID")
+                .description("ID of the order to delete.")
+                .required(true)
+                .options((OptionsFunction<String>) ShopifyOptionsUtils::getOrderIdOptions))
+        .output(
+            outputSchema(
+                object()
+                    .properties(
+                        string("deletedId")
+                            .description("ID of the deleted order."),
+                        USER_ERRORS_PROPERTY)))
+        .help("", "https://docs.bytechef.io/reference/components/shopify_v1#delete-order")
+        .perform(ShopifyDeleteOrderAction::perform);
 
     private ShopifyDeleteOrderAction() {
+    }
+
+    public static Object perform(Parameters inputParameters, Parameters connectionParameters, Context context) {
+        String query = """
+            mutation OrderDelete($orderId: ID!) {
+              orderDelete(orderId: $orderId) {
+                deletedId
+                userErrors {
+                  field
+                  message
+                  code
+                }
+              }
+            }""";
+
+        Map<String, Object> variables = Map.of(ORDER_ID, inputParameters.getRequiredString(ORDER_ID));
+
+        return executeGraphQlOperation(query, context, variables, "orderDelete");
     }
 }

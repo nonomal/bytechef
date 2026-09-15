@@ -1,0 +1,27 @@
+extend type Query {
+    connectedUserMcpServers(connectedUserId: ID!): [ConnectedUserMcpServer!]!
+}
+
+extend type Mutation {
+    deleteConnectedUserMcpServer(connectedUserId: ID!, mcpServerId: ID!): Boolean
+    enableConnectedUserMcpServer(connectedUserId: ID!, mcpServerId: ID!, enable: Boolean!): Boolean
+    enableConnectedUserMcpTool(id: ID!, enable: Boolean!): Boolean
+}
+
+type ConnectedUserMcpServer {
+    id: ID!
+    name: String!
+    enabled: Boolean!
+    environmentId: ID!
+    lastModifiedDate: String
+    tools: [ConnectedUserMcpServerTool!]!
+}
+
+type ConnectedUserMcpServerTool {
+    id: ID!
+    componentName: String!
+    componentVersion: Int!
+    integrationInstanceId: ID!
+    name: String!
+    enabled: Boolean!
+}

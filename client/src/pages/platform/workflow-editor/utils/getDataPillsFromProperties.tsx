@@ -1,9 +1,8 @@
-import {WorkflowModel} from '@/shared/middleware/platform/configuration';
-import {ComponentPropertiesType, DataPillType, PropertyType} from '@/shared/types';
+import {ComponentPropertiesType, DataPillType, PropertyAllType} from '@/shared/types';
 
 import getSubProperties from './getSubProperties';
 
-const getExistingProperties = (properties: Array<PropertyType>): Array<PropertyType> =>
+const getExistingProperties = (properties: Array<PropertyAllType>): Array<PropertyAllType> =>
     properties.filter((property) => {
         if (property.properties) {
             return getExistingProperties(property.properties);
@@ -16,21 +15,19 @@ const getExistingProperties = (properties: Array<PropertyType>): Array<PropertyT
 
 export default function getDataPillsFromProperties(
     properties: Array<ComponentPropertiesType>,
-    workflow: WorkflowModel,
     previousNodeNames: Array<string>
 ) {
     const dataPills: Array<DataPillType> = [];
 
     properties.forEach((componentProperty, index) => {
-        if (!componentProperty || !componentProperty.properties?.length) {
+        if (!componentProperty) {
             return;
         }
 
         const {componentDefinition} = componentProperty;
 
-        const existingProperties = getExistingProperties(componentProperty.properties);
-
-        const nodeName = workflow.triggers?.length ? previousNodeNames[index] : previousNodeNames[index + 1];
+        const filteredNodeNames = previousNodeNames.filter((name) => name !== 'manual' && !name.includes('condition'));
+        const nodeName = filteredNodeNames[index];
 
         dataPills.push({
             componentIcon: componentDefinition.icon,
@@ -39,23 +36,45 @@ export default function getDataPillsFromProperties(
             value: nodeName,
         });
 
-        const formattedProperties: DataPillType[] = existingProperties.map((property) => {
-            if (property.properties) {
-                return getSubProperties(componentDefinition.icon!, nodeName, property.properties, property.name);
-            } else if (property.items) {
-                return getSubProperties(componentDefinition.icon!, nodeName, property.items, property.name);
+        if (!componentProperty.properties?.length) {
+            return;
+        }
+
+        const existingProperties = getExistingProperties(componentProperty.properties);
+
+        const allPropertiesFlat: Array<DataPillType> = [];
+
+        existingProperties.forEach((property) => {
+            const {items, name, properties} = property;
+
+            const subProperties = properties?.length ? properties : items;
+
+            let value = `${nodeName}.${name ?? '[index]'}`;
+
+            if (value.includes('.[index]')) {
+                value = value.replace('.[index]', '[index]');
             }
 
-            return {
-                componentIcon: componentDefinition.icon,
-                id: property.name,
-                nodeName,
-                value: `${nodeName}.${property.name}`,
-            };
+            if (subProperties?.length) {
+                const subResults = getSubProperties(componentDefinition.icon!, nodeName, subProperties, value);
+
+                allPropertiesFlat.push(subResults[0]);
+
+                if (subResults.length > 1) {
+                    allPropertiesFlat.push(...subResults.slice(1));
+                }
+            } else {
+                allPropertiesFlat.push({
+                    componentIcon: componentDefinition.icon,
+                    id: name ?? value,
+                    nodeName,
+                    value,
+                });
+            }
         });
 
-        if (existingProperties.length && formattedProperties.length) {
-            dataPills.push(...formattedProperties);
+        if (allPropertiesFlat.length) {
+            dataPills.push(...allPropertiesFlat);
         }
     });
 

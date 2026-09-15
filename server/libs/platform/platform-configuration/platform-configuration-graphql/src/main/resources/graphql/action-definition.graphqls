@@ -1,0 +1,19 @@
+extend type Query {
+    actionDefinition(componentName: String!, componentVersion: Int!, actionName: String!): ActionDefinition!
+    actionDefinitions(componentName: String!, componentVersion: Int!): [ActionDefinition!]!
+}
+
+type ActionDefinition {
+    componentName: String!
+    componentVersion: Int!
+    description: String
+    help: Help
+    name: String!
+    outputDefined: Boolean!
+    outputFunctionDefined: Boolean!
+    outputSchemaDefined: Boolean
+    properties: [Property!]!
+    resumePerformFunctionDefined: Boolean
+    title: String
+    workflowNodeDescriptionDefined: Boolean
+}

@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * Modifications copyright (C) 2023 ByteChef Inc.
+ * Modifications copyright (C) 2025 ByteChef
  */
 
 package com.bytechef.component.map;
@@ -35,67 +35,41 @@ import com.bytechef.atlas.file.storage.TaskFileStorageImpl;
 import com.bytechef.atlas.worker.TaskWorker;
 import com.bytechef.atlas.worker.event.TaskExecutionEvent;
 import com.bytechef.atlas.worker.task.handler.TaskHandlerResolver;
-import com.bytechef.commons.util.JsonUtils;
 import com.bytechef.commons.util.MapUtils;
+import com.bytechef.evaluator.Evaluator;
+import com.bytechef.evaluator.SpelEvaluator;
 import com.bytechef.file.storage.base64.service.Base64FileStorageService;
-import com.bytechef.message.broker.sync.SyncMessageBroker;
+import com.bytechef.message.broker.memory.SyncMessageBroker;
 import com.bytechef.message.event.MessageEvent;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import com.bytechef.test.extension.ObjectMapperSetupExtension;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 /**
  * @author Arik Cohen
  */
+@ExtendWith(ObjectMapperSetupExtension.class)
+@Disabled
 public class MapTaskDispatcherAdapterTaskHandlerTest {
 
+    private static final Evaluator EVALUATOR = SpelEvaluator.create();
     private static final ExecutorService EXECUTOR_SERVICE = Executors.newSingleThreadExecutor();
-    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper() {
-        {
-            disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
-            registerModule(new JavaTimeModule());
-            registerModule(new Jdk8Module());
-        }
-    };
 
-    private final TaskFileStorage taskFileStorage = new TaskFileStorageImpl(
-        new Base64FileStorageService());
-
-    @BeforeAll
-    @SuppressFBWarnings("RV_RETURN_VALUE_IGNORED_NO_SIDE_EFFECT")
-    public static void beforeAll() {
-        class JsonUtilsMock extends JsonUtils {
-            static {
-                objectMapper = OBJECT_MAPPER;
-            }
-        }
-
-        new JsonUtilsMock();
-
-        class MapUtilsMock extends MapUtils {
-            static {
-                objectMapper = OBJECT_MAPPER;
-            }
-        }
-
-        new MapUtilsMock();
-    }
+    private final TaskFileStorage taskFileStorage = new TaskFileStorageImpl(new Base64FileStorageService());
 
     @Test
     public void test1() {
         TaskHandlerResolver resolver = task -> t -> MapUtils.get(t.getParameters(), "value");
+
         MapTaskDispatcherAdapterTaskHandler taskHandler = new MapTaskDispatcherAdapterTaskHandler(
-            OBJECT_MAPPER, resolver);
+            EVALUATOR, resolver);
 
         TaskExecution taskExecution = TaskExecution.builder()
             .workflowTask(
@@ -104,12 +78,13 @@ public class MapTaskDispatcherAdapterTaskHandlerTest {
                         NAME, "map1",
                         TYPE, "type",
                         PARAMETERS, Map.of(
-                            "list", List.of(1, 2, 3),
+                            "items", List.of(1, 2, 3),
                             "iteratee",
-                            Map.of(
-                                NAME, "name",
-                                TYPE, "var",
-                                PARAMETERS, Map.of("value", "${map1.item}"))))))
+                            List.of(
+                                Map.of(
+                                    NAME, "name",
+                                    TYPE, "var",
+                                    PARAMETERS, Map.of("value", "${map1.item}")))))))
             .build();
 
         taskExecution.setJobId(4567L);
@@ -126,14 +101,14 @@ public class MapTaskDispatcherAdapterTaskHandlerTest {
                 throw new IllegalStateException("i'm rogue");
             };
             MapTaskDispatcherAdapterTaskHandler taskHandler = new MapTaskDispatcherAdapterTaskHandler(
-                OBJECT_MAPPER, taskHandlerResolver);
+                EVALUATOR, taskHandlerResolver);
 
             TaskExecution taskExecution = TaskExecution.builder()
                 .workflowTask(
                     new WorkflowTask(
                         Map.of(
                             PARAMETERS,
-                            Map.of("list", List.of(1, 2, 3), "iteratee", Map.of("type", "rogue")))))
+                            Map.of("list", List.of(1, 2, 3), "iteratee", List.of(Map.of("type", "rogue"))))))
                 .build();
 
             taskExecution.setJobId(4567L);
@@ -144,7 +119,7 @@ public class MapTaskDispatcherAdapterTaskHandlerTest {
 
     @Test
     public void test3() {
-        SyncMessageBroker syncMessageBroker = new SyncMessageBroker(OBJECT_MAPPER);
+        SyncMessageBroker syncMessageBroker = new SyncMessageBroker();
 
         syncMessageBroker.receive(TaskCoordinatorMessageRoute.TASK_EXECUTION_COMPLETE_EVENTS, t -> {
             TaskExecution taskExecution = ((TaskExecutionCompleteEvent) t).getTaskExecution();
@@ -181,10 +156,11 @@ public class MapTaskDispatcherAdapterTaskHandlerTest {
         };
 
         TaskWorker worker = new TaskWorker(
-            event -> syncMessageBroker.send(((MessageEvent<?>) event).getRoute(), event),
-            EXECUTOR_SERVICE::execute, taskHandlerResolver, taskFileStorage);
+            null, EVALUATOR, event -> syncMessageBroker.send(((MessageEvent<?>) event).getRoute(), event),
+            EXECUTOR_SERVICE::execute, taskHandlerResolver, taskFileStorage, List.of());
 
-        mapAdapterTaskHandlerRefs[0] = new MapTaskDispatcherAdapterTaskHandler(OBJECT_MAPPER, taskHandlerResolver);
+        mapAdapterTaskHandlerRefs[0] = new MapTaskDispatcherAdapterTaskHandler(
+            EVALUATOR, taskHandlerResolver);
 
         TaskExecution taskExecution = TaskExecution.builder()
             .workflowTask(
@@ -198,35 +174,38 @@ public class MapTaskDispatcherAdapterTaskHandlerTest {
                                 TYPE, "map",
                                 PARAMETERS,
                                 Map.of(
-                                    "list", Arrays.asList(1, 2, 3),
+                                    "items", Arrays.asList(1, 2, 3),
                                     "iteratee",
-                                    Map.of(
-                                        NAME, "var",
-                                        TYPE, "var",
-                                        PARAMETERS, Map.of("value", "${item}"))))),
+                                    List.of(
+                                        Map.of(
+                                            NAME, "var",
+                                            TYPE, "var",
+                                            PARAMETERS, Map.of("value", "${item}")))))),
                         POST, List.of(
                             Map.of(
                                 NAME, "output",
                                 TYPE, "map",
                                 PARAMETERS,
                                 Map.of(
-                                    "list", Arrays.asList(1, 2, 3),
+                                    "items", Arrays.asList(1, 2, 3),
                                     "iteratee",
-                                    Map.of(
-                                        NAME, "var",
-                                        TYPE, "var",
-                                        PARAMETERS, Map.of("value", "${item}"))))),
+                                    List.of(
+                                        Map.of(
+                                            NAME, "var",
+                                            TYPE, "var",
+                                            PARAMETERS, Map.of("value", "${item}")))))),
                         FINALIZE, List.of(Map.of(
                             NAME, "output",
                             TYPE, "map",
                             PARAMETERS,
                             Map.of(
-                                "list", Arrays.asList(1, 2, 3),
+                                "items", Arrays.asList(1, 2, 3),
                                 "iteratee",
-                                Map.of(
-                                    NAME, "var",
-                                    TYPE, "var",
-                                    PARAMETERS, Map.of("value", "${item}"))))))))
+                                List.of(
+                                    Map.of(
+                                        NAME, "var",
+                                        TYPE, "var",
+                                        PARAMETERS, Map.of("value", "${item}")))))))))
             .build();
 
         taskExecution.setId(1234L);

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,16 +17,17 @@
 package com.bytechef.component.pipedrive.action;
 
 import static com.bytechef.component.OpenApiComponentHandler.PropertyType;
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.array;
-import static com.bytechef.component.definition.ComponentDSL.bool;
-import static com.bytechef.component.definition.ComponentDSL.integer;
-import static com.bytechef.component.definition.ComponentDSL.object;
-import static com.bytechef.component.definition.ComponentDSL.option;
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.array;
+import static com.bytechef.component.definition.ComponentDsl.bool;
+import static com.bytechef.component.definition.ComponentDsl.integer;
+import static com.bytechef.component.definition.ComponentDsl.object;
+import static com.bytechef.component.definition.ComponentDsl.option;
+import static com.bytechef.component.definition.ComponentDsl.outputSchema;
+import static com.bytechef.component.definition.ComponentDsl.string;
 import static com.bytechef.component.definition.Context.Http.ResponseType;
 
-import com.bytechef.component.definition.ComponentDSL;
+import com.bytechef.component.definition.ComponentDsl;
 import java.util.Map;
 
 /**
@@ -35,8 +36,8 @@ import java.util.Map;
  * @generated
  */
 public class PipedriveSearchOrganizationAction {
-    public static final ComponentDSL.ModifiableActionDefinition ACTION_DEFINITION = action("searchOrganization")
-        .title("Search organizations")
+    public static final ComponentDsl.ModifiableActionDefinition ACTION_DEFINITION = action("searchOrganization")
+        .title("Search Organizations")
         .description(
             "Searches all organizations by name, address, notes and/or custom fields. This endpoint is a wrapper of <a href=\"https://developers.pipedrive.com/docs/api/v1/ItemSearch#searchItem\">/v1/itemSearch</a> with a narrower OAuth scope.")
         .metadata(
@@ -68,22 +69,20 @@ public class PipedriveSearchOrganizationAction {
                 .metadata(
                     Map.of(
                         "type", PropertyType.QUERY)))
-        .outputSchema(object()
-            .properties(object("body")
-                .properties(object("data")
-                    .properties(array("items")
-                        .items(object().properties(integer("id").required(false), integer("company_id").required(false),
-                            object("owner_id")
-                                .properties(integer("id").required(false), string("name").required(false),
-                                    string("email").required(false))
-                                .required(false),
-                            string("name").required(false)))
-                        .required(false))
+        .output(outputSchema(object()
+            .properties(object("data")
+                .properties(array("items")
+                    .items(object().properties(integer("id").required(false), integer("company_id").required(false),
+                        object("owner_id")
+                            .properties(integer("id").required(false), string("name").required(false),
+                                string("email").required(false))
+                            .required(false),
+                        string("name").required(false)))
                     .required(false))
                 .required(false))
             .metadata(
                 Map.of(
-                    "responseType", ResponseType.JSON)));
+                    "responseType", ResponseType.JSON))));
 
     private PipedriveSearchOrganizationAction() {
     }

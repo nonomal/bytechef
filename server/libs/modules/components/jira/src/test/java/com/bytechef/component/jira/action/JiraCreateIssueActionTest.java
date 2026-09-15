@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,58 +28,68 @@ import static com.bytechef.component.jira.constant.JiraConstants.SUMMARY;
 import static com.bytechef.component.jira.constant.JiraConstants.TEXT;
 import static com.bytechef.component.jira.constant.JiraConstants.TYPE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.ArgumentMatchers.any;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.mockito.ArgumentCaptor.forClass;
 import static org.mockito.Mockito.when;
 
 import com.bytechef.component.definition.Context;
+import com.bytechef.component.definition.Context.ContextFunction;
 import com.bytechef.component.definition.Context.Http;
+import com.bytechef.component.definition.Context.Http.Configuration.ConfigurationBuilder;
+import com.bytechef.component.definition.Parameters;
+import com.bytechef.component.test.definition.MockParametersFactory;
+import com.bytechef.component.test.definition.extension.MockContextSetupExtension;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 
 /**
- * @author Monika Domiter
+ * @author Monika Kušter
  */
-class JiraCreateIssueActionTest extends AbstractJiraActionTest {
+@ExtendWith(MockContextSetupExtension.class)
+class JiraCreateIssueActionTest {
 
-    private final ArgumentCaptor<Http.Body> bodyArgumentCaptor = ArgumentCaptor.forClass(Http.Body.class);
+    private final ArgumentCaptor<Http.Body> bodyArgumentCaptor = forClass(Http.Body.class);
+    private final Parameters mockedParameters = MockParametersFactory.create(
+        Map.of(PROJECT, "1", ISSUETYPE, "1", SUMMARY, "summary", ASSIGNEE, "1", PRIORITY, "1",
+            DESCRIPTION, "description"));
+    private final Map<String, Object> responseMap = Map.of("key", "value");
+    private final ArgumentCaptor<String> stringArgumentCaptor = forClass(String.class);
 
     @Test
-    void testPerform() {
-        when(mockedParameters.getRequiredString(PROJECT))
-            .thenReturn("1");
-        when(mockedParameters.getRequiredString(ISSUETYPE))
-            .thenReturn("1");
-        when(mockedParameters.getRequiredString(SUMMARY))
-            .thenReturn("summary");
-        when(mockedParameters.getString(ASSIGNEE))
-            .thenReturn("1");
-        when(mockedParameters.getString(PRIORITY))
-            .thenReturn("1");
-        when(mockedParameters.getString(DESCRIPTION))
-            .thenReturn("description");
+    void testPerform(
+        Context mockedContext, Http.Response mockedResponse, Http.Executor mockedExecutor, Http mockedHttp,
+        ArgumentCaptor<ContextFunction<Http, Http.Executor>> httpFunctionArgumentCaptor,
+        ArgumentCaptor<ConfigurationBuilder> configurationBuilderArgumentCaptor) {
 
-        when(mockedContext.http(any()))
-            .thenReturn(mockedExecutor);
-        when(mockedExecutor.configuration(any()))
+        when(mockedHttp.post(stringArgumentCaptor.capture()))
             .thenReturn(mockedExecutor);
         when(mockedExecutor.body(bodyArgumentCaptor.capture()))
             .thenReturn(mockedExecutor);
-        when(mockedExecutor.execute())
-            .thenReturn(mockedResponse);
-        when(mockedResponse.getBody(any(Context.TypeReference.class)))
+        when(mockedResponse.getBody())
             .thenReturn(responseMap);
 
-        Object result = JiraCreateIssueAction.perform(mockedParameters, mockedParameters, mockedContext);
+        Object result = JiraCreateIssueAction.perform(mockedParameters, null, mockedContext);
 
         assertEquals(responseMap, result);
 
-        Http.Body body = bodyArgumentCaptor.getValue();
+        ContextFunction<Http, Http.Executor> capturedFunction = httpFunctionArgumentCaptor.getValue();
 
-        Map<String, Object> expectedFieldsMap = getExpectedFieldsMap();
+        assertNotNull(capturedFunction);
 
-        assertEquals(Map.of(FIELDS, expectedFieldsMap), body.getContent());
+        ConfigurationBuilder configurationBuilder = configurationBuilderArgumentCaptor.getValue();
+
+        Http.Configuration configuration = configurationBuilder.build();
+
+        Http.ResponseType responseType = configuration.getResponseType();
+
+        assertEquals(Http.ResponseType.Type.JSON, responseType.getType());
+        assertEquals("/issue", stringArgumentCaptor.getValue());
+        assertEquals(
+            Http.Body.of(Map.of(FIELDS, getExpectedFieldsMap()), Http.BodyContentType.JSON),
+            bodyArgumentCaptor.getValue());
     }
 
     private static Map<String, Object> getExpectedFieldsMap() {

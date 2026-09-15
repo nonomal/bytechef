@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,70 +16,242 @@
 
 package com.bytechef.component.microsoft.outlook.util;
 
-import static com.bytechef.component.definition.ComponentDSL.option;
+import static com.bytechef.component.definition.ComponentDsl.array;
+import static com.bytechef.component.microsoft.outlook.constant.MicrosoftOutlook365Constants.ADDRESS;
+import static com.bytechef.component.microsoft.outlook.constant.MicrosoftOutlook365Constants.BCC_RECIPIENTS;
+import static com.bytechef.component.microsoft.outlook.constant.MicrosoftOutlook365Constants.BODY;
+import static com.bytechef.component.microsoft.outlook.constant.MicrosoftOutlook365Constants.CC_RECIPIENTS;
+import static com.bytechef.component.microsoft.outlook.constant.MicrosoftOutlook365Constants.CONTENT;
+import static com.bytechef.component.microsoft.outlook.constant.MicrosoftOutlook365Constants.CONTENT_BYTES;
+import static com.bytechef.component.microsoft.outlook.constant.MicrosoftOutlook365Constants.CONTENT_TYPE;
+import static com.bytechef.component.microsoft.outlook.constant.MicrosoftOutlook365Constants.EMAIL_ADDRESS;
+import static com.bytechef.component.microsoft.outlook.constant.MicrosoftOutlook365Constants.FORMAT;
+import static com.bytechef.component.microsoft.outlook.constant.MicrosoftOutlook365Constants.FROM;
+import static com.bytechef.component.microsoft.outlook.constant.MicrosoftOutlook365Constants.FULL_MESSAGE_OUTPUT_PROPERTY;
+import static com.bytechef.component.microsoft.outlook.constant.MicrosoftOutlook365Constants.ID;
+import static com.bytechef.component.microsoft.outlook.constant.MicrosoftOutlook365Constants.NAME;
+import static com.bytechef.component.microsoft.outlook.constant.MicrosoftOutlook365Constants.ODATA_NEXT_LINK;
+import static com.bytechef.component.microsoft.outlook.constant.MicrosoftOutlook365Constants.SIMPLE_MESSAGE_OUTPUT_PROPERTY;
+import static com.bytechef.component.microsoft.outlook.constant.MicrosoftOutlook365Constants.SUBJECT;
+import static com.bytechef.component.microsoft.outlook.constant.MicrosoftOutlook365Constants.TO_RECIPIENTS;
+import static com.bytechef.component.microsoft.outlook.constant.MicrosoftOutlook365Constants.VALUE;
+import static com.bytechef.component.microsoft.outlook.definition.Format.SIMPLE;
+import static com.bytechef.microsoft.commons.MicrosoftConstants.LAST_TIME_CHECKED;
+import static com.bytechef.microsoft.commons.MicrosoftUtils.getItemsFromNextPage;
 
-import com.bytechef.component.definition.ActionContext;
+import com.bytechef.component.definition.ComponentDsl.ModifiableObjectProperty;
 import com.bytechef.component.definition.Context;
-import com.bytechef.component.definition.Option;
+import com.bytechef.component.definition.Context.Http;
+import com.bytechef.component.definition.FileEntry;
 import com.bytechef.component.definition.Parameters;
+import com.bytechef.component.definition.TriggerContext;
+import com.bytechef.component.definition.TriggerDefinition.PollOutput;
+import com.bytechef.component.definition.TypeReference;
+import com.bytechef.component.microsoft.outlook.definition.Format;
+import com.bytechef.definition.BaseOutputDefinition.OutputResponse;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import java.io.ByteArrayInputStream;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import org.apache.commons.lang3.tuple.Pair;
 
 /**
- * @author Monika Domiter
+ * @author Monika Kušter
  */
 public class MicrosoftOutlook365Utils {
 
     private MicrosoftOutlook365Utils() {
     }
 
-    public static List<Option<String>> getCategoryOptions(
-        Parameters inputParameters, Parameters connectionParameters, Map<String, String> dependencyPaths,
-        String searchText, ActionContext context) {
-
-        Map<String, Object> body = context
-            .http(http -> http.get("https://graph.microsoft.com/v1.0/me/outlook/masterCategories"))
-            .configuration(Context.Http.responseType(Context.Http.ResponseType.JSON))
-            .execute()
-            .getBody(new Context.TypeReference<>() {});
-
-        ArrayList<LinkedHashMap<String, String>> value = (ArrayList<LinkedHashMap<String, String>>) body.get("value");
-
-        List<Option<String>> options = new ArrayList<>();
-
-        for (LinkedHashMap<String, String> linkedHashMap : value) {
-            String displayName = linkedHashMap.get("displayName");
-
-            options.add(option(displayName, displayName));
+    public static List<Map<String, Map<String, String>>> createRecipientList(List<String> recipients) {
+        if (recipients == null) {
+            return null;
         }
 
-        return options;
+        return recipients.stream()
+            .map(recipient -> Map.of(EMAIL_ADDRESS, Map.of(ADDRESS, recipient)))
+            .toList();
     }
 
-    @SuppressWarnings("unchecked")
-    public static List<Option<String>> getMessageIdOptions(
-        Parameters inputParameters, Parameters connectionParameters, Map<String, String> dependencyPaths,
-        String searchText, ActionContext context) {
+    public static SimpleMessage createSimpleMessage(Context context, Map<?, ?> messageBody) {
+        String from = null;
 
-        Map<String, Object> body = context
-            .http(http -> http.get("https://graph.microsoft.com/v1.0/me/messages"))
-            .configuration(Context.Http.responseType(Context.Http.ResponseType.JSON))
-            .execute()
-            .getBody(new Context.TypeReference<>() {});
+        if (messageBody.get(FROM) instanceof Map<?, ?> fromMap &&
+            fromMap.get(EMAIL_ADDRESS) instanceof Map<?, ?> emailAddressMap) {
 
-        ArrayList<LinkedHashMap<String, String>> value = (ArrayList<LinkedHashMap<String, String>>) body.get("value");
-
-        List<Option<String>> options = new ArrayList<>();
-
-        for (LinkedHashMap<String, String> linkedHashMap : value) {
-            String id = linkedHashMap.get("id");
-
-            options.add(option(id, id));
+            from = (String) emailAddressMap.get(ADDRESS);
         }
 
-        return options;
+        String bodyHtml = null;
+
+        if (messageBody.get(BODY) instanceof Map<?, ?> map) {
+            bodyHtml = (String) map.get(CONTENT);
+        }
+
+        String id = (String) messageBody.get(ID);
+        Pair<List<FileEntry>, List<FileEntry>> attachments = getFileEntries(id, context);
+
+        return new SimpleMessage(
+            id, (String) messageBody.get("conversationId"), (String) messageBody.get(SUBJECT), from,
+            getRecipients(messageBody, TO_RECIPIENTS), getRecipients(messageBody, CC_RECIPIENTS),
+            getRecipients(messageBody, BCC_RECIPIENTS), (String) messageBody.get("bodyPreview"), bodyHtml,
+            attachments.getLeft(), attachments.getRight(), (String) messageBody.get("webLink"));
     }
 
+    public static List<Map<String, Object>> getAttachments(Context context, List<FileEntry> attachments) {
+        if (attachments == null) {
+            return null;
+        }
+
+        List<Map<String, Object>> encodedAttachments = new ArrayList<>();
+
+        for (FileEntry attachment : attachments) {
+            byte[] file1 = context.file(file -> file.readAllBytes(attachment));
+
+            encodedAttachments.add(
+                Map.of(
+                    "@odata.type", "#microsoft.graph.fileAttachment",
+                    NAME, attachment.getName(),
+                    CONTENT_TYPE, attachment.getMimeType(),
+                    CONTENT_BYTES, context.encoder(encoder -> encoder.base64Encode(file1))));
+        }
+
+        return encodedAttachments;
+    }
+
+    public static String getMailboxTimeZone(Context context) {
+        Map<String, String> body = context.http(http -> http.get("/me/mailboxSettings/timeZone"))
+            .configuration(Http.responseType(Http.ResponseType.JSON))
+            .execute()
+            .getBody(new TypeReference<>() {});
+
+        return body.get(VALUE);
+    }
+
+    private static Pair<List<FileEntry>, List<FileEntry>> getFileEntries(String id, Context context) {
+        List<FileEntry> fileEntries = new ArrayList<>();
+        List<FileEntry> inlineFileEntries = new ArrayList<>();
+
+        Map<String, Object> attachmentsBody = context
+            .http(http -> http.get("/me/messages/%s/attachments".formatted(id)))
+            .configuration(Http.responseType(Http.ResponseType.JSON))
+            .execute()
+            .getBody(new TypeReference<>() {});
+
+        if (attachmentsBody.get(VALUE) instanceof List<?> attachments) {
+            for (Object attachment : attachments) {
+                if (attachment instanceof Map<?, ?> map) {
+                    String contentBytes = (String) map.get(CONTENT_BYTES);
+
+                    if (contentBytes != null) {
+                        byte[] decodedBytes = context.encoder(encoder -> encoder.base64Decode(contentBytes));
+
+                        FileEntry fileEntry = context.file(
+                            file -> file.storeContent((String) map.get(NAME), new ByteArrayInputStream(decodedBytes)));
+
+                        if ((Boolean) map.get("isInline")) {
+                            inlineFileEntries.add(fileEntry);
+                        } else {
+                            fileEntries.add(fileEntry);
+                        }
+                    }
+                }
+            }
+        }
+
+        return Pair.of(fileEntries, inlineFileEntries);
+    }
+
+    private static List<String> getRecipients(Map<?, ?> body, String recipientType) {
+        List<String> recipients = new ArrayList<>();
+
+        if (body.get(recipientType) instanceof List<?> list) {
+            for (Object recipient : list) {
+                if (recipient instanceof Map<?, ?> recipientMap &&
+                    recipientMap.get(EMAIL_ADDRESS) instanceof Map<?, ?> emailAddressMap) {
+
+                    recipients.add((String) emailAddressMap.get(ADDRESS));
+                }
+            }
+        }
+
+        return recipients;
+    }
+
+    public static OutputResponse getMessageOutput(
+        Parameters inputParameters, Parameters connectionParameters, Context context) {
+
+        return OutputResponse.of(getMessageOutputProperty(inputParameters.getRequired(FORMAT, Format.class)));
+    }
+
+    public static OutputResponse getArrayMessageOutput(
+        Parameters inputParameters, Parameters connectionParameters, Context context) {
+
+        return OutputResponse
+            .of(array().items(getMessageOutputProperty(inputParameters.getRequired(FORMAT, Format.class))));
+    }
+
+    public static ModifiableObjectProperty getMessageOutputProperty(Format format) {
+        return format.equals(SIMPLE) ? SIMPLE_MESSAGE_OUTPUT_PROPERTY : FULL_MESSAGE_OUTPUT_PROPERTY;
+    }
+
+    public static PollOutput getPollOutput(
+        Parameters inputParameters, Parameters closureParameters, TriggerContext context) {
+
+        ZoneId zoneId = ZoneId.systemDefault();
+
+        LocalDateTime now = LocalDateTime.now(zoneId);
+
+        LocalDateTime startDate = closureParameters.getLocalDateTime(
+            LAST_TIME_CHECKED, context.isEditorEnvironment() ? now.minusHours(3) : now);
+
+        List<Map<?, ?>> emails = new ArrayList<>();
+
+        String formattedStartDate = startDate.format(DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'")
+            .withZone(zoneId));
+
+        Map<String, Object> body = context
+            .http(http -> http.get("/me/mailFolders/Inbox/messages"))
+            .queryParameters(
+                "$filter", "isRead eq false and receivedDateTime ge " + formattedStartDate,
+                "$orderby", "receivedDateTime asc")
+            .configuration(Http.responseType(Http.ResponseType.JSON))
+            .execute()
+            .getBody(new TypeReference<>() {});
+
+        if (body.get(VALUE) instanceof List<?> list) {
+            for (Object item : list) {
+                if (item instanceof Map<?, ?> map) {
+                    emails.add(map);
+                }
+            }
+        }
+
+        emails.addAll(getItemsFromNextPage((String) body.get(ODATA_NEXT_LINK), context));
+
+        Format format = inputParameters.getRequired(FORMAT, Format.class);
+
+        if (format.equals(SIMPLE)) {
+            List<SimpleMessage> simpleMessages = new ArrayList<>();
+
+            for (Map<?, ?> email : emails) {
+                simpleMessages.add(createSimpleMessage(context, email));
+            }
+
+            return new PollOutput(simpleMessages, Map.of(LAST_TIME_CHECKED, now), false);
+        } else {
+            return new PollOutput(emails, Map.of(LAST_TIME_CHECKED, now), false);
+        }
+    }
+
+    @SuppressFBWarnings("EI")
+    public record SimpleMessage(
+        String id, String conversationId, String subject, String from, List<String> to, List<String> cc,
+        List<String> bcc, String bodyPlain, String bodyHtml, List<FileEntry> attachments,
+        List<FileEntry> inlineAttachments, String webLink) {
+    }
 }

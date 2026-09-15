@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,16 +16,21 @@
 
 package com.bytechef.platform.configuration.facade;
 
-import com.bytechef.platform.component.registry.domain.Option;
+import com.bytechef.platform.component.domain.Option;
 import java.util.List;
-import org.springframework.lang.NonNull;
+import org.jspecify.annotations.Nullable;
 
 /**
  * @author Ivica Cardic
  */
 public interface WorkflowNodeOptionFacade {
 
+    List<Option> getClusterElementNodeOptions(
+        String workflowId, String workflowNodeName, String clusterElementTypeName,
+        String clusterElementWorkflowNodeName, String propertyName, List<String> lookupDependsOnPaths,
+        @Nullable String searchText, long environmentId);
+
     List<Option> getWorkflowNodeOptions(
-        @NonNull String workflowId, @NonNull String workflowNodeName, @NonNull String propertyName,
-        @NonNull List<String> lookupDependsOnPaths, String searchText);
+        String workflowId, String workflowNodeName, String propertyName, List<String> lookupDependsOnPaths,
+        @Nullable String searchText, long environmentId);
 }

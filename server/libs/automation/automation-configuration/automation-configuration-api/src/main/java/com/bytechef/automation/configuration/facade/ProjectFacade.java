@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,55 +18,51 @@ package com.bytechef.automation.configuration.facade;
 
 import com.bytechef.automation.configuration.domain.ProjectVersion.Status;
 import com.bytechef.automation.configuration.dto.ProjectDTO;
-import com.bytechef.automation.configuration.dto.WorkflowDTO;
-import com.bytechef.platform.category.domain.Category;
-import com.bytechef.platform.tag.domain.Tag;
+import com.bytechef.automation.configuration.dto.ProjectTemplateDTO;
+import com.bytechef.automation.configuration.dto.ProjectWorkflowDTO;
+import com.bytechef.automation.configuration.dto.SharedProjectDTO;
 import java.util.List;
-import org.springframework.lang.NonNull;
+import org.jspecify.annotations.Nullable;
 
 /**
  * @author Ivica Cardic
  */
 public interface ProjectFacade {
 
-    WorkflowDTO addWorkflow(long id, @NonNull String definition);
-
-    ProjectDTO createProject(@NonNull ProjectDTO projectDTO);
+    long createProject(ProjectDTO projectDTO);
 
     void deleteProject(long id);
 
-    void deleteWorkflow(@NonNull String workflowId);
+    void deleteSharedProject(long id);
 
     ProjectDTO duplicateProject(long id);
 
-    String duplicateWorkflow(long id, @NonNull String workflowId);
+    byte[] exportProject(long id);
+
+    void exportSharedProject(long id, @Nullable String description);
+
+    ProjectTemplateDTO getProjectTemplate(String id, boolean sharedProject);
 
     ProjectDTO getProject(long id);
 
-    List<Category> getProjectCategories();
+    List<ProjectTemplateDTO> getPreBuiltProjectTemplates(String query, String category);
 
-    List<Tag> getProjectTags();
+    List<ProjectDTO> getProjects(
+        @Nullable Long categoryId, @Nullable Boolean projectDeployments, @Nullable Long tagId, @Nullable Status status);
 
-    WorkflowDTO getProjectWorkflow(String workflowId);
-
-    WorkflowDTO getProjectWorkflow(long projectWorkflowId);
-
-    List<WorkflowDTO> getProjectWorkflows();
-
-    List<WorkflowDTO> getProjectWorkflows(long id);
-
-    List<WorkflowDTO> getProjectVersionWorkflows(long id, int projectVersion);
-
-    List<ProjectDTO> getProjects(Long categoryId, boolean projectInstances, Long tagId, Status status);
+    SharedProjectDTO getSharedProject(String projectUuid);
 
     List<ProjectDTO> getWorkspaceProjects(
-        long workspaceId, Long categoryId, boolean projectInstances, Long tagId, Status status);
+        Boolean apiCollections, @Nullable Long categoryId, boolean includeAllFields, Boolean projectDeployments,
+        @Nullable Status status, @Nullable Long tagId, long workspaceId);
 
-    void publishProject(long id, String description);
+    List<ProjectWorkflowDTO> getWorkspaceProjectWorkflows(long workspaceId);
 
-    ProjectDTO updateProject(@NonNull ProjectDTO projectDTO);
+    long importProject(byte[] projectData, long workspaceId);
 
-    void updateProjectTags(long id, @NonNull List<Tag> tags);
+    long importProjectTemplate(String id, long workspaceId, boolean sharedProject);
 
-    WorkflowDTO updateWorkflow(String workflowId, String definition, int version);
+    int publishProject(long id, @Nullable String description, boolean syncWithGit);
+
+    void updateProject(ProjectDTO projectDTO);
 }

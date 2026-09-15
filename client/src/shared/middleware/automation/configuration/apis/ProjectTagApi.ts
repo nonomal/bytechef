@@ -12,22 +12,21 @@
  * Do not edit the class manually.
  */
 
-
 import * as runtime from '../runtime';
-import type {
-  TagModel,
-  UpdateTagsRequestModel,
-} from '../models/index';
 import {
-    TagModelFromJSON,
-    TagModelToJSON,
-    UpdateTagsRequestModelFromJSON,
-    UpdateTagsRequestModelToJSON,
-} from '../models/index';
+    type Tag,
+    TagFromJSON,
+    TagToJSON,
+} from '../models/Tag';
+import {
+    type UpdateTagsRequest,
+    UpdateTagsRequestFromJSON,
+    UpdateTagsRequestToJSON,
+} from '../models/UpdateTagsRequest';
 
 export interface UpdateProjectTagsRequest {
     id: number;
-    updateTagsRequestModel: UpdateTagsRequestModel;
+    updateTagsRequest: UpdateTagsRequest;
 }
 
 /**
@@ -36,38 +35,48 @@ export interface UpdateProjectTagsRequest {
 export class ProjectTagApi extends runtime.BaseAPI {
 
     /**
-     * Get project tags.
-     * Get project tags.
+     * Creates request options for getProjectTags without sending the request
      */
-    async getProjectTagsRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<TagModel>>> {
+    async getProjectTagsRequestOpts(): Promise<runtime.RequestOpts> {
         const queryParameters: any = {};
 
         const headerParameters: runtime.HTTPHeaders = {};
 
-        const response = await this.request({
-            path: `/projects/tags`,
+
+        let urlPath = `/projects/tags`;
+
+        return {
+            path: urlPath,
             method: 'GET',
             headers: headerParameters,
             query: queryParameters,
-        }, initOverrides);
-
-        return new runtime.JSONApiResponse(response, (jsonValue) => jsonValue.map(TagModelFromJSON));
+        };
     }
 
     /**
      * Get project tags.
      * Get project tags.
      */
-    async getProjectTags(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<TagModel>> {
+    async getProjectTagsRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<Tag>>> {
+        const requestOptions = await this.getProjectTagsRequestOpts();
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => jsonValue.map(TagFromJSON));
+    }
+
+    /**
+     * Get project tags.
+     * Get project tags.
+     */
+    async getProjectTags(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<Tag>> {
         const response = await this.getProjectTagsRaw(initOverrides);
         return await response.value();
     }
 
     /**
-     * Updates tags of an existing project.
-     * Updates tags of an existing project.
+     * Creates request options for updateProjectTags without sending the request
      */
-    async updateProjectTagsRaw(requestParameters: UpdateProjectTagsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+    async updateProjectTagsRequestOpts(requestParameters: UpdateProjectTagsRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['id'] == null) {
             throw new runtime.RequiredError(
                 'id',
@@ -75,10 +84,10 @@ export class ProjectTagApi extends runtime.BaseAPI {
             );
         }
 
-        if (requestParameters['updateTagsRequestModel'] == null) {
+        if (requestParameters['updateTagsRequest'] == null) {
             throw new runtime.RequiredError(
-                'updateTagsRequestModel',
-                'Required parameter "updateTagsRequestModel" was null or undefined when calling updateProjectTags().'
+                'updateTagsRequest',
+                'Required parameter "updateTagsRequest" was null or undefined when calling updateProjectTags().'
             );
         }
 
@@ -88,13 +97,26 @@ export class ProjectTagApi extends runtime.BaseAPI {
 
         headerParameters['Content-Type'] = 'application/json';
 
-        const response = await this.request({
-            path: `/projects/{id}/tags`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))),
+
+        let urlPath = `/projects/{id}/tags`;
+        urlPath = urlPath.replace('{id}', encodeURIComponent(String(requestParameters['id'])));
+
+        return {
+            path: urlPath,
             method: 'PUT',
             headers: headerParameters,
             query: queryParameters,
-            body: UpdateTagsRequestModelToJSON(requestParameters['updateTagsRequestModel']),
-        }, initOverrides);
+            body: UpdateTagsRequestToJSON(requestParameters['updateTagsRequest']),
+        };
+    }
+
+    /**
+     * Updates tags of an existing project.
+     * Updates tags of an existing project.
+     */
+    async updateProjectTagsRaw(requestParameters: UpdateProjectTagsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        const requestOptions = await this.updateProjectTagsRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
 
         return new runtime.VoidApiResponse(response);
     }

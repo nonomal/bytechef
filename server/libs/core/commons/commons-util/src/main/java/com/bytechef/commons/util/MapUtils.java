@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,22 +16,24 @@
 
 package com.bytechef.commons.util;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jayway.jsonpath.JsonPath;
+import com.jayway.jsonpath.PathNotFoundException;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.lang.reflect.Array;
-import java.lang.reflect.Type;
 import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -39,33 +41,31 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.commons.lang3.Validate;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.lang.Nullable;
-import org.springframework.stereotype.Component;
-import org.springframework.util.MultiValueMap;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.DeserializationFeature;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * @author Ivica Cardic
  */
-@Component
 public class MapUtils {
 
-    private static final Logger logger = LoggerFactory.getLogger(MapUtils.class);
+    private static final Logger log = LoggerFactory.getLogger(MapUtils.class);
 
-    @SuppressFBWarnings("MS_PKGPROTECT")
-    protected static ObjectMapper objectMapper;
+    private static ObjectMapper objectMapper;
 
     public static <K> Map<K, ?> append(Map<K, ?> map, K key, Map<K, ?> values) {
         Validate.notNull(key, "'key' must not be null");
         Validate.notNull(values, "'values' must not be null");
 
-        Map<K, Object> submap = new HashMap<>(getMap(map, key, Map.of()));
+        Map<K, Object> submap = new LinkedHashMap<>(getMap(map, key, Map.of()));
 
         submap.putAll(values);
 
-        Map<K, Object> newMap = new HashMap<>(map);
+        Map<K, Object> newMap = new LinkedHashMap<>(map);
 
         newMap.put(key, submap);
 
@@ -76,30 +76,28 @@ public class MapUtils {
         Validate.notNull(map1, "'map1' must not be null");
         Validate.notNull(map2, "'map2' must not be null");
 
-        return Stream.concat(stream(map1), stream(map2))
+        return Stream
+            .concat(
+                stream(map1)
+                    .filter(entry -> entry.getValue() != null),
+                stream(map2)
+                    .filter(entry -> entry.getValue() != null))
             .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (v1, v2) -> v2));
-    }
-
-    @SuppressWarnings("PMD.UselessOverridingMethod")
-    public static <K, V1, V2> Map<K, V1> concatDifferentTypes(Map<K, V1> map1, Map<K, V2> map2) {
-        TypeReference<V1> elementType = new TypeReference<>() {
-
-            @Override
-            public Type getType() {
-                return super.getType();
-            }
-        };
-
-        Map<K, V1> newMap = new HashMap<>();
-        map2.forEach((key, value) -> newMap.put(key, convert(value, elementType)));
-
-        return concat(map1, newMap);
     }
 
     public static <K> boolean containsKey(Map<K, ?> map, String key) {
         Validate.notNull(map, "'map' must not be null");
 
         return map.containsKey(key);
+    }
+
+    public static boolean containsPath(Map<String, ?> map, String path) {
+        try {
+            JsonPath.read(map, path);
+            return true;
+        } catch (PathNotFoundException e) {
+            return false;
+        }
     }
 
     public static boolean isEmpty(Map<String, ?> map) {
@@ -112,8 +110,7 @@ public class MapUtils {
         return map.get(key);
     }
 
-    @Nullable
-    public static <K, T> T get(Map<K, ?> map, K key, Class<T> returnType) {
+    public static <K, T> @Nullable T get(Map<K, ?> map, K key, Class<T> returnType) {
         Object value = get(map, key);
 
         if (value == null) {
@@ -133,8 +130,7 @@ public class MapUtils {
         return value;
     }
 
-    @Nullable
-    public static <K, T> T get(Map<K, ?> map, K key, TypeReference<T> elementTypeRef) {
+    public static <K, T> @Nullable T get(Map<K, ?> map, K key, TypeReference<T> elementTypeRef) {
         Validate.notNull(map, "'map' must not be null");
 
         Object value = get(map, key);
@@ -158,8 +154,7 @@ public class MapUtils {
         return convert(value, elementTypeRef);
     }
 
-    @Nullable
-    public static <K> Object[] getArray(Map<K, ?> map, K key) {
+    public static <K> @Nullable Object[] getArray(Map<K, ?> map, K key) {
         Object value = get(map, key);
 
         if (value == null) {
@@ -203,9 +198,8 @@ public class MapUtils {
         return list.toArray((Object[]) Array.newInstance(Object.class, 0));
     }
 
-    @Nullable
     @SuppressWarnings("unchecked")
-    public static <K, T> T[] getArray(Map<K, ?> map, K key, Class<T> elementType) {
+    public static <K, T> @Nullable T[] getArray(Map<K, ?> map, K key, Class<T> elementType) {
         Object value = get(map, key);
 
         if (value == null) {
@@ -304,8 +298,36 @@ public class MapUtils {
         return get(map, key, Float.class, defaultValue);
     }
 
-    public static <T> T getFromPath(Map<String, ?> map, String path) {
-        return JsonPath.read(map, path);
+    public static <K, T> T getFromPath(Map<K, ?> map, String path, Class<T> elementType) {
+        Object value = readFromPath(map, path);
+
+        return convert(value, elementType);
+    }
+
+    public static <K, T> T getFromPath(Map<K, ?> map, String path, Class<T> elementType, T defaultValue) {
+        Object value = readFromPath(map, path);
+
+        if (value == null) {
+            return defaultValue;
+        }
+
+        return convert(value, elementType);
+    }
+
+    public static <K, T> T getFromPath(Map<K, ?> map, String path, TypeReference<T> typeReference) {
+        Object value = readFromPath(map, path);
+
+        return convert(value, typeReference);
+    }
+
+    public static <K, T> T getFromPath(Map<K, ?> map, String path, TypeReference<T> typeReference, T defaultValue) {
+        Object value = readFromPath(map, path);
+
+        if (value == null) {
+            return defaultValue;
+        }
+
+        return convert(value, typeReference);
     }
 
     public static <K> Integer getInteger(Map<K, ?> map, K key) {
@@ -326,8 +348,7 @@ public class MapUtils {
         return list == null ? defaultValue : list;
     }
 
-    @Nullable
-    public static <K, T> List<T> getList(Map<K, ?> map, K key, Class<T> elementType) {
+    public static <K, T> @Nullable List<T> getList(Map<K, ?> map, K key, Class<T> elementType) {
         List<?> list = get(map, key, List.class);
 
         if (list == null) {
@@ -354,7 +375,7 @@ public class MapUtils {
 
         if (list != null) {
             list = list.stream()
-                .map(value -> convert(value, Arrays.asList(elementTypes)))
+                .map(entryValue -> convert(entryValue, Arrays.asList(elementTypes)))
                 .toList();
         }
 
@@ -370,15 +391,14 @@ public class MapUtils {
             list = defaultValue;
         } else {
             list = list.stream()
-                .map(value -> convert(value, elementTypes))
+                .map(entryValue -> convert(entryValue, elementTypes))
                 .toList();
         }
 
         return list;
     }
 
-    @Nullable
-    public static <K, T> List<T> getList(Map<K, ?> map, K key, TypeReference<T> elementTypeRef) {
+    public static <K, T> @Nullable List<T> getList(Map<K, ?> map, K key, TypeReference<T> elementTypeRef) {
         List<?> list = getList(map, key);
 
         if (list == null) {
@@ -448,8 +468,7 @@ public class MapUtils {
         return get(map, key, Long.class, defaultValue);
     }
 
-    @Nullable
-    public static <K1, K2> Map<K2, ?> getMap(Map<K1, ?> map, K1 key) {
+    public static <K1, K2> @Nullable Map<K2, ?> getMap(Map<K1, ?> map, K1 key) {
         @SuppressWarnings("unchecked")
         Map<K2, ?> value = get(map, key, Map.class);
 
@@ -460,8 +479,7 @@ public class MapUtils {
         return Collections.unmodifiableMap(toMap(value, entry -> (K2) entry.getKey(), Map.Entry::getValue));
     }
 
-    @Nullable
-    public static <K1, K2, V> Map<K2, V> getMap(Map<K1, ?> map, K1 key, TypeReference<V> elementTypeRef) {
+    public static <K1, K2, V> @Nullable Map<K2, V> getMap(Map<K1, ?> map, K1 key, TypeReference<V> elementTypeRef) {
         Map<K2, ?> resultMap = getMap(map, key);
 
         if (resultMap == null) {
@@ -482,8 +500,7 @@ public class MapUtils {
         return Collections.unmodifiableMap(toMap(value, entry -> (K2) entry.getKey(), Map.Entry::getValue));
     }
 
-    @Nullable
-    public static <K1, K2, V> Map<K2, V> getMap(Map<K1, ?> map, K1 key, Class<V> valueType) {
+    public static <K1, K2, V> @Nullable Map<K2, V> getMap(Map<K1, ?> map, K1 key, Class<V> valueType) {
         @SuppressWarnings("unchecked")
         Map<K2, ?> value = get(map, key, Map.class);
 
@@ -537,6 +554,30 @@ public class MapUtils {
         return mapValue;
     }
 
+    public static <K1, K2> Map<K2, ?> getMapFromPath(Map<K1, ?> map, String path, List<Class<?>> valueTypes) {
+        Map<K2, ?> mapValue = getFromPath(map, path, new TypeReference<>() {});
+
+        if (mapValue != null) {
+            mapValue = toMap(mapValue, Map.Entry::getKey, entry -> convert(entry.getValue(), valueTypes));
+        }
+
+        return mapValue;
+    }
+
+    public static <K1, K2> Map<K2, ?> getMapFromPath(
+        Map<K1, ?> map, String path, List<Class<?>> valueTypes, Map<K2, ?> defaultValue) {
+
+        Map<K2, ?> mapValue = getFromPath(map, path, new TypeReference<>() {});
+
+        if (mapValue == null) {
+            mapValue = Collections.unmodifiableMap(defaultValue);
+        } else {
+            mapValue = toMap(mapValue, Map.Entry::getKey, entry -> convert(entry.getValue(), valueTypes));
+        }
+
+        return mapValue;
+    }
+
     public static <K> Object getRequired(Map<K, ?> map, K key) {
         Object value = get(map, key);
 
@@ -547,6 +588,14 @@ public class MapUtils {
 
     public static <K, T> T getRequired(Map<K, ?> map, K key, Class<T> returnType) {
         T value = get(map, key, returnType);
+
+        Validate.notNull(value, "Unknown value for : " + key);
+
+        return value;
+    }
+
+    public static <K, T> T getRequired(Map<K, ?> map, K key, TypeReference<T> returnTypeRef) {
+        T value = get(map, key, returnTypeRef);
 
         Validate.notNull(value, "Unknown value for : " + key);
 
@@ -601,12 +650,18 @@ public class MapUtils {
         return value;
     }
 
-    public static <T> T getRequiredFromPath(Map<String, ?> map, String path) {
-        T value = JsonPath.read(map, path);
+    public static <T> T getRequiredFromPath(Map<String, ?> map, String path, Class<T> elementType) {
+        Object value = readFromPath(map, path);
 
         Validate.notNull(value, "Unknown value for : " + path);
 
-        return value;
+        return convert(value, elementType);
+    }
+
+    public static <T> T getRequiredFromPath(Map<String, ?> map, String path, TypeReference<T> typeReference) {
+        Object value = readFromPath(map, path);
+
+        return convert(value, typeReference);
     }
 
     public static <K> Integer getRequiredInteger(Map<K, ?> map, K key) {
@@ -717,6 +772,11 @@ public class MapUtils {
         return value != null ? value : defaultValue;
     }
 
+    @SuppressFBWarnings("EI")
+    public static void setObjectMapper(ObjectMapper objectMapper) {
+        MapUtils.objectMapper = objectMapper;
+    }
+
     public static int size(Map<?, ?> map) {
         Validate.notNull(map, "'map' must not be null");
 
@@ -731,6 +791,12 @@ public class MapUtils {
         return entry.stream();
     }
 
+    public static Map<String, List<String>> toMap(Map<String, String[]> map) {
+        return map.entrySet()
+            .stream()
+            .collect(Collectors.toMap(Map.Entry::getKey, entry -> Arrays.asList(entry.getValue())));
+    }
+
     public static <K, V, T> Map<K, V> toMap(
         List<T> list, Function<T, ? extends K> keyMapper, Function<T, ? extends V> valueMapper) {
 
@@ -742,17 +808,13 @@ public class MapUtils {
         Map<K, V> map, Function<Map.Entry<K, V>, ? extends K1> keyMapper,
         Function<Map.Entry<K, V>, ? extends V1> valueMapper) {
 
-        Map<K1, V1> newMap = new HashMap<>();
+        Map<K1, V1> newMap = new LinkedHashMap<>();
 
         for (Map.Entry<K, V> entry : map.entrySet()) {
             newMap.put(keyMapper.apply(entry), valueMapper.apply(entry));
         }
 
         return newMap;
-    }
-
-    public static <K, V> MultiValueMap<K, V> toMultiValueMap(Map<K, List<V>> targetMap) {
-        return org.springframework.util.CollectionUtils.toMultiValueMap(targetMap);
     }
 
     public static String toString(Map<String, ?> map) {
@@ -774,6 +836,53 @@ public class MapUtils {
     }
 
     private static <T> T convert(Object value, Class<T> elementType) {
+        // Special handling for Instant: attempts the ISO_INSTANT format first, then falls back to
+        // ISO_LOCAL_DATE_TIME assuming UTC timezone if no timezone information is present
+        if (elementType == Instant.class) {
+            if (value == null) {
+                return null;
+            }
+
+            if (value instanceof Instant) {
+                return elementType.cast(value);
+            }
+
+            if (value instanceof String string) {
+                try {
+                    // Try strict ISO_INSTANT first (expects 'Z' or offset)
+                    return elementType.cast(Instant.parse(string));
+                } catch (DateTimeParseException e) {
+                    if (log.isDebugEnabled()) {
+                        log.debug(
+                            "Failed to parse Instant using ISO_INSTANT from value '{}'; attempting ISO_LOCAL_DATE_TIME assuming UTC",
+                            string, e);
+                    }
+                    try {
+                        LocalDateTime localDateTime = LocalDateTime.parse(
+                            string, DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+
+                        return elementType.cast(localDateTime.toInstant(ZoneOffset.UTC));
+                    } catch (DateTimeParseException e2) {
+                        if (log.isDebugEnabled()) {
+                            log.debug(
+                                "Failed to parse Instant using ISO_LOCAL_DATE_TIME from value '{}'; falling back to ObjectMapper.convertValue",
+                                string, e2);
+                        }
+                    }
+                }
+            }
+        }
+
+        if (elementType.isEnum() && value instanceof String string) {
+            for (Object enumConstant : elementType.getEnumConstants()) {
+                String name = ((Enum<?>) enumConstant).name();
+
+                if (name.equalsIgnoreCase(string)) {
+                    return elementType.cast(enumConstant);
+                }
+            }
+        }
+
         return objectMapper.convertValue(value, elementType);
     }
 
@@ -784,10 +893,14 @@ public class MapUtils {
     private static Object convert(Object value, List<Class<?>> elementTypes) {
         for (Class<?> elementType : elementTypes) {
             try {
-                value = convert(value, elementType);
+                value = objectMapper
+                    .rebuild()
+                    .enable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+                    .build()
+                    .convertValue(value, elementType);
             } catch (Exception e) {
-                if (logger.isTraceEnabled()) {
-                    logger.trace(e.getMessage(), e);
+                if (log.isTraceEnabled()) {
+                    log.trace(e.getMessage(), e);
                 }
             }
 
@@ -797,12 +910,6 @@ public class MapUtils {
         }
 
         return value;
-    }
-
-    @Autowired
-    @SuppressFBWarnings("ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD")
-    void setObjectMapper(ObjectMapper objectMapper) {
-        MapUtils.objectMapper = objectMapper;
     }
 
     private static Object[] getArray(Object value) {
@@ -823,5 +930,18 @@ public class MapUtils {
         }
 
         return outputArray;
+    }
+
+    private static Object readFromPath(Object map, String path) {
+        Object value = null;
+
+        try {
+            value = JsonPath.read(map, path);
+        } catch (PathNotFoundException e) {
+            if (log.isTraceEnabled()) {
+                log.trace(e.getMessage());
+            }
+        }
+        return value;
     }
 }

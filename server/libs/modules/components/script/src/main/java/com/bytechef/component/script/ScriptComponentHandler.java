@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 
 package com.bytechef.component.script;
 
-import static com.bytechef.component.definition.ComponentDSL.component;
+import static com.bytechef.component.definition.ComponentDsl.component;
 import static com.bytechef.platform.component.definition.ScriptComponentDefinition.SCRIPT;
 
 import com.bytechef.component.ComponentHandler;
@@ -25,6 +25,12 @@ import com.bytechef.component.definition.ComponentDefinition;
 import com.bytechef.component.script.action.ScriptJavaScriptAction;
 import com.bytechef.component.script.action.ScriptPythonAction;
 import com.bytechef.component.script.action.ScriptRubyAction;
+import com.bytechef.component.script.cluster.datastream.ScriptJavaScriptItemProcessor;
+import com.bytechef.component.script.cluster.datastream.ScriptPythonItemProcessor;
+import com.bytechef.component.script.cluster.datastream.ScriptRubyItemProcessor;
+import com.bytechef.component.script.cluster.tool.ScriptJavaScriptTool;
+import com.bytechef.component.script.cluster.tool.ScriptPythonTool;
+import com.bytechef.component.script.cluster.tool.ScriptRubyTool;
 import com.bytechef.component.script.engine.PolyglotEngine;
 import com.bytechef.platform.component.definition.AbstractComponentDefinitionWrapper;
 import com.bytechef.platform.component.definition.ScriptComponentDefinition;
@@ -60,12 +66,20 @@ public class ScriptComponentHandler implements ComponentHandler {
                     .icon("path:assets/script.svg")
                     .categories(ComponentCategory.HELPERS, ComponentCategory.DEVELOPER_TOOLS)
                     .actions(
-                        new ScriptJavaScriptAction(polyglotEngine).actionDefinition,
-                        new ScriptPythonAction(polyglotEngine).actionDefinition,
-//                        new ScriptRAction(polyglotEngine).actionDefinition,
-                        new ScriptRubyAction(polyglotEngine).actionDefinition
-//                        new ScriptJavaAction(polyglotEngine).actionDefinition
-                    ));
+                        ScriptJavaScriptAction.of(polyglotEngine),
+                        ScriptPythonAction.of(polyglotEngine),
+//                        ScriptRAction.of(polyglotEngine),
+//                        ScriptJavaAction.of(polyglotEngine),
+                        ScriptRubyAction.of(polyglotEngine))
+                    .clusterElements(
+                        ScriptJavaScriptTool.of(polyglotEngine),
+                        ScriptPythonTool.of(polyglotEngine),
+                        ScriptRubyTool.of(polyglotEngine),
+//                        ScriptJavaItemProcessor.of(polyglotEngine),
+//                        ScriptRAction.of(polyglotEngine),
+                        ScriptJavaScriptItemProcessor.of(polyglotEngine),
+                        ScriptPythonItemProcessor.of(polyglotEngine),
+                        ScriptRubyItemProcessor.of(polyglotEngine)));
         }
     }
 }

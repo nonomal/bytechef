@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * Modifications copyright (C) 2023 ByteChef Inc.
+ * Modifications copyright (C) 2025 ByteChef
  */
 
 package com.bytechef.atlas.worker;
@@ -36,16 +36,13 @@ import com.bytechef.atlas.file.storage.TaskFileStorageImpl;
 import com.bytechef.atlas.worker.event.CancelControlTaskEvent;
 import com.bytechef.atlas.worker.event.TaskExecutionEvent;
 import com.bytechef.atlas.worker.exception.TaskExecutionException;
-import com.bytechef.commons.util.FileSystemUtils;
-import com.bytechef.commons.util.JsonUtils;
 import com.bytechef.commons.util.MapUtils;
+import com.bytechef.evaluator.Evaluator;
+import com.bytechef.evaluator.SpelEvaluator;
 import com.bytechef.file.storage.base64.service.Base64FileStorageService;
-import com.bytechef.message.broker.sync.SyncMessageBroker;
+import com.bytechef.message.broker.memory.SyncMessageBroker;
 import com.bytechef.message.event.MessageEvent;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.bytechef.test.extension.ObjectMapperSetupExtension;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.File;
 import java.util.List;
@@ -56,51 +53,52 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang3.Validate;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 /**
  * @author Arik Cohen
  * @author Ivica Cardic
  */
+@ExtendWith(ObjectMapperSetupExtension.class)
+@SuppressFBWarnings("PATH_TRAVERSAL_IN")
 public class TaskWorkerTest {
 
-    private static final ExecutorService NEW_FIXED_THREAD_POOL = Executors.newFixedThreadPool(2);
+    private static final Evaluator EVALUATOR = SpelEvaluator.create();
+    private static final ExecutorService EXECUTOR_SERVICE = Executors.newCachedThreadPool();
     private static final ExecutorService NEW_SINGLE_THREAD_EXECUTOR = Executors.newSingleThreadExecutor();
-    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper() {
-        {
-            disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
-            registerModule(new JavaTimeModule());
-            registerModule(new Jdk8Module());
-        }
-    };
 
-    private final TaskFileStorage taskFileStorage = new TaskFileStorageImpl(
-        new Base64FileStorageService());
+    private final TaskFileStorage taskFileStorage = new TaskFileStorageImpl(new Base64FileStorageService());
 
-    @BeforeAll
-    @SuppressFBWarnings("RV_RETURN_VALUE_IGNORED_NO_SIDE_EFFECT")
-    public static void beforeAll() {
-        class JsonUtilsMock extends JsonUtils {
-            static {
-                objectMapper = OBJECT_MAPPER;
-            }
-        }
+    @Test
+    public void testCalculateTimeout() {
+        TaskWorker worker = new TaskWorker(
+            5000L, EVALUATOR, event -> {}, NEW_SINGLE_THREAD_EXECUTOR::execute, t -> null, taskFileStorage, List.of());
 
-        new JsonUtilsMock();
+        TaskExecution taskExecution = TaskExecution.builder()
+            .workflowTask(new WorkflowTask(Map.of(NAME, "name", TYPE, "type")))
+            .build();
 
-        class MapUtilsMock extends MapUtils {
-            static {
-                objectMapper = new ObjectMapper();
-            }
-        }
+        Assertions.assertEquals(5000L, worker.calculateTimeout(taskExecution));
 
-        new MapUtilsMock();
+        taskExecution = TaskExecution.builder()
+            .workflowTask(new WorkflowTask(Map.of(NAME, "name", TYPE, "type", "timeout", "10S")))
+            .build();
+
+        Assertions.assertEquals(10000L, worker.calculateTimeout(taskExecution));
+
+        worker = new TaskWorker(
+            null, EVALUATOR, event -> {}, NEW_SINGLE_THREAD_EXECUTOR::execute, t -> null, taskFileStorage, List.of());
+
+        taskExecution = TaskExecution.builder()
+            .workflowTask(new WorkflowTask(Map.of(NAME, "name", TYPE, "type")))
+            .build();
+        Assertions.assertEquals(24 * 60 * 60 * 1000L, worker.calculateTimeout(taskExecution));
     }
 
     @Test
     public void test1() {
-        SyncMessageBroker syncMessageBroker = new SyncMessageBroker(OBJECT_MAPPER);
+        SyncMessageBroker syncMessageBroker = new SyncMessageBroker();
 
         syncMessageBroker.receive(
             TaskCoordinatorMessageRoute.TASK_EXECUTION_COMPLETE_EVENTS,
@@ -113,8 +111,9 @@ public class TaskWorkerTest {
 
         TaskWorker worker =
             new TaskWorker(
+                null, EVALUATOR,
                 event -> syncMessageBroker.send(((MessageEvent<?>) event).getRoute(), event),
-                NEW_SINGLE_THREAD_EXECUTOR::execute, task -> taskExecution -> "done", taskFileStorage);
+                NEW_SINGLE_THREAD_EXECUTOR::execute, task -> taskExecution -> "done", taskFileStorage, List.of());
 
         TaskExecution taskExecution = TaskExecution.builder()
             .workflowTask(new WorkflowTask(Map.of(NAME, "name", TYPE, "type")))
@@ -128,7 +127,7 @@ public class TaskWorkerTest {
 
     @Test
     public void test2() {
-        SyncMessageBroker syncMessageBroker = new SyncMessageBroker(OBJECT_MAPPER);
+        SyncMessageBroker syncMessageBroker = new SyncMessageBroker();
 
         syncMessageBroker.receive(
             TaskCoordinatorMessageRoute.ERROR_EVENTS,
@@ -139,11 +138,12 @@ public class TaskWorkerTest {
             t -> {});
 
         TaskWorker worker = new TaskWorker(
+            null, EVALUATOR,
             event -> syncMessageBroker.send(((MessageEvent<?>) event).getRoute(), event),
             NEW_SINGLE_THREAD_EXECUTOR::execute,
             task -> taskExecution -> {
                 throw new IllegalArgumentException("bad input");
-            }, taskFileStorage);
+            }, taskFileStorage, List.of());
 
         TaskExecution taskExecution = TaskExecution.builder()
             .workflowTask(new WorkflowTask(Map.of(NAME, "name", TYPE, "type")))
@@ -157,7 +157,7 @@ public class TaskWorkerTest {
 
     @Test
     public void test3() {
-        SyncMessageBroker syncMessageBroker = new SyncMessageBroker(OBJECT_MAPPER);
+        SyncMessageBroker syncMessageBroker = new SyncMessageBroker();
 
         syncMessageBroker.receive(
             TaskCoordinatorMessageRoute.TASK_EXECUTION_COMPLETE_EVENTS,
@@ -175,6 +175,7 @@ public class TaskWorkerTest {
             t -> {});
 
         TaskWorker worker = new TaskWorker(
+            null, EVALUATOR,
             event -> syncMessageBroker.send(((MessageEvent<?>) event).getRoute(), event),
             NEW_SINGLE_THREAD_EXECUTOR::execute,
             task -> {
@@ -184,7 +185,7 @@ public class TaskWorkerTest {
                 } else {
                     throw new IllegalArgumentException("unknown type: " + type);
                 }
-            }, taskFileStorage);
+            }, taskFileStorage, List.of());
 
         TaskExecution taskExecution = TaskExecution.builder()
             .workflowTask(
@@ -214,15 +215,15 @@ public class TaskWorkerTest {
 
         String tempDir = tempFile.getAbsolutePath();
 
-        SyncMessageBroker syncMessageBroker = new SyncMessageBroker(OBJECT_MAPPER);
+        SyncMessageBroker syncMessageBroker = new SyncMessageBroker();
 
         syncMessageBroker.receive(
             TaskCoordinatorMessageRoute.TASK_EXECUTION_COMPLETE_EVENTS,
             t -> Assertions.assertFalse(new File(tempDir).exists()));
-        syncMessageBroker.receive(TaskCoordinatorMessageRoute.APPLICATION_EVENTS,
-            t -> {});
+        syncMessageBroker.receive(TaskCoordinatorMessageRoute.APPLICATION_EVENTS, t -> {});
 
         TaskWorker worker = new TaskWorker(
+            null, EVALUATOR,
             event -> syncMessageBroker.send(((MessageEvent<?>) event).getRoute(), event),
             NEW_SINGLE_THREAD_EXECUTOR::execute,
             task -> {
@@ -233,7 +234,7 @@ public class TaskWorkerTest {
                     return taskExecution -> new File(MapUtils.getString(taskExecution.getParameters(), "path"))
                         .mkdirs();
                 } else if ("rm".equals(type)) {
-                    return taskExecution -> FileSystemUtils.deleteRecursively(
+                    return taskExecution -> org.springframework.util.FileSystemUtils.deleteRecursively(
                         new File(MapUtils.getString(taskExecution.getParameters(), "path")));
                 } else if ("pass".equals(type)) {
                     Assertions.assertTrue(new File(tempDir).exists());
@@ -242,7 +243,7 @@ public class TaskWorkerTest {
                 } else {
                     throw new IllegalArgumentException("unknown type: " + type);
                 }
-            }, taskFileStorage);
+            }, taskFileStorage, List.of());
 
         TaskExecution taskExecution = TaskExecution.builder()
             .workflowTask(
@@ -276,7 +277,7 @@ public class TaskWorkerTest {
 
         String tempDir = tempFile.getAbsolutePath();
 
-        SyncMessageBroker syncMessageBroker = new SyncMessageBroker(OBJECT_MAPPER);
+        SyncMessageBroker syncMessageBroker = new SyncMessageBroker();
 
         syncMessageBroker.receive(
             TaskCoordinatorMessageRoute.ERROR_EVENTS,
@@ -284,6 +285,7 @@ public class TaskWorkerTest {
         syncMessageBroker.receive(TaskCoordinatorMessageRoute.APPLICATION_EVENTS, t -> {});
 
         TaskWorker worker = new TaskWorker(
+            null, EVALUATOR,
             event -> syncMessageBroker.send(((MessageEvent<?>) event).getRoute(), event),
             NEW_SINGLE_THREAD_EXECUTOR::execute,
             task -> {
@@ -294,7 +296,7 @@ public class TaskWorkerTest {
                     return taskExecution -> new File(MapUtils.getString(taskExecution.getParameters(), "path"))
                         .mkdirs();
                 } else if ("rm".equals(type)) {
-                    return taskExecution -> FileSystemUtils.deleteRecursively(
+                    return taskExecution -> org.springframework.util.FileSystemUtils.deleteRecursively(
                         new File(MapUtils.getString(taskExecution.getParameters(), "path")));
                 } else if ("rogue".equals(type)) {
                     Assertions.assertTrue(new File(tempDir).exists());
@@ -305,7 +307,7 @@ public class TaskWorkerTest {
                 } else {
                     throw new IllegalArgumentException("unknown type: " + type);
                 }
-            }, taskFileStorage);
+            }, taskFileStorage, List.of());
 
         TaskExecution taskExecution = TaskExecution.builder()
             .workflowTask(
@@ -334,13 +336,15 @@ public class TaskWorkerTest {
     @Test
     public void test6() throws InterruptedException {
         ExecutorService executorService = Executors.newSingleThreadExecutor();
-        SyncMessageBroker syncMessageBroker = new SyncMessageBroker(OBJECT_MAPPER);
+        ExecutorService singleThreadExecutor = Executors.newSingleThreadExecutor();
+        SyncMessageBroker syncMessageBroker = new SyncMessageBroker();
 
         syncMessageBroker.receive(TaskCoordinatorMessageRoute.APPLICATION_EVENTS, e -> {});
 
         TaskWorker worker = new TaskWorker(
+            null, EVALUATOR,
             event -> syncMessageBroker.send(((MessageEvent<?>) event).getRoute(), event),
-            NEW_SINGLE_THREAD_EXECUTOR::execute,
+            singleThreadExecutor::execute,
             task -> taskExecution -> {
                 try {
                     TimeUnit.SECONDS.sleep(5);
@@ -349,7 +353,7 @@ public class TaskWorkerTest {
                 }
 
                 return null;
-            }, taskFileStorage);
+            }, taskFileStorage, List.of());
 
         TaskExecution taskExecution = TaskExecution.builder()
             .workflowTask(new WorkflowTask(Map.of(NAME, "name", TYPE, "type")))
@@ -361,8 +365,8 @@ public class TaskWorkerTest {
         // execute the task
         executorService.submit(() -> worker.onTaskExecutionEvent(new TaskExecutionEvent(taskExecution)));
 
-        // give it a second to start executing
-        TimeUnit.SECONDS.sleep(1);
+        // wait for task to be registered
+        waitForCondition(() -> MapUtils.size(worker.getTaskExecutions()) == 1, 5000);
 
         Assertions.assertEquals(1, MapUtils.size(worker.getTaskExecutions()));
 
@@ -371,22 +375,25 @@ public class TaskWorkerTest {
             new CancelControlTaskEvent(new CancelControlTask(
                 Validate.notNull(taskExecution.getJobId(), "jobId"), Validate.notNull(taskExecution.getId(), "id"))));
 
-        // give it a second to cancel
-        TimeUnit.SECONDS.sleep(1);
+        // wait for cancellation to complete
+        waitForCondition(() -> MapUtils.size(worker.getTaskExecutions()) == 0, 5000);
 
         Assertions.assertEquals(0, MapUtils.size(worker.getTaskExecutions()));
+
+        singleThreadExecutor.shutdownNow();
     }
 
     @Test
     public void test7() throws InterruptedException {
-        ExecutorService executorService = Executors.newFixedThreadPool(2);
-        SyncMessageBroker syncMessageBroker = new SyncMessageBroker(OBJECT_MAPPER);
+        ExecutorService singleThreadExecutor = Executors.newSingleThreadExecutor();
+        SyncMessageBroker syncMessageBroker = new SyncMessageBroker();
 
         syncMessageBroker.receive(TaskCoordinatorMessageRoute.APPLICATION_EVENTS, e -> {});
 
         TaskWorker worker = new TaskWorker(
+            null, EVALUATOR,
             event -> syncMessageBroker.send(((MessageEvent<?>) event).getRoute(), event),
-            NEW_SINGLE_THREAD_EXECUTOR::execute,
+            singleThreadExecutor::execute,
             task -> taskExecution -> {
                 try {
                     TimeUnit.SECONDS.sleep(5);
@@ -395,7 +402,7 @@ public class TaskWorkerTest {
                 }
 
                 return null;
-            }, taskFileStorage);
+            }, taskFileStorage, List.of());
 
         TaskExecution taskExecution1 = TaskExecution.builder()
             .workflowTask(new WorkflowTask(Map.of(NAME, "name", TYPE, "type")))
@@ -405,7 +412,7 @@ public class TaskWorkerTest {
         taskExecution1.setJobId(2222L);
 
         // execute the task
-        executorService.submit(() -> worker.onTaskExecutionEvent(new TaskExecutionEvent(taskExecution1)));
+        EXECUTOR_SERVICE.submit(() -> worker.onTaskExecutionEvent(new TaskExecutionEvent(taskExecution1)));
 
         TaskExecution taskExecution2 = TaskExecution.builder()
             .workflowTask(new WorkflowTask(Map.of(NAME, "name", TYPE, "type")))
@@ -415,10 +422,10 @@ public class TaskWorkerTest {
         taskExecution2.setJobId(4444L);
 
         // execute the task
-        executorService.submit(() -> worker.onTaskExecutionEvent(new TaskExecutionEvent(taskExecution2)));
+        EXECUTOR_SERVICE.submit(() -> worker.onTaskExecutionEvent(new TaskExecutionEvent(taskExecution2)));
 
-        // give it a second to start executing
-        TimeUnit.SECONDS.sleep(1);
+        // wait for both tasks to be registered
+        waitForCondition(() -> MapUtils.size(worker.getTaskExecutions()) == 2, 5000);
 
         Assertions.assertEquals(2, MapUtils.size(worker.getTaskExecutions()));
 
@@ -427,22 +434,35 @@ public class TaskWorkerTest {
             new CancelControlTaskEvent(new CancelControlTask(
                 Validate.notNull(taskExecution1.getJobId(), "jobId"), Validate.notNull(taskExecution1.getId(), "id"))));
 
-        // give it a second to cancel
-        TimeUnit.SECONDS.sleep(1);
+        // wait for cancellation to complete
+        waitForCondition(() -> MapUtils.size(worker.getTaskExecutions()) == 1, 5000);
 
         Assertions.assertEquals(1, MapUtils.size(worker.getTaskExecutions()));
+
+        singleThreadExecutor.shutdownNow();
+    }
+
+    private void waitForCondition(java.util.function.BooleanSupplier condition, long timeoutMs)
+        throws InterruptedException {
+
+        long deadline = System.currentTimeMillis() + timeoutMs;
+
+        while (!condition.getAsBoolean() && System.currentTimeMillis() < deadline) {
+            TimeUnit.MILLISECONDS.sleep(100);
+        }
     }
 
     @Test
     public void test8() throws InterruptedException {
-        ExecutorService executorService = Executors.newFixedThreadPool(2);
-        SyncMessageBroker syncMessageBroker = new SyncMessageBroker(OBJECT_MAPPER);
+        ExecutorService fixedThreadPool = Executors.newFixedThreadPool(2);
+        SyncMessageBroker syncMessageBroker = new SyncMessageBroker();
 
         syncMessageBroker.receive(TaskCoordinatorMessageRoute.APPLICATION_EVENTS, e -> {});
 
         TaskWorker worker = new TaskWorker(
+            null, EVALUATOR,
             event -> syncMessageBroker.send(((MessageEvent<?>) event).getRoute(), event),
-            NEW_FIXED_THREAD_POOL::execute,
+            fixedThreadPool::execute,
             task -> taskExecution -> {
                 try {
                     TimeUnit.SECONDS.sleep(5);
@@ -451,7 +471,7 @@ public class TaskWorkerTest {
                 }
 
                 return null;
-            }, taskFileStorage);
+            }, taskFileStorage, List.of());
 
         TaskExecution taskExecution1 = TaskExecution.builder()
             .workflowTask(new WorkflowTask(Map.of(NAME, "name", TYPE, "type")))
@@ -461,7 +481,7 @@ public class TaskWorkerTest {
         taskExecution1.setJobId(2222L);
 
         // execute the task
-        executorService.submit(() -> worker.onTaskExecutionEvent(new TaskExecutionEvent(taskExecution1)));
+        EXECUTOR_SERVICE.submit(() -> worker.onTaskExecutionEvent(new TaskExecutionEvent(taskExecution1)));
 
         TaskExecution taskExecution2 = TaskExecution.builder()
             .workflowTask(new WorkflowTask(Map.of(NAME, "name", TYPE, "type")))
@@ -472,10 +492,10 @@ public class TaskWorkerTest {
         taskExecution2.setParentId(taskExecution1.getId());
 
         // execute the task
-        executorService.submit(() -> worker.onTaskExecutionEvent(new TaskExecutionEvent(taskExecution2)));
+        EXECUTOR_SERVICE.submit(() -> worker.onTaskExecutionEvent(new TaskExecutionEvent(taskExecution2)));
 
-        // give it a second to start executing
-        TimeUnit.SECONDS.sleep(1);
+        // wait for both tasks to be registered
+        waitForCondition(() -> MapUtils.size(worker.getTaskExecutions()) == 2, 5000);
 
         Assertions.assertEquals(2, MapUtils.size(worker.getTaskExecutions()));
 
@@ -484,9 +504,11 @@ public class TaskWorkerTest {
             new CancelControlTaskEvent(new CancelControlTask(
                 Validate.notNull(taskExecution1.getJobId(), "jobId"), Validate.notNull(taskExecution1.getId(), "id"))));
 
-        // give it a second to cancel
-        TimeUnit.SECONDS.sleep(1);
+        // wait for cancellation to complete (both tasks share same jobId, so both should be cancelled)
+        waitForCondition(() -> MapUtils.size(worker.getTaskExecutions()) == 0, 5000);
 
         Assertions.assertEquals(0, MapUtils.size(worker.getTaskExecutions()));
+
+        fixedThreadPool.shutdownNow();
     }
 }

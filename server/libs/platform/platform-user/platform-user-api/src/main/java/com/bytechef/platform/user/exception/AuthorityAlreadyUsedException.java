@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,12 +16,12 @@
 
 package com.bytechef.platform.user.exception;
 
-import com.bytechef.platform.exception.PlatformException;
+import com.bytechef.exception.AbstractException;
 
 /**
  * @author Ivica Cardic
  */
-public class AuthorityAlreadyUsedException extends PlatformException {
+public class AuthorityAlreadyUsedException extends AbstractException {
 
     public AuthorityAlreadyUsedException() {
         super("Authority name already used!", UserErrorType.AUTHORITY_ALREADY_USED);

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,14 +16,13 @@
 
 package com.bytechef.component.xero.action;
 
-import static com.bytechef.component.definition.ComponentDSL.ModifiableActionDefinition;
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.date;
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.definition.ComponentDsl.ModifiableActionDefinition;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.date;
+import static com.bytechef.component.definition.ComponentDsl.outputSchema;
+import static com.bytechef.component.definition.ComponentDsl.string;
 import static com.bytechef.component.xero.constant.XeroConstants.ACCREC;
-import static com.bytechef.component.xero.constant.XeroConstants.BASE_URL;
 import static com.bytechef.component.xero.constant.XeroConstants.CONTACT_ID;
-import static com.bytechef.component.xero.constant.XeroConstants.CREATE_SALES_INVOICE;
 import static com.bytechef.component.xero.constant.XeroConstants.CURRENCY_CODE;
 import static com.bytechef.component.xero.constant.XeroConstants.DATE;
 import static com.bytechef.component.xero.constant.XeroConstants.DUE_DATE;
@@ -35,9 +34,9 @@ import static com.bytechef.component.xero.constant.XeroConstants.REFERENCE;
 import static com.bytechef.component.xero.util.XeroUtils.createInvoice;
 
 import com.bytechef.component.definition.ActionContext;
+import com.bytechef.component.definition.ActionDefinition.OptionsFunction;
 import com.bytechef.component.definition.Context.ContextFunction;
 import com.bytechef.component.definition.Context.Http;
-import com.bytechef.component.definition.OptionsDataSource.ActionOptionsFunction;
 import com.bytechef.component.definition.Parameters;
 import com.bytechef.component.xero.util.XeroUtils;
 
@@ -47,14 +46,14 @@ import com.bytechef.component.xero.util.XeroUtils;
  */
 public class XeroCreateInvoiceAction {
 
-    public static final ModifiableActionDefinition ACTION_DEFINITION = action(CREATE_SALES_INVOICE)
-        .title("Create invoice")
+    public static final ModifiableActionDefinition ACTION_DEFINITION = action("createSalesInvoice")
+        .title("Create Invoice")
         .description("Creates draft invoice (Acount Receivable).")
         .properties(
             string(CONTACT_ID)
-                .label("Contact")
-                .description("Contact to create the invoice for.")
-                .options((ActionOptionsFunction<String>) XeroUtils::getContactIdOptions)
+                .label("Contact ID")
+                .description("ID of the contact to create the invoice for.")
+                .options((OptionsFunction<String>) XeroUtils::getContactIdOptions)
                 .required(true),
             date(DATE)
                 .label("Date")
@@ -69,19 +68,19 @@ public class XeroCreateInvoiceAction {
             LINE_AMOUNT_TYPE_PROPERTY,
             LINE_ITEMS_ACCREC_PROPERTY,
             string(CURRENCY_CODE)
-                .label("Currency")
-                .description("Currency that invoice is raised in.")
-                .options((ActionOptionsFunction<String>) XeroUtils::getCurrencyCodeOptions)
+                .label("Currency Code")
+                .description("Currency code that invoice is raised in.")
+                .options((OptionsFunction<String>) XeroUtils::getCurrencyCodeOptions)
                 .required(false),
             string(REFERENCE)
                 .label("Invoice Reference")
                 .description("Reference number of the invoice.")
                 .required(false))
-        .outputSchema(INVOICE_OUTPUT_PROPERTY)
+        .output(outputSchema(INVOICE_OUTPUT_PROPERTY))
         .perform(XeroCreateInvoiceAction::perform);
 
     protected static final ContextFunction<Http, Http.Executor> POST_INVOICES_CONTEXT_FUNCTION =
-        http -> http.post(BASE_URL + "/" + INVOICES);
+        http -> http.post("/" + INVOICES);
 
     private XeroCreateInvoiceAction() {
     }

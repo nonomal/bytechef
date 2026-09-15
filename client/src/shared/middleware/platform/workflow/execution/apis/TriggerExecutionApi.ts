@@ -12,18 +12,17 @@
  * Do not edit the class manually.
  */
 
-
 import * as runtime from '../runtime';
-import type {
-  PageModel,
-  TriggerExecutionModel,
-} from '../models/index';
 import {
-    PageModelFromJSON,
-    PageModelToJSON,
-    TriggerExecutionModelFromJSON,
-    TriggerExecutionModelToJSON,
-} from '../models/index';
+    type Page,
+    PageFromJSON,
+    PageToJSON,
+} from '../models/Page';
+import {
+    type TriggerExecution,
+    TriggerExecutionFromJSON,
+    TriggerExecutionToJSON,
+} from '../models/TriggerExecution';
 
 export interface GetTriggerExecutionRequest {
     id: number;
@@ -39,10 +38,9 @@ export interface GetTriggerExecutionsPageRequest {
 export class TriggerExecutionApi extends runtime.BaseAPI {
 
     /**
-     * Get a trigger execution by id.
-     * Get a trigger execution by id
+     * Creates request options for getTriggerExecution without sending the request
      */
-    async getTriggerExecutionRaw(requestParameters: GetTriggerExecutionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<TriggerExecutionModel>> {
+    async getTriggerExecutionRequestOpts(requestParameters: GetTriggerExecutionRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['id'] == null) {
             throw new runtime.RequiredError(
                 'id',
@@ -54,30 +52,42 @@ export class TriggerExecutionApi extends runtime.BaseAPI {
 
         const headerParameters: runtime.HTTPHeaders = {};
 
-        const response = await this.request({
-            path: `/trigger-executions/{id}`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))),
+
+        let urlPath = `/trigger-executions/{id}`;
+        urlPath = urlPath.replace('{id}', encodeURIComponent(String(requestParameters['id'])));
+
+        return {
+            path: urlPath,
             method: 'GET',
             headers: headerParameters,
             query: queryParameters,
-        }, initOverrides);
-
-        return new runtime.JSONApiResponse(response, (jsonValue) => TriggerExecutionModelFromJSON(jsonValue));
+        };
     }
 
     /**
      * Get a trigger execution by id.
      * Get a trigger execution by id
      */
-    async getTriggerExecution(requestParameters: GetTriggerExecutionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<TriggerExecutionModel> {
+    async getTriggerExecutionRaw(requestParameters: GetTriggerExecutionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<TriggerExecution>> {
+        const requestOptions = await this.getTriggerExecutionRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => TriggerExecutionFromJSON(jsonValue));
+    }
+
+    /**
+     * Get a trigger execution by id.
+     * Get a trigger execution by id
+     */
+    async getTriggerExecution(requestParameters: GetTriggerExecutionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<TriggerExecution> {
         const response = await this.getTriggerExecutionRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
     /**
-     * Get a page of trigger execution.
-     * Get a page of trigger execution
+     * Creates request options for getTriggerExecutionsPage without sending the request
      */
-    async getTriggerExecutionsPageRaw(requestParameters: GetTriggerExecutionsPageRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<PageModel>> {
+    async getTriggerExecutionsPageRequestOpts(requestParameters: GetTriggerExecutionsPageRequest): Promise<runtime.RequestOpts> {
         const queryParameters: any = {};
 
         if (requestParameters['pageNumber'] != null) {
@@ -86,21 +96,33 @@ export class TriggerExecutionApi extends runtime.BaseAPI {
 
         const headerParameters: runtime.HTTPHeaders = {};
 
-        const response = await this.request({
-            path: `/trigger-executions`,
+
+        let urlPath = `/trigger-executions`;
+
+        return {
+            path: urlPath,
             method: 'GET',
             headers: headerParameters,
             query: queryParameters,
-        }, initOverrides);
-
-        return new runtime.JSONApiResponse(response, (jsonValue) => PageModelFromJSON(jsonValue));
+        };
     }
 
     /**
      * Get a page of trigger execution.
      * Get a page of trigger execution
      */
-    async getTriggerExecutionsPage(requestParameters: GetTriggerExecutionsPageRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<PageModel> {
+    async getTriggerExecutionsPageRaw(requestParameters: GetTriggerExecutionsPageRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Page>> {
+        const requestOptions = await this.getTriggerExecutionsPageRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => PageFromJSON(jsonValue));
+    }
+
+    /**
+     * Get a page of trigger execution.
+     * Get a page of trigger execution
+     */
+    async getTriggerExecutionsPage(requestParameters: GetTriggerExecutionsPageRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Page> {
         const response = await this.getTriggerExecutionsPageRaw(requestParameters, initOverrides);
         return await response.value();
     }

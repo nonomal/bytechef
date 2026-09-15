@@ -1,13 +1,22 @@
 /* eslint-disable sort-keys */
 import {
+    ComponentDefinition,
     ComponentDefinitionApi,
-    ComponentDefinitionBasicModel,
-    ComponentDefinitionModel,
+    ComponentDefinitionBasic,
     GetComponentDefinitionRequest,
-    GetComponentDefinitionsRequest,
-    GetDataStreamComponentDefinitionsRequest,
+    GetComponentDefinitionVersionsRequest,
+    GetConnectionComponentDefinitionRequest,
 } from '@/shared/middleware/platform/configuration';
+import {DEFINITION_STALE_TIME} from '@/shared/queries/queryConstants';
 import {useQuery} from '@tanstack/react-query';
+
+export interface GetComponentDefinitionsRequestI {
+    actionDefinitions?: boolean;
+    clusterElementDefinitions?: boolean;
+    connectionDefinitions?: boolean;
+    triggerDefinitions?: boolean;
+    include?: Array<string>;
+}
 
 export const ComponentDefinitionKeys = {
     componentDefinition: (request: GetComponentDefinitionRequest) => [
@@ -15,37 +24,49 @@ export const ComponentDefinitionKeys = {
         request.componentName,
         request.componentVersion,
     ],
+    componentDefinitionVersions: (request: GetComponentDefinitionVersionsRequest) => [
+        ...ComponentDefinitionKeys.componentDefinitions,
+        request.componentName,
+        'versions',
+    ],
     componentDefinitions: ['componentDefinitions'] as const,
-    filteredComponentDefinitions: (request?: GetComponentDefinitionsRequest) => [
+    connectionComponentDefinition: (request: GetConnectionComponentDefinitionRequest) => [
+        ...ComponentDefinitionKeys.componentDefinitions,
+        request.componentName,
+        request.connectionVersion,
+    ],
+    filteredComponentDefinitions: (request?: GetComponentDefinitionsRequestI) => [
         ...ComponentDefinitionKeys.componentDefinitions,
         request,
-    ],
-    filteredDataStreamComponentDefinitions: (request?: GetDataStreamComponentDefinitionsRequest) => [
-        ...ComponentDefinitionKeys.componentDefinitions,
-        request?.componentType,
     ],
 };
 
 export const useGetComponentDefinitionQuery = (request: GetComponentDefinitionRequest, enabled?: boolean) =>
-    useQuery<ComponentDefinitionModel, Error>({
+    useQuery<ComponentDefinition, Error>({
         queryKey: ComponentDefinitionKeys.componentDefinition(request),
         queryFn: () => new ComponentDefinitionApi().getComponentDefinition(request),
         enabled: enabled === undefined ? true : enabled,
+        staleTime: DEFINITION_STALE_TIME,
     });
 
-export const useGetComponentDefinitionsQuery = (request?: GetComponentDefinitionsRequest, enabled?: boolean) =>
-    useQuery<ComponentDefinitionBasicModel[], Error>({
-        queryKey: ComponentDefinitionKeys.filteredComponentDefinitions(request),
-        queryFn: () => new ComponentDefinitionApi().getComponentDefinitions(request),
-        enabled: enabled === undefined ? true : enabled,
-    });
-
-export const useGetDataStreamComponentDefinitions = (
-    request: GetDataStreamComponentDefinitionsRequest,
+export const useGetConnectionComponentDefinitionQuery = (
+    request: GetConnectionComponentDefinitionRequest,
     enabled?: boolean
 ) =>
-    useQuery<ComponentDefinitionBasicModel[], Error>({
-        queryKey: ComponentDefinitionKeys.filteredDataStreamComponentDefinitions(request),
-        queryFn: () => new ComponentDefinitionApi().getDataStreamComponentDefinitions(request),
+    useQuery<ComponentDefinition, Error>({
+        queryKey: ComponentDefinitionKeys.connectionComponentDefinition(request),
+        queryFn: () => new ComponentDefinitionApi().getConnectionComponentDefinition(request),
         enabled: enabled === undefined ? true : enabled,
+        staleTime: DEFINITION_STALE_TIME,
+    });
+
+export const useGetComponentDefinitionVersionsQuery = (
+    request: GetComponentDefinitionVersionsRequest,
+    enabled?: boolean
+) =>
+    useQuery<Array<ComponentDefinitionBasic>, Error>({
+        queryKey: ComponentDefinitionKeys.componentDefinitionVersions(request),
+        queryFn: () => new ComponentDefinitionApi().getComponentDefinitionVersions(request),
+        enabled: enabled ?? true,
+        staleTime: DEFINITION_STALE_TIME,
     });

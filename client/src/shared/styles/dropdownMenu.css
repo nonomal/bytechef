@@ -1,0 +1,28 @@
+@reference '../../styles/index.css';
+
+@layer utilities {
+    .dropdown-menu-item-base {
+        @apply cursor-pointer! justify-start! rounded-none! px-4! py-2!;
+    }
+
+    .dropdown-menu-item {
+        @apply cursor-pointer! justify-start! rounded-none! px-4! py-2!;
+        @apply hover:bg-surface-neutral-primary-hover! focus:bg-surface-neutral-primary-hover!;
+    }
+
+    .dropdown-menu-item-destructive {
+        @apply cursor-pointer! justify-start! rounded-none! px-4! py-2!;
+        @apply text-content-destructive!;
+        @apply hover:bg-surface-destructive-secondary! hover:text-content-destructive!;
+        @apply focus:bg-surface-destructive-secondary! focus:text-content-destructive!;
+    }
+
+    .dropdown-menu-item-destructive-disabled {
+        @apply cursor-pointer! justify-start! rounded-none! px-4! py-2!;
+        @apply text-content-destructive-primary!;
+        @apply cursor-not-allowed!;
+        @apply opacity-50!;
+        @apply hover:bg-transparent! hover:text-content-destructive-primary!;
+        @apply focus:bg-transparent! focus:text-content-destructive-primary!;
+    }
+}

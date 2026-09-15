@@ -1,226 +1,409 @@
 group = "com.bytechef.server"
 description = "ByteChef server app"
+version = properties["bytechefVersion"].toString()
 
 springBoot {
     mainClass.set("com.bytechef.server.ServerApplication")
 }
 
+// =============================================================================
+// FAST STARTUP CONFIGURATION FOR INTELLIJ
+// =============================================================================
+// When useComponentJars=true, use pre-built JARs instead of project dependencies
+// for component modules. This significantly speeds up IntelliJ startup because
+// ServiceLoader reads from JAR manifests (fast) instead of scanning directories (slow).
+//
+// Usage:
+//   1. Build all component JARs first: ./gradlew jar --parallel
+//   2. Refresh Gradle in IntelliJ
+//   3. Run the application - it will use the pre-built JARs
+//
+// To switch back to project dependencies (for active component development):
+//   Set useComponentJars=false in gradle.properties or remove the property
+// =============================================================================
+
+val useComponentJars = project.findProperty("useComponentJars")?.toString()?.toBoolean() ?: false
+
+// =============================================================================
+// COMPONENT FILTERING - Include/exclude specific components at build time
+// =============================================================================
+// includeComponents: Comma-separated whitelist. If set, ONLY these are loaded.
+// excludeComponents: Comma-separated blacklist. If set, these are skipped.
+//
+// Priority: includeComponents > excludeComponents > load all (default)
+//
+// | includeComponents | excludeComponents | Result                    |
+// |-------------------|-------------------|---------------------------|
+// | empty/not set     | empty/not set     | Load ALL components       |
+// | comp1,comp2       | (ignored)         | Load ONLY comp1, comp2    |
+// | empty/not set     | comp1,comp2       | Load all EXCEPT comp1,comp2|
+//
+// Component names = directory name under server/libs/modules/components/
+// =============================================================================
+
+val includeComponents = project.findProperty("includeComponents")?.toString()
+    ?.split(",")
+    ?.map { it.trim().lowercase() }
+    ?.filter { it.isNotEmpty() }
+    ?.toSet()
+    ?: emptySet()
+
+val excludeComponents = project.findProperty("excludeComponents")?.toString()
+    ?.split(",")
+    ?.map { it.trim().lowercase() }
+    ?.filter { it.isNotEmpty() }
+    ?.toSet()
+    ?: emptySet()
+
+fun shouldIncludeComponent(componentPath: String): Boolean {
+    val componentName = componentPath.substringAfterLast(":").lowercase()
+
+    // Always exclude the example component
+    if (componentName == "example") return false
+
+    // If includeComponents is specified, only include those
+    if (includeComponents.isNotEmpty()) {
+        return includeComponents.contains(componentName)
+    }
+
+    // If excludeComponents is specified, exclude those
+    if (excludeComponents.isNotEmpty()) {
+        return !excludeComponents.contains(componentName)
+    }
+
+    // Default: include all
+    return true
+}
+
 dependencies {
+    developmentOnly(libs.com.julien.dubois.bootui.bootui.spring.boot.starter)
+
     implementation("io.awspring.cloud:spring-cloud-aws-starter-s3")
-    implementation("io.awspring.cloud:spring-cloud-aws-starter-secrets-manager")
     implementation("io.awspring.cloud:spring-cloud-aws-starter-sqs")
     implementation(libs.org.springdoc.springdoc.openapi.starter.common)
+    implementation(libs.org.springdoc.springdoc.openapi.starter.webmvc.ui)
+    implementation("org.springframework.ai:spring-ai-autoconfigure-mcp-client-common")
+    implementation("org.springframework.ai:spring-ai-starter-mcp-client")
+    implementation("org.springframework.ai:spring-ai-starter-model-anthropic")
+    implementation("org.springframework.ai:spring-ai-starter-model-chat-memory-repository-jdbc")
+    implementation("org.springframework.ai:spring-ai-starter-model-chat-memory-repository-redis")
+    implementation("org.springframework.ai:spring-ai-starter-model-openai")
+    implementation("org.springframework.ai:spring-ai-starter-vector-store-pgvector")
+    implementation("org.springframework.boot:spring-boot-starter-actuator")
+    implementation("org.springframework.boot:spring-boot-starter-amqp")
+    implementation("org.springframework.boot:spring-boot-starter-aspectj")
+    implementation("org.springframework.boot:spring-boot-starter-cache")
     implementation("org.springframework.boot:spring-boot-starter-batch")
     implementation("org.springframework.boot:spring-boot-starter-data-jdbc")
     implementation("org.springframework.boot:spring-boot-starter-data-redis")
+    implementation("org.springframework.boot:spring-boot-starter-jackson")
+    implementation("org.springframework.boot:spring-boot-starter-jms")
+    implementation("org.springframework.boot:spring-boot-starter-kafka")
+    implementation("org.springframework.boot:spring-boot-starter-liquibase")
+    implementation("org.springframework.boot:spring-boot-starter-graphql")
+    implementation("org.springframework.boot:spring-boot-starter-quartz")
     implementation("org.springframework.boot:spring-boot-starter-mail")
+    implementation("org.springframework.boot:spring-boot-starter-opentelemetry")
+    implementation("org.springframework.boot:spring-boot-starter-restclient")
     implementation("org.springframework.boot:spring-boot-starter-security")
     implementation("org.springframework.boot:spring-boot-starter-thymeleaf")
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-web")
+    implementation(project(":server:libs:platform:platform-ai:platform-ai-api"))
+    implementation(project(":server:libs:ai:ai-mcp:ai-mcp-server"))
+    implementation(project(":server:libs:ai:ai-mcp:ai-mcp-server-configuration:ai-mcp-server-configuration-graphql"))
     implementation(project(":server:libs:atlas:atlas-configuration:atlas-configuration-config"))
     implementation(project(":server:libs:atlas:atlas-configuration:atlas-configuration-converter"))
+    implementation(project(":server:libs:atlas:atlas-configuration:atlas-configuration-repository:atlas-configuration-repository-git"))
     implementation(project(":server:libs:atlas:atlas-configuration:atlas-configuration-repository:atlas-configuration-repository-jdbc"))
     implementation(project(":server:libs:atlas:atlas-configuration:atlas-configuration-service"))
     implementation(project(":server:libs:atlas:atlas-coordinator:atlas-coordinator-config"))
     implementation(project(":server:libs:atlas:atlas-execution:atlas-execution-repository:atlas-execution-repository-jdbc"))
     implementation(project(":server:libs:atlas:atlas-execution:atlas-execution-config"))
     implementation(project(":server:libs:atlas:atlas-execution:atlas-execution-service"))
-    implementation(project(":server:libs:atlas:atlas-file-storage:atlas-file-storage-service"))
+    implementation(project(":server:libs:atlas:atlas-file-storage:atlas-file-storage-impl"))
     implementation(project(":server:libs:atlas:atlas-worker:atlas-worker-config"))
+    implementation(project(":server:libs:automation:automation-ai:automation-ai-mcp-server"))
+    implementation(project(":server:libs:automation:automation-configuration:automation-configuration-graphql"))
     implementation(project(":server:libs:automation:automation-configuration:automation-configuration-instance-impl"))
     implementation(project(":server:libs:automation:automation-configuration:automation-configuration-rest:automation-configuration-rest-impl"))
     implementation(project(":server:libs:automation:automation-configuration:automation-configuration-service"))
-    implementation(project(":server:libs:automation:automation-connection:automation-connection-rest"))
     implementation(project(":server:libs:automation:automation-connection:automation-connection-service"))
+    implementation(project(":server:libs:automation:automation-data-table:automation-data-table-graphql"))
+    implementation(project(":server:libs:automation:automation-data-table:automation-data-table-service"))
+    implementation(project(":server:libs:platform:platform-data-table:platform-data-table-service"))
+    implementation(project(":server:libs:automation:automation-knowledge-base:automation-knowledge-base-graphql"))
+    implementation(project(":server:libs:automation:automation-knowledge-base:automation-knowledge-base-service"))
+    implementation(project(":server:libs:platform:platform-knowledge-base:platform-knowledge-base-file-storage:platform-knowledge-base-file-storage-impl"))
+    implementation(project(":server:libs:platform:platform-knowledge-base:platform-knowledge-base-rest"))
+    implementation(project(":server:libs:platform:platform-knowledge-base:platform-knowledge-base-service"))
+    implementation(project(":server:libs:platform:platform-knowledge-base:platform-knowledge-base-worker"))
+    implementation(project(":server:libs:automation:automation-ai:automation-ai-mcp:automation-ai-mcp-graphql"))
+    implementation(project(":server:libs:automation:automation-ai:automation-ai-mcp:automation-ai-mcp-service"))
+    implementation(project(":server:libs:automation:automation-search:automation-search-graphql"))
+    implementation(project(":server:libs:automation:automation-search:automation-search-service"))
+    implementation(project(":server:libs:automation:automation-task:automation-task-graphql"))
+    implementation(project(":server:libs:automation:automation-task:automation-task-service"))
     implementation(project(":server:libs:automation:automation-swagger"))
-    implementation(project(":server:libs:automation:automation-user:automation-user-rest"))
     implementation(project(":server:libs:automation:automation-workflow:automation-workflow-coordinator"))
     implementation(project(":server:libs:automation:automation-workflow:automation-workflow-execution:automation-workflow-execution-rest"))
     implementation(project(":server:libs:automation:automation-workflow:automation-workflow-execution:automation-workflow-execution-service"))
+    implementation(project(":server:libs:config:ai-chat-memory-config:ai-chat-memory-aws-config"))
+    implementation(project(":server:libs:config:ai-chat-memory-config:ai-chat-memory-in-memory-config"))
+    implementation(project(":server:libs:config:ai-chat-memory-config:ai-chat-memory-jdbc-config"))
+    implementation(project(":server:libs:config:ai-chat-memory-config:ai-chat-memory-redis-config"))
+    implementation(project(":server:libs:config:ai-model-config"))
     implementation(project(":server:libs:config:app-config"))
     implementation(project(":server:libs:config:async-config"))
     implementation(project(":server:libs:config:automation-demo-config"))
     implementation(project(":server:libs:config:cache-config"))
     implementation(project(":server:libs:config:environment-config"))
+    implementation(project(":server:libs:config:eval-config"))
     implementation(project(":server:libs:config:jackson-config"))
     implementation(project(":server:libs:config:jdbc-config"))
     implementation(project(":server:libs:config:liquibase-config"))
     implementation(project(":server:libs:config:logback-config"))
     implementation(project(":server:libs:config:messages-config"))
-    implementation(project(":server:libs:config:rest-config"))
+    implementation(project(":server:libs:config:pgvector-config"))
     implementation(project(":server:libs:config:security-config"))
     implementation(project(":server:libs:config:static-resources-config"))
+    implementation(project(":server:libs:config:tenant-single-security-config"))
     implementation(project(":server:libs:core:commons:commons-data"))
     implementation(project(":server:libs:core:encryption:encryption-filesystem"))
+    implementation(project(":server:libs:core:evaluator:evaluator-impl"))
     implementation(project(":server:libs:core:encryption:encryption-impl"))
+    implementation(project(":server:libs:core:encryption:encryption-property"))
     implementation(project(":server:libs:core:file-storage:file-storage-base64-service"))
     implementation(project(":server:libs:core:file-storage:file-storage-filesystem-service"))
-    implementation(project(":server:libs:core:file-storage:file-storage-noop-service"))
+    implementation(project(":server:libs:core:graphql:graphql-impl"))
     implementation(project(":server:libs:core:message:message-broker:message-broker-amqp"))
     implementation(project(":server:libs:core:message:message-broker:message-broker-jms"))
     implementation(project(":server:libs:core:message:message-broker:message-broker-kafka"))
     implementation(project(":server:libs:core:message:message-broker:message-broker-redis"))
     implementation(project(":server:libs:core:message:message-event:message-event-impl"))
+    implementation(project(":server:libs:core:rest:rest-impl"))
+    implementation(project(":server:libs:core:tenant:tenant-api"))
     implementation(project(":server:libs:core:tenant:tenant-single-service"))
-    implementation(project(":server:libs:embedded:embedded-connected-user:embedded-connected-user-rest"))
-    implementation(project(":server:libs:embedded:embedded-connected-user:embedded-connected-user-service"))
-    implementation(project(":server:libs:embedded:embedded-configuration:embedded-configuration-connected-user-token-rest"))
-    implementation(project(":server:libs:embedded:embedded-configuration:embedded-configuration-instance-impl"))
-    implementation(project(":server:libs:embedded:embedded-configuration:embedded-configuration-public-rest:embedded-configuration-public-rest-impl"))
-    implementation(project(":server:libs:embedded:embedded-configuration:embedded-configuration-rest:embedded-configuration-rest-impl"))
-    implementation(project(":server:libs:embedded:embedded-configuration:embedded-configuration-service"))
-    implementation(project(":server:libs:embedded:embedded-connection:embedded-connection-rest"))
-    implementation(project(":server:libs:embedded:embedded-connectivity:embedded-connectivity-rest"))
-    implementation(project(":server:libs:embedded:embedded-connectivity:embedded-connectivity-service"))
-    implementation(project(":server:libs:embedded:embedded-security-web"))
-    implementation(project(":server:libs:embedded:embedded-swagger"))
-    implementation(project(":server:libs:embedded:embedded-user:embedded-user-rest"))
-    implementation(project(":server:libs:embedded:embedded-workflow:embedded-workflow-coordinator"))
-    implementation(project(":server:libs:embedded:embedded-workflow:embedded-workflow-execution:embedded-workflow-execution-rest"))
-    implementation(project(":server:libs:embedded:embedded-workflow:embedded-workflow-execution:embedded-workflow-execution-service"))
+    implementation(project(":server:libs:platform:platform-billing:platform-billing-rest"))
+    implementation(project(":server:libs:platform:platform-billing:platform-billing-service"))
     implementation(project(":server:libs:platform:platform-category:platform-category-service"))
-    implementation(project(":server:libs:platform:platform-component:platform-component-registry:platform-component-registry-service"))
-    implementation(project(":server:libs:platform:platform-component:platform-component-rest"))
+    implementation(project(":server:libs:platform:platform-component:platform-component-context:platform-component-context-service"))
+    implementation(project(":server:libs:platform:platform-component:platform-component-log:platform-component-log-graphql"))
+    implementation(project(":server:libs:platform:platform-component:platform-component-log:platform-component-log-service"))
+    implementation(project(":server:libs:platform:platform-component:platform-component-service"))
     implementation(project(":server:libs:platform:platform-connection:platform-connection-service"))
+    implementation(project(":server:libs:platform:platform-configuration:platform-configuration-graphql"))
     implementation(project(":server:libs:platform:platform-configuration:platform-configuration-rest:platform-configuration-rest-impl"))
     implementation(project(":server:libs:platform:platform-configuration:platform-configuration-service"))
-    implementation(project(":server:libs:platform:platform-connection:platform-connection-rest:platform-connection-rest-impl"))
+    implementation(project(":server:libs:platform:platform-coordinator"))
+    implementation(project(":server:libs:platform:platform-data-storage:platform-data-storage-file-storage:platform-data-storage-file-storage-service"))
     implementation(project(":server:libs:platform:platform-data-storage:platform-data-storage-jdbc:platform-data-storage-jdbc-service"))
-    implementation(project(":server:libs:platform:platform-file-storage:platform-file-storage-service"))
+    implementation(project(":server:libs:platform:platform-file-storage:platform-file-storage-impl"))
+    implementation(project(":server:libs:platform:platform-mcp:platform-mcp-graphql"))
+    implementation(project(":server:libs:platform:platform-mcp:platform-mcp-service"))
+    implementation(project(":server:libs:platform:platform-notification:platform-notification-rest"))
+    implementation(project(":server:libs:platform:platform-notification:platform-notification-service"))
     implementation(project(":server:libs:platform:platform-oauth2:platform-oauth2-service"))
-    implementation(project(":server:libs:platform:platform-rest:platform-rest-impl"))
     implementation(project(":server:libs:platform:platform-scheduler:platform-scheduler-impl"))
+    implementation(project(":server:libs:platform:platform-security:platform-security-graphql"))
+    implementation(project(":server:libs:platform:platform-security:platform-security-service"))
     implementation(project(":server:libs:platform:platform-swagger"))
     implementation(project(":server:libs:platform:platform-tag:platform-tag-service"))
-    implementation(project(":server:libs:platform:platform-user:platform-user-rest:platform-user-rest-impl"))
+    implementation(project(":server:libs:platform:platform-user:platform-user-graphql"))
+    implementation(project(":server:libs:platform:platform-user:platform-user-rest"))
     implementation(project(":server:libs:platform:platform-user:platform-user-service"))
     implementation(project(":server:libs:platform:platform-webhook:platform-webhook-impl"))
-    implementation(project(":server:libs:platform:platform-webhook:platform-webhook-rest"))
+    implementation(project(":server:libs:platform:platform-webhook:platform-webhook-rest:platform-webhook-rest-impl"))
+    implementation(project(":server:libs:platform:platform-webhook:platform-websocket-webhook-rest"))
+    implementation(project(":server:libs:platform:platform-worker"))
     implementation(project(":server:libs:platform:platform-workflow:platform-workflow-coordinator:platform-workflow-coordinator-impl"))
-    implementation(project(":server:libs:platform:platform-workflow:platform-workflow-task-dispatcher:platform-workflow-task-dispatcher-registry:platform-workflow-task-dispatcher-registry-service"))
+    implementation(project(":server:libs:platform:platform-workflow:platform-workflow-task-dispatcher:platform-workflow-task-dispatcher-service"))
     implementation(project(":server:libs:platform:platform-workflow:platform-workflow-test:platform-workflow-test-rest"))
     implementation(project(":server:libs:platform:platform-workflow:platform-workflow-test:platform-workflow-test-service"))
     implementation(project(":server:libs:platform:platform-workflow:platform-workflow-execution:platform-workflow-execution-rest:platform-workflow-execution-rest-impl"))
     implementation(project(":server:libs:platform:platform-workflow:platform-workflow-execution:platform-workflow-execution-service"))
+    implementation(project(":server:libs:platform:platform-workflow:platform-workflow-validator:platform-workflow-validator-graphql"))
+    implementation(project(":server:libs:platform:platform-workflow:platform-workflow-worker:platform-workflow-worker-api"))
     implementation(project(":server:libs:platform:platform-workflow:platform-workflow-worker:platform-workflow-worker-impl"))
 
-    implementation(project(":server:libs:modules:components:accelo"))
-    implementation(project(":server:libs:modules:components:active-campaign"))
-    implementation(project(":server:libs:modules:components:affinity"))
-    implementation(project(":server:libs:modules:components:airtable"))
-    implementation(project(":server:libs:modules:components:aitable"))
-    implementation(project(":server:libs:modules:components:asana"))
-    implementation(project(":server:libs:modules:components:aws:aws-s3"))
-    implementation(project(":server:libs:modules:components:bash"))
-    implementation(project(":server:libs:modules:components:box"))
-    implementation(project(":server:libs:modules:components:capsule-crm"))
-    implementation(project(":server:libs:modules:components:copper"))
-    implementation(project(":server:libs:modules:components:csv-file"))
-    implementation(project(":server:libs:modules:components:data-mapper"))
-    implementation(project(":server:libs:modules:components:data-storage"))
-    implementation(project(":server:libs:modules:components:data-stream"))
-    implementation(project(":server:libs:modules:components:date-helper"))
-    implementation(project(":server:libs:modules:components:delay"))
-    implementation(project(":server:libs:modules:components:discord"))
-    implementation(project(":server:libs:modules:components:dropbox"))
-    implementation(project(":server:libs:modules:components:file-storage"))
-    implementation(project(":server:libs:modules:components:email"))
-    implementation(project(":server:libs:modules:components:encharge"))
-    implementation(project(":server:libs:modules:components:http-client"))
-    implementation(project(":server:libs:modules:components:hubspot"))
-    implementation(project(":server:libs:modules:components:infobip"))
-    implementation(project(":server:libs:modules:components:insightly"))
-    implementation(project(":server:libs:modules:components:intercom"))
-    implementation(project(":server:libs:modules:components:intercom"))
-    implementation(project(":server:libs:modules:components:jira"))
-    implementation(project(":server:libs:modules:components:json-file"))
-    implementation(project(":server:libs:modules:components:keap"))
-    implementation(project(":server:libs:modules:components:logger"))
-    implementation(project(":server:libs:modules:components:filesystem"))
-    implementation(project(":server:libs:modules:components:freshdesk"))
-    implementation(project(":server:libs:modules:components:freshsales"))
-    implementation(project(":server:libs:modules:components:github"))
-    implementation(project(":server:libs:modules:components:google:google-calendar"))
-    implementation(project(":server:libs:modules:components:google:google-contacts"))
-    implementation(project(":server:libs:modules:components:google:google-docs"))
-    implementation(project(":server:libs:modules:components:google:google-drive"))
-    implementation(project(":server:libs:modules:components:google:google-mail"))
-    implementation(project(":server:libs:modules:components:google:google-sheets"))
-    implementation(project(":server:libs:modules:components:map"))
-    implementation(project(":server:libs:modules:components:mailchimp"))
-    implementation(project(":server:libs:modules:components:microsoft:microsoft-excel"))
-    implementation(project(":server:libs:modules:components:microsoft:microsoft-one-drive"))
-    implementation(project(":server:libs:modules:components:microsoft:microsoft-outlook-365"))
-    implementation(project(":server:libs:modules:components:microsoft:microsoft-share-point"))
-    implementation(project(":server:libs:modules:components:microsoft:microsoft-teams"))
-    implementation(project(":server:libs:modules:components:mysql"))
-    implementation(project(":server:libs:modules:components:nifty"))
-    implementation(project(":server:libs:modules:components:object-helper"))
-    implementation(project(":server:libs:modules:components:ods-file"))
-    implementation(project(":server:libs:modules:components:one-simple-api"))
-    implementation(project(":server:libs:modules:components:openai"))
-    implementation(project(":server:libs:modules:components:petstore"))
-    implementation(project(":server:libs:modules:components:pipedrive"))
-    implementation(project(":server:libs:modules:components:pipeliner"))
-    implementation(project(":server:libs:modules:components:postgresql"))
-    implementation(project(":server:libs:modules:components:quickbooks"))
-    implementation(project(":server:libs:modules:components:rabbitmq"))
-    implementation(project(":server:libs:modules:components:random-helper"))
-    implementation(project(":server:libs:modules:components:resend"))
-    implementation(project(":server:libs:modules:components:salesflare"))
-    implementation(project(":server:libs:modules:components:schedule"))
-    implementation(project(":server:libs:modules:components:script"))
-    implementation(project(":server:libs:modules:components:sendgrid"))
-    implementation(project(":server:libs:modules:components:shopify"))
-    implementation(project(":server:libs:modules:components:slack"))
-    implementation(project(":server:libs:modules:components:teamwork"))
-    implementation(project(":server:libs:modules:components:text-helper"))
-    implementation(project(":server:libs:modules:components:twilio"))
-    implementation(project(":server:libs:modules:components:var"))
-    implementation(project(":server:libs:modules:components:vtiger"))
-    implementation(project(":server:libs:modules:components:whatsapp"))
-    implementation(project(":server:libs:modules:components:xero"))
-    implementation(project(":server:libs:modules:components:xlsx-file"))
-    implementation(project(":server:libs:modules:components:xml-file"))
-    implementation(project(":server:libs:modules:components:xml-helper"))
-    implementation(project(":server:libs:modules:components:webhook"))
-    implementation(project(":server:libs:modules:components:zendesk-sell"))
-    implementation(project(":server:libs:modules:components:zoho:zoho-crm"))
+    // CE Components - filtered by includeComponents/excludeComponents properties
+    // Use pre-built JARs when useComponentJars=true for faster IntelliJ startup
+    if (useComponentJars) {
+        rootProject.subprojects
+            .asSequence()
+            .filter { it.path.startsWith(":server:libs:modules:components") }
+            .filter { shouldIncludeComponent(it.path) }
+            .sortedBy { it.path }
+            .forEach {
+                implementation(files(it.tasks.named<Jar>("jar").flatMap { jar -> jar.archiveFile }))
+            }
+    } else {
+        rootProject.subprojects
+            .asSequence()
+            .filter { it.path.startsWith(":server:libs:modules:components") }
+            .filter { shouldIncludeComponent(it.path) }
+            .sortedBy { it.path }
+            .forEach { implementation(project(it.path)) }
+    }
 
+    implementation(project(":server:libs:modules:task-dispatchers:approval"))
     implementation(project(":server:libs:modules:task-dispatchers:branch"))
     implementation(project(":server:libs:modules:task-dispatchers:condition"))
     implementation(project(":server:libs:modules:task-dispatchers:each"))
     implementation(project(":server:libs:modules:task-dispatchers:fork-join"))
     implementation(project(":server:libs:modules:task-dispatchers:loop"))
     implementation(project(":server:libs:modules:task-dispatchers:map"))
+    implementation(project(":server:libs:modules:task-dispatchers:on-error"))
     implementation(project(":server:libs:modules:task-dispatchers:parallel"))
     implementation(project(":server:libs:modules:task-dispatchers:subflow"))
+    implementation(project(":server:libs:modules:task-dispatchers:suspend"))
+    implementation(project(":server:libs:modules:task-dispatchers:terminate"))
 
-    implementation(project(":server:ee:libs:atlas:atlas-configuration:atlas-configuration-repository:atlas-configuration-repository-git"))
+    implementation(project(":server:ee:libs:ai:ai-copilot:ai-copilot-rest"))
+    implementation(project(":server:ee:libs:ai:ai-copilot:ai-copilot-service"))
+    implementation(project(":server:libs:ai:ai-copilot:ai-copilot-service"))
+    implementation(project(":server:ee:libs:automation:automation-ai:automation-ai-gateway:automation-ai-gateway-graphql"))
+    implementation(project(":server:ee:libs:automation:automation-api-platform:automation-api-platform-configuration:automation-api-platform-configuration-rest"))
+    implementation(project(":server:ee:libs:automation:automation-api-platform:automation-api-platform-configuration:automation-api-platform-configuration-service"))
+    implementation(project(":server:ee:libs:automation:automation-api-platform:automation-api-platform-handler:automation-api-platform-handler-rest"))
+    implementation(project(":server:ee:libs:automation:automation-configuration:automation-configuration-public-rest"))
     implementation(project(":server:ee:libs:automation:automation-configuration:automation-configuration-rest"))
+    implementation(project(":server:ee:libs:automation:automation-configuration:automation-configuration-service"))
+    implementation(project(":server:ee:libs:automation:automation-security-web:automation-security-web-impl"))
+    implementation(project(":server:ee:libs:config:cloud-config"))
+    implementation(project(":server:ee:libs:config:observability-config"))
     implementation(project(":server:ee:libs:config:tenant-multi-data-config"))
-    implementation(project(":server:ee:libs:config:tenant-multi-message-event-config"))
+    implementation(project(":server:ee:libs:config:tenant-multi-knowledge-base-config"))
+    implementation(project(":server:ee:libs:config:tenant-multi-pgvector-config"))
+    implementation(project(":server:ee:libs:config:security-sso-config"))
     implementation(project(":server:ee:libs:config:tenant-multi-security-config"))
-    implementation(project(":server:ee:libs:core:audit:audit-service"))
     implementation(project(":server:ee:libs:core:cloud:cloud-aws"))
-    implementation(project(":server:ee:libs:core:encryption:encryption-aws"))
-    implementation(project(":server:ee:libs:core:file-storage:file-storage-aws"))
+    implementation(project(":server:ee:libs:core:file-storage:file-storage-aws:file-storage-aws-api"))
+    implementation(project(":server:ee:libs:core:file-storage:file-storage-aws:file-storage-aws-impl"))
     implementation(project(":server:ee:libs:core:message:message-broker:message-broker-aws"))
     implementation(project(":server:ee:libs:core:tenant:tenant-multi-service"))
+    implementation(project(":server:ee:libs:embedded:embedded-ai:embedded-ai-mcp-server"))
+    implementation(project(":server:ee:libs:embedded:embedded-connected-user:embedded-connected-user-graphql"))
+    implementation(project(":server:ee:libs:embedded:embedded-connected-user:embedded-connected-user-rest"))
+    implementation(project(":server:ee:libs:embedded:embedded-connected-user:embedded-connected-user-service"))
+    implementation(project(":server:ee:libs:embedded:embedded-configuration:embedded-configuration-graphql"))
+    implementation(project(":server:ee:libs:embedded:embedded-configuration:embedded-configuration-instance-impl"))
+    implementation(project(":server:ee:libs:embedded:embedded-configuration:embedded-configuration-public-rest"))
+    implementation(project(":server:ee:libs:embedded:embedded-configuration:embedded-configuration-rest:embedded-configuration-rest-impl"))
+    implementation(project(":server:ee:libs:embedded:embedded-configuration:embedded-configuration-service"))
+    implementation(project(":server:ee:libs:embedded:embedded-execution:embedded-execution-public-rest"))
+    implementation(project(":server:ee:libs:embedded:embedded-execution:embedded-execution-service"))
+    implementation(project(":server:ee:libs:embedded:embedded-ai:embedded-ai-mcp-graphql"))
+    implementation(project(":server:ee:libs:embedded:embedded-ai:embedded-ai-mcp-service"))
+    implementation(project(":server:ee:libs:embedded:embedded-security:embedded-security-rest"))
+    implementation(project(":server:ee:libs:embedded:embedded-security:embedded-security-service"))
+    implementation(project(":server:ee:libs:embedded:embedded-security-web:embedded-security-web-impl"))
+    implementation(project(":server:ee:libs:embedded:embedded-swagger"))
+    implementation(project(":server:ee:libs:embedded:embedded-unified:embedded-unified-rest"))
+    implementation(project(":server:ee:libs:embedded:embedded-unified:embedded-unified-service"))
+    implementation(project(":server:ee:libs:embedded:embedded-webhook:embedded-webhook-public-rest"))
+    implementation(project(":server:ee:libs:embedded:embedded-workflow:embedded-workflow-coordinator"))
+    implementation(project(":server:ee:libs:embedded:embedded-workflow:embedded-workflow-execution:embedded-workflow-execution-rest"))
+    implementation(project(":server:ee:libs:embedded:embedded-workflow:embedded-workflow-execution:embedded-workflow-execution-service"))
+    implementation(project(":server:ee:libs:platform:platform-ai:platform-ai-agent:platform-ai-agent-eval:platform-ai-agent-eval-file-storage:platform-ai-agent-eval-file-storage-impl"))
+    implementation(project(":server:ee:libs:platform:platform-ai:platform-ai-agent:platform-ai-agent-eval:platform-ai-agent-eval-graphql"))
+    implementation(project(":server:ee:libs:platform:platform-ai:platform-ai-agent:platform-ai-agent-eval:platform-ai-agent-eval-service"))
+    implementation(project(":server:ee:libs:platform:platform-ai:platform-ai-agent:platform-ai-agent-service"))
+    implementation(project(":server:libs:platform:platform-ai:platform-ai-provider:platform-ai-provider-service"))
+    implementation(project(":server:libs:platform:platform-ai:platform-ai-skill:platform-ai-skill-file-storage:platform-ai-skill-file-storage-impl"))
+    implementation(project(":server:libs:platform:platform-ai:platform-ai-skill:platform-ai-skill-graphql"))
+    implementation(project(":server:libs:platform:platform-ai:platform-ai-skill:platform-ai-skill-rest"))
+    implementation(project(":server:libs:platform:platform-ai:platform-ai-skill:platform-ai-skill-service"))
+    implementation(project(":server:ee:libs:platform:platform-api-connector:platform-api-connector-configuration:platform-api-connector-configuration-graphql"))
+    implementation(project(":server:ee:libs:platform:platform-api-connector:platform-api-connector-configuration:platform-api-connector-configuration-service"))
+    implementation(project(":server:ee:libs:platform:platform-api-connector:platform-api-connector-file-storage:platform-api-connector-file-storage-impl"))
+    implementation(project(":server:ee:libs:platform:platform-api-connector:platform-api-connector-handler"))
+    implementation(project(":server:ee:libs:platform:platform-audit:platform-audit-service"))
+    implementation(project(":server:ee:libs:platform:platform-code-workflow:platform-code-workflow-configuration:platform-code-workflow-configuration-service"))
+    implementation(project(":server:ee:libs:platform:platform-code-workflow:platform-code-workflow-file-storage:platform-code-workflow-file-storage-impl"))
+    implementation(project(":server:ee:libs:platform:platform-configuration:platform-configuration-rest"))
+    implementation(project(":server:ee:libs:platform:platform-configuration:platform-configuration-service"))
+    implementation(project(":server:ee:libs:platform:platform-custom-component:platform-custom-component-handler"))
+    implementation(project(":server:ee:libs:platform:platform-custom-component:platform-custom-component-configuration:platform-custom-component-configuration-rest"))
+    implementation(project(":server:ee:libs:platform:platform-custom-component:platform-custom-component-configuration:platform-custom-component-configuration-graphql"))
+    implementation(project(":server:ee:libs:platform:platform-custom-component:platform-custom-component-configuration:platform-custom-component-configuration-service"))
+    implementation(project(":server:ee:libs:platform:platform-custom-component:platform-custom-component-file-storage:platform-custom-component-file-storage-impl"))
+    implementation(project(":server:ee:libs:platform:platform-scheduler:platform-scheduler-aws"))
+    implementation(project(":server:ee:libs:platform:platform-scheduler:platform-scheduler-impl"))
+    implementation(project(":server:ee:libs:platform:platform-security-web:platform-security-web-impl"))
+    implementation(project(":server:ee:libs:platform:platform-user:platform-user-graphql"))
+    implementation(project(":server:ee:libs:platform:platform-user:platform-user-scim"))
+    implementation(project(":server:ee:libs:platform:platform-user:platform-user-service"))
+
+    // EE Components - filtered by includeComponents/excludeComponents properties
+    // Use pre-built JARs when useComponentJars=true for faster IntelliJ startup
+    if (useComponentJars) {
+        rootProject.subprojects
+            .asSequence()
+            .filter { it.path.startsWith(":server:ee:libs:modules:components") }
+            .filter { shouldIncludeComponent(it.path) }
+            .sortedBy { it.path }
+            .forEach {
+                implementation(files(it.tasks.named<Jar>("jar").flatMap { jar -> jar.archiveFile }))
+            }
+    } else {
+        rootProject.subprojects
+            .asSequence()
+            .filter { it.path.startsWith(":server:ee:libs:modules:components") }
+            .filter { shouldIncludeComponent(it.path) }
+            .sortedBy { it.path }
+            .forEach { implementation(project(it.path)) }
+    }
 
     runtimeOnly("com.h2database:h2")
     runtimeOnly("com.zaxxer:HikariCP")
-    runtimeOnly("org.apache.activemq:artemis-jakarta-server")
     runtimeOnly("org.postgresql:postgresql")
-    runtimeOnly(libs.org.springdoc.springdoc.openapi.starter.webmvc.ui)
-    runtimeOnly("org.springframework.boot:spring-boot-starter-actuator")
-    runtimeOnly("org.springframework.boot:spring-boot-starter-amqp")
-    runtimeOnly("org.springframework.boot:spring-boot-starter-artemis")
-    runtimeOnly("org.springframework.boot:spring-boot-starter-cache")
-    runtimeOnly("org.springframework.boot:spring-boot-starter-quartz")
-    runtimeOnly("org.springframework.boot:spring-boot-starter-mail")
-    runtimeOnly("org.springframework.kafka:spring-kafka")
 
     testImplementation(project(":server:libs:test:test-int-support"))
+    testImplementation(project(":server:libs:core:tenant:tenant-api"))
+    testImplementation(project(":server:libs:automation:automation-knowledge-base:automation-knowledge-base-api"))
+    testImplementation(project(":server:libs:platform:platform-knowledge-base:platform-knowledge-base-api"))
+    testImplementation("org.springframework.boot:spring-boot-jdbc")
+    testImplementation("org.testcontainers:testcontainers")
+    testImplementation("org.testcontainers:postgresql")
+    testImplementation("org.testcontainers:junit-jupiter")
+}
+
+configure<com.gorylenko.GitPropertiesPluginExtension> {
+    dotGitDirectory = project.rootProject.layout.projectDirectory.dir(".git")
+}
+
+tasks.named<Test>("testIntegration") {
+    maxHeapSize = "1g"
+}
+
+// Task to build component JARs for the fast IntelliJ startup (respects includeComponents/excludeComponents)
+val buildComponentJars by tasks.registering {
+    group = "build"
+    description = "Build component JARs for fast IntelliJ startup (respects includeComponents/excludeComponents filters)"
+
+    val filteredComponents = rootProject.subprojects
+        .filter { it.path.startsWith(":server:libs:modules:components") || it.path.startsWith(":server:ee:libs:modules:components") }
+        .filter { shouldIncludeComponent(it.path) }
+
+    dependsOn(filteredComponents.map { "${it.path}:jar" })
+
+    doLast {
+        val totalComponents = rootProject.subprojects
+            .filter { it.path.startsWith(":server:libs:modules:components") || it.path.startsWith(":server:ee:libs:modules:components") }
+            .filterNot { it.path.contains("example") }
+            .count()
+
+        println("\n✅ Built ${filteredComponents.size} / $totalComponents component JARs")
+
+        if (includeComponents.isNotEmpty()) {
+            println("📋 Whitelist (includeComponents): ${includeComponents.joinToString(", ")}")
+        }
+
+        if (excludeComponents.isNotEmpty()) {
+            println("🚫 Blacklist (excludeComponents): ${excludeComponents.joinToString(", ")}")
+        }
+
+        println("📝 Now set useComponentJars=true in gradle.properties and refresh Gradle in IntelliJ")
+    }
 }

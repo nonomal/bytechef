@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,12 +20,12 @@ import static com.bytechef.component.definition.Authorization.AUTHORIZATION;
 import static com.bytechef.component.definition.Authorization.ApplyResponse.ofHeaders;
 import static com.bytechef.component.definition.Authorization.KEY;
 import static com.bytechef.component.definition.Authorization.USERNAME;
-import static com.bytechef.component.definition.ComponentDSL.authorization;
-import static com.bytechef.component.definition.ComponentDSL.connection;
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.definition.ComponentDsl.authorization;
+import static com.bytechef.component.definition.ComponentDsl.connection;
+import static com.bytechef.component.definition.ComponentDsl.string;
 
 import com.bytechef.component.definition.Authorization.AuthorizationType;
-import com.bytechef.component.definition.ComponentDSL.ModifiableConnectionDefinition;
+import com.bytechef.component.definition.ComponentDsl.ModifiableConnectionDefinition;
 import java.util.List;
 import java.util.Map;
 
@@ -35,20 +35,24 @@ import java.util.Map;
 public class FreshsalesConnection {
 
     public static final ModifiableConnectionDefinition CONNECTION_DEFINITION = connection()
+        .baseUri((connectionParameters, context) -> "https://" + connectionParameters.getRequiredString(USERNAME)
+            + ".myfreshworks.com/crm/sales/api")
         .authorizations(
             authorization(AuthorizationType.API_KEY)
                 .title("API Key")
                 .properties(
                     string(USERNAME)
                         .label("Bundle alias")
-                        .description("Your Freshsales bundle alias (e.g. https://<alias>.myfreshworks.com)")
+                        .description("Your Freshsales bundle alias (e.g. https://<alias>.myfreshworks.com).")
                         .required(true),
                     string(KEY)
                         .label("API Key")
-                        .description("The API Key supplied by Freshsales")
+                        .description("The API Key supplied by Freshsales.")
                         .required(true))
                 .apply((connectionParameters, context) -> ofHeaders(
-                    Map.of(AUTHORIZATION, List.of("Token token=" + connectionParameters.getRequiredString(KEY))))));
+                    Map.of(AUTHORIZATION, List.of("Token token=" + connectionParameters.getRequiredString(KEY))))))
+        .help("", "https://docs.bytechef.io/reference/components/freshsales_v1#connection-setup")
+        .version(1);
 
     private FreshsalesConnection() {
     }

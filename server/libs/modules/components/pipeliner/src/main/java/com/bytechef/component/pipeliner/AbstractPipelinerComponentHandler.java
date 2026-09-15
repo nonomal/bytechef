@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 
 package com.bytechef.component.pipeliner;
 
-import static com.bytechef.component.definition.ComponentDSL.component;
+import static com.bytechef.component.definition.ComponentDsl.component;
 
 import com.bytechef.component.OpenApiComponentHandler;
 import com.bytechef.component.definition.ComponentDefinition;
@@ -35,11 +35,12 @@ public abstract class AbstractPipelinerComponentHandler implements OpenApiCompon
         component("pipeliner")
             .title("Pipeliner")
             .description(
-                "Pipeliner CRM is a comprehensive sales management tool that helps streamline sales processes through visual pipline management, contact organization, sales forecasting, and reporting."))
-                    .actions(modifyActions(PipelinerCreateAccountAction.ACTION_DEFINITION,
-                        PipelinerCreateContactAction.ACTION_DEFINITION, PipelinerCreateTaskAction.ACTION_DEFINITION))
-                    .connection(modifyConnection(PipelinerConnection.CONNECTION_DEFINITION))
-                    .triggers(getTriggers());
+                "Pipeliner CRM is a comprehensive sales management tool that helps streamline sales processes through visual pipline management, contact organization, sales forecasting, and reporting.")
+            .version(1))
+                .actions(modifyActions(PipelinerCreateAccountAction.ACTION_DEFINITION,
+                    PipelinerCreateContactAction.ACTION_DEFINITION, PipelinerCreateTaskAction.ACTION_DEFINITION))
+                .connection(modifyConnection(PipelinerConnection.CONNECTION_DEFINITION))
+                .triggers(getTriggers());
 
     @Override
     public ComponentDefinition getDefinition() {

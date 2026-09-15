@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,10 +17,15 @@
 package com.bytechef.component.google.docs.util;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentCaptor.forClass;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.google.api.services.docs.v1.Docs;
+import com.google.api.services.docs.v1.Docs.Documents;
+import com.google.api.services.docs.v1.Docs.Documents.BatchUpdate;
+import com.google.api.services.docs.v1.Docs.Documents.Create;
+import com.google.api.services.docs.v1.Docs.Documents.Get;
 import com.google.api.services.docs.v1.model.BatchUpdateDocumentRequest;
 import com.google.api.services.docs.v1.model.Document;
 import com.google.api.services.docs.v1.model.Request;
@@ -35,16 +40,17 @@ import org.mockito.ArgumentCaptor;
 class GoogleDocsUtilsTest {
 
     private final ArgumentCaptor<BatchUpdateDocumentRequest> batchUpdateDocumentRequestArgumentCaptor =
-        ArgumentCaptor.forClass(BatchUpdateDocumentRequest.class);
-    private final ArgumentCaptor<Document> documentArgumentCaptor = ArgumentCaptor.forClass(Document.class);
-    private final ArgumentCaptor<String> documentIdArgumentCaptor = ArgumentCaptor.forClass(String.class);
-    private final Docs.Documents.BatchUpdate mockedBatchUpdate = mock(Docs.Documents.BatchUpdate.class);
-    private final Docs.Documents.Create mockedCreate = mock(Docs.Documents.Create.class);
+        forClass(BatchUpdateDocumentRequest.class);
+    private final ArgumentCaptor<Document> documentArgumentCaptor = forClass(Document.class);
+    private final BatchUpdate mockedBatchUpdate = mock(BatchUpdate.class);
+    private final Create mockedCreate = mock(Create.class);
     private final Docs mockedDocs = mock(Docs.class);
     private final Document mockedDocument = mock(Document.class);
-    private final Docs.Documents mockedDocuments = mock(Docs.Documents.class);
+    private final Documents mockedDocuments = mock(Documents.class);
+    private final Get mockedGet = mock(Get.class);
     @SuppressWarnings("unchecked")
     private final List<Request> mockedList = mock(List.class);
+    private final ArgumentCaptor<String> stringArgumentCaptor = forClass(String.class);
 
     @Test
     void testCreateDocument() throws IOException {
@@ -58,7 +64,22 @@ class GoogleDocsUtilsTest {
         Document result = GoogleDocsUtils.createDocument("Title", mockedDocs);
 
         assertEquals(mockedDocument, result);
-        assertEquals("Title", documentArgumentCaptor.getValue().getTitle());
+        assertEquals(new Document().setTitle("Title"), documentArgumentCaptor.getValue());
+    }
+
+    @Test
+    void testGetDocument() throws IOException {
+        when(mockedDocs.documents())
+            .thenReturn(mockedDocuments);
+        when(mockedDocuments.get(stringArgumentCaptor.capture()))
+            .thenReturn(mockedGet);
+        when(mockedGet.execute())
+            .thenReturn(mockedDocument);
+
+        Document result = GoogleDocsUtils.getDocument(mockedDocs, "id");
+
+        assertEquals(mockedDocument, result);
+        assertEquals("id", stringArgumentCaptor.getValue());
     }
 
     @Test
@@ -66,12 +87,14 @@ class GoogleDocsUtilsTest {
         when(mockedDocs.documents())
             .thenReturn(mockedDocuments);
         when(mockedDocuments.batchUpdate(
-            documentIdArgumentCaptor.capture(), batchUpdateDocumentRequestArgumentCaptor.capture()))
-            .thenReturn(mockedBatchUpdate);
+            stringArgumentCaptor.capture(), batchUpdateDocumentRequestArgumentCaptor.capture()))
+                .thenReturn(mockedBatchUpdate);
 
         GoogleDocsUtils.writeToDocument(mockedDocs, "id", mockedList);
 
-        assertEquals("id", documentIdArgumentCaptor.getValue());
-        assertEquals(mockedList, batchUpdateDocumentRequestArgumentCaptor.getValue().getRequests());
+        assertEquals("id", stringArgumentCaptor.getValue());
+        assertEquals(
+            new BatchUpdateDocumentRequest().setRequests(mockedList),
+            batchUpdateDocumentRequestArgumentCaptor.getValue());
     }
 }

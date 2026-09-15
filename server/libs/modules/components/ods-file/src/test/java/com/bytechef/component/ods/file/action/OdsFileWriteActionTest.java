@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,8 +19,8 @@ package com.bytechef.component.ods.file.action;
 import static org.skyscreamer.jsonassert.JSONAssert.assertEquals;
 
 import com.bytechef.component.definition.ActionContext;
-import com.bytechef.component.definition.Context;
 import com.bytechef.component.definition.Parameters;
+import com.bytechef.component.definition.TypeReference;
 import com.bytechef.component.ods.file.OdsFileComponentHandlerTest;
 import com.bytechef.component.ods.file.constant.OdsFileConstants;
 import java.io.ByteArrayInputStream;
@@ -81,7 +81,7 @@ public class OdsFileWriteActionTest {
         Mockito.when(inputParameters.getString(Mockito.eq(OdsFileConstants.FILENAME), Mockito.eq("file.ods")))
             .thenReturn("file.ods");
         Mockito.when(inputParameters.getList(
-            Mockito.eq(OdsFileConstants.ROWS), Mockito.any(Context.TypeReference.class), Mockito.eq(List.of())))
+            Mockito.eq(OdsFileConstants.ROWS), Mockito.any(TypeReference.class), Mockito.eq(List.of())))
             .thenReturn(items);
         Mockito.when(inputParameters.getString(Mockito.eq(OdsFileConstants.SHEET_NAME), Mockito.eq("Sheet")))
             .thenReturn("Sheet");

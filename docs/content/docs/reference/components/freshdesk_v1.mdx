@@ -1,0 +1,470 @@
+---
+title: "Freshdesk"
+description: "Freshdesk is a cloud-based customer support software that helps businesses manage customer queries and tickets efficiently."
+---
+
+
+Categories: Customer Support
+
+
+Type: freshdesk/v1
+
+<hr />
+
+
+
+
+## Connections
+
+Version: 1
+
+
+### Basic Auth
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| domain | Domain | STRING | Your helpdesk domain name, e.g. https://&#123;your_domain&#125;.freshdesk.com/api/v2 | true |
+| username | API key | STRING |  | true |
+
+
+
+## Connection Setup
+
+### Find API Key
+
+1. Navigate to your [Freshworks](https://www.freshworks.com/) dashboard.
+2. Click on **Login**.
+3. Login to your account.
+4. Click on **Continue**.
+5. Choose your Freshdesk account.
+6. Click on your Profile icon.
+7. Click on **Profile settings**.
+8. Click on **View API Key** and verify you are not a robot.
+9. Here you can see your **API Key**.
+10. Done 🚀.
+
+<div style={{ position: 'relative', height:0, width: '100%', overflow: 'hidden', zIndex: 49, boxSizing: 'border-box', paddingBottom: 'calc(50.05219207% + 32px)'}}>
+    <iframe src="https://www.guidejar.com/embed/f16c9d6e-cccb-4c72-85e5-b9f26a964b73?type=1&controls=on" width="100%" height="100%" style={{height:'100%', position:'absolute', inset:0}} allowFullScreen frameBorder="0"></iframe>
+</div>
+
+
+
+<hr />
+
+
+## Actions
+
+
+### Create Company
+Name: createCompany
+
+`Creates a new compan.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| name | Name | STRING | Name of the company. | true |
+| description | Description | STRING | Description of the company. | false |
+| note | Note | STRING | Any specific note about the company. | false |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Create Company",
+  "name" : "createCompany",
+  "parameters" : {
+    "name" : "",
+    "description" : "",
+    "note" : ""
+  },
+  "type" : "freshdesk/v1/createCompany"
+}
+```
+
+#### Output
+
+
+
+Type: OBJECT
+
+
+#### Properties
+
+|     Name     |     Type     |     Description     |
+|:------------:|:------------:|:-------------------:|
+| id | INTEGER | ID of the company. |
+| name | STRING | Name of the company. |
+| description | STRING | Description of the company. |
+| domains | ARRAY <details> <summary> Items </summary> [STRING] </details> | List of domains associated with the company. |
+| note | STRING | Note about the company. |
+| created_at | STRING | Timestamp when the company was created. |
+| updated_at | STRING | Timestamp when the company was last updated. |
+| health_score | STRING | Health score of the company. |
+| account_tier | STRING | Account tier of the company. |
+| renewal_date | STRING | Renewal date of the company subscription. |
+| industry | STRING | Industry of the company. |
+
+
+
+
+#### Output Example
+```json
+{
+  "id" : 1,
+  "name" : "",
+  "description" : "",
+  "domains" : [ "" ],
+  "note" : "",
+  "created_at" : "",
+  "updated_at" : "",
+  "health_score" : "",
+  "account_tier" : "",
+  "renewal_date" : "",
+  "industry" : ""
+}
+```
+
+
+
+
+### Create Contact
+Name: createContact
+
+`Creates a new contact.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| name | Name | STRING | Full name of the contact | true |
+| email | Email | STRING | Primary email address of the contact. | true |
+| phone | Work Phone | STRING | Telephone number of the contact. | false |
+| mobile | Mobile | STRING | Mobile number of the contact. | false |
+| description | Description | STRING | A small description of the contact. | false |
+| job_title | Job Title | STRING | Job title of the contact. | false |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Create Contact",
+  "name" : "createContact",
+  "parameters" : {
+    "name" : "",
+    "email" : "",
+    "phone" : "",
+    "mobile" : "",
+    "description" : "",
+    "job_title" : ""
+  },
+  "type" : "freshdesk/v1/createContact"
+}
+```
+
+#### Output
+
+
+
+Type: OBJECT
+
+
+#### Properties
+
+|     Name     |     Type     |     Description     |
+|:------------:|:------------:|:-------------------:|
+| active | BOOLEAN <details> <summary> Options </summary> <span>true</span>, <span>false</span> </details> | Whether the contact is active. |
+| address | STRING | Address of the contact. |
+| company_id | INTEGER | ID of the primary company of the contact. |
+| view_all_tickets | BOOLEAN <details> <summary> Options </summary> <span>true</span>, <span>false</span> </details> | Whether the contact can view all tickets. |
+| deleted | BOOLEAN <details> <summary> Options </summary> <span>true</span>, <span>false</span> </details> | Whether the contact is deleted. |
+| description | STRING | Description of the contact. |
+| email | STRING | Email address of the contact. |
+| id | INTEGER | ID of the contact. |
+| contact_type | STRING | Type of the contact. |
+| job_title | STRING | Job title of the contact. |
+| language | STRING | Language of the contact. |
+| mobile | STRING | Mobile number of the contact. |
+| name | STRING | Name of the contact. |
+| phone | STRING | Phone number of the contact. |
+| time_zone | STRING | Time zone of the contact. |
+| twitter_id | STRING | Twitter ID of the contact. |
+| social_handler | ARRAY <details> <summary> Items </summary> [STRING] </details> | List of social handlers of the contact. |
+| other_emails | ARRAY <details> <summary> Items </summary> [STRING] </details> | List of additional email addresses of the contact. |
+| other_companies | ARRAY <details> <summary> Items </summary> [&#123;INTEGER\(company_id), BOOLEAN\(view_all_tickets)&#125;] </details> | List of other companies associated with the contact. |
+| created_at | STRING | Timestamp when the contact was created. |
+| updated_at | STRING | Timestamp when the contact was last updated. |
+| tags | ARRAY <details> <summary> Items </summary> [STRING] </details> | List of tags associated with the contact. |
+| avatar | STRING | Avatar of the contact. |
+
+
+
+
+#### Output Example
+```json
+{
+  "active" : false,
+  "address" : "",
+  "company_id" : 1,
+  "view_all_tickets" : false,
+  "deleted" : false,
+  "description" : "",
+  "email" : "",
+  "id" : 1,
+  "contact_type" : "",
+  "job_title" : "",
+  "language" : "",
+  "mobile" : "",
+  "name" : "",
+  "phone" : "",
+  "time_zone" : "",
+  "twitter_id" : "",
+  "social_handler" : [ "" ],
+  "other_emails" : [ "" ],
+  "other_companies" : [ {
+    "company_id" : 1,
+    "view_all_tickets" : false
+  } ],
+  "created_at" : "",
+  "updated_at" : "",
+  "tags" : [ "" ],
+  "avatar" : ""
+}
+```
+
+
+
+
+### Create Ticket
+Name: createTicket
+
+`Creates a new ticket.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| subject | Subject | STRING | Subject of the ticket. | true |
+| email | Email | STRING | Email address of the requester. If no contact exists with this email address in Freshdesk, it will be added as a new contact. | true |
+| description | Description | STRING | HTML content of the ticket. | true |
+| priority | Priority | INTEGER <details> <summary> Options </summary> <span>1</span>, <span>2</span>, <span>3</span>, <span>4</span> </details> | Priority of the ticket. | false |
+| status | Status | INTEGER <details> <summary> Options </summary> <span>2</span>, <span>3</span>, <span>4</span>, <span>5</span> </details> | Status of the ticket. | false |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Create Ticket",
+  "name" : "createTicket",
+  "parameters" : {
+    "subject" : "",
+    "email" : "",
+    "description" : "",
+    "priority" : 1,
+    "status" : 1
+  },
+  "type" : "freshdesk/v1/createTicket"
+}
+```
+
+#### Output
+
+
+
+Type: OBJECT
+
+
+#### Properties
+
+|     Name     |     Type     |     Description     |
+|:------------:|:------------:|:-------------------:|
+| cc_emails | ARRAY <details> <summary> Items </summary> [STRING] </details> | List of email addresses added in the cc field of the ticket. |
+| fwd_emails | ARRAY <details> <summary> Items </summary> [STRING] </details> | List of email addresses added while forwarding a ticket. |
+| reply_cc_emails | ARRAY <details> <summary> Items </summary> [STRING] </details> | List of email addresses added while replying to a ticket. |
+| email_config_id | INTEGER | ID of the email config used for the ticket. |
+| group_id | INTEGER | ID of the group the ticket is assigned to. |
+| priority | INTEGER | Priority of the ticket. |
+| requester_id | INTEGER | ID of the requester of the ticket. |
+| responder_id | INTEGER | ID of the agent the ticket is assigned to. |
+| source | INTEGER | Channel through which the ticket was created. |
+| status | INTEGER | Status of the ticket. |
+| subject | STRING | Subject of the ticket. |
+| company_id | INTEGER | ID of the company the ticket belongs to. |
+| id | INTEGER | ID of the ticket. |
+| type | STRING | Type of the ticket. |
+| to_emails | ARRAY <details> <summary> Items </summary> [STRING] </details> | List of email addresses the ticket was sent to. |
+| product_id | INTEGER | ID of the product the ticket belongs to. |
+| fr_escalated | BOOLEAN <details> <summary> Options </summary> <span>true</span>, <span>false</span> </details> | Whether the ticket has been escalated as the result of first response time being breached. |
+| spam | BOOLEAN <details> <summary> Options </summary> <span>true</span>, <span>false</span> </details> | Whether the ticket has been marked as spam. |
+| urgent | BOOLEAN <details> <summary> Options </summary> <span>true</span>, <span>false</span> </details> | Whether the ticket is marked as urgent. |
+| is_escalated | BOOLEAN <details> <summary> Options </summary> <span>true</span>, <span>false</span> </details> | Whether the ticket has been escalated. |
+| created_at | STRING | Timestamp when the ticket was created. |
+| updated_at | STRING | Timestamp when the ticket was last updated. |
+| due_by | STRING | Timestamp when the ticket is due to be resolved. |
+| fr_due_by | STRING | Timestamp when the first response is due. |
+| description_text | STRING | Plain text version of the ticket description. |
+| description | STRING | HTML content of the ticket description. |
+| tags | ARRAY <details> <summary> Items </summary> [STRING] </details> | List of tags associated with the ticket. |
+| attachments | ARRAY <details> <summary> Items </summary> [&#123;&#125;] </details> | List of attachments associated with the ticket. |
+
+
+
+
+#### Output Example
+```json
+{
+  "cc_emails" : [ "" ],
+  "fwd_emails" : [ "" ],
+  "reply_cc_emails" : [ "" ],
+  "email_config_id" : 1,
+  "group_id" : 1,
+  "priority" : 1,
+  "requester_id" : 1,
+  "responder_id" : 1,
+  "source" : 1,
+  "status" : 1,
+  "subject" : "",
+  "company_id" : 1,
+  "id" : 1,
+  "type" : "",
+  "to_emails" : [ "" ],
+  "product_id" : 1,
+  "fr_escalated" : false,
+  "spam" : false,
+  "urgent" : false,
+  "is_escalated" : false,
+  "created_at" : "",
+  "updated_at" : "",
+  "due_by" : "",
+  "fr_due_by" : "",
+  "description_text" : "",
+  "description" : "",
+  "tags" : [ "" ],
+  "attachments" : [ { } ]
+}
+```
+
+
+
+
+### Update Ticket
+Name: updateTicket
+
+`Updates a ticket.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| ticketId | Ticket Id | STRING |  | false |
+| subject | Subject | STRING | Subject of the ticket. | false |
+| email | Email | STRING | Email address of the requester. If no contact exists with this email address in Freshdesk, it will be added as a new contact. | false |
+| description | Description | STRING | HTML content of the ticket. | false |
+| priority | Priority | INTEGER <details> <summary> Options </summary> <span>1</span>, <span>2</span>, <span>3</span>, <span>4</span> </details> | Priority of the ticket. | false |
+| status | Status | INTEGER <details> <summary> Options </summary> <span>2</span>, <span>3</span>, <span>4</span>, <span>5</span> </details> | Status of the ticket. | false |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Update Ticket",
+  "name" : "updateTicket",
+  "parameters" : {
+    "ticketId" : "",
+    "subject" : "",
+    "email" : "",
+    "description" : "",
+    "priority" : 1,
+    "status" : 1
+  },
+  "type" : "freshdesk/v1/updateTicket"
+}
+```
+
+#### Output
+
+
+
+Type: OBJECT
+
+
+#### Properties
+
+|     Name     |     Type     |     Description     |
+|:------------:|:------------:|:-------------------:|
+| cc_emails | ARRAY <details> <summary> Items </summary> [STRING] </details> | List of email addresses added in the cc field of the ticket. |
+| fwd_emails | ARRAY <details> <summary> Items </summary> [STRING] </details> | List of email addresses added while forwarding a ticket. |
+| reply_cc_emails | ARRAY <details> <summary> Items </summary> [STRING] </details> | List of email addresses added while replying to a ticket. |
+| email_config_id | INTEGER | ID of the email config used for the ticket. |
+| group_id | INTEGER | ID of the group the ticket is assigned to. |
+| priority | INTEGER | Priority of the ticket. |
+| requester_id | INTEGER | ID of the requester of the ticket. |
+| responder_id | INTEGER | ID of the agent the ticket is assigned to. |
+| source | INTEGER | Channel through which the ticket was created. |
+| status | INTEGER | Status of the ticket. |
+| subject | STRING | Subject of the ticket. |
+| company_id | INTEGER | ID of the company the ticket belongs to. |
+| id | INTEGER | ID of the ticket. |
+| type | STRING | Type of the ticket. |
+| to_emails | ARRAY <details> <summary> Items </summary> [STRING] </details> | List of email addresses the ticket was sent to. |
+| product_id | INTEGER | ID of the product the ticket belongs to. |
+| fr_escalated | BOOLEAN <details> <summary> Options </summary> <span>true</span>, <span>false</span> </details> | Whether the ticket has been escalated as the result of first response time being breached. |
+| spam | BOOLEAN <details> <summary> Options </summary> <span>true</span>, <span>false</span> </details> | Whether the ticket has been marked as spam. |
+| urgent | BOOLEAN <details> <summary> Options </summary> <span>true</span>, <span>false</span> </details> | Whether the ticket is marked as urgent. |
+| is_escalated | BOOLEAN <details> <summary> Options </summary> <span>true</span>, <span>false</span> </details> | Whether the ticket has been escalated. |
+| created_at | STRING | Timestamp when the ticket was created. |
+| updated_at | STRING | Timestamp when the ticket was last updated. |
+| due_by | STRING | Timestamp when the ticket is due to be resolved. |
+| fr_due_by | STRING | Timestamp when the first response is due. |
+| description_text | STRING | Plain text version of the ticket description. |
+| description | STRING | HTML content of the ticket description. |
+| tags | ARRAY <details> <summary> Items </summary> [STRING] </details> | List of tags associated with the ticket. |
+| attachments | ARRAY <details> <summary> Items </summary> [&#123;&#125;] </details> | List of attachments associated with the ticket. |
+
+
+
+
+#### Output Example
+```json
+{
+  "cc_emails" : [ "" ],
+  "fwd_emails" : [ "" ],
+  "reply_cc_emails" : [ "" ],
+  "email_config_id" : 1,
+  "group_id" : 1,
+  "priority" : 1,
+  "requester_id" : 1,
+  "responder_id" : 1,
+  "source" : 1,
+  "status" : 1,
+  "subject" : "",
+  "company_id" : 1,
+  "id" : 1,
+  "type" : "",
+  "to_emails" : [ "" ],
+  "product_id" : 1,
+  "fr_escalated" : false,
+  "spam" : false,
+  "urgent" : false,
+  "is_escalated" : false,
+  "created_at" : "",
+  "updated_at" : "",
+  "due_by" : "",
+  "fr_due_by" : "",
+  "description_text" : "",
+  "description" : "",
+  "tags" : [ "" ],
+  "attachments" : [ { } ]
+}
+```
+
+
+
+
+
+
+## What to do if your action is not listed here?
+
+If this component doesn't have the action you need, you can use **Custom Action** to create your own. Custom Actions empower you to define HTTP requests tailored to your specific requirements, allowing for greater flexibility in integrating with external services or APIs.
+
+To create a Custom Action, simply specify the desired HTTP method, path, and any necessary parameters. This way, you can extend the functionality of your component beyond the predefined actions, ensuring that you can meet all your integration needs effectively.
+

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,17 +19,29 @@ package com.bytechef.platform.configuration.facade;
 import com.bytechef.atlas.configuration.domain.Workflow;
 import com.bytechef.atlas.configuration.domain.WorkflowTask;
 import com.bytechef.atlas.configuration.service.WorkflowService;
+import com.bytechef.commons.util.CollectionUtils;
 import com.bytechef.commons.util.MapUtils;
-import com.bytechef.platform.component.registry.domain.Property;
-import com.bytechef.platform.component.registry.facade.ActionDefinitionFacade;
-import com.bytechef.platform.component.registry.facade.TriggerDefinitionFacade;
+import com.bytechef.evaluator.Evaluator;
+import com.bytechef.platform.component.domain.Property;
+import com.bytechef.platform.component.facade.ActionDefinitionFacade;
+import com.bytechef.platform.component.facade.ClusterElementDefinitionFacade;
+import com.bytechef.platform.component.facade.TriggerDefinitionFacade;
+import com.bytechef.platform.component.service.ClusterElementDefinitionService;
+import com.bytechef.platform.configuration.domain.ClusterElement;
+import com.bytechef.platform.configuration.domain.ClusterElementMap;
+import com.bytechef.platform.configuration.domain.WorkflowTestConfigurationConnection;
 import com.bytechef.platform.configuration.domain.WorkflowTrigger;
 import com.bytechef.platform.configuration.service.WorkflowTestConfigurationService;
 import com.bytechef.platform.definition.WorkflowNodeType;
+import com.bytechef.platform.domain.BaseProperty;
+import com.bytechef.platform.workflow.task.dispatcher.service.TaskDispatcherDefinitionService;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import org.springframework.lang.NonNull;
+import java.util.Objects;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 
 /**
@@ -39,6 +51,10 @@ import org.springframework.stereotype.Service;
 public class WorkflowNodeDynamicPropertiesFacadeImpl implements WorkflowNodeDynamicPropertiesFacade {
 
     private final ActionDefinitionFacade actionDefinitionFacade;
+    private final ClusterElementDefinitionFacade clusterElementDefinitionFacade;
+    private final ClusterElementDefinitionService clusterElementDefinitionService;
+    private final Evaluator evaluator;
+    private final TaskDispatcherDefinitionService taskDispatcherDefinitionService;
     private final TriggerDefinitionFacade triggerDefinitionFacade;
     private final WorkflowService workflowService;
     private final WorkflowNodeOutputFacade workflowNodeOutputFacade;
@@ -46,11 +62,18 @@ public class WorkflowNodeDynamicPropertiesFacadeImpl implements WorkflowNodeDyna
 
     @SuppressFBWarnings("EI")
     public WorkflowNodeDynamicPropertiesFacadeImpl(
-        ActionDefinitionFacade actionDefinitionFacade, TriggerDefinitionFacade triggerDefinitionFacade,
-        WorkflowService workflowService, WorkflowNodeOutputFacade workflowNodeOutputFacade,
+        ActionDefinitionFacade actionDefinitionFacade, ClusterElementDefinitionFacade clusterElementDefinitionFacade,
+        ClusterElementDefinitionService clusterElementDefinitionService, Evaluator evaluator,
+        TaskDispatcherDefinitionService taskDispatcherDefinitionService,
+        TriggerDefinitionFacade triggerDefinitionFacade, WorkflowService workflowService,
+        WorkflowNodeOutputFacade workflowNodeOutputFacade,
         WorkflowTestConfigurationService workflowTestConfigurationService) {
 
         this.actionDefinitionFacade = actionDefinitionFacade;
+        this.clusterElementDefinitionFacade = clusterElementDefinitionFacade;
+        this.clusterElementDefinitionService = clusterElementDefinitionService;
+        this.evaluator = evaluator;
+        this.taskDispatcherDefinitionService = taskDispatcherDefinitionService;
         this.triggerDefinitionFacade = triggerDefinitionFacade;
         this.workflowService = workflowService;
         this.workflowNodeOutputFacade = workflowNodeOutputFacade;
@@ -59,39 +82,137 @@ public class WorkflowNodeDynamicPropertiesFacadeImpl implements WorkflowNodeDyna
 
     @Override
     @SuppressWarnings("unchecked")
-    public List<Property> getWorkflowNodeDynamicProperties(
-        @NonNull String workflowId, @NonNull String workflowNodeName, @NonNull String propertyName,
-        @NonNull List<String> lookupDependsOnPaths) {
+    public List<Property> getClusterElementDynamicProperties(
+        String workflowId, String workflowNodeName, String clusterElementTypeName,
+        String clusterElementWorkflowNodeName, String propertyName, List<String> lookupDependsOnPaths,
+        long environmentId) {
 
-        Long connectionId = workflowTestConfigurationService
-            .fetchWorkflowTestConfigurationConnectionId(workflowId, workflowNodeName)
+        List<WorkflowTestConfigurationConnection> connections = workflowTestConfigurationService
+            .fetchWorkflowTestConfiguration(workflowId, environmentId)
+            .stream()
+            .flatMap(workflowTestConfiguration -> CollectionUtils.stream(
+                workflowTestConfiguration.getConnections()))
+            .toList();
+
+        Map<String, Long> clusterElementConnectionIds = connections.stream()
+            .collect(Collectors.toMap(
+                WorkflowTestConfigurationConnection::getWorkflowConnectionKey,
+                WorkflowTestConfigurationConnection::getConnectionId));
+
+        Long connectionId = connections.stream()
+            .filter(connection -> Objects.equals(
+                connection.getWorkflowConnectionKey(), clusterElementWorkflowNodeName))
+            .findFirst()
+            .map(WorkflowTestConfigurationConnection::getConnectionId)
             .orElse(null);
-        Map<String, ?> inputs = workflowTestConfigurationService.getWorkflowTestConfigurationInputs(workflowId);
+
+        Map<String, ?> inputs = workflowTestConfigurationService.getWorkflowTestConfigurationInputs(
+            workflowId, environmentId);
+        Workflow workflow = workflowService.getWorkflow(workflowId);
+
+        WorkflowTask workflowTask = workflow.getTask(workflowNodeName);
+
+        WorkflowNodeType workflowNodeType = WorkflowNodeType.ofType(workflowTask.getType());
+
+        Map<String, ?> outputs = workflowNodeOutputFacade.getPreviousWorkflowNodeSampleOutputs(
+            workflowId, workflowTask.getName(), environmentId);
+
+        ClusterElementMap clusterElementMap = ClusterElementMap.of(workflowTask.getExtensions());
+
+        ClusterElement clusterElement = clusterElementMap.getClusterElement(
+            clusterElementDefinitionService.getClusterElementType(
+                workflowNodeType.name(), workflowNodeType.version(), clusterElementTypeName),
+            clusterElementWorkflowNodeName);
+
+        Map<String, Object> context = MapUtils.concat((Map<String, Object>) inputs, (Map<String, Object>) outputs);
+
+        Map<String, Map<String, ?>> clusterElementInputParameters = evaluateClusterElementInputParameters(
+            clusterElementMap, context);
+
+        WorkflowNodeType clusterElementWorkflowNodeType = WorkflowNodeType.ofType(clusterElement.getType());
+
+        return clusterElementDefinitionFacade.executeDynamicProperties(
+            clusterElementWorkflowNodeType.name(), clusterElementWorkflowNodeType.version(),
+            clusterElementWorkflowNodeType.operation(), propertyName,
+            evaluator.evaluate(clusterElement.getParameters(), context, true),
+            workflowTask.getExtensions(), lookupDependsOnPaths, connectionId, clusterElementConnectionIds,
+            clusterElementInputParameters);
+    }
+
+    private Map<String, Map<String, ?>> evaluateClusterElementInputParameters(
+        ClusterElementMap clusterElementMap, Map<String, Object> context) {
+
+        Map<String, Map<String, ?>> result = new HashMap<>();
+
+        for (Map.Entry<String, Object> entry : clusterElementMap.entrySet()) {
+            Object value = entry.getValue();
+
+            if (value instanceof ClusterElement clusterElement) {
+                result.put(
+                    clusterElement.getWorkflowNodeName(),
+                    evaluator.evaluate(clusterElement.getParameters(), context, true));
+            } else if (value instanceof List<?> list) {
+                for (Object item : list) {
+                    if (item instanceof ClusterElement clusterElement) {
+                        result.put(
+                            clusterElement.getWorkflowNodeName(),
+                            evaluator.evaluate(clusterElement.getParameters(), context, true));
+                    }
+                }
+            }
+        }
+
+        return result;
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public List<? extends BaseProperty> getWorkflowNodeDynamicProperties(
+        String workflowId, String workflowNodeName, String propertyName, List<String> lookupDependsOnPaths,
+        long environmentId) {
+
+        Long connectionId = getConnectionId(workflowId, workflowNodeName, environmentId);
+        Map<String, ?> inputs = workflowTestConfigurationService.getWorkflowTestConfigurationInputs(
+            workflowId, environmentId);
         Workflow workflow = workflowService.getWorkflow(workflowId);
 
         return WorkflowTrigger
             .fetch(workflow, workflowNodeName)
-            .map(workflowTrigger -> {
+            .<List<? extends BaseProperty>>map(workflowTrigger -> {
                 WorkflowNodeType workflowNodeType = WorkflowNodeType.ofType(workflowTrigger.getType());
 
                 return triggerDefinitionFacade.executeDynamicProperties(
-                    workflowNodeType.componentName(), workflowNodeType.componentVersion(),
-                    workflowNodeType.componentOperationName(), propertyName, workflowTrigger.evaluateParameters(inputs),
-                    lookupDependsOnPaths, connectionId);
+                    workflowNodeType.name(), workflowNodeType.version(),
+                    workflowNodeType.operation(), propertyName,
+                    workflowTrigger.evaluateParameters(inputs, evaluator, true), lookupDependsOnPaths, connectionId);
             })
             .orElseGet(() -> {
                 WorkflowTask workflowTask = workflow.getTask(workflowNodeName);
 
-                Map<String, ?> outputs = workflowNodeOutputFacade.getWorkflowNodeSampleOutputs(
-                    workflowId, workflowTask.getName());
                 WorkflowNodeType workflowNodeType = WorkflowNodeType.ofType(workflowTask.getType());
 
+                if (workflowNodeType.operation() == null) {
+                    return new ArrayList<>(
+                        taskDispatcherDefinitionService.executeDynamicProperties(
+                            workflowNodeType.name(), workflowNodeType.version(), propertyName,
+                            workflowTask.evaluateParameters(
+                                (Map<String, Object>) inputs, evaluator, true)));
+                }
+
+                Map<String, ?> outputs = workflowNodeOutputFacade.getPreviousWorkflowNodeSampleOutputs(
+                    workflowId, workflowTask.getName(), environmentId);
+
                 return actionDefinitionFacade.executeDynamicProperties(
-                    workflowNodeType.componentName(), workflowNodeType.componentVersion(),
-                    workflowNodeType.componentOperationName(), propertyName,
+                    workflowNodeType.name(), workflowNodeType.version(), workflowNodeType.operation(), propertyName,
                     workflowTask.evaluateParameters(
-                        MapUtils.concat((Map<String, Object>) inputs, (Map<String, Object>) outputs)),
-                    lookupDependsOnPaths, connectionId);
+                        MapUtils.concat((Map<String, Object>) inputs, (Map<String, Object>) outputs), evaluator, true),
+                    lookupDependsOnPaths, workflowId, connectionId);
             });
+    }
+
+    private Long getConnectionId(String workflowId, String workflowNodeName, long environmentId) {
+        return workflowTestConfigurationService
+            .fetchWorkflowTestConfigurationConnectionId(workflowId, workflowNodeName, environmentId)
+            .orElse(null);
     }
 }

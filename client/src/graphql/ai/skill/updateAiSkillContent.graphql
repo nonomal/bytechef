@@ -1,0 +1,8 @@
+mutation updateAiSkillContent($id: ID!, $path: String, $content: String!) {
+    updateAiSkillContent(id: $id, path: $path, content: $content) {
+        description
+        id
+        lastModifiedDate
+        name
+    }
+}

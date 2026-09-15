@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,5 +26,5 @@ public class WebhookConstants {
     public static final String HEADERS = "headers";
     public static final String METHOD = "method";
     public static final String PARAMETERS = "parameters";
-    public static final String WEBHOOK = "webhook";
+    public static final String STATUS_CODE = "statusCode";
 }

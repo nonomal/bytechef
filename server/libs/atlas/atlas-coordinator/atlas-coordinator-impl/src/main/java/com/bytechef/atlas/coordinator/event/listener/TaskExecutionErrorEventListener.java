@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * Modifications copyright (C) 2023 ByteChef Inc.
+ * Modifications copyright (C) 2025 ByteChef
  */
 
 package com.bytechef.atlas.coordinator.event.listener;
@@ -23,17 +23,22 @@ import com.bytechef.atlas.coordinator.event.ErrorEvent;
 import com.bytechef.atlas.coordinator.event.JobStatusApplicationEvent;
 import com.bytechef.atlas.coordinator.event.TaskExecutionErrorEvent;
 import com.bytechef.atlas.coordinator.task.dispatcher.TaskDispatcher;
+import com.bytechef.atlas.execution.domain.Context;
 import com.bytechef.atlas.execution.domain.Job;
 import com.bytechef.atlas.execution.domain.TaskExecution;
+import com.bytechef.atlas.execution.service.ContextService;
 import com.bytechef.atlas.execution.service.JobService;
 import com.bytechef.atlas.execution.service.TaskExecutionService;
+import com.bytechef.atlas.file.storage.TaskFileStorage;
 import com.bytechef.error.ExecutionError;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.util.Map;
 import org.apache.commons.lang3.Validate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.util.Assert;
 
 /**
  * @author Arik Cohen
@@ -42,22 +47,27 @@ import org.springframework.context.ApplicationEventPublisher;
  */
 public class TaskExecutionErrorEventListener implements ErrorEventListener {
 
-    private static final Logger logger = LoggerFactory.getLogger(TaskExecutionErrorEventListener.class);
+    private static final Logger log = LoggerFactory.getLogger(TaskExecutionErrorEventListener.class);
 
     private final ApplicationEventPublisher eventPublisher;
+    private final ContextService contextService;
     private final JobService jobService;
     private final TaskDispatcher<? super Task> taskDispatcher;
     private final TaskExecutionService taskExecutionService;
+    private final TaskFileStorage taskFileStorage;
 
     @SuppressFBWarnings("EI2")
     public TaskExecutionErrorEventListener(
-        ApplicationEventPublisher eventPublisher, JobService jobService,
-        TaskDispatcher<? super Task> taskDispatcher, TaskExecutionService taskExecutionService) {
+        ApplicationEventPublisher eventPublisher, ContextService contextService, JobService jobService,
+        TaskDispatcher<? super Task> taskDispatcher, TaskExecutionService taskExecutionService,
+        TaskFileStorage taskFileStorage) {
 
+        this.contextService = contextService;
         this.eventPublisher = eventPublisher;
         this.jobService = jobService;
         this.taskDispatcher = taskDispatcher;
         this.taskExecutionService = taskExecutionService;
+        this.taskFileStorage = taskFileStorage;
     }
 
     @Override
@@ -67,35 +77,64 @@ public class TaskExecutionErrorEventListener implements ErrorEventListener {
 
             ExecutionError error = taskExecution.getError();
 
-            Validate.notNull(error, "'error' must not be null");
+            Assert.notNull(error, "'error' must not be null");
 
-            logger.error(
+            log.error(
                 "Task id={}: message={}\nstackTrace={}", taskExecution.getId(), error.getMessage(),
                 error.getStackTrace());
 
             // set task status to FAILED and persist
 
-            taskExecution.setEndDate(LocalDateTime.now());
+            taskExecution.setEndDate(Instant.now());
             taskExecution.setStatus(TaskExecution.Status.FAILED);
 
             taskExecution = taskExecutionService.update(taskExecution);
 
             // if the task is retryable, then retry it
             if (taskExecution.getRetryAttempts() < taskExecution.getMaxRetries()) {
-                taskExecution.setStatus(TaskExecution.Status.CREATED);
-                taskExecution.setError(null);
-                taskExecution.setRetryAttempts(taskExecution.getRetryAttempts() + 1);
+                Map<String, ?> context = taskFileStorage.readContextValue(
+                    contextService.peek(Validate.notNull(taskExecution.getJobId(), "id"), Context.Classname.JOB));
 
-                taskExecution = taskExecutionService.create(taskExecution);
+                TaskExecution retryTaskExecution = TaskExecution.builder()
+                    .jobId(taskExecution.getJobId())
+                    .maxRetries(taskExecution.getMaxRetries())
+                    .parentId(taskExecution.getParentId())
+                    .priority(taskExecution.getPriority())
+                    .retryAttempts(taskExecution.getRetryAttempts() + 1)
+                    .status(TaskExecution.Status.CREATED)
+                    .workflowTask(taskExecution.getWorkflowTask())
+                    .build();
 
-                taskDispatcher.dispatch(taskExecution);
+                retryTaskExecution = taskExecutionService.create(retryTaskExecution);
+
+                contextService.push(
+                    Validate.notNull(retryTaskExecution.getId(), "id"), Context.Classname.TASK_EXECUTION,
+                    taskFileStorage.storeContextValue(
+                        Validate.notNull(retryTaskExecution.getId(), "id"), Context.Classname.TASK_EXECUTION, context));
+
+                taskDispatcher.dispatch(retryTaskExecution);
             }
             // if it's not retryable then we're going fail the job
             else {
                 while (taskExecution.getParentId() != null) { // mark parent tasks as FAILED as well
                     taskExecution = taskExecutionService.getTaskExecution(taskExecution.getParentId());
 
-                    taskExecution.setEndDate(LocalDateTime.now());
+                    // if it's an on-error dispatcher and its error is not set, navigate back to the on-error
+                    // dispatcher to start executing the error branch
+                    String type = taskExecution.getType();
+
+                    if (type.startsWith("on-error/") && taskExecution.getError() == null) {
+                        taskExecution.setError(error);
+                        taskExecution.setStatus(TaskExecution.Status.CREATED);
+
+                        taskExecution = taskExecutionService.update(taskExecution);
+
+                        taskDispatcher.dispatch(taskExecution);
+
+                        return;
+                    }
+
+                    taskExecution.setEndDate(Instant.now());
                     taskExecution.setStatus(TaskExecution.Status.FAILED);
 
                     taskExecution = taskExecutionService.update(taskExecution);
@@ -106,12 +145,12 @@ public class TaskExecutionErrorEventListener implements ErrorEventListener {
                 Validate.notNull(job, "No job found for task %s", taskExecution.getId());
 
                 job.setStatus(Job.Status.FAILED);
-                job.setEndDate(LocalDateTime.now());
+                job.setEndDate(Instant.now());
 
                 jobService.update(job);
 
-                eventPublisher
-                    .publishEvent(new JobStatusApplicationEvent(Validate.notNull(job.getId(), "id"), job.getStatus()));
+                eventPublisher.publishEvent(
+                    new JobStatusApplicationEvent(Validate.notNull(job.getId(), "id"), job.getStatus()));
             }
         }
     }

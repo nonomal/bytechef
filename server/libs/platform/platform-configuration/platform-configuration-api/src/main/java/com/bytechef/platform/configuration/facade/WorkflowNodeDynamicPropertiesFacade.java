@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,16 +16,21 @@
 
 package com.bytechef.platform.configuration.facade;
 
-import com.bytechef.platform.component.registry.domain.Property;
+import com.bytechef.platform.component.domain.Property;
+import com.bytechef.platform.domain.BaseProperty;
 import java.util.List;
-import org.springframework.lang.NonNull;
 
 /**
  * @author Ivica Cardic
  */
 public interface WorkflowNodeDynamicPropertiesFacade {
 
-    List<Property> getWorkflowNodeDynamicProperties(
-        @NonNull String workflowId, @NonNull String workflowNodeName, @NonNull String propertyName,
-        @NonNull List<String> lookupDependsOnPaths);
+    List<Property> getClusterElementDynamicProperties(
+        String workflowId, String workflowNodeName, String clusterElementTypeName,
+        String clusterElementWorkflowNodeName, String propertyName, List<String> lookupDependsOnPath,
+        long environmentId);
+
+    List<? extends BaseProperty> getWorkflowNodeDynamicProperties(
+        String workflowId, String workflowNodeName, String propertyName, List<String> lookupDependsOnPaths,
+        long environmentId);
 }

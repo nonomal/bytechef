@@ -1,0 +1,6 @@
+type Integration {
+    id: ID!
+    componentName: String!
+    name: String!
+    permissionExpression: String
+}

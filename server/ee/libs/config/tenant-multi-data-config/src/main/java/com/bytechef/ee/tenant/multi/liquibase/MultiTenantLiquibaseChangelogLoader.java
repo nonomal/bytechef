@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the ByteChef Enterprise license (the "Enterprise License");
  * you may not use this file except in compliance with the Enterprise License.
@@ -7,6 +7,7 @@
 
 package com.bytechef.ee.tenant.multi.liquibase;
 
+import com.bytechef.tenant.constant.Tenancy;
 import com.bytechef.tenant.service.TenantService;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.List;
@@ -34,10 +35,10 @@ public class MultiTenantLiquibaseChangelogLoader implements InitializingBean {
     public void afterPropertiesSet() {
         List<String> tenantIds = tenantService.getTenantIds();
 
-        if (log.isDebugEnabled()) {
-            log.debug("Loading changelog for tenantIds={}", String.join(",", tenantIds));
-        }
+        log.info("Loading changelog for {} tenants", tenantIds.size());
 
-        tenantService.loadChangelog(tenantIds, "multitenant");
+        tenantService.loadChangelog(tenantIds, Tenancy.MULTITENANT);
+
+        log.info("Loading changelog completed");
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,23 +16,22 @@
 
 package com.bytechef.platform.data.storage.jdbc.service;
 
-import com.bytechef.commons.util.OptionalUtils;
-import com.bytechef.component.definition.ActionContext.Data.Scope;
-import com.bytechef.platform.constant.AppType;
+import com.bytechef.platform.constant.PlatformType;
+import com.bytechef.platform.data.storage.domain.DataStorageScope;
 import com.bytechef.platform.data.storage.jdbc.domain.DataEntry;
 import com.bytechef.platform.data.storage.jdbc.repository.DataStorageRepository;
-import com.bytechef.platform.data.storage.service.DataStorageService;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import org.jspecify.annotations.NonNull;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
  * @author Ivica Cardic
  */
 @Transactional
-public class JdbcDataStorageServiceImpl implements DataStorageService, JdbcDataStorageService {
+public class JdbcDataStorageServiceImpl implements JdbcDataStorageService {
 
     private final DataStorageRepository dataStorageRepository;
 
@@ -42,48 +41,67 @@ public class JdbcDataStorageServiceImpl implements DataStorageService, JdbcDataS
     }
 
     @Override
-    public void delete(String componentName, Scope scope, String scopeId, String key, AppType type) {
+    public void delete(
+        String componentName, DataStorageScope scope, String scopeId, String key, long environmentId,
+        PlatformType type) {
+
         dataStorageRepository
-            .findByComponentNameAndScopeAndScopeIdAndKeyAndType(componentName, scope, scopeId, key, type.ordinal())
-            .ifPresentOrElse(dataStorageRepository::delete, null);
+            .findByComponentNameAndScopeAndScopeIdAndKeyAndEnvironmentAndType(
+                componentName, scope.ordinal(), scopeId, key, (int) environmentId, type.ordinal())
+            .ifPresent(dataStorageRepository::delete);
     }
 
     @Override
     @SuppressWarnings("unchecked")
     @Transactional
-    public <T> Optional<T> fetch(String componentName, Scope scope, String scopeId, String key, AppType type) {
+    public <T> @NonNull Optional<T> fetch(
+        String componentName, DataStorageScope scope, String scopeId, String key, long environmentId,
+        PlatformType type) {
+
         return dataStorageRepository
-            .findByComponentNameAndScopeAndScopeIdAndKeyAndType(componentName, scope, scopeId, key, type.ordinal())
+            .findByComponentNameAndScopeAndScopeIdAndKeyAndEnvironmentAndType(
+                componentName, scope.ordinal(), scopeId, key, (int) environmentId, type.ordinal())
             .map(dataEntry -> (T) dataEntry.getValue());
     }
 
     @Override
-    public <T> T get(String componentName, Scope scope, String scopeId, String key, AppType type) {
-        return OptionalUtils.get(fetch(componentName, scope, scopeId, key, type));
+    @SuppressWarnings("unchecked")
+    public <T> @NonNull T get(
+        String componentName, DataStorageScope scope, String scopeId, String key, long environmentId,
+        PlatformType type) {
+
+        return (T) fetch(componentName, scope, scopeId, key, environmentId, type)
+            .orElseThrow();
     }
 
     @Override
     @SuppressWarnings("unchecked")
-    public <T> Map<String, T> getAll(
-        String componentName, Scope scope, String scopeId, AppType type) {
-        return OptionalUtils.get(
-            dataStorageRepository
-                .findByComponentNameAndScopeAndScopeIdAndType(componentName, scope, scopeId, type.ordinal()))
+    public <T> @NonNull Map<String, T> getAll(
+        String componentName, DataStorageScope scope, String scopeId, long environmentId, PlatformType type) {
+
+        return dataStorageRepository
+            .findByComponentNameAndScopeAndScopeIdAndEnvironmentAndType(
+                componentName, scope.ordinal(), scopeId, (int) environmentId, type.ordinal())
             .stream()
-            .collect(Collectors.toMap(dataEntry -> String.valueOf(dataEntry.getKey()),
-                dataEntry -> (T) dataEntry.getValue()));
+            .collect(Collectors.toMap(
+                dataEntry -> String.valueOf(dataEntry.getKey()), dataEntry -> (T) dataEntry.getValue()));
     }
 
     @Override
-    public void put(String componentName, Scope scope, String scopeId, String key, AppType type, Object value) {
+    public void put(
+        String componentName, DataStorageScope scope, String scopeId, String key, long environmentId, PlatformType type,
+        Object value) {
+
         dataStorageRepository
-            .findByComponentNameAndScopeAndScopeIdAndKeyAndType(componentName, scope, scopeId, key, type.ordinal())
+            .findByComponentNameAndScopeAndScopeIdAndKeyAndEnvironmentAndType(
+                componentName, scope.ordinal(), scopeId, key, (int) environmentId, type.ordinal())
             .ifPresentOrElse(
                 dataEntry -> {
                     dataEntry.setValue(value);
 
                     dataStorageRepository.save(dataEntry);
                 },
-                () -> dataStorageRepository.save(new DataEntry(componentName, scope, scopeId, key, value, type)));
+                () -> dataStorageRepository.save(
+                    new DataEntry(componentName, scope, scopeId, key, value, (int) environmentId, type)));
     }
 }

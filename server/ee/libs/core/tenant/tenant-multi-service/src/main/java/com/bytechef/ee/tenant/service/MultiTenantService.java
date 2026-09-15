@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,20 +16,28 @@
 
 package com.bytechef.ee.tenant.service;
 
-import com.bytechef.edition.annotation.ConditionalOnEEVersion;
 import com.bytechef.ee.tenant.repository.TenantRepository;
+import com.bytechef.ee.tenant.util.TenantUtils;
+import com.bytechef.platform.annotation.ConditionalOnEEVersion;
+import com.bytechef.tenant.TenantContext;
 import com.bytechef.tenant.annotation.ConditionalOnMultiTenant;
+import com.bytechef.tenant.constant.Tenancy;
 import com.bytechef.tenant.domain.Tenant;
+import com.bytechef.tenant.event.TenantSchemaCreatedEvent;
 import com.bytechef.tenant.service.TenantService;
-import com.bytechef.tenant.util.TenantUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.text.DecimalFormat;
 import java.util.Collections;
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Locale;
+import java.util.Objects;
+import java.util.concurrent.locks.ReentrantLock;
 import javax.sql.DataSource;
 import liquibase.integration.spring.MultiTenantSpringLiquibase;
-import org.springframework.boot.autoconfigure.liquibase.LiquibaseProperties;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.boot.liquibase.autoconfigure.LiquibaseProperties;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.ResourceLoaderAware;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.stereotype.Service;
@@ -37,39 +45,58 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * @author Ivica Cardic
+ * @author Igor Beslic
  */
 @Service
 @ConditionalOnEEVersion
 @ConditionalOnMultiTenant
 public class MultiTenantService implements TenantService, ResourceLoaderAware {
 
-    private final TenantRepository tenantRepository;
+    private static final Logger log = LoggerFactory.getLogger(MultiTenantService.class);
+
+    private static final ReentrantLock LOCK = new ReentrantLock();
+
     private final DataSource dataSource;
+    private final ApplicationEventPublisher eventPublisher;
     private final LiquibaseProperties liquibaseProperties;
+    private final TenantRepository tenantRepository;
+
     private ResourceLoader resourceLoader;
 
     @SuppressFBWarnings("EI")
     public MultiTenantService(
-        TenantRepository tenantRepository, DataSource dataSource, LiquibaseProperties liquibaseProperties) {
+        DataSource dataSource, ApplicationEventPublisher eventPublisher, LiquibaseProperties liquibaseProperties,
+        TenantRepository tenantRepository) {
 
-        this.tenantRepository = tenantRepository;
         this.dataSource = dataSource;
+        this.eventPublisher = eventPublisher;
         this.liquibaseProperties = liquibaseProperties;
+        this.tenantRepository = tenantRepository;
     }
 
     @Override
-    public synchronized String createTenant() {
-        String tenantId = tenantRepository.findMaxTenantId();
+    public String createTenant() {
+        try {
+            LOCK.lock();
 
-        DecimalFormat decimalFormat = new DecimalFormat("000000");
+            String tenantId = tenantRepository.findMaxTenantId();
 
-        tenantId = decimalFormat.format(Integer.parseInt(tenantId) + 1);
+            DecimalFormat decimalFormat = new DecimalFormat("000000");
 
-        tenantRepository.createTenant(tenantId);
+            tenantId = decimalFormat.format(Integer.parseInt(tenantId) + 1);
 
-        initTenant(tenantId, "multitenant");
+            tenantRepository.createTenant(tenantId);
 
-        return tenantId;
+            loadChangelog(Collections.singletonList(tenantId), Tenancy.MULTITENANT);
+
+            eventPublisher.publishEvent(new TenantSchemaCreatedEvent(tenantId));
+
+            log.info("Tenant created: {}", tenantId);
+
+            return tenantId;
+        } finally {
+            LOCK.unlock();
+        }
     }
 
     public void createTenant(String tenantId) {
@@ -79,6 +106,8 @@ public class MultiTenantService implements TenantService, ResourceLoaderAware {
     @Override
     public void deleteTenant(String tenantId) {
         tenantRepository.deleteTenant(tenantId);
+
+        log.info("Tenant deleted: {}", tenantId);
     }
 
     @Override
@@ -121,46 +150,31 @@ public class MultiTenantService implements TenantService, ResourceLoaderAware {
         return tenantRepository.findTenants();
     }
 
-    public void initTenant(String tenantId, String contexts) {
-        loadChangelog(Collections.singletonList(tenantId), contexts);
-    }
-
     @Override
     public boolean isMultiTenantEnabled() {
         return true;
     }
 
     @Override
-    public void loadChangelog(List<String> tenantIds, String contexts) {
+    public void loadChangelog(List<String> tenantIds, Tenancy tenancy) {
+        for (String tenantId : tenantIds) {
+            TenantContext.runWithTenantId(tenantId, () -> loadChangelog(tenantId, tenancy));
+        }
+    }
+
+    void loadChangelog(String tenantId, Tenancy tenancy) throws Exception {
         MultiTenantSpringLiquibase multiTenantSpringLiquibase = new MultiTenantSpringLiquibase();
 
+        multiTenantSpringLiquibase.setContexts(getRuntimeContext(tenancy));
         multiTenantSpringLiquibase.setDataSource(dataSource);
         multiTenantSpringLiquibase.setResourceLoader(resourceLoader);
-
-        List<String> schemas =
-            tenantIds
-                .stream()
-                .map(TenantUtils::getDatabaseSchema)
-                .collect(Collectors.toList());
-
-        multiTenantSpringLiquibase.setSchemas(schemas);
+        multiTenantSpringLiquibase.setSchemas(List.of(TenantUtils.getDatabaseSchema(tenantId)));
         multiTenantSpringLiquibase.setChangeLog("classpath:config/liquibase/master.xml");
-
-        if (contexts == null) {
-            multiTenantSpringLiquibase.setContexts(liquibaseProperties.getContexts());
-        } else {
-            multiTenantSpringLiquibase.setContexts(contexts);
-        }
-
         multiTenantSpringLiquibase.setDefaultSchema(liquibaseProperties.getDefaultSchema());
         multiTenantSpringLiquibase.setDropFirst(liquibaseProperties.isDropFirst());
         multiTenantSpringLiquibase.setParameters(liquibaseProperties.getParameters());
 
-        try {
-            multiTenantSpringLiquibase.afterPropertiesSet();
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
+        multiTenantSpringLiquibase.afterPropertiesSet();
     }
 
     @Override
@@ -178,5 +192,18 @@ public class MultiTenantService implements TenantService, ResourceLoaderAware {
     @Transactional(readOnly = true)
     public boolean tenantIdsByUserLoginExist(String email) {
         return !getTenantIdsByUserLogin(email).isEmpty();
+    }
+
+    private String getRuntimeContext(Tenancy tenancy) {
+        if (Objects.nonNull(tenancy)) {
+            return tenancy.name()
+                .toLowerCase(Locale.ROOT);
+        }
+
+        if (Objects.nonNull(liquibaseProperties.getContexts())) {
+            return String.join(",", liquibaseProperties.getContexts());
+        }
+
+        return null;
     }
 }

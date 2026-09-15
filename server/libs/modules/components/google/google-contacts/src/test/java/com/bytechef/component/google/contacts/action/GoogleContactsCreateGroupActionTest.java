@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,47 +18,67 @@ package com.bytechef.component.google.contacts.action;
 
 import static com.bytechef.component.google.contacts.constant.GoogleContactsConstants.NAME;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.Mockito.mock;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.mockito.ArgumentCaptor.forClass;
 import static org.mockito.Mockito.when;
 
-import com.google.api.services.people.v1.PeopleService;
-import com.google.api.services.people.v1.model.ContactGroup;
-import com.google.api.services.people.v1.model.CreateContactGroupRequest;
-import java.io.IOException;
+import com.bytechef.component.definition.Context;
+import com.bytechef.component.definition.Context.ContextFunction;
+import com.bytechef.component.definition.Context.Http;
+import com.bytechef.component.definition.Context.Http.Body;
+import com.bytechef.component.definition.Context.Http.BodyContentType;
+import com.bytechef.component.definition.Context.Http.Configuration;
+import com.bytechef.component.definition.Context.Http.Configuration.ConfigurationBuilder;
+import com.bytechef.component.definition.Context.Http.Executor;
+import com.bytechef.component.definition.Context.Http.Response;
+import com.bytechef.component.definition.Context.Http.ResponseType;
+import com.bytechef.component.definition.Parameters;
+import com.bytechef.component.test.definition.MockParametersFactory;
+import com.bytechef.component.test.definition.extension.MockContextSetupExtension;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 
 /**
- * @author Monika Domiter
+ * @author Monika Kušter
+ * @author Nikolina Spehar
  */
-class GoogleContactsCreateGroupActionTest extends AbstractGoogleContactsActionTest {
+@ExtendWith(MockContextSetupExtension.class)
+class GoogleContactsCreateGroupActionTest {
 
-    private final PeopleService.ContactGroups.Create mockedCreate =
-        mock(PeopleService.ContactGroups.Create.class);
-    private final ContactGroup mockedContactGroup = mock(ContactGroup.class);
-    private final PeopleService.ContactGroups mockedContactGroups = mock(PeopleService.ContactGroups.class);
-    private final ArgumentCaptor<CreateContactGroupRequest> createContactGroupRequestArgumentCaptor =
-        ArgumentCaptor.forClass(CreateContactGroupRequest.class);
+    private final ArgumentCaptor<Body> bodyArgumentCaptor = forClass(Body.class);
+    private final Parameters mockedParameters = MockParametersFactory.create(Map.of(NAME, "name"));
+    private final Map<String, Object> responseMap = Map.of();
+    private final ArgumentCaptor<String> stringArgumentCaptor = forClass(String.class);
 
     @Test
-    void testPerform() throws IOException {
-        when(mockedParameters.getRequiredString(NAME))
-            .thenReturn("Name");
+    void testPerform(
+        Context mockedContext, Response mockedResponse, Executor mockedExecutor, Http mockedHttp,
+        ArgumentCaptor<ContextFunction<Http, Executor>> httpFunctionArgumentCaptor,
+        ArgumentCaptor<ConfigurationBuilder> configurationBuilderArgumentCaptor) {
 
-        when(mockedPeopleService.contactGroups())
-            .thenReturn(mockedContactGroups);
-        when(mockedContactGroups.create(createContactGroupRequestArgumentCaptor.capture()))
-            .thenReturn(mockedCreate);
-        when(mockedCreate.execute())
-            .thenReturn(mockedContactGroup);
+        when(mockedHttp.post(stringArgumentCaptor.capture()))
+            .thenReturn(mockedExecutor);
+        when(mockedExecutor.body(bodyArgumentCaptor.capture()))
+            .thenReturn(mockedExecutor);
+        when(mockedResponse.getBody())
+            .thenReturn(responseMap);
 
-        ContactGroup result = GoogleContactsCreateGroupAction.perform(mockedParameters, mockedParameters, mockedContext);
+        Object result = GoogleContactsCreateGroupAction.perform(mockedParameters, null, mockedContext);
 
-        assertEquals(mockedContactGroup, result);
+        assertEquals(responseMap, result);
+        assertNotNull(httpFunctionArgumentCaptor.getValue());
 
-        CreateContactGroupRequest createContactGroupRequest = createContactGroupRequestArgumentCaptor.getValue();
+        ConfigurationBuilder configurationBuilder = configurationBuilderArgumentCaptor.getValue();
+        Configuration configuration = configurationBuilder.build();
 
-        assertEquals("Name", createContactGroupRequest.getContactGroup().getName());
-
+        assertEquals(ResponseType.JSON, configuration.getResponseType());
+        assertEquals("/contactGroups", stringArgumentCaptor.getValue());
+        assertEquals(
+            Body.of(
+                Map.of("contactGroup", Map.of(NAME, "name"), "readGroupFields", "name"),
+                BodyContentType.JSON),
+            bodyArgumentCaptor.getValue());
     }
 }

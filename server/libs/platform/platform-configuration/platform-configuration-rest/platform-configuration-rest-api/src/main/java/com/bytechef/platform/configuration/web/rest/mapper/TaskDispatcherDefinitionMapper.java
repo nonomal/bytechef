@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,8 +19,10 @@ package com.bytechef.platform.configuration.web.rest.mapper;
 import com.bytechef.platform.configuration.web.rest.mapper.config.PlatformConfigurationMapperSpringConfig;
 import com.bytechef.platform.configuration.web.rest.model.TaskDispatcherDefinitionBasicModel;
 import com.bytechef.platform.configuration.web.rest.model.TaskDispatcherDefinitionModel;
-import com.bytechef.platform.workflow.task.dispatcher.registry.domain.TaskDispatcherDefinition;
+import com.bytechef.platform.workflow.task.dispatcher.domain.TaskDispatcherDefinition;
+import org.mapstruct.AfterMapping;
 import org.mapstruct.Mapper;
+import org.mapstruct.MappingTarget;
 import org.springframework.core.convert.converter.Converter;
 
 /**
@@ -32,6 +34,14 @@ public class TaskDispatcherDefinitionMapper {
     public interface TaskDispatcherDefinitionToTaskDispatcherDefinitionModelMapper
         extends Converter<TaskDispatcherDefinition, TaskDispatcherDefinitionModel> {
 
+        @AfterMapping
+        default void afterMapping(
+            TaskDispatcherDefinition taskDispatcherDefinition,
+            @MappingTarget TaskDispatcherDefinitionModel taskDispatcherDefinitionModel) {
+
+            taskDispatcherDefinitionModel.setIcon("/icons/%s.svg".formatted(taskDispatcherDefinition.getName()));
+        }
+
         @Override
         TaskDispatcherDefinitionModel convert(TaskDispatcherDefinition taskDispatcherDefinition);
     }
@@ -42,5 +52,13 @@ public class TaskDispatcherDefinitionMapper {
 
         @Override
         TaskDispatcherDefinitionBasicModel convert(TaskDispatcherDefinition taskDispatcherDefinition);
+
+        @AfterMapping
+        default void afterMapping(
+            TaskDispatcherDefinition taskDispatcherDefinition,
+            @MappingTarget TaskDispatcherDefinitionBasicModel taskDispatcherDefinitionBasicModel) {
+
+            taskDispatcherDefinitionBasicModel.setIcon("/icons/%s.svg".formatted(taskDispatcherDefinition.getName()));
+        }
     }
 }

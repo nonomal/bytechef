@@ -1,0 +1,146 @@
+/*
+ * Copyright 2025 ByteChef
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.bytechef.component.ai.vectorstore.knowledgebase;
+
+import static com.bytechef.component.ai.vectorstore.knowledgebase.constant.KnowledgeBaseVectorStoreConstants.KNOWLEDGE_BASE;
+import static com.bytechef.component.definition.ComponentDsl.component;
+import static com.bytechef.platform.component.definition.ai.vectorstore.DocumentReaderFunction.DOCUMENT_READER;
+import static com.bytechef.platform.component.definition.ai.vectorstore.DocumentTransformerFunction.DOCUMENT_TRANSFORMER;
+
+import com.bytechef.component.ComponentHandler;
+import com.bytechef.component.ai.vectorstore.knowledgebase.action.KnowledgeBaseDeleteAction;
+import com.bytechef.component.ai.vectorstore.knowledgebase.action.KnowledgeBaseLoadAction;
+import com.bytechef.component.ai.vectorstore.knowledgebase.action.KnowledgeBaseSearchAction;
+import com.bytechef.component.ai.vectorstore.knowledgebase.action.KnowledgeBaseUpdateAction;
+import com.bytechef.component.ai.vectorstore.knowledgebase.cluster.KnowledgeBaseSearchTool;
+import com.bytechef.component.ai.vectorstore.knowledgebase.cluster.KnowledgeBaseUpdateTool;
+import com.bytechef.component.ai.vectorstore.knowledgebase.util.KnowledgeBaseVectorStore;
+import com.bytechef.component.definition.ClusterElementDefinition.ClusterElementType;
+import com.bytechef.component.definition.ComponentCategory;
+import com.bytechef.component.definition.ComponentDefinition;
+import com.bytechef.platform.component.definition.AbstractComponentDefinitionWrapper;
+import com.bytechef.platform.component.definition.VectorStoreComponentDefinition;
+import com.bytechef.platform.component.service.ClusterElementDefinitionService;
+import com.bytechef.platform.knowledgebase.facade.KnowledgeBaseDocumentChunkFacade;
+import com.bytechef.platform.knowledgebase.file.storage.KnowledgeBaseFileStorage;
+import com.bytechef.platform.knowledgebase.service.KnowledgeBaseDocumentChunkService;
+import com.bytechef.platform.knowledgebase.service.KnowledgeBaseDocumentService;
+import com.bytechef.platform.knowledgebase.service.KnowledgeBaseDocumentTagService;
+import com.bytechef.platform.knowledgebase.service.KnowledgeBaseService;
+import java.util.List;
+import java.util.Map;
+import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.stereotype.Component;
+
+/**
+ * Component handler for the internal Knowledge Base vector store.
+ *
+ * @author Ivica Cardic
+ */
+@Component(KNOWLEDGE_BASE + "_v1_ComponentHandler")
+@ConditionalOnProperty(prefix = "bytechef.ai.knowledge-base", name = "enabled", havingValue = "true")
+public class KnowledgeBaseComponentHandler implements ComponentHandler {
+
+    private final VectorStoreComponentDefinition componentDefinition;
+
+    public KnowledgeBaseComponentHandler(
+        ClusterElementDefinitionService clusterElementDefinitionService,
+        KnowledgeBaseDocumentChunkFacade knowledgeBaseDocumentChunkFacade,
+        KnowledgeBaseDocumentChunkService knowledgeBaseDocumentChunkService,
+        KnowledgeBaseDocumentService knowledgeBaseDocumentService,
+        KnowledgeBaseDocumentTagService knowledgeBaseDocumentTagService,
+        KnowledgeBaseFileStorage knowledgeBaseFileStorage, KnowledgeBaseService knowledgeBaseService,
+        @Qualifier("knowledgeBasePgVectorStore") VectorStore vectorStore) {
+
+        this.componentDefinition =
+            new KnowledgeBaseVectorStoreComponentDefinitionImpl(
+                clusterElementDefinitionService, knowledgeBaseDocumentChunkFacade, knowledgeBaseDocumentChunkService,
+                knowledgeBaseDocumentService, knowledgeBaseDocumentTagService, knowledgeBaseFileStorage,
+                knowledgeBaseService, vectorStore);
+    }
+
+    @Override
+    public ComponentDefinition getDefinition() {
+        return componentDefinition;
+    }
+
+    private static class KnowledgeBaseVectorStoreComponentDefinitionImpl extends AbstractComponentDefinitionWrapper
+        implements VectorStoreComponentDefinition {
+
+        public KnowledgeBaseVectorStoreComponentDefinitionImpl(
+            ClusterElementDefinitionService clusterElementDefinitionService,
+            KnowledgeBaseDocumentChunkFacade knowledgeBaseDocumentChunkFacade,
+            KnowledgeBaseDocumentChunkService knowledgeBaseDocumentChunkService,
+            KnowledgeBaseDocumentService knowledgeBaseDocumentService,
+            KnowledgeBaseDocumentTagService knowledgeBaseDocumentTagService,
+            KnowledgeBaseFileStorage knowledgeBaseFileStorage, KnowledgeBaseService knowledgeBaseService,
+            VectorStore vectorStore) {
+
+            super(
+                component(KNOWLEDGE_BASE)
+                    .title("Knowledge Base")
+                    .description(
+                        "Search ByteChef's internal knowledge base to retrieve relevant document chunks using " +
+                            "semantic similarity search powered by vector embeddings.")
+                    .icon("path:assets/knowledge-base.svg")
+                    .categories(ComponentCategory.ARTIFICIAL_INTELLIGENCE)
+                    .actions(
+                        KnowledgeBaseDeleteAction.of(vectorStore, knowledgeBaseService),
+                        KnowledgeBaseLoadAction.of(
+                            vectorStore, clusterElementDefinitionService, knowledgeBaseDocumentChunkService,
+                            knowledgeBaseDocumentService, knowledgeBaseFileStorage, knowledgeBaseService),
+                        KnowledgeBaseSearchAction.of(
+                            vectorStore, knowledgeBaseService, knowledgeBaseDocumentTagService),
+                        KnowledgeBaseUpdateAction.of(
+                            vectorStore, clusterElementDefinitionService, knowledgeBaseDocumentChunkFacade,
+                            knowledgeBaseDocumentChunkService, knowledgeBaseDocumentService, knowledgeBaseFileStorage,
+                            knowledgeBaseService))
+                    .clusterElements(
+                        KnowledgeBaseSearchTool.of(
+                            vectorStore, knowledgeBaseService, knowledgeBaseDocumentTagService),
+                        KnowledgeBaseUpdateTool.of(
+                            vectorStore, knowledgeBaseDocumentChunkFacade, knowledgeBaseDocumentChunkService,
+                            knowledgeBaseDocumentService, knowledgeBaseFileStorage, knowledgeBaseService),
+                        KnowledgeBaseVectorStore.of(
+                            vectorStore, knowledgeBaseDocumentChunkService, knowledgeBaseDocumentService,
+                            knowledgeBaseFileStorage, knowledgeBaseService, knowledgeBaseDocumentTagService)));
+        }
+
+        @Override
+        public List<ClusterElementType> getClusterElementTypes() {
+            return List.of(DOCUMENT_READER, DOCUMENT_TRANSFORMER);
+        }
+
+        @Override
+        public Map<String, List<String>> getActionClusterElementTypes() {
+            return Map.of(
+                DELETE, List.of(),
+                LOAD, List.of(DOCUMENT_READER.name(), DOCUMENT_TRANSFORMER.name()),
+                SEARCH, List.of(),
+                UPDATE, List.of(DOCUMENT_READER.name(), DOCUMENT_TRANSFORMER.name()));
+        }
+
+        @Override
+        public Map<String, List<String>> getClusterElementClusterElementTypes() {
+            return Map.of(
+                VECTOR_STORE, List.of(),
+                SEARCH, List.of());
+        }
+    }
+}

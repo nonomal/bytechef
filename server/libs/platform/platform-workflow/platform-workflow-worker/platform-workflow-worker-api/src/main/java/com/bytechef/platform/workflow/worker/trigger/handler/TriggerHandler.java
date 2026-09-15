@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@ package com.bytechef.platform.workflow.worker.trigger.handler;
 
 import com.bytechef.platform.component.trigger.TriggerOutput;
 import com.bytechef.platform.workflow.execution.domain.TriggerExecution;
-import com.bytechef.platform.workflow.worker.trigger.exception.TriggerExecutionException;
+import com.bytechef.platform.workflow.worker.exception.TriggerExecutionException;
 
 /**
  * A strategy interface used for executing a {@link TriggerExecution}.

@@ -1,24 +1,42 @@
-import {PropertyType} from '@/shared/types';
+import {DataPillType, PropertyAllType} from '@/shared/types';
+
+import {transformValueForObjectAccess} from './encodingUtils';
 
 export default function getSubProperties(
     componentIcon: string,
     nodeName: string,
-    properties: Array<PropertyType>,
-    propertyName?: string
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-): any {
-    return properties.map((subProperty) => {
-        if (subProperty.properties?.length) {
-            return getSubProperties(componentIcon, nodeName, subProperty.properties, propertyName);
-        } else if (subProperty.items?.length) {
-            return getSubProperties(componentIcon, nodeName, subProperty.items, propertyName);
-        }
-
-        return {
+    subProperties: Array<PropertyAllType>,
+    value: string
+): Array<DataPillType> {
+    const dataPills: Array<DataPillType> = [
+        {
             componentIcon,
-            id: subProperty.name,
+            id: value,
             nodeName,
-            value: propertyName ? `${nodeName}.${propertyName}.${subProperty.name}` : `${nodeName}.${subProperty.name}`,
-        };
+            value: transformValueForObjectAccess(value),
+        },
+    ];
+
+    subProperties.forEach((subProperty) => {
+        const {items, name, properties} = subProperty;
+
+        const nestedSubProperties = properties?.length ? properties : items;
+
+        const subValue = name ? `${value}.${name}` : `${value}[index]`;
+
+        dataPills.push({
+            componentIcon,
+            id: name ?? subValue,
+            nodeName,
+            value: transformValueForObjectAccess(subValue),
+        });
+
+        if (nestedSubProperties?.length) {
+            const nestedProperties = getSubProperties(componentIcon, nodeName, nestedSubProperties, subValue);
+
+            dataPills.push(...nestedProperties.slice(1));
+        }
     });
+
+    return dataPills;
 }

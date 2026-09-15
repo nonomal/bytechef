@@ -10,6 +10,9 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.annotation.JsonValue;
+import java.util.HashMap;
+import java.util.Map;
+import org.springframework.lang.Nullable;
 import org.openapitools.jackson.nullable.JsonNullable;
 import java.time.OffsetDateTime;
 import jakarta.validation.Valid;
@@ -47,20 +50,23 @@ import jakarta.annotation.Generated;
   @JsonSubTypes.Type(value = ValuePropertyModel.class, name = "ValueProperty")
 })
 
-@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2024-06-30T07:20:54.243996+02:00[Europe/Zagreb]", comments = "Generator version: 7.5.0")
+@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2026-07-03T17:58:15.504637+02:00[Europe/Zagreb]", comments = "Generator version: 7.22.0")
 public class PropertyModel {
 
   private Boolean advancedOption = false;
 
-  private String description;
+  private @Nullable String description;
 
-  private String displayCondition;
+  private @Nullable String displayCondition;
 
   private Boolean expressionEnabled = true;
 
   private Boolean hidden = false;
 
-  private String name;
+  @Valid
+  private Map<String, Object> metadata = new HashMap<>();
+
+  private @Nullable String name;
 
   private Boolean required = false;
 
@@ -85,7 +91,7 @@ public class PropertyModel {
   /**
    * If the property should be grouped under advanced options.
    * @return advancedOption
-  */
+   */
   
   @Schema(name = "advancedOption", description = "If the property should be grouped under advanced options.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("advancedOption")
@@ -93,11 +99,12 @@ public class PropertyModel {
     return advancedOption;
   }
 
+  @JsonProperty("advancedOption")
   public void setAdvancedOption(Boolean advancedOption) {
     this.advancedOption = advancedOption;
   }
 
-  public PropertyModel description(String description) {
+  public PropertyModel description(@Nullable String description) {
     this.description = description;
     return this;
   }
@@ -105,19 +112,20 @@ public class PropertyModel {
   /**
    * The property description.
    * @return description
-  */
+   */
   
   @Schema(name = "description", description = "The property description.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("description")
-  public String getDescription() {
+  public @Nullable String getDescription() {
     return description;
   }
 
-  public void setDescription(String description) {
+  @JsonProperty("description")
+  public void setDescription(@Nullable String description) {
     this.description = description;
   }
 
-  public PropertyModel displayCondition(String displayCondition) {
+  public PropertyModel displayCondition(@Nullable String displayCondition) {
     this.displayCondition = displayCondition;
     return this;
   }
@@ -125,15 +133,16 @@ public class PropertyModel {
   /**
    * Defines rules when the property should be shown or hidden.
    * @return displayCondition
-  */
+   */
   
   @Schema(name = "displayCondition", description = "Defines rules when the property should be shown or hidden.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("displayCondition")
-  public String getDisplayCondition() {
+  public @Nullable String getDisplayCondition() {
     return displayCondition;
   }
 
-  public void setDisplayCondition(String displayCondition) {
+  @JsonProperty("displayCondition")
+  public void setDisplayCondition(@Nullable String displayCondition) {
     this.displayCondition = displayCondition;
   }
 
@@ -145,7 +154,7 @@ public class PropertyModel {
   /**
    * Defines if the property can contain expressions or only constant values. Defaults to true.
    * @return expressionEnabled
-  */
+   */
   
   @Schema(name = "expressionEnabled", description = "Defines if the property can contain expressions or only constant values. Defaults to true.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("expressionEnabled")
@@ -153,6 +162,7 @@ public class PropertyModel {
     return expressionEnabled;
   }
 
+  @JsonProperty("expressionEnabled")
   public void setExpressionEnabled(Boolean expressionEnabled) {
     this.expressionEnabled = expressionEnabled;
   }
@@ -165,7 +175,7 @@ public class PropertyModel {
   /**
    * If the property should be visible or not.
    * @return hidden
-  */
+   */
   
   @Schema(name = "hidden", description = "If the property should be visible or not.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("hidden")
@@ -173,11 +183,41 @@ public class PropertyModel {
     return hidden;
   }
 
+  @JsonProperty("hidden")
   public void setHidden(Boolean hidden) {
     this.hidden = hidden;
   }
 
-  public PropertyModel name(String name) {
+  public PropertyModel metadata(Map<String, Object> metadata) {
+    this.metadata = metadata;
+    return this;
+  }
+
+  public PropertyModel putMetadataItem(String key, Object metadataItem) {
+    if (this.metadata == null) {
+      this.metadata = new HashMap<>();
+    }
+    this.metadata.put(key, metadataItem);
+    return this;
+  }
+
+  /**
+   * Key-value map of metadata.
+   * @return metadata
+   */
+  
+  @Schema(name = "metadata", description = "Key-value map of metadata.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+  @JsonProperty("metadata")
+  public Map<String, Object> getMetadata() {
+    return metadata;
+  }
+
+  @JsonProperty("metadata")
+  public void setMetadata(Map<String, Object> metadata) {
+    this.metadata = metadata;
+  }
+
+  public PropertyModel name(@Nullable String name) {
     this.name = name;
     return this;
   }
@@ -185,15 +225,16 @@ public class PropertyModel {
   /**
    * The property name.
    * @return name
-  */
+   */
   
   @Schema(name = "name", description = "The property name.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("name")
-  public String getName() {
+  public @Nullable String getName() {
     return name;
   }
 
-  public void setName(String name) {
+  @JsonProperty("name")
+  public void setName(@Nullable String name) {
     this.name = name;
   }
 
@@ -205,7 +246,7 @@ public class PropertyModel {
   /**
    * If the property is required or not.
    * @return required
-  */
+   */
   
   @Schema(name = "required", description = "If the property is required or not.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("required")
@@ -213,6 +254,7 @@ public class PropertyModel {
     return required;
   }
 
+  @JsonProperty("required")
   public void setRequired(Boolean required) {
     this.required = required;
   }
@@ -225,7 +267,7 @@ public class PropertyModel {
   /**
    * Get type
    * @return type
-  */
+   */
   @NotNull @Valid 
   @Schema(name = "type", requiredMode = Schema.RequiredMode.REQUIRED)
   @JsonProperty("type")
@@ -233,6 +275,7 @@ public class PropertyModel {
     return type;
   }
 
+  @JsonProperty("type")
   public void setType(PropertyTypeModel type) {
     this.type = type;
   }
@@ -251,6 +294,7 @@ public class PropertyModel {
         Objects.equals(this.displayCondition, property.displayCondition) &&
         Objects.equals(this.expressionEnabled, property.expressionEnabled) &&
         Objects.equals(this.hidden, property.hidden) &&
+        Objects.equals(this.metadata, property.metadata) &&
         Objects.equals(this.name, property.name) &&
         Objects.equals(this.required, property.required) &&
         Objects.equals(this.type, property.type);
@@ -258,7 +302,7 @@ public class PropertyModel {
 
   @Override
   public int hashCode() {
-    return Objects.hash(advancedOption, description, displayCondition, expressionEnabled, hidden, name, required, type);
+    return Objects.hash(advancedOption, description, displayCondition, expressionEnabled, hidden, metadata, name, required, type);
   }
 
   @Override
@@ -270,6 +314,7 @@ public class PropertyModel {
     sb.append("    displayCondition: ").append(toIndentedString(displayCondition)).append("\n");
     sb.append("    expressionEnabled: ").append(toIndentedString(expressionEnabled)).append("\n");
     sb.append("    hidden: ").append(toIndentedString(hidden)).append("\n");
+    sb.append("    metadata: ").append(toIndentedString(metadata)).append("\n");
     sb.append("    name: ").append(toIndentedString(name)).append("\n");
     sb.append("    required: ").append(toIndentedString(required)).append("\n");
     sb.append("    type: ").append(toIndentedString(type)).append("\n");
@@ -281,11 +326,8 @@ public class PropertyModel {
    * Convert the given object to string with each line indented by 4 spaces
    * (except the first line).
    */
-  private String toIndentedString(Object o) {
-    if (o == null) {
-      return "null";
-    }
-    return o.toString().replace("\n", "\n    ");
+  private String toIndentedString(@Nullable Object o) {
+    return o == null ? "null" : o.toString().replace("\n", "\n    ");
   }
 }
 

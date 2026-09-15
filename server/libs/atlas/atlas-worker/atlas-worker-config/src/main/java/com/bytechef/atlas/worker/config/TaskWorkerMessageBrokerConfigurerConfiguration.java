@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,13 +16,18 @@
 
 package com.bytechef.atlas.worker.config;
 
+import static com.bytechef.tenant.TenantContext.CURRENT_TENANT_ID;
+
 import com.bytechef.atlas.worker.TaskWorker;
+import com.bytechef.atlas.worker.annotation.ConditionalOnWorker;
 import com.bytechef.atlas.worker.event.TaskExecutionEvent;
 import com.bytechef.atlas.worker.message.route.TaskWorkerMessageRoute;
 import com.bytechef.config.ApplicationProperties;
 import com.bytechef.message.broker.config.MessageBrokerConfigurer;
 import com.bytechef.message.event.MessageEvent;
 import com.bytechef.message.event.MessageEventPostReceiveProcessor;
+import com.bytechef.message.event.tracing.MessageEventTracing;
+import com.bytechef.tenant.TenantContext;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.List;
 import java.util.Map;
@@ -33,6 +38,7 @@ import org.springframework.context.annotation.Configuration;
  * @author Ivica Cardic
  */
 @Configuration
+@ConditionalOnWorker
 public class TaskWorkerMessageBrokerConfigurerConfiguration {
 
     private final List<MessageEventPostReceiveProcessor> messageEventPostReceiveProcessors;
@@ -46,18 +52,20 @@ public class TaskWorkerMessageBrokerConfigurerConfiguration {
 
     @Bean
     MessageBrokerConfigurer<?> taskWorkerMessageBrokerConfigurer(
-        TaskWorker taskWorker, ApplicationProperties applicationProperties) {
+        MessageEventTracing messageEventTracing, TaskWorker taskWorker,
+        ApplicationProperties applicationProperties) {
 
-        TaskWorkerDelegate taskWorkerDelegate = new TaskWorkerDelegate(messageEventPostReceiveProcessors, taskWorker);
+        TaskWorkerDelegate taskWorkerDelegate = new TaskWorkerDelegate(
+            messageEventPostReceiveProcessors, messageEventTracing, taskWorker);
 
         return (listenerEndpointRegistrar, messageBrokerListenerRegistrar) -> {
-            Map<String, Object> subscriptions = applicationProperties.getWorker()
+            Map<String, Integer> subscriptions = applicationProperties.getWorker()
                 .getTask()
                 .getSubscriptions();
 
             subscriptions.forEach((routeName, concurrency) -> messageBrokerListenerRegistrar.registerListenerEndpoint(
-                listenerEndpointRegistrar, TaskWorkerMessageRoute.ofTaskMessageRoute(routeName),
-                Integer.parseInt((String) concurrency), taskWorkerDelegate, "onTaskExecutionEvent"));
+                listenerEndpointRegistrar, TaskWorkerMessageRoute.ofTaskMessageRoute(routeName), concurrency,
+                taskWorkerDelegate, "onTaskExecutionEvent"));
 
             messageBrokerListenerRegistrar.registerListenerEndpoint(
                 listenerEndpointRegistrar, TaskWorkerMessageRoute.CONTROL_EVENTS, 1, taskWorkerDelegate,
@@ -66,24 +74,31 @@ public class TaskWorkerMessageBrokerConfigurerConfiguration {
     }
 
     private record TaskWorkerDelegate(
-        List<MessageEventPostReceiveProcessor> messageEventPostReceiveProcessors, TaskWorker taskWorker) {
+        List<MessageEventPostReceiveProcessor> messageEventPostReceiveProcessors,
+        MessageEventTracing messageEventTracing, TaskWorker taskWorker) {
 
         public void onTaskExecutionEvent(TaskExecutionEvent taskExecutionEvent) {
-            process(taskExecutionEvent);
-
-            taskWorker.onTaskExecutionEvent(taskExecutionEvent);
+            TenantContext.runWithTenantId(
+                (String) taskExecutionEvent.getMetadata(CURRENT_TENANT_ID),
+                () -> messageEventTracing.runWithTraceContext(
+                    taskExecutionEvent, "task.execute",
+                    () -> taskWorker.onTaskExecutionEvent((TaskExecutionEvent) process(taskExecutionEvent))));
         }
 
         public void onCancelControlTaskEvent(MessageEvent<?> messageEvent) {
-            process(messageEvent);
-
-            taskWorker.onCancelControlTaskEvent(messageEvent);
+            TenantContext.runWithTenantId(
+                (String) messageEvent.getMetadata(CURRENT_TENANT_ID),
+                () -> messageEventTracing.runWithTraceContext(
+                    messageEvent, "task.cancel",
+                    () -> taskWorker.onCancelControlTaskEvent(process(messageEvent))));
         }
 
-        private void process(MessageEvent<?> messageEvent) {
+        private MessageEvent<?> process(MessageEvent<?> messageEvent) {
             for (MessageEventPostReceiveProcessor messageEventPostReceiveProcessor : messageEventPostReceiveProcessors) {
-                messageEventPostReceiveProcessor.process(messageEvent);
+                messageEvent = messageEventPostReceiveProcessor.process(messageEvent);
             }
+
+            return messageEvent;
         }
     }
 }

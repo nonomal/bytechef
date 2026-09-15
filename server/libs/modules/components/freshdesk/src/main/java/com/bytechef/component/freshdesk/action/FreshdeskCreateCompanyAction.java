@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,14 +17,16 @@
 package com.bytechef.component.freshdesk.action;
 
 import static com.bytechef.component.OpenApiComponentHandler.PropertyType;
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.number;
-import static com.bytechef.component.definition.ComponentDSL.object;
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.array;
+import static com.bytechef.component.definition.ComponentDsl.integer;
+import static com.bytechef.component.definition.ComponentDsl.object;
+import static com.bytechef.component.definition.ComponentDsl.outputSchema;
+import static com.bytechef.component.definition.ComponentDsl.string;
 import static com.bytechef.component.definition.Context.Http.BodyContentType;
 import static com.bytechef.component.definition.Context.Http.ResponseType;
 
-import com.bytechef.component.definition.ComponentDSL;
+import com.bytechef.component.definition.ComponentDsl;
 import java.util.Map;
 
 /**
@@ -33,36 +35,60 @@ import java.util.Map;
  * @generated
  */
 public class FreshdeskCreateCompanyAction {
-    public static final ComponentDSL.ModifiableActionDefinition ACTION_DEFINITION = action("createCompany")
-        .title("Create company")
-        .description("Creates a new company")
+    public static final ComponentDsl.ModifiableActionDefinition ACTION_DEFINITION = action("createCompany")
+        .title("Create Company")
+        .description("Creates a new compan.")
         .metadata(
             Map.of(
                 "method", "POST",
                 "path", "/companies", "bodyContentType", BodyContentType.JSON, "mimeType", "application/json"
 
             ))
-        .properties(object("__item").properties(string("name").label("Name")
-            .description("Name of the company")
+        .properties(string("name").metadata(
+            Map.of(
+                "type", PropertyType.BODY))
+            .label("Name")
+            .description("Name of the company.")
             .required(true),
-            string("description").label("Description")
-                .description("Description of the company")
+            string("description").metadata(
+                Map.of(
+                    "type", PropertyType.BODY))
+                .label("Description")
+                .description("Description of the company.")
                 .required(false),
-            string("note").label("Note")
-                .description("Any specific note about the company")
+            string("note").metadata(
+                Map.of(
+                    "type", PropertyType.BODY))
+                .label("Note")
+                .description("Any specific note about the company.")
                 .required(false))
-            .label("Company")
+        .output(outputSchema(object().properties(integer("id").description("ID of the company.")
+            .required(false),
+            string("name").description("Name of the company.")
+                .required(false),
+            string("description").description("Description of the company.")
+                .required(false),
+            array("domains").items(string().description("List of domains associated with the company."))
+                .description("List of domains associated with the company.")
+                .required(false),
+            string("note").description("Note about the company.")
+                .required(false),
+            string("created_at").description("Timestamp when the company was created.")
+                .required(false),
+            string("updated_at").description("Timestamp when the company was last updated.")
+                .required(false),
+            string("health_score").description("Health score of the company.")
+                .required(false),
+            string("account_tier").description("Account tier of the company.")
+                .required(false),
+            string("renewal_date").description("Renewal date of the company subscription.")
+                .required(false),
+            string("industry").description("Industry of the company.")
+                .required(false))
             .metadata(
                 Map.of(
-                    "type", PropertyType.BODY)))
-        .outputSchema(object()
-            .properties(object("body")
-                .properties(number("id").required(false), string("name").required(false),
-                    string("description").required(false), string("note").required(false))
-                .required(false))
-            .metadata(
-                Map.of(
-                    "responseType", ResponseType.JSON)));
+                    "responseType", ResponseType.JSON))))
+        .help("", "https://docs.bytechef.io/reference/components/freshdesk_v1#create-company");
 
     private FreshdeskCreateCompanyAction() {
     }

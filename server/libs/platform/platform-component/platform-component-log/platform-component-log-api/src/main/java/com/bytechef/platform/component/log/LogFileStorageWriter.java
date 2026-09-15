@@ -1,0 +1,77 @@
+/*
+ * Copyright 2025 ByteChef
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.bytechef.platform.component.log;
+
+import com.bytechef.platform.component.log.domain.LogEntry;
+import java.util.List;
+
+/**
+ * Interface for writing and managing storage of log entries associated with task executions. Provides methods to store
+ * log records for specific task executions and to delete all logs related to a specific job for cleanup purposes.
+ *
+ * @author Ivica Cardic
+ */
+public interface LogFileStorageWriter {
+
+    /**
+     * Stores a log entry for a specific task execution.
+     *
+     * @param jobId           the job ID
+     * @param taskExecutionId the task execution ID
+     * @param logEntry        the log entry to store
+     */
+    default void storeLogEntry(long jobId, long taskExecutionId, LogEntry logEntry) {
+        storeLogEntries(jobId, taskExecutionId, List.of(logEntry));
+    }
+
+    /**
+     * Stores a batch of log entries for a specific task execution in the order given. Appending a batch costs the same
+     * as appending a single entry, so callers that can accumulate entries should prefer this method.
+     *
+     * @param jobId           the job ID
+     * @param taskExecutionId the task execution ID
+     * @param logEntries      the log entries to store
+     */
+    void storeLogEntries(long jobId, long taskExecutionId, List<LogEntry> logEntries);
+
+    /**
+     * Blocks until every entry stored for the job through this writer so far has reached storage. A writer that stores
+     * synchronously has nothing to wait for, hence the no-op default.
+     *
+     * @param jobId the job ID
+     */
+    default void awaitPendingWrites(long jobId) {
+    }
+
+    /**
+     * Blocks until every entry stored for the task execution through this writer so far has reached storage. A writer
+     * that does not track writes per task execution waits for the whole job.
+     *
+     * @param jobId           the job ID
+     * @param taskExecutionId the task execution ID
+     */
+    default void awaitPendingWrites(long jobId, long taskExecutionId) {
+        awaitPendingWrites(jobId);
+    }
+
+    /**
+     * Deletes logs for a job (cleanup).
+     *
+     * @param jobId the job ID
+     */
+    void deleteLogEntries(long jobId);
+}

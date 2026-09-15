@@ -12,24 +12,31 @@
  * Do not edit the class manually.
  */
 
-
 import * as runtime from '../runtime';
-import type {
-  WorkflowNodeOutputModel,
-} from '../models/index';
 import {
-    WorkflowNodeOutputModelFromJSON,
-    WorkflowNodeOutputModelToJSON,
-} from '../models/index';
+    type WorkflowNodeOutput,
+    WorkflowNodeOutputFromJSON,
+    WorkflowNodeOutputToJSON,
+} from '../models/WorkflowNodeOutput';
+
+export interface GetClusterElementOutputRequest {
+    id: string;
+    workflowNodeName: string;
+    clusterElementType: string;
+    clusterElementWorkflowNodeName: string;
+    environmentId: number;
+}
 
 export interface GetPreviousWorkflowNodeOutputsRequest {
     id: string;
+    environmentId: number;
     lastWorkflowNodeName?: string;
 }
 
 export interface GetWorkflowNodeOutputRequest {
     id: string;
     workflowNodeName: string;
+    environmentId: number;
 }
 
 /**
@@ -38,14 +45,102 @@ export interface GetWorkflowNodeOutputRequest {
 export class WorkflowNodeOutputApi extends runtime.BaseAPI {
 
     /**
-     * Get all workflow node outputs used in a workflow.
-     * Get all dynamic workflow node outputs used in a workflow
+     * Creates request options for getClusterElementOutput without sending the request
      */
-    async getPreviousWorkflowNodeOutputsRaw(requestParameters: GetPreviousWorkflowNodeOutputsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<WorkflowNodeOutputModel>>> {
+    async getClusterElementOutputRequestOpts(requestParameters: GetClusterElementOutputRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['id'] == null) {
+            throw new runtime.RequiredError(
+                'id',
+                'Required parameter "id" was null or undefined when calling getClusterElementOutput().'
+            );
+        }
+
+        if (requestParameters['workflowNodeName'] == null) {
+            throw new runtime.RequiredError(
+                'workflowNodeName',
+                'Required parameter "workflowNodeName" was null or undefined when calling getClusterElementOutput().'
+            );
+        }
+
+        if (requestParameters['clusterElementType'] == null) {
+            throw new runtime.RequiredError(
+                'clusterElementType',
+                'Required parameter "clusterElementType" was null or undefined when calling getClusterElementOutput().'
+            );
+        }
+
+        if (requestParameters['clusterElementWorkflowNodeName'] == null) {
+            throw new runtime.RequiredError(
+                'clusterElementWorkflowNodeName',
+                'Required parameter "clusterElementWorkflowNodeName" was null or undefined when calling getClusterElementOutput().'
+            );
+        }
+
+        if (requestParameters['environmentId'] == null) {
+            throw new runtime.RequiredError(
+                'environmentId',
+                'Required parameter "environmentId" was null or undefined when calling getClusterElementOutput().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        if (requestParameters['environmentId'] != null) {
+            queryParameters['environmentId'] = requestParameters['environmentId'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+
+        let urlPath = `/workflows/{id}/workflow-nodes/{workflowNodeName}/cluster-elements/{clusterElementType}/{clusterElementWorkflowNodeName}/outputs`;
+        urlPath = urlPath.replace('{id}', encodeURIComponent(String(requestParameters['id'])));
+        urlPath = urlPath.replace('{workflowNodeName}', encodeURIComponent(String(requestParameters['workflowNodeName'])));
+        urlPath = urlPath.replace('{clusterElementType}', encodeURIComponent(String(requestParameters['clusterElementType'])));
+        urlPath = urlPath.replace('{clusterElementWorkflowNodeName}', encodeURIComponent(String(requestParameters['clusterElementWorkflowNodeName'])));
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Get cluster element node output used in a workflow.
+     * Get cluster element node output used in a workflow
+     */
+    async getClusterElementOutputRaw(requestParameters: GetClusterElementOutputRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<WorkflowNodeOutput>> {
+        const requestOptions = await this.getClusterElementOutputRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => WorkflowNodeOutputFromJSON(jsonValue));
+    }
+
+    /**
+     * Get cluster element node output used in a workflow.
+     * Get cluster element node output used in a workflow
+     */
+    async getClusterElementOutput(requestParameters: GetClusterElementOutputRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<WorkflowNodeOutput> {
+        const response = await this.getClusterElementOutputRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for getPreviousWorkflowNodeOutputs without sending the request
+     */
+    async getPreviousWorkflowNodeOutputsRequestOpts(requestParameters: GetPreviousWorkflowNodeOutputsRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['id'] == null) {
             throw new runtime.RequiredError(
                 'id',
                 'Required parameter "id" was null or undefined when calling getPreviousWorkflowNodeOutputs().'
+            );
+        }
+
+        if (requestParameters['environmentId'] == null) {
+            throw new runtime.RequiredError(
+                'environmentId',
+                'Required parameter "environmentId" was null or undefined when calling getPreviousWorkflowNodeOutputs().'
             );
         }
 
@@ -55,32 +150,48 @@ export class WorkflowNodeOutputApi extends runtime.BaseAPI {
             queryParameters['lastWorkflowNodeName'] = requestParameters['lastWorkflowNodeName'];
         }
 
+        if (requestParameters['environmentId'] != null) {
+            queryParameters['environmentId'] = requestParameters['environmentId'];
+        }
+
         const headerParameters: runtime.HTTPHeaders = {};
 
-        const response = await this.request({
-            path: `/workflows/{id}/outputs`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))),
+
+        let urlPath = `/workflows/{id}/outputs`;
+        urlPath = urlPath.replace('{id}', encodeURIComponent(String(requestParameters['id'])));
+
+        return {
+            path: urlPath,
             method: 'GET',
             headers: headerParameters,
             query: queryParameters,
-        }, initOverrides);
-
-        return new runtime.JSONApiResponse(response, (jsonValue) => jsonValue.map(WorkflowNodeOutputModelFromJSON));
+        };
     }
 
     /**
      * Get all workflow node outputs used in a workflow.
      * Get all dynamic workflow node outputs used in a workflow
      */
-    async getPreviousWorkflowNodeOutputs(requestParameters: GetPreviousWorkflowNodeOutputsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<WorkflowNodeOutputModel>> {
+    async getPreviousWorkflowNodeOutputsRaw(requestParameters: GetPreviousWorkflowNodeOutputsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<WorkflowNodeOutput>>> {
+        const requestOptions = await this.getPreviousWorkflowNodeOutputsRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => jsonValue.map(WorkflowNodeOutputFromJSON));
+    }
+
+    /**
+     * Get all workflow node outputs used in a workflow.
+     * Get all dynamic workflow node outputs used in a workflow
+     */
+    async getPreviousWorkflowNodeOutputs(requestParameters: GetPreviousWorkflowNodeOutputsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<WorkflowNodeOutput>> {
         const response = await this.getPreviousWorkflowNodeOutputsRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
     /**
-     * Get workflow node output of an action task or trigger used in a workflow.
-     * Get workflow node output of an action task or trigger used in a workflow
+     * Creates request options for getWorkflowNodeOutput without sending the request
      */
-    async getWorkflowNodeOutputRaw(requestParameters: GetWorkflowNodeOutputRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<WorkflowNodeOutputModel>> {
+    async getWorkflowNodeOutputRequestOpts(requestParameters: GetWorkflowNodeOutputRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['id'] == null) {
             throw new runtime.RequiredError(
                 'id',
@@ -95,25 +206,50 @@ export class WorkflowNodeOutputApi extends runtime.BaseAPI {
             );
         }
 
+        if (requestParameters['environmentId'] == null) {
+            throw new runtime.RequiredError(
+                'environmentId',
+                'Required parameter "environmentId" was null or undefined when calling getWorkflowNodeOutput().'
+            );
+        }
+
         const queryParameters: any = {};
+
+        if (requestParameters['environmentId'] != null) {
+            queryParameters['environmentId'] = requestParameters['environmentId'];
+        }
 
         const headerParameters: runtime.HTTPHeaders = {};
 
-        const response = await this.request({
-            path: `/workflows/{id}/outputs/{workflowNodeName}`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))).replace(`{${"workflowNodeName"}}`, encodeURIComponent(String(requestParameters['workflowNodeName']))),
+
+        let urlPath = `/workflows/{id}/workflow-nodes/{workflowNodeName}/outputs`;
+        urlPath = urlPath.replace('{id}', encodeURIComponent(String(requestParameters['id'])));
+        urlPath = urlPath.replace('{workflowNodeName}', encodeURIComponent(String(requestParameters['workflowNodeName'])));
+
+        return {
+            path: urlPath,
             method: 'GET',
             headers: headerParameters,
             query: queryParameters,
-        }, initOverrides);
-
-        return new runtime.JSONApiResponse(response, (jsonValue) => WorkflowNodeOutputModelFromJSON(jsonValue));
+        };
     }
 
     /**
      * Get workflow node output of an action task or trigger used in a workflow.
      * Get workflow node output of an action task or trigger used in a workflow
      */
-    async getWorkflowNodeOutput(requestParameters: GetWorkflowNodeOutputRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<WorkflowNodeOutputModel> {
+    async getWorkflowNodeOutputRaw(requestParameters: GetWorkflowNodeOutputRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<WorkflowNodeOutput>> {
+        const requestOptions = await this.getWorkflowNodeOutputRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => WorkflowNodeOutputFromJSON(jsonValue));
+    }
+
+    /**
+     * Get workflow node output of an action task or trigger used in a workflow.
+     * Get workflow node output of an action task or trigger used in a workflow
+     */
+    async getWorkflowNodeOutput(requestParameters: GetWorkflowNodeOutputRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<WorkflowNodeOutput> {
         const response = await this.getWorkflowNodeOutputRaw(requestParameters, initOverrides);
         return await response.value();
     }

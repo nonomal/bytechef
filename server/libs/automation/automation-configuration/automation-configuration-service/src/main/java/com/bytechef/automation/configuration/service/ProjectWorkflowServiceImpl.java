@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,15 +17,15 @@
 package com.bytechef.automation.configuration.service;
 
 import com.bytechef.automation.configuration.domain.ProjectWorkflow;
-import com.bytechef.automation.configuration.exception.ProjectErrorType;
 import com.bytechef.automation.configuration.repository.ProjectWorkflowRepository;
-import com.bytechef.commons.util.OptionalUtils;
-import com.bytechef.platform.exception.PlatformException;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
-import org.apache.commons.lang3.Validate;
+import org.jspecify.annotations.Nullable;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.Assert;
 
 /**
  * @author Ivica Cardic
@@ -41,41 +41,58 @@ public class ProjectWorkflowServiceImpl implements ProjectWorkflowService {
     }
 
     @Override
+    @PreAuthorize("hasPermission(#projectId, 'Project', 'WORKFLOW_CREATE')")
     public ProjectWorkflow addWorkflow(long projectId, int projectVersion, String workflowId) {
-        return addWorkflow(projectId, projectVersion, workflowId, String.valueOf(UUID.randomUUID()));
+        return projectWorkflowRepository.save(new ProjectWorkflow(projectId, projectVersion, workflowId));
     }
 
     @Override
-    public ProjectWorkflow addWorkflow(
-        long projectId, int projectVersion, String workflowId, String workflowReferenceCode) {
-
-        Validate.notNull(workflowId, "'workflowId' must not be null");
-
-        ProjectWorkflow project = new ProjectWorkflow(projectId, projectVersion, workflowId, workflowReferenceCode);
-
-        return projectWorkflowRepository.save(project);
-    }
-
-    @Override
-    public void deleteProjectWorkflows(List<Long> ids) {
+    public void delete(List<Long> ids) {
         projectWorkflowRepository.deleteAllById(ids);
     }
 
     @Override
-    public ProjectWorkflow getProjectWorkflow(long id) {
-        return OptionalUtils.get(projectWorkflowRepository.findById(id));
+    public Optional<String> fetchLastProjectWorkflowId(Long projectId, String workflowUuid) {
+        return projectWorkflowRepository.findLastByProjectIdAndUuid(projectId, UUID.fromString(workflowUuid))
+            .map(ProjectWorkflow::getWorkflowId);
     }
 
     @Override
-    public String getProjectWorkflowId(long projectInstanceId, String workflowReferenceCode) {
-        return OptionalUtils.get(
-            projectWorkflowRepository
-                .findByProjectInstanceIdAndWorkflowReferenceCode(projectInstanceId, workflowReferenceCode)
-                .map(ProjectWorkflow::getWorkflowId));
+    public Optional<ProjectWorkflow> fetchProjectWorkflow(long projectId, int projectVersion, String workflowUuid) {
+        return projectWorkflowRepository.findByProjectIdAndProjectVersionAndUuid(
+            projectId, projectVersion, UUID.fromString(workflowUuid));
     }
 
     @Override
-    public List<Long> getProjectWorkflowIds(long projectId, int projectVersion) {
+    public ProjectWorkflow getLastProjectWorkflow(long projectId, String workflowUuid) {
+        return projectWorkflowRepository.findLastByProjectIdAndUuid(projectId, UUID.fromString(workflowUuid))
+            .orElseThrow(() -> new IllegalArgumentException("No workflow found for project id " + projectId));
+    }
+
+    @Override
+    public String getLastPublishedWorkflowId(String workflowUuid) {
+        return projectWorkflowRepository
+            .findLastPublishedByUuid(UUID.fromString(workflowUuid))
+            .map(ProjectWorkflow::getWorkflowId)
+            .orElseThrow(
+                () -> new IllegalArgumentException("No published workflow found for workflow uuid " + workflowUuid));
+    }
+
+    @Override
+    public String getLastWorkflowId(String workflowUuid) {
+        return projectWorkflowRepository
+            .findLastByUuid(UUID.fromString(workflowUuid))
+            .map(ProjectWorkflow::getWorkflowId)
+            .orElseThrow(() -> new IllegalArgumentException("No workflow found for workflow uuid " + workflowUuid));
+    }
+
+    @Override
+    public List<ProjectWorkflow> getLatestProjectWorkflows() {
+        return projectWorkflowRepository.findAllLatestPerUuid();
+    }
+
+    @Override
+    public List<Long> getProjectProjectWorkflowIds(long projectId, int projectVersion) {
         return projectWorkflowRepository.findAllByProjectIdAndProjectVersion(projectId, projectVersion)
             .stream()
             .map(ProjectWorkflow::getId)
@@ -83,8 +100,35 @@ public class ProjectWorkflowServiceImpl implements ProjectWorkflowService {
     }
 
     @Override
+    public ProjectWorkflow getProjectWorkflow(long id) {
+        return projectWorkflowRepository.findById(id)
+            .orElseThrow(() -> new IllegalArgumentException("ProjectWorkflow not found"));
+    }
+
+    @Override
+    public List<String> getProjectWorkflowIds(long projectId) {
+        return projectWorkflowRepository.findAllByProjectId(projectId)
+            .stream()
+            .map(ProjectWorkflow::getWorkflowId)
+            .toList();
+    }
+
+    @Override
+    public List<String> getProjectWorkflowIds(long projectId, int projectVersion) {
+        return projectWorkflowRepository.findAllByProjectIdAndProjectVersion(projectId, projectVersion)
+            .stream()
+            .map(ProjectWorkflow::getWorkflowId)
+            .toList();
+    }
+
+    @Override
     public List<ProjectWorkflow> getProjectWorkflows() {
         return projectWorkflowRepository.findAll();
+    }
+
+    @Override
+    public List<ProjectWorkflow> getProjectWorkflows(List<Long> projectIds) {
+        return projectWorkflowRepository.findAllByProjectIdIn(projectIds);
     }
 
     @Override
@@ -98,49 +142,92 @@ public class ProjectWorkflowServiceImpl implements ProjectWorkflowService {
     }
 
     @Override
-    public List<String> getWorkflowIds(long projectId) {
-        return projectWorkflowRepository.findAllByProjectId(projectId)
-            .stream()
-            .map(ProjectWorkflow::getWorkflowId)
-            .toList();
+    public List<ProjectWorkflow> getProjectWorkflows(Long projectId, String workflowUuid) {
+        return projectWorkflowRepository.findAllByProjectIdAndUuid(
+            projectId, UUID.fromString(workflowUuid));
     }
 
     @Override
-    public List<String> getWorkflowIds(long projectId, int projectVersion) {
-        return projectWorkflowRepository.findAllByProjectIdAndProjectVersion(projectId, projectVersion)
-            .stream()
+    public String getProjectWorkflowWorkflowId(long projectDeploymentId, String workflowUuid) {
+        return projectWorkflowRepository
+            .findByProjectDeploymentIdAndUuid(projectDeploymentId, UUID.fromString(workflowUuid))
             .map(ProjectWorkflow::getWorkflowId)
-            .toList();
+            .orElseThrow(() -> new IllegalArgumentException("ProjectWorkflow not found"));
+    }
+
+    @Override
+    public Optional<String> fetchProjectWorkflowWorkflowId(long projectDeploymentId, String workflowUuid) {
+        return projectWorkflowRepository
+            .findByProjectDeploymentIdAndUuid(projectDeploymentId, UUID.fromString(workflowUuid))
+            .map(ProjectWorkflow::getWorkflowId);
+    }
+
+    @Override
+    public String getProjectWorkflowUuid(long projectDeploymentId, String workflowId) {
+        return projectWorkflowRepository
+            .findByProjectDeploymentIdAndWorkflowId(projectDeploymentId, workflowId)
+            .map(ProjectWorkflow::getUuidAsString)
+            .orElseThrow(() -> new IllegalArgumentException("ProjectWorkflow not found"));
     }
 
     @Override
     public ProjectWorkflow getWorkflowProjectWorkflow(String workflowId) {
-        return OptionalUtils.get(projectWorkflowRepository.findByWorkflowId(workflowId));
+        return projectWorkflowRepository.findByWorkflowId(workflowId)
+            .orElseThrow(() -> new IllegalArgumentException("ProjectWorkflow not found"));
     }
 
     @Override
-    public void removeWorkflow(long projectId, int projectVersion, String workflowId) {
-        if (projectWorkflowRepository.countByProjectIdAndProjectVersion(projectId, projectVersion) == 1) {
-            throw new PlatformException(
-                "The last workflow id=%s cannot be deleted".formatted(workflowId),
-                ProjectErrorType.REMOVE_LAST_WORKFLOW);
+    public List<ProjectWorkflow> getWorkflowProjectWorkflows(List<String> workflowIds) {
+        if (workflowIds.isEmpty()) {
+            return List.of();
         }
 
+        return projectWorkflowRepository.findAllByWorkflowIdIn(workflowIds);
+    }
+
+    @Override
+    @PreAuthorize("hasPermission(#projectId, 'Project', 'WORKFLOW_DELETE')")
+    public void delete(long projectId, int projectVersion, String workflowId) {
         projectWorkflowRepository.findByProjectIdAndProjectVersionAndWorkflowId(projectId, projectVersion, workflowId)
             .ifPresent(projectWorkflow -> projectWorkflowRepository.deleteById(projectWorkflow.getId()));
     }
 
     @Override
-    public ProjectWorkflow update(ProjectWorkflow projectWorkflow) {
-        Validate.notNull(projectWorkflow, "'projectWorkflow' must not be null");
-        Validate.notNull(projectWorkflow.getId(), "'id' must not be null");
+    @PreAuthorize("hasPermission(#projectId, 'Project', 'DEPLOYMENT_PUSH')")
+    public void publishWorkflow(
+        long projectId, int oldProjectVersion, String oldWorkflowId, ProjectWorkflow projectWorkflow) {
 
-        ProjectWorkflow curProjectWorkflow = OptionalUtils.get(
-            projectWorkflowRepository.findById(projectWorkflow.getId()));
+        Assert.notNull(projectWorkflow, "'projectWorkflow' must not be null");
+
+        update(projectWorkflow);
+
+        projectWorkflow = new ProjectWorkflow(
+            projectId, oldProjectVersion, oldWorkflowId, UUID.fromString(projectWorkflow.getUuidAsString()));
+
+        projectWorkflowRepository.save(projectWorkflow);
+    }
+
+    @Override
+    public ProjectWorkflow update(ProjectWorkflow projectWorkflow) {
+        Assert.notNull(projectWorkflow, "'projectWorkflow' must not be null");
+        Assert.notNull(projectWorkflow.getId(), "'id' must not be null");
+
+        ProjectWorkflow curProjectWorkflow = projectWorkflowRepository.findById(projectWorkflow.getId())
+            .orElseThrow(() -> new IllegalArgumentException("ProjectWorkflow not found"));
 
         curProjectWorkflow.setProjectVersion(projectWorkflow.getProjectVersion());
         curProjectWorkflow.setWorkflowId(projectWorkflow.getWorkflowId());
-        curProjectWorkflow.setWorkflowReferenceCode(projectWorkflow.getWorkflowReferenceCode());
+        curProjectWorkflow.setUuid(projectWorkflow.getUuidAsString());
+
+        return projectWorkflowRepository.save(curProjectWorkflow);
+    }
+
+    @Override
+    public ProjectWorkflow updatePermissionExpression(long id, @Nullable String permissionExpression) {
+        ProjectWorkflow projectWorkflow = projectWorkflowRepository.findById(id)
+            .orElseThrow(() -> new IllegalArgumentException("ProjectWorkflow not found"));
+
+        projectWorkflow.setPermissionExpression(permissionExpression);
 
         return projectWorkflowRepository.save(projectWorkflow);
     }

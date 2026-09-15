@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,119 +16,77 @@
 
 package com.bytechef.component.shopify.util;
 
-import static com.bytechef.component.definition.ComponentDSL.option;
-import static com.bytechef.component.shopify.constant.ShopifyConstants.ID;
-import static com.bytechef.component.shopify.constant.ShopifyConstants.PRODUCT_ID;
-import static com.bytechef.component.shopify.constant.ShopifyConstants.SHOP_NAME;
+import static com.bytechef.component.shopify.constant.ShopifyConstants.QUERY;
+import static com.bytechef.component.shopify.constant.ShopifyConstants.VARIABLES;
 
-import com.bytechef.component.definition.ActionContext;
 import com.bytechef.component.definition.Context;
 import com.bytechef.component.definition.Context.Http;
-import com.bytechef.component.definition.Context.TypeReference;
-import com.bytechef.component.definition.Option;
-import com.bytechef.component.definition.Parameters;
-import java.util.ArrayList;
+import com.bytechef.component.definition.Context.Http.Body;
+import com.bytechef.component.definition.Context.Http.ResponseType;
+import com.bytechef.component.definition.TypeReference;
+import com.bytechef.component.exception.ProviderException;
 import java.util.List;
 import java.util.Map;
 
 /**
  * @author Monika Domiter
+ * @author Nikolina Spehar
  */
 public class ShopifyUtils {
 
     private ShopifyUtils() {
     }
 
-    public static String getBaseUrl(Parameters connectionParameters) {
-        return "https://" + connectionParameters.getRequiredString(SHOP_NAME) + ".myshopify.com/admin/api/2024-04";
+    public static Object executeGraphQlOperation(
+        String query, Context context, Map<String, Object> variables, String dataKey) {
+
+        Object data = sendGraphQlQuery(query, context, variables);
+
+        if (data instanceof Map<?, ?> dataMap) {
+            Object content = dataMap.get(dataKey);
+
+            checkForUserError(content);
+
+            return content;
+        }
+
+        throw new ProviderException("GraphQL query was not executed correctly.");
     }
 
-    public static List<Option<Long>> getOrderIdOptions(
-        Parameters inputParameters, Parameters connectionParameters, Map<String, String> dependencyPaths,
-        String searchText, ActionContext context) {
+    public static Object sendGraphQlQuery(
+        String query, Context context, Map<String, Object> variables) {
 
-        Map<String, List<Map<String, Object>>> body = context
-            .http(http -> http.get(getBaseUrl(connectionParameters) + "/orders.json?status=any"))
-            .configuration(Http.responseType(Http.ResponseType.JSON))
+        Map<String, Object> body = context
+            .http(http -> http.post("/2025-10/graphql.json"))
+            .configuration(Http.responseType(ResponseType.JSON))
+            .body(Body.of(QUERY, query, VARIABLES, variables))
             .execute()
             .getBody(new TypeReference<>() {});
 
-        List<Option<Long>> options = new ArrayList<>();
+        checkForErrors(body.get("errors"));
 
-        for (Map<String, Object> map : body.get("orders")) {
-            options.add(option((String) map.get("name"), ((Long) map.get(ID)).longValue()));
+        return body.get("data");
+    }
+
+    private static void checkForUserError(Object content) {
+        if (content instanceof Map<?, ?> contentMap) {
+            Object userErrorsObj = contentMap.get("userErrors");
+
+            checkForErrors(userErrorsObj);
         }
-
-        return options;
     }
 
-    public static List<Option<Long>> getProductIdOptions(
-        Parameters inputParameters, Parameters connectionParameters, Map<String, String> dependencyPaths,
-        String searchText, ActionContext context) {
+    private static void checkForErrors(Object userErrorsObj) {
+        if (userErrorsObj instanceof List<?> userErrors && !userErrors.isEmpty()) {
+            Object first = userErrors.getFirst();
 
-        Map<String, List<Map<String, Object>>> body = context
-            .http(http -> http.get(getBaseUrl(connectionParameters) + "/products.json"))
-            .configuration(Http.responseType(Http.ResponseType.JSON))
-            .execute()
-            .getBody(new TypeReference<>() {});
+            if (first instanceof Map<?, ?> userError) {
+                Object message = userError.get("message");
 
-        List<Option<Long>> options = new ArrayList<>();
-
-        for (Map<String, Object> map : body.get("products")) {
-            options.add(option((String) map.get("title"), ((Long) map.get(ID)).longValue()));
+                if (message instanceof String msg && !msg.isBlank()) {
+                    throw new ProviderException(msg);
+                }
+            }
         }
-
-        return options;
     }
-
-    public static List<Option<Long>> getVariantIdOptions(
-        Parameters inputParameters, Parameters connectionParameters, Map<String, String> dependencyPaths,
-        String searchText, ActionContext context) {
-
-        Map<String, List<Map<String, Object>>> body = context.http(
-            http -> http.get(
-                getBaseUrl(connectionParameters) + "/products/" +
-                    inputParameters.getRequiredFromPath(dependencyPaths.get(PRODUCT_ID)) + "/variants.json"))
-            .configuration(Http.responseType(Http.ResponseType.JSON))
-            .execute()
-            .getBody(new TypeReference<>() {});
-
-        List<Option<Long>> options = new ArrayList<>();
-
-        for (Map<String, Object> map : body.get("variants")) {
-            options.add(option((String) map.get("title"), ((Long) map.get(ID)).longValue()));
-        }
-
-        return options;
-    }
-
-    public static Long subscribeWebhook(
-        Parameters connectionParameters, String webhookUrl, Context context, String topic) {
-
-        Map<String, ?> body = context.http(http -> http.post(getBaseUrl(connectionParameters) + "/webhooks.json"))
-            .body(Http.Body.of(
-                "webhook", Map.of(
-                    "topic", topic,
-                    "address", webhookUrl,
-                    "format", "json")))
-            .configuration(Http.responseType(Http.ResponseType.JSON))
-            .execute()
-            .getBody(new TypeReference<>() {});
-
-        if (body.get("webhook") instanceof Map<?, ?> map) {
-            return (Long) map.get(ID);
-        }
-
-        return null;
-    }
-
-    public static void unsubscribeWebhook(
-        Parameters connectionParameters, Parameters outputParameters, Context context) {
-
-        context.http(http -> http
-            .delete(getBaseUrl(connectionParameters) + "/webhooks/" + outputParameters.getString(ID) + ".json"))
-            .configuration(Http.responseType(Http.ResponseType.JSON))
-            .execute();
-    }
-
 }

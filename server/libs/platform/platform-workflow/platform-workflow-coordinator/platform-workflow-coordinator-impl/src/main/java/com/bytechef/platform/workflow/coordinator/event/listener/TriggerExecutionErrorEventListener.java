@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,10 +19,10 @@ package com.bytechef.platform.workflow.coordinator.event.listener;
 import com.bytechef.error.ExecutionError;
 import com.bytechef.platform.workflow.coordinator.event.ErrorEvent;
 import com.bytechef.platform.workflow.coordinator.event.TriggerExecutionErrorEvent;
+import com.bytechef.platform.workflow.coordinator.trigger.error.TriggerErrorHandler;
 import com.bytechef.platform.workflow.execution.domain.TriggerExecution;
 import com.bytechef.platform.workflow.execution.service.TriggerExecutionService;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import java.time.LocalDateTime;
 import org.apache.commons.lang3.Validate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,28 +34,33 @@ import org.springframework.stereotype.Component;
 @Component
 public class TriggerExecutionErrorEventListener implements ErrorEventListener {
 
-    private static final Logger logger = LoggerFactory.getLogger(TriggerExecutionErrorEventListener.class);
+    private static final Logger log = LoggerFactory.getLogger(TriggerExecutionErrorEventListener.class);
 
     private final TriggerExecutionService triggerExecutionService;
+    private final TriggerErrorHandler triggerErrorHandler;
 
     @SuppressFBWarnings("EI")
-    public TriggerExecutionErrorEventListener(TriggerExecutionService triggerExecutionService) {
+    public TriggerExecutionErrorEventListener(
+        TriggerErrorHandler triggerErrorHandler, TriggerExecutionService triggerExecutionService) {
+
         this.triggerExecutionService = triggerExecutionService;
+        this.triggerErrorHandler = triggerErrorHandler;
     }
 
     public void onErrorEvent(ErrorEvent errorEvent) {
         if (errorEvent instanceof TriggerExecutionErrorEvent triggerExecutionErrorEvent) {
-            ExecutionError error = Validate.notNull(triggerExecutionErrorEvent.getError(), "'error' must not be null");
             TriggerExecution triggerExecution = triggerExecutionErrorEvent.getTriggerExecution();
+            ExecutionError error = Validate.notNull(triggerExecutionErrorEvent.getError(), "'error' must not be null");
 
-            logger.error(
+            log.error(
                 "Trigger id={}: message={}\nstackTrace={}", triggerExecution.getId(), error.getMessage(),
                 error.getStackTrace());
 
-            // set task status to FAILED and persist
-
-            triggerExecution.setEndDate(LocalDateTime.now());
-            triggerExecution.setStatus(TriggerExecution.Status.FAILED);
+            try {
+                triggerErrorHandler.handleError(triggerExecution);
+            } catch (Exception ex) {
+                log.debug("Job creation during trigger error handling failed: {}", ex.getMessage(), ex);
+            }
 
             triggerExecutionService.update(triggerExecution);
         }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,11 +22,7 @@ package com.bytechef.component.file.storage.constant;
 public class FileStorageConstants {
 
     public static final String CONTENT = "content";
-    public static final String FILE_STORAGE = "fileStorage";
-    public static final String READ = "read";
-    public static final String WRITE = "write";
-    public static final String DOWNLOAD = "download";
-    public static final String URL = "url";
     public static final String FILE_ENTRY = "fileEntry";
     public static final String FILENAME = "filename";
+    public static final String URL = "url";
 }

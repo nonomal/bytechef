@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,25 +16,25 @@
 
 package com.bytechef.component.map;
 
-import static com.bytechef.platform.workflow.task.dispatcher.definition.TaskDispatcherDSL.array;
-import static com.bytechef.platform.workflow.task.dispatcher.definition.TaskDispatcherDSL.integer;
-import static com.bytechef.platform.workflow.task.dispatcher.definition.TaskDispatcherDSL.object;
-import static com.bytechef.platform.workflow.task.dispatcher.definition.TaskDispatcherDSL.task;
-import static com.bytechef.platform.workflow.task.dispatcher.definition.TaskDispatcherDSL.taskDispatcher;
+import static com.bytechef.platform.workflow.task.dispatcher.definition.TaskDispatcherDsl.array;
+import static com.bytechef.platform.workflow.task.dispatcher.definition.TaskDispatcherDsl.integer;
+import static com.bytechef.platform.workflow.task.dispatcher.definition.TaskDispatcherDsl.object;
+import static com.bytechef.platform.workflow.task.dispatcher.definition.TaskDispatcherDsl.task;
+import static com.bytechef.platform.workflow.task.dispatcher.definition.TaskDispatcherDsl.taskDispatcher;
 import static com.bytechef.task.dispatcher.map.constant.MapTaskDispatcherConstants.INDEX;
 import static com.bytechef.task.dispatcher.map.constant.MapTaskDispatcherConstants.ITEM;
+import static com.bytechef.task.dispatcher.map.constant.MapTaskDispatcherConstants.ITEMS;
 import static com.bytechef.task.dispatcher.map.constant.MapTaskDispatcherConstants.ITERATEE;
-import static com.bytechef.task.dispatcher.map.constant.MapTaskDispatcherConstants.LIST;
 import static com.bytechef.task.dispatcher.map.constant.MapTaskDispatcherConstants.MAP;
 
 import com.bytechef.commons.util.MapUtils;
-import com.bytechef.platform.registry.util.SchemaUtils;
+import com.bytechef.definition.BaseOutputDefinition.OutputResponse;
+import com.bytechef.platform.util.SchemaUtils;
 import com.bytechef.platform.workflow.task.dispatcher.TaskDispatcherDefinitionFactory;
-import com.bytechef.platform.workflow.task.dispatcher.definition.OutputFunction;
 import com.bytechef.platform.workflow.task.dispatcher.definition.Property.ObjectProperty;
 import com.bytechef.platform.workflow.task.dispatcher.definition.PropertyFactory;
-import com.bytechef.platform.workflow.task.dispatcher.definition.TaskDispatcherDSL.ModifiableValueProperty;
 import com.bytechef.platform.workflow.task.dispatcher.definition.TaskDispatcherDefinition;
+import com.bytechef.platform.workflow.task.dispatcher.definition.TaskDispatcherDsl.ModifiableValueProperty;
 import java.util.List;
 import java.util.Map;
 
@@ -50,27 +50,26 @@ public class MapTaskDispatcherDefinitionFactory implements TaskDispatcherDefinit
             "Produces a new collection of values by mapping each value in list through defined task, in parallel. When execution is finished on all items, the `map` task will return a list of execution results in an order which corresponds to the order of the source list.")
         .icon("path:assets/map.svg")
         .properties(
-            array(LIST)
+            array(ITEMS)
                 .label("List of items")
                 .description("List of items to iterate over."))
-        .output(getOutputFunction())
+        .output(MapTaskDispatcherDefinitionFactory::output)
         .taskProperties(task(ITERATEE))
-        .variableProperties(MapTaskDispatcherDefinitionFactory::getVariableProperties);
+        .variableProperties(MapTaskDispatcherDefinitionFactory::variableProperties);
 
     @Override
     public TaskDispatcherDefinition getDefinition() {
         return TASK_DISPATCHER_DEFINITION;
     }
 
-    protected static OutputFunction getOutputFunction() {
-        // TODO
-        return (inputParameters) -> null;
+    protected static OutputResponse output(Map<String, ?> inputParameters) {
+        return null;
     }
 
-    private static ObjectProperty getVariableProperties(Map<String, ?> inputParameters) {
+    protected static OutputResponse variableProperties(Map<String, ?> inputParameters) {
         ObjectProperty variableProperties;
 
-        List<?> list = MapUtils.getRequiredList(inputParameters, LIST);
+        List<?> list = MapUtils.getRequiredList(inputParameters, ITEMS);
 
         if (list.isEmpty()) {
             variableProperties = object();
@@ -78,10 +77,10 @@ public class MapTaskDispatcherDefinitionFactory implements TaskDispatcherDefinit
             variableProperties = object()
                 .properties(
                     (ModifiableValueProperty<?, ?>) SchemaUtils.getOutputSchema(
-                        ITEM, list.getFirst(), new PropertyFactory(list.getFirst())),
+                        ITEM, list.getFirst(), PropertyFactory.PROPERTY_FACTORY),
                     integer(INDEX));
         }
 
-        return variableProperties;
+        return OutputResponse.of(variableProperties);
     }
 }

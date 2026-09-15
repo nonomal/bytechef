@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,31 +16,33 @@
 
 package com.bytechef.component.google.mail.action;
 
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.array;
-import static com.bytechef.component.definition.ComponentDSL.bool;
-import static com.bytechef.component.definition.ComponentDSL.number;
-import static com.bytechef.component.definition.ComponentDSL.object;
-import static com.bytechef.component.definition.ComponentDSL.option;
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.array;
+import static com.bytechef.component.definition.ComponentDsl.bool;
+import static com.bytechef.component.definition.ComponentDsl.number;
+import static com.bytechef.component.definition.ComponentDsl.object;
+import static com.bytechef.component.definition.ComponentDsl.option;
+import static com.bytechef.component.definition.ComponentDsl.outputSchema;
+import static com.bytechef.component.definition.ComponentDsl.string;
 import static com.bytechef.component.google.mail.constant.GoogleMailConstants.CATEGORY;
 import static com.bytechef.component.google.mail.constant.GoogleMailConstants.FROM;
+import static com.bytechef.component.google.mail.constant.GoogleMailConstants.ID;
 import static com.bytechef.component.google.mail.constant.GoogleMailConstants.INCLUDE_SPAM_TRASH;
-import static com.bytechef.component.google.mail.constant.GoogleMailConstants.LABEL;
 import static com.bytechef.component.google.mail.constant.GoogleMailConstants.LABEL_IDS;
 import static com.bytechef.component.google.mail.constant.GoogleMailConstants.MAX_RESULTS;
+import static com.bytechef.component.google.mail.constant.GoogleMailConstants.ME;
 import static com.bytechef.component.google.mail.constant.GoogleMailConstants.MESSAGES;
-import static com.bytechef.component.google.mail.constant.GoogleMailConstants.MESSAGE_PROPERTY;
 import static com.bytechef.component.google.mail.constant.GoogleMailConstants.NEXT_PAGE_TOKEN;
 import static com.bytechef.component.google.mail.constant.GoogleMailConstants.PAGE_TOKEN;
 import static com.bytechef.component.google.mail.constant.GoogleMailConstants.RESULT_SIZE_ESTIMATE;
-import static com.bytechef.component.google.mail.constant.GoogleMailConstants.SEARCH_EMAIL;
 import static com.bytechef.component.google.mail.constant.GoogleMailConstants.SUBJECT;
+import static com.bytechef.component.google.mail.constant.GoogleMailConstants.THREAD_ID;
 import static com.bytechef.component.google.mail.constant.GoogleMailConstants.TO;
+import static com.bytechef.google.commons.GoogleUtils.translateGoogleIOException;
 
-import com.bytechef.component.definition.ActionContext;
-import com.bytechef.component.definition.ComponentDSL.ModifiableActionDefinition;
-import com.bytechef.component.definition.OptionsDataSource.ActionOptionsFunction;
+import com.bytechef.component.definition.ActionDefinition.OptionsFunction;
+import com.bytechef.component.definition.ComponentDsl.ModifiableActionDefinition;
+import com.bytechef.component.definition.Context;
 import com.bytechef.component.definition.Parameters;
 import com.bytechef.component.google.mail.util.GoogleMailUtils;
 import com.bytechef.google.commons.GoogleServices;
@@ -50,21 +52,23 @@ import java.io.IOException;
 import java.util.List;
 
 /**
- * @author Monika Domiter
+ * @author Monika Kušter
  */
 public class GoogleMailSearchEmailAction {
-    public static final ModifiableActionDefinition ACTION_DEFINITION = action(SEARCH_EMAIL)
+
+    public static final ModifiableActionDefinition ACTION_DEFINITION = action("searchEmail")
         .title("Search Email")
-        .description("Lists the messages in the user's mailbox.")
+        .description("Lists the email messages in the user's mailbox.")
+        .help("", "https://docs.bytechef.io/reference/components/google-mail_v1#search-email")
         .properties(
             number(MAX_RESULTS)
-                .label("Max results")
+                .label("Max Results")
                 .description("Maximum number of messages to return.")
                 .defaultValue(100)
                 .maxValue(500)
                 .required(false),
             string(PAGE_TOKEN)
-                .label("Page token")
+                .label("Page Token")
                 .description("Page token to retrieve a specific page of results in the list.")
                 .required(false),
             string(FROM)
@@ -91,50 +95,58 @@ public class GoogleMailSearchEmailAction {
                     option("Reservations", "reservations"),
                     option("Purchases", "purchases"))
                 .required(false),
-            string(LABEL)
-                .label("Label")
-                .description("")
-                .options((ActionOptionsFunction<String>) GoogleMailUtils::getLabelIdOptions)
-                .required(false),
             array(LABEL_IDS)
-                .label("Label IDs")
+                .label("Labels")
                 .description(
                     "Only return messages with labels that match all of the specified label IDs. Messages in a " +
                         "thread might have labels that other messages in the same thread don't have.")
                 .items(string())
+                .options((OptionsFunction<String>) GoogleMailUtils::getLabelIdOptions)
                 .required(false),
             bool(INCLUDE_SPAM_TRASH)
-                .label("Include spam trash")
+                .label("Include Spam Trash")
                 .description("Include messages from SPAM and TRASH in the results.")
                 .required(false))
-        .outputSchema(
-            object()
-                .properties(
-                    array(MESSAGES)
-                        .items(MESSAGE_PROPERTY),
-                    string(NEXT_PAGE_TOKEN),
-                    number(RESULT_SIZE_ESTIMATE)))
+        .output(
+            outputSchema(
+                object()
+                    .properties(
+                        array(MESSAGES)
+                            .items(
+                                object()
+                                    .properties(
+                                        string(ID)
+                                            .description("ID of the message."),
+                                        string(THREAD_ID)
+                                            .description("The ID of the thread the message belongs to."))),
+                        string(NEXT_PAGE_TOKEN),
+                        number(RESULT_SIZE_ESTIMATE)
+                            .description("Estimated number of messages."))))
         .perform(GoogleMailSearchEmailAction::perform);
 
     private GoogleMailSearchEmailAction() {
     }
 
     public static ListMessagesResponse perform(
-        Parameters inputParameters, Parameters connectionParameters, ActionContext actionContext) throws IOException {
+        Parameters inputParameters, Parameters connectionParameters, Context context) {
 
         Gmail service = GoogleServices.getMail(connectionParameters);
 
         StringBuilder query = createQuery(inputParameters);
 
-        return service.users()
-            .messages()
-            .list("me")
-            .setMaxResults(inputParameters.getLong(MAX_RESULTS))
-            .setPageToken(inputParameters.getString(PAGE_TOKEN))
-            .setQ(query.toString())
-            .setLabelIds(inputParameters.getList(LABEL_IDS, String.class, List.of()))
-            .setIncludeSpamTrash(inputParameters.getBoolean(INCLUDE_SPAM_TRASH))
-            .execute();
+        try {
+            return service.users()
+                .messages()
+                .list(ME)
+                .setMaxResults(inputParameters.getLong(MAX_RESULTS))
+                .setPageToken(inputParameters.getString(PAGE_TOKEN))
+                .setQ(query.toString())
+                .setLabelIds(inputParameters.getList(LABEL_IDS, String.class, List.of()))
+                .setIncludeSpamTrash(inputParameters.getBoolean(INCLUDE_SPAM_TRASH))
+                .execute();
+        } catch (IOException e) {
+            throw translateGoogleIOException(e);
+        }
     }
 
     private static StringBuilder createQuery(Parameters inputParameters) {
@@ -158,11 +170,6 @@ public class GoogleMailSearchEmailAction {
         if (inputParameters.getString(CATEGORY) != null) {
             query.append(" category:")
                 .append(inputParameters.getString(CATEGORY));
-        }
-
-        if (inputParameters.getString(LABEL) != null) {
-            query.append(" label:")
-                .append(inputParameters.getString(LABEL));
         }
 
         return query;

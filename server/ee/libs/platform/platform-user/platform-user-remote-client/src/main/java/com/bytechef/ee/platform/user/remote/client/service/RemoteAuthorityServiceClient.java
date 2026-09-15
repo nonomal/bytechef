@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the ByteChef Enterprise license (the "Enterprise License");
  * you may not use this file except in compliance with the Enterprise License.
@@ -43,6 +43,11 @@ public class RemoteAuthorityServiceClient implements AuthorityService {
 
     @Override
     public boolean exists(String name) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Authority update(Authority authority) {
         throw new UnsupportedOperationException();
     }
 }

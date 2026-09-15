@@ -13,13 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * Modifications copyright (C) 2023 ByteChef Inc.
+ * Modifications copyright (C) 2025 ByteChef
  */
 
 package com.bytechef.atlas.coordinator;
 
 import com.bytechef.atlas.configuration.domain.CancelControlTask;
 import com.bytechef.atlas.configuration.domain.Task;
+import com.bytechef.atlas.coordinator.constant.MetadataConstants;
 import com.bytechef.atlas.coordinator.event.ApplicationEvent;
 import com.bytechef.atlas.coordinator.event.ErrorEvent;
 import com.bytechef.atlas.coordinator.event.JobStatusApplicationEvent;
@@ -37,13 +38,16 @@ import com.bytechef.atlas.execution.domain.Job;
 import com.bytechef.atlas.execution.domain.TaskExecution;
 import com.bytechef.atlas.execution.service.JobService;
 import com.bytechef.atlas.execution.service.TaskExecutionService;
-import com.bytechef.commons.util.ExceptionUtils;
 import com.bytechef.error.ExecutionError;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import org.apache.commons.lang3.Validate;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
@@ -57,7 +61,7 @@ import org.springframework.context.ApplicationEventPublisher;
  */
 public class TaskCoordinator {
 
-    private static final Logger logger = LoggerFactory.getLogger(TaskCoordinator.class);
+    private static final Logger log = LoggerFactory.getLogger(TaskCoordinator.class);
 
     private final List<ApplicationEventListener> applicationEventListeners;
     private final List<ErrorEventListener> errorEventListeners;
@@ -71,9 +75,9 @@ public class TaskCoordinator {
     @SuppressFBWarnings("EI")
     public TaskCoordinator(
         List<ApplicationEventListener> applicationEventListeners, List<ErrorEventListener> errorEventListeners,
-        ApplicationEventPublisher eventPublisher,
-        JobExecutor jobExecutor, JobService jobService, TaskCompletionHandler taskCompletionHandler,
-        TaskDispatcher<? super Task> taskDispatcher, TaskExecutionService taskExecutionService) {
+        ApplicationEventPublisher eventPublisher, JobExecutor jobExecutor, JobService jobService,
+        TaskCompletionHandler taskCompletionHandler, TaskDispatcher<? super Task> taskDispatcher,
+        TaskExecutionService taskExecutionService) {
 
         this.applicationEventListeners = applicationEventListeners;
         this.errorEventListeners = errorEventListeners;
@@ -90,8 +94,8 @@ public class TaskCoordinator {
      * @param applicationEvent
      */
     public void onApplicationEvent(ApplicationEvent applicationEvent) {
-        if (logger.isDebugEnabled()) {
-            logger.debug("onApplicationEvent: applicationEvent={}", applicationEvent);
+        if (log.isTraceEnabled()) {
+            log.trace("onApplicationEvent: applicationEvent={}", applicationEvent);
         }
 
         for (ApplicationEventListener applicationEventListener : applicationEventListeners) {
@@ -100,8 +104,8 @@ public class TaskCoordinator {
     }
 
     public void onErrorEvent(ErrorEvent errorEvent) {
-        if (logger.isDebugEnabled()) {
-            logger.debug("onErrorEvent: errorEvent={}", errorEvent);
+        if (log.isTraceEnabled()) {
+            log.trace("onErrorEvent: errorEvent={}", errorEvent);
         }
 
         for (ErrorEventListener errorEventListener : errorEventListeners) {
@@ -116,16 +120,38 @@ public class TaskCoordinator {
      */
 // TODO @Transactional
     public void onResumeJobEvent(ResumeJobEvent resumeJobEvent) {
-        if (logger.isDebugEnabled()) {
-            logger.debug("onResumeJobEvent: resumeJobEvent={}", resumeJobEvent);
+        if (log.isTraceEnabled()) {
+            log.trace("onResumeJobEvent: resumeJobEvent={}", resumeJobEvent);
         }
 
         Job job = jobService.resumeToStatusStarted(resumeJobEvent.getJobId());
 
-        jobExecutor.execute(job);
+        Map<String, ?> data = resumeJobEvent.getData();
 
-        if (logger.isDebugEnabled()) {
-            logger.debug("Job id={} resumed", resumeJobEvent.getJobId());
+        if (resumeJobEvent.getTaskExecutionId() == null) {
+            try {
+                jobExecutor.execute(job);
+            } catch (Exception exception) {
+                handleJobExecutionException(job, exception);
+            }
+        } else {
+            TaskExecution taskExecution = taskExecutionService.getTaskExecution(resumeJobEvent.getTaskExecutionId());
+
+            if (data != null) {
+                Map<String, Object> jobMetadata = new HashMap<>(job.getMetadata());
+
+                jobMetadata.put(MetadataConstants.RESUME_DATA, data);
+
+                job.setMetadata(jobMetadata);
+
+                jobService.update(job);
+            }
+
+            taskDispatcher.dispatch(taskExecution);
+        }
+
+        if (log.isDebugEnabled()) {
+            log.debug("Job id={} resumed", resumeJobEvent.getJobId());
         }
     }
 
@@ -136,20 +162,26 @@ public class TaskCoordinator {
      */
 // TODO @Transactional
     public void onStartJobEvent(StartJobEvent startJobEvent) {
-        if (logger.isDebugEnabled()) {
-            logger.debug("onStartJobEvent: startJobEvent={}", startJobEvent);
+        if (log.isTraceEnabled()) {
+            log.trace("onStartJobEvent: startJobEvent={}", startJobEvent);
         }
 
         Job job = jobService.setStatusToStarted(startJobEvent.getJobId());
 
-        jobExecutor.execute(job);
+        if (log.isDebugEnabled()) {
+            log.debug("Job id={}, label='{}' started", job.getId(), job.getLabel());
+        }
+
+        try {
+            jobExecutor.execute(job);
+        } catch (Exception exception) {
+            handleJobExecutionException(job, exception);
+
+            return;
+        }
 
         eventPublisher.publishEvent(
             new JobStatusApplicationEvent(Validate.notNull(job.getId(), "id"), job.getStatus()));
-
-        if (logger.isDebugEnabled()) {
-            logger.debug("Job id={} started", startJobEvent.getJobId());
-        }
     }
 
     /**
@@ -159,8 +191,8 @@ public class TaskCoordinator {
      */
 // TODO @Transactional
     public void onStopJobEvent(StopJobEvent stopJobEvent) {
-        if (logger.isDebugEnabled()) {
-            logger.debug("onStopJobEvent: stopJobEvent={}", stopJobEvent);
+        if (log.isTraceEnabled()) {
+            log.trace("onStopJobEvent: stopJobEvent={}", stopJobEvent);
         }
 
         Job job = jobService.setStatusToStopped(stopJobEvent.getJobId());
@@ -173,7 +205,7 @@ public class TaskCoordinator {
         if (!taskExecutions.isEmpty()) {
             TaskExecution currentTaskExecution = taskExecutions.get(taskExecutions.size() - 1);
 
-            currentTaskExecution.setEndDate(LocalDateTime.now());
+            currentTaskExecution.setEndDate(Instant.now());
             currentTaskExecution.setStatus(TaskExecution.Status.CANCELLED);
 
             taskExecutionService.update(currentTaskExecution);
@@ -184,8 +216,8 @@ public class TaskCoordinator {
                     Validate.notNull(currentTaskExecution.getId(), "id")));
         }
 
-        if (logger.isDebugEnabled()) {
-            logger.debug("Job id={} stopped", stopJobEvent.getJobId());
+        if (log.isDebugEnabled()) {
+            log.debug("Job id={} stopped", stopJobEvent.getJobId());
         }
     }
 
@@ -196,8 +228,8 @@ public class TaskCoordinator {
      */
 // TODO @Transactional
     public void onTaskExecutionCompleteEvent(TaskExecutionCompleteEvent taskExecutionCompleteEvent) {
-        if (logger.isDebugEnabled()) {
-            logger.debug("onTaskExecutionCompleteEvent: taskExecutionCompleteEvent={}", taskExecutionCompleteEvent);
+        if (log.isTraceEnabled()) {
+            log.trace("onTaskExecutionCompleteEvent: taskExecutionCompleteEvent={}", taskExecutionCompleteEvent);
         }
 
         TaskExecution taskExecution = taskExecutionCompleteEvent.getTaskExecution();
@@ -209,5 +241,44 @@ public class TaskCoordinator {
 
             eventPublisher.publishEvent(new TaskExecutionErrorEvent(taskExecution));
         }
+    }
+
+    private void handleJobExecutionException(Job job, Exception exception) {
+        long jobId = Validate.notNull(job.getId(), "id");
+
+        log.error("Job id={} execution failed", jobId, exception);
+
+        String errorMessage = resolveErrorMessage(exception);
+
+        Optional<TaskExecution> taskExecutionOptional = taskExecutionService.fetchLastJobTaskExecution(jobId);
+
+        if (taskExecutionOptional.isPresent()) {
+            TaskExecution taskExecution = taskExecutionOptional.get();
+
+            taskExecution.setError(
+                new ExecutionError(errorMessage, Arrays.asList(ExceptionUtils.getStackFrames(exception))));
+
+            eventPublisher.publishEvent(new TaskExecutionErrorEvent(taskExecution));
+        } else {
+            job.setEndDate(Instant.now());
+            job.setError(
+                new ExecutionError(
+                    errorMessage, Arrays.asList(ExceptionUtils.getStackFrames(exception))));
+            job.setStatus(Job.Status.FAILED);
+
+            jobService.update(job);
+
+            eventPublisher.publishEvent(new JobStatusApplicationEvent(jobId, Job.Status.FAILED));
+        }
+    }
+
+    private static String resolveErrorMessage(Exception exception) {
+        String message = exception.getMessage();
+
+        if (message == null || message.isBlank()) {
+            return exception.toString();
+        }
+
+        return message;
     }
 }

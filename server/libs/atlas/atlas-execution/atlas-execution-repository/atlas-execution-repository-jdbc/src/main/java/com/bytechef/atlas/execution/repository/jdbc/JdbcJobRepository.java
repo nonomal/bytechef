@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package com.bytechef.atlas.execution.repository.jdbc;
 
 import com.bytechef.atlas.execution.domain.Job;
 import com.bytechef.atlas.execution.repository.JobRepository;
+import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jdbc.repository.query.Query;
 import org.springframework.data.repository.ListCrudRepository;
@@ -31,6 +32,9 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface JdbcJobRepository
     extends ListPagingAndSortingRepository<Job, Long>, ListCrudRepository<Job, Long>, JobRepository {
+
+    @Override
+    List<Job> findAllByIdIn(List<Long> ids);
 
     @Override
     Optional<Job> findById(Long id);
@@ -55,8 +59,16 @@ public interface JdbcJobRepository
     Optional<Job> findTop1ByWorkflowIdOrderByIdDesc(String workflowId);
 
     @Override
+    Optional<Job> findTop1ByWorkflowIdInOrderByIdDesc(List<String> workflowIds);
+
+    @Override
     @Query("SELECT * FROM job j WHERE j.id = (SELECT job_id FROM task_execution te WHERE te.id=:taskExecutionId)")
-    Job findByTaskExecutionId(@Param("taskExecutionId") Long taskExecutionId);
+    Optional<Job> findByTaskExecutionId(@Param("taskExecutionId") Long taskExecutionId);
+
+    @Override
+    @Query("SELECT j.id FROM job j WHERE j.parent_task_execution_id IN "
+        + "(SELECT te.id FROM task_execution te WHERE te.job_id=:parentJobId)")
+    List<Long> findAllIdsByParentJobId(@Param("parentJobId") Long parentJobId);
 
     Job save(Job job);
 }

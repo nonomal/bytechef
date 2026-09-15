@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,8 +16,8 @@
 
 package com.bytechef.component.microsoft.share.point;
 
-import static com.bytechef.component.definition.ComponentDSL.component;
-import static com.bytechef.component.microsoft.share.point.constant.MicrosoftSharePointConstants.MICROSOFT_SHARE_POINT;
+import static com.bytechef.component.definition.ComponentDsl.component;
+import static com.bytechef.component.definition.ComponentDsl.tool;
 
 import com.bytechef.component.ComponentHandler;
 import com.bytechef.component.definition.ComponentCategory;
@@ -25,8 +25,14 @@ import com.bytechef.component.definition.ComponentDefinition;
 import com.bytechef.component.microsoft.share.point.action.MicrosoftSharePointCreateFolderAction;
 import com.bytechef.component.microsoft.share.point.action.MicrosoftSharePointCreateListAction;
 import com.bytechef.component.microsoft.share.point.action.MicrosoftSharePointCreateListItemAction;
+import com.bytechef.component.microsoft.share.point.action.MicrosoftSharePointDeleteFileOrFolderAction;
+import com.bytechef.component.microsoft.share.point.action.MicrosoftSharePointDownloadFileAction;
+import com.bytechef.component.microsoft.share.point.action.MicrosoftSharePointGetFileOrFolderByIdAction;
+import com.bytechef.component.microsoft.share.point.action.MicrosoftSharePointGetFolderContentsAction;
+import com.bytechef.component.microsoft.share.point.action.MicrosoftSharePointReplaceFileAction;
 import com.bytechef.component.microsoft.share.point.action.MicrosoftSharePointUploadFileAction;
 import com.bytechef.component.microsoft.share.point.connection.MicrosoftSharePointConnection;
+import com.bytechef.component.microsoft.share.point.trigger.MicrosoftSharePointNewFileTrigger;
 import com.google.auto.service.AutoService;
 
 /**
@@ -35,11 +41,16 @@ import com.google.auto.service.AutoService;
 @AutoService(ComponentHandler.class)
 public class MicrosoftSharePointComponentHandler implements ComponentHandler {
 
-    private static final ComponentDefinition COMPONENT_DEFINITION = component(MICROSOFT_SHARE_POINT)
+    private static final ComponentDefinition COMPONENT_DEFINITION = component("microsoftSharePoint")
         .title("Microsoft SharePoint")
         .description(
             "Microsoft SharePoint is a web-based collaborative platform that integrates with Microsoft Office, " +
                 "providing document management, intranet, and content management features for organizations.")
+        .customAction(true)
+        .customActionHelp(
+            "",
+            "https://learn.microsoft.com/en-us/sharepoint/dev/sp-add-ins/get-to-know-the-sharepoint-rest-" +
+                "service?tabs=csom")
         .icon("path:assets/microsoft-share-point.svg")
         .categories(ComponentCategory.FILE_STORAGE, ComponentCategory.COMMUNICATION)
         .connection(MicrosoftSharePointConnection.CONNECTION_DEFINITION)
@@ -47,7 +58,24 @@ public class MicrosoftSharePointComponentHandler implements ComponentHandler {
             MicrosoftSharePointCreateFolderAction.ACTION_DEFINITION,
             MicrosoftSharePointCreateListAction.ACTION_DEFINITION,
             MicrosoftSharePointCreateListItemAction.ACTION_DEFINITION,
-            MicrosoftSharePointUploadFileAction.ACTION_DEFINITION);
+            MicrosoftSharePointDeleteFileOrFolderAction.ACTION_DEFINITION,
+            MicrosoftSharePointDownloadFileAction.ACTION_DEFINITION,
+            MicrosoftSharePointGetFileOrFolderByIdAction.ACTION_DEFINITION,
+            MicrosoftSharePointGetFolderContentsAction.ACTION_DEFINITION,
+            MicrosoftSharePointReplaceFileAction.ACTION_DEFINITION,
+            MicrosoftSharePointUploadFileAction.ACTION_DEFINITION)
+        .clusterElements(
+            tool(MicrosoftSharePointCreateFolderAction.ACTION_DEFINITION),
+            tool(MicrosoftSharePointCreateListAction.ACTION_DEFINITION),
+            tool(MicrosoftSharePointCreateListItemAction.ACTION_DEFINITION),
+            tool(MicrosoftSharePointDeleteFileOrFolderAction.ACTION_DEFINITION),
+            tool(MicrosoftSharePointDownloadFileAction.ACTION_DEFINITION),
+            tool(MicrosoftSharePointGetFileOrFolderByIdAction.ACTION_DEFINITION),
+            tool(MicrosoftSharePointGetFolderContentsAction.ACTION_DEFINITION),
+            tool(MicrosoftSharePointReplaceFileAction.ACTION_DEFINITION),
+            tool(MicrosoftSharePointUploadFileAction.ACTION_DEFINITION))
+        .triggers(MicrosoftSharePointNewFileTrigger.TRIGGER_DEFINITION)
+        .version(1);
 
     @Override
     public ComponentDefinition getDefinition() {

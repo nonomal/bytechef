@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,18 +16,36 @@
 
 package com.bytechef.platform.configuration.facade;
 
+import com.bytechef.platform.configuration.dto.ClusterElementOutputDTO;
 import com.bytechef.platform.configuration.dto.WorkflowNodeOutputDTO;
 import java.util.List;
 import java.util.Map;
+import org.jspecify.annotations.Nullable;
 
 /**
  * @author Ivica Cardic
  */
 public interface WorkflowNodeOutputFacade {
 
-    WorkflowNodeOutputDTO getWorkflowNodeOutput(String workflowId, String workflowNodeName);
+    String PREVIOUS_WORKFLOW_NODE_OUTPUTS_CACHE = "WorkflowNodeOutputFacade.previousWorkflowNodeOutputs";
+    String PREVIOUS_WORKFLOW_NODE_SAMPLE_OUTPUTS_CACHE = "WorkflowNodeOutputFacade.previousWorkflowNodeSampleOutputs";
 
-    List<WorkflowNodeOutputDTO> getPreviousWorkflowNodeOutputs(String workflowId, String lastWorkflowNodeName);
+    List<String> WORKFLOW_CACHE_NAMES = List.of(
+        PREVIOUS_WORKFLOW_NODE_OUTPUTS_CACHE, PREVIOUS_WORKFLOW_NODE_SAMPLE_OUTPUTS_CACHE);
 
-    Map<String, ?> getWorkflowNodeSampleOutputs(String workflowId, String lastWorkflowNodeName);
+    @Nullable
+    ClusterElementOutputDTO getClusterElementOutput(
+        String workflowId, String workflowNodeName, String clusterElementType, String clusterElementWorkflowNodeName,
+        long environmentId);
+
+    @Nullable
+    WorkflowNodeOutputDTO getWorkflowNodeOutput(String workflowId, String workflowNodeName, long environmentId);
+
+    List<WorkflowNodeOutputDTO> getPreviousWorkflowNodeOutputs(
+        String workflowId, String lastWorkflowNodeName, long environmentId);
+
+    Map<String, ?> getPreviousWorkflowNodeSampleOutputs(
+        String workflowId, String lastWorkflowNodeName, long environmentId);
+
+    void checkWorkflowCache(String workflowId, String lastWorkflowNodeName, long environmentId);
 }

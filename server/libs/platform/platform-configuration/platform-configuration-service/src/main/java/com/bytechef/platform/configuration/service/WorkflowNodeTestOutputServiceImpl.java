@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,19 +18,24 @@ package com.bytechef.platform.configuration.service;
 
 import com.bytechef.atlas.configuration.domain.Workflow;
 import com.bytechef.atlas.configuration.domain.WorkflowTask;
-import com.bytechef.commons.util.OptionalUtils;
-import com.bytechef.platform.component.definition.PropertyFactory;
-import com.bytechef.platform.component.registry.domain.Output;
-import com.bytechef.platform.component.registry.domain.Property;
+import com.bytechef.platform.configuration.annotation.WorkflowCacheEvict;
 import com.bytechef.platform.configuration.domain.WorkflowNodeTestOutput;
 import com.bytechef.platform.configuration.domain.WorkflowTrigger;
+import com.bytechef.platform.configuration.facade.WorkflowNodeOutputFacade;
 import com.bytechef.platform.configuration.repository.WorkflowNodeTestOutputRepository;
 import com.bytechef.platform.definition.WorkflowNodeType;
-import com.bytechef.platform.registry.util.SchemaUtils;
+import com.bytechef.platform.domain.BaseProperty;
+import com.bytechef.platform.domain.OutputResponse;
+import com.bytechef.tenant.util.TenantCacheKeyUtils;
+import java.time.Instant;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import org.apache.commons.lang3.Validate;
-import org.springframework.lang.NonNull;
+import org.jspecify.annotations.Nullable;
+import org.springframework.cache.CacheManager;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -41,37 +46,66 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 public class WorkflowNodeTestOutputServiceImpl implements WorkflowNodeTestOutputService {
 
+    private static final String WORKFLOW_TEST_NODE_OUTPUT_CACHE = "workflowTestNodeOutput";
+
+    private final CacheManager cacheManager;
     private final WorkflowNodeTestOutputRepository workflowNodeTestOutputRepository;
 
     public WorkflowNodeTestOutputServiceImpl(
-        WorkflowNodeTestOutputRepository workflowNodeTestOutputRepository) {
+        CacheManager cacheManager, WorkflowNodeTestOutputRepository workflowNodeTestOutputRepository) {
 
+        this.cacheManager = cacheManager;
         this.workflowNodeTestOutputRepository = workflowNodeTestOutputRepository;
     }
 
     @Override
-    public void deleteWorkflowNodeTestOutput(String workflowId, String workflowNodeName) {
+    public boolean checkWorkflowNodeTestOutputExists(
+        String workflowId, String workflowNodeName, @Nullable Instant createdDate, long environmentId) {
+
+        if (createdDate == null) {
+            return workflowNodeTestOutputRepository.existsByWorkflowIdAndWorkflowNodeName(workflowId, workflowNodeName);
+        } else {
+            return workflowNodeTestOutputRepository.existsByWorkflowIdAndWorkflowNodeNameAndLastModifiedDateAfter(
+                workflowId, workflowNodeName, createdDate);
+        }
+    }
+
+    @Override
+    @CacheEvict(value = WORKFLOW_TEST_NODE_OUTPUT_CACHE)
+    @WorkflowCacheEvict(cacheNames = {
+        WorkflowNodeOutputFacade.PREVIOUS_WORKFLOW_NODE_OUTPUTS_CACHE,
+        WorkflowNodeOutputFacade.PREVIOUS_WORKFLOW_NODE_SAMPLE_OUTPUTS_CACHE,
+    })
+    public void deleteWorkflowNodeTestOutput(
+        @WorkflowCacheEvict.WorkflowIdParam String workflowId, String workflowNodeName,
+        @WorkflowCacheEvict.EnvironmentIdParam long environmentId) {
         workflowNodeTestOutputRepository
-            .findByWorkflowIdAndWorkflowNodeName(workflowId, workflowNodeName)
+            .findByWorkflowIdAndWorkflowNodeNameAndEnvironmentId(workflowId, workflowNodeName, environmentId)
             .ifPresent(workflowNodeTestOutputRepository::delete);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public Optional<WorkflowNodeTestOutput> fetchWorkflowTestNodeOutput(String workflowId, String workflowNodeName) {
-        return workflowNodeTestOutputRepository.findByWorkflowIdAndWorkflowNodeName(workflowId, workflowNodeName);
+    @Cacheable(value = WORKFLOW_TEST_NODE_OUTPUT_CACHE)
+    public Optional<WorkflowNodeTestOutput> fetchWorkflowTestNodeOutput(
+        String workflowId, String workflowNodeName, long environmentId) {
+
+        return workflowNodeTestOutputRepository.findByWorkflowIdAndWorkflowNodeNameAndEnvironmentId(
+            workflowId, workflowNodeName, environmentId);
     }
 
     @Override
     public void removeUnusedNodeTestOutputs(Workflow workflow) {
-        List<String> workflowTaskNames = workflow
-            .getAllTasks()
+        List<String> workflowTaskNames = workflow.getTasks(true)
             .stream()
             .map(WorkflowTask::getName)
             .toList();
 
-        List<String> workflowTriggerNames = WorkflowTrigger
-            .of(workflow)
+        List<WorkflowTrigger> workflowTriggers = WorkflowTrigger.of(workflow)
+            .stream()
+            .toList();
+
+        List<String> workflowTriggerNames = WorkflowTrigger.of(workflow)
             .stream()
             .map(WorkflowTrigger::getName)
             .toList();
@@ -85,28 +119,46 @@ public class WorkflowNodeTestOutputServiceImpl implements WorkflowNodeTestOutput
 
                 workflowNodeTestOutputRepository.delete(workflowNodeTestOutput);
             }
+
+            if (workflowTriggerNames.contains(workflowNodeTestOutput.getWorkflowNodeName())) {
+                workflowTriggers.stream()
+                    .filter(workflowTrigger -> {
+                        String name = workflowTrigger.getName();
+
+                        return name.equals(workflowNodeTestOutput.getWorkflowNodeName());
+                    })
+                    .findFirst()
+                    .ifPresent(workflowTrigger -> {
+                        WorkflowNodeType workflowNodeType = WorkflowNodeType.ofType(workflowTrigger.getType());
+
+                        if (!Objects.equals(
+                            workflowNodeType.operation(),
+                            workflowNodeTestOutput.getTypeOperationName())) {
+
+                            workflowNodeTestOutputRepository.delete(workflowNodeTestOutput);
+                        }
+                    });
+            }
         }
     }
 
     @Override
+    @WorkflowCacheEvict(cacheNames = {
+        WorkflowNodeOutputFacade.PREVIOUS_WORKFLOW_NODE_OUTPUTS_CACHE,
+        WorkflowNodeOutputFacade.PREVIOUS_WORKFLOW_NODE_SAMPLE_OUTPUTS_CACHE,
+    })
     public WorkflowNodeTestOutput save(
-        @NonNull String workflowId, @NonNull String workflowNodeName, @NonNull WorkflowNodeType workflowNodeType,
-        @NonNull Object sampleOutput) {
+        @WorkflowCacheEvict.WorkflowIdParam String workflowId, String workflowNodeName,
+        WorkflowNodeType workflowNodeType, OutputResponse outputResponse,
+        @WorkflowCacheEvict.EnvironmentIdParam long environmentId) {
 
-        Property outputSchema = Property.toProperty(
-            (com.bytechef.component.definition.Property) SchemaUtils.getOutputSchema(
-                sampleOutput, new PropertyFactory(sampleOutput)));
-
-        return save(workflowId, workflowNodeName, workflowNodeType, outputSchema, sampleOutput);
-    }
-
-    @Override
-    public WorkflowNodeTestOutput save(
-        @NonNull String workflowId, @NonNull String workflowNodeName, @NonNull WorkflowNodeType workflowNodeType,
-        @NonNull Output output) {
-
-        return save(
-            workflowId, workflowNodeName, workflowNodeType, output.getOutputSchema(), output.getSampleOutput());
+        try {
+            return save(
+                workflowId, workflowNodeName, workflowNodeType, outputResponse.outputSchema(),
+                outputResponse.sampleOutput(), environmentId);
+        } finally {
+            clearWorkflowTestNodeOutputCache(workflowId, workflowNodeName, environmentId);
+        }
     }
 
     @Override
@@ -115,21 +167,27 @@ public class WorkflowNodeTestOutputServiceImpl implements WorkflowNodeTestOutput
     }
 
     private WorkflowNodeTestOutput save(
-        String workflowId, String workflowNodeName, WorkflowNodeType workflowNodeType,
-        Property outputSchema, Object sampleOutput) {
+        String workflowId, String workflowNodeName, WorkflowNodeType workflowNodeType, BaseProperty outputSchema,
+        Object sampleOutput, long environmentId) {
 
-        WorkflowNodeTestOutput workflowNodeTestOutput = OptionalUtils.orElse(
-            workflowNodeTestOutputRepository.findByWorkflowIdAndWorkflowNodeName(workflowId, workflowNodeName),
-            new WorkflowNodeTestOutput());
+        WorkflowNodeTestOutput workflowNodeTestOutput = workflowNodeTestOutputRepository
+            .findByWorkflowIdAndWorkflowNodeNameAndEnvironmentId(workflowId, workflowNodeName, environmentId)
+            .orElse(new WorkflowNodeTestOutput());
 
-        workflowNodeTestOutput.setComponentName(workflowNodeType.componentName());
-        workflowNodeTestOutput.setComponentOperationName(workflowNodeType.componentOperationName());
-        workflowNodeTestOutput.setComponentVersion(workflowNodeType.componentVersion());
+        workflowNodeTestOutput.setEnvironmentId(environmentId);
+        workflowNodeTestOutput.setTypeName(workflowNodeType.name());
+        workflowNodeTestOutput.setTypeOperationName(workflowNodeType.operation());
+        workflowNodeTestOutput.setTypeVersion(workflowNodeType.version());
         workflowNodeTestOutput.setOutputSchema(outputSchema);
         workflowNodeTestOutput.setSampleOutput(sampleOutput);
         workflowNodeTestOutput.setWorkflowId(workflowId);
         workflowNodeTestOutput.setWorkflowNodeName(workflowNodeName);
 
         return workflowNodeTestOutputRepository.save(workflowNodeTestOutput);
+    }
+
+    private void clearWorkflowTestNodeOutputCache(String workflowId, String workflowNodeName, long environmentId) {
+        Objects.requireNonNull(cacheManager.getCache(WORKFLOW_TEST_NODE_OUTPUT_CACHE))
+            .evict(TenantCacheKeyUtils.getKey(workflowId, workflowNodeName, environmentId));
     }
 }

@@ -1,0 +1,295 @@
+---
+title: "Aha!"
+description: "Aha! is a comprehensive product management software platform that helps teams set strategy, capture ideas, and plan, prioritize, and track work to build products customers love."
+---
+
+
+Categories: Productivity and Collaboration
+
+
+Type: aha/v1
+
+<hr />
+
+
+
+
+## Connections
+
+Version: 1
+
+
+### OAuth2 Authorization Code
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| subdomain | Subdomain | STRING | The subdomain of your Aha! account. For example, if your Aha! URL is https://mycompany.aha.io, then the subdomain is mycompany. | true |
+| clientId | Client Id | STRING |  | true |
+| clientSecret | Client Secret | STRING |  | true |
+
+
+
+## Connection Setup
+
+### Create OAuth Application
+
+1. Navigate to your Aha! dashboard.
+2. Click on **Personal**.
+3. Click on **Developer**.
+4. Click on **OAuth applications**.
+5. Click on **Register OAuth application**.
+6. Enter name of your OAuth application.
+7. Enter **Redirect URI** depending on your instance:
+    - `https://app.bytechef.io/callback` (Cloud)
+    - `http://localhost:5173/callback` (Local dev)
+8. Click **Create**.
+9. Here you can see your credentials.
+10. Done 🚀.
+
+<div style={{ position: 'relative', height:0, width: '100%', overflow: 'hidden', zIndex: 49, boxSizing: 'border-box', paddingBottom: 'calc(50.05219207% + 32px)'}}>
+    <iframe src="https://www.guidejar.com/embed/739b69f7-a2e8-44de-9a31-1957c6c67f9c?type=1&controls=on" width="100%" height="100%" style={{height:'100%', position:'absolute', inset:0}} allowFullScreen frameBorder="0"></iframe>
+</div>
+
+
+
+<hr />
+
+
+## Actions
+
+
+### Create Feature
+Name: createFeature
+
+`Creates a new feature.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| productId | Product ID | STRING | ID of the product to which the release belongs. | false |
+| releaseId | Release ID | STRING <details> <summary> Depends On </summary> productId </details> | Numeric ID or key of the release. | true |
+| name | Name | STRING | Name of the feature. | true |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Create Feature",
+  "name" : "createFeature",
+  "parameters" : {
+    "productId" : "",
+    "releaseId" : "",
+    "name" : ""
+  },
+  "type" : "aha/v1/createFeature"
+}
+```
+
+#### Output
+
+
+
+Type: OBJECT
+
+
+#### Properties
+
+|     Name     |     Type     |     Description     |
+|:------------:|:------------:|:-------------------:|
+| feature | OBJECT <details> <summary> Properties </summary> &#123;STRING\(id), STRING\(name), STRING\(reference_num), STRING\(release_reference_num), INTEGER\(position), INTEGER\(score), DATE_TIME\(created_at), DATE_TIME\(updated_at), STRING\(product_id), INTEGER\(progress), STRING\(progress_source), DATE\(status_changed_on), &#123;STRING\(id), STRING\(name), STRING\(email), DATE_TIME\(created_at), DATE_TIME\(updated_at)&#125;\(created_by_user), &#123;STRING\(id), STRING\(name)&#125;\(workflow_kind), &#123;STRING\(id), STRING\(name), INTEGER\(position), BOOLEAN\(complete), STRING\(color)&#125;\(workflow_status)&#125; </details> |  |
+
+
+
+
+#### Output Example
+```json
+{
+  "feature" : {
+    "id" : "",
+    "name" : "",
+    "reference_num" : "",
+    "release_reference_num" : "",
+    "position" : 1,
+    "score" : 1,
+    "created_at" : "2021-01-01T00:00:00",
+    "updated_at" : "2021-01-01T00:00:00",
+    "product_id" : "",
+    "progress" : 1,
+    "progress_source" : "",
+    "status_changed_on" : "2021-01-01",
+    "created_by_user" : {
+      "id" : "",
+      "name" : "",
+      "email" : "",
+      "created_at" : "2021-01-01T00:00:00",
+      "updated_at" : "2021-01-01T00:00:00"
+    },
+    "workflow_kind" : {
+      "id" : "",
+      "name" : ""
+    },
+    "workflow_status" : {
+      "id" : "",
+      "name" : "",
+      "position" : 1,
+      "complete" : false,
+      "color" : ""
+    }
+  }
+}
+```
+
+#### Find product ID and release ID
+
+To find the Product ID, click [here](/reference/components/aha_v1#how-to-find-the-product-id).
+
+To find the Release ID, click [here](/reference/components/aha_v1#how-to-find-the-release-id).
+
+
+
+### Create Idea
+Name: createIdea
+
+`Creates a new idea.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| productId | Product ID | STRING | Numeric ID or key of the product. | true |
+| name | Name | STRING | Name of the idea. | true |
+| description | Description | STRING | Description of the idea. | false |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Create Idea",
+  "name" : "createIdea",
+  "parameters" : {
+    "productId" : "",
+    "name" : "",
+    "description" : ""
+  },
+  "type" : "aha/v1/createIdea"
+}
+```
+
+#### Output
+
+
+
+Type: OBJECT
+
+
+#### Properties
+
+|     Name     |     Type     |     Description     |
+|:------------:|:------------:|:-------------------:|
+| idea | OBJECT <details> <summary> Properties </summary> &#123;STRING\(id), STRING\(name), STRING\(reference_number), INTEGER\(score), DATE_TIME\(created_at), DATE_TIME\(updated_at), STRING\(product_id), INTEGER\(votes), INTEGER\(initial_votes), DATE_TIME\(status_changed_at), &#123;STRING\(id), STRING\(name), INTEGER\(position), BOOLEAN\(complete), STRING\(color)&#125;\(workflow_status), &#123;STRING\(id), STRING\(body), DATE_TIME\(created_at), DATE_TIME\(updated_at)&#125;\(description), STRING\(visibility), STRING\(url), STRING\(resource), &#123;STRING\(id), STRING\(reference_prefix), STRING\(name), BOOLEAN\(product_line), DATE_TIME\(created_at), STRING\(workspace_type), STRING\(url)&#125;\(product), &#123;STRING\(id), STRING\(name), STRING\(email), DATE_TIME\(created_at), DATE_TIME\(updated_at)&#125;\(created_by_user), INTEGER\(endorsements_count), INTEGER\(comments_count), [&#123;STRING\(status_id), STRING\(status_name), DATE_TIME\(started_at), DATE_TIME\(ended_at)&#125;]\(workflow_status_times), STRING\(submitted_idea_portal_record_url)&#125; </details> |  |
+
+
+
+
+#### Output Example
+```json
+{
+  "idea" : {
+    "id" : "",
+    "name" : "",
+    "reference_number" : "",
+    "score" : 1,
+    "created_at" : "2021-01-01T00:00:00",
+    "updated_at" : "2021-01-01T00:00:00",
+    "product_id" : "",
+    "votes" : 1,
+    "initial_votes" : 1,
+    "status_changed_at" : "2021-01-01T00:00:00",
+    "workflow_status" : {
+      "id" : "",
+      "name" : "",
+      "position" : 1,
+      "complete" : false,
+      "color" : ""
+    },
+    "description" : {
+      "id" : "",
+      "body" : "",
+      "created_at" : "2021-01-01T00:00:00",
+      "updated_at" : "2021-01-01T00:00:00"
+    },
+    "visibility" : "",
+    "url" : "",
+    "resource" : "",
+    "product" : {
+      "id" : "",
+      "reference_prefix" : "",
+      "name" : "",
+      "product_line" : false,
+      "created_at" : "2021-01-01T00:00:00",
+      "workspace_type" : "",
+      "url" : ""
+    },
+    "created_by_user" : {
+      "id" : "",
+      "name" : "",
+      "email" : "",
+      "created_at" : "2021-01-01T00:00:00",
+      "updated_at" : "2021-01-01T00:00:00"
+    },
+    "endorsements_count" : 1,
+    "comments_count" : 1,
+    "workflow_status_times" : [ {
+      "status_id" : "",
+      "status_name" : "",
+      "started_at" : "2021-01-01T00:00:00",
+      "ended_at" : "2021-01-01T00:00:00"
+    } ],
+    "submitted_idea_portal_record_url" : ""
+  }
+}
+```
+
+#### Find product ID and release ID
+
+To find the Product ID, click [here](/reference/components/aha_v1#how-to-find-the-product-id).
+
+To find the Release ID, click [here](/reference/components/aha_v1#how-to-find-the-release-id).
+
+
+
+
+
+## What to do if your action is not listed here?
+
+If this component doesn't have the action you need, you can use **Custom Action** to create your own. Custom Actions empower you to define HTTP requests tailored to your specific requirements, allowing for greater flexibility in integrating with external services or APIs.
+
+To create a Custom Action, simply specify the desired HTTP method, path, and any necessary parameters. This way, you can extend the functionality of your component beyond the predefined actions, ensuring that you can meet all your integration needs effectively.
+
+<hr />
+
+# Additional Instructions
+
+### How to find the Release ID
+
+The Release ID (also known as the Reference Number) can be found in the Aha! UI or via the API.
+
+#### In the Aha! UI
+- **Release Detail View**: Open a specific release. The Reference Number (e.g., `APP-R-1`) is displayed in the header or in the URL.
+- **Gantt Views**: **Releases** → **Gantt**. The Reference Number is shown in its own column.
+- **Search**: Use the search bar (or press `/`) and type the release name. The Reference Number (e.g., `APP-R-1`) will appear in the results.
+
+#### Via API
+- Use the `GET /products/{product_id}/releases` endpoint.
+- List releases within a product to retrieve their IDs.
+
+### How to find the Product ID
+
+The Product ID is a unique numeric value that can be found in the URL or via the API.
+
+#### Via API
+- Use the `GET /products` endpoint to retrieve a list of all products and their numeric IDs.
+
+#### Via Search
+- Press `/` to open the search modal. Recently viewed products will be listed with their IDs.

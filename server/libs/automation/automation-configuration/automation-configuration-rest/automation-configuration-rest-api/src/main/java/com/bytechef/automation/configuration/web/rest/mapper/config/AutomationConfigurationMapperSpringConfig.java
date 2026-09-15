@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,8 @@ package com.bytechef.automation.configuration.web.rest.mapper.config;
 
 import com.bytechef.automation.configuration.web.rest.adapter.AutomationConfigurationConversionServiceAdapter;
 import com.bytechef.platform.configuration.web.rest.adapter.PlatformConfigurationConversionServiceAdapter;
+import com.bytechef.platform.configuration.web.rest.mapper.EnvironmentMapper;
+import com.bytechef.web.rest.mapper.DateTimeMapper;
 import org.mapstruct.MapperConfig;
 import org.mapstruct.extensions.spring.SpringMapperConfig;
 
@@ -25,7 +27,8 @@ import org.mapstruct.extensions.spring.SpringMapperConfig;
  * @author Ivica Cardic
  */
 @MapperConfig(componentModel = "spring", uses = {
-    PlatformConfigurationConversionServiceAdapter.class, AutomationConfigurationConversionServiceAdapter.class
+    EnvironmentMapper.class, DateTimeMapper.class, AutomationConfigurationConversionServiceAdapter.class,
+    PlatformConfigurationConversionServiceAdapter.class,
 })
 @SpringMapperConfig(
     conversionServiceAdapterPackage = "com.bytechef.automation.configuration.web.rest.adapter",

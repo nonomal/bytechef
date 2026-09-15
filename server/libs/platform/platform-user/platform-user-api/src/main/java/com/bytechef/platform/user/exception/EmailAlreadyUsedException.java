@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,12 +16,12 @@
 
 package com.bytechef.platform.user.exception;
 
-import com.bytechef.platform.exception.PlatformException;
+import com.bytechef.exception.AbstractException;
 
 /**
  * @author Ivica Cardic
  */
-public class EmailAlreadyUsedException extends PlatformException {
+public class EmailAlreadyUsedException extends AbstractException {
 
     public EmailAlreadyUsedException() {
         super("Email is already in use!", UserErrorType.EMAIL_ALREADY_USED);

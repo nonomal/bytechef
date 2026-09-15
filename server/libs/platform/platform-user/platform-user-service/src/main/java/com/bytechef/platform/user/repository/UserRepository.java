@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,8 +33,8 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface UserRepository extends ListCrudRepository<User, Long>, ListPagingAndSortingRepository<User, Long> {
 
-    String USERS_BY_LOGIN_CACHE = "usersByLogin";
-    String USERS_BY_EMAIL_CACHE = "usersByEmail";
+    String USERS_BY_LOGIN_CACHE = "UserRepository.usersByLogin";
+    String USERS_BY_EMAIL_CACHE = "UserRepository.usersByEmail";
 
     long countAllByActivatedIsTrue();
 
@@ -43,6 +43,8 @@ public interface UserRepository extends ListCrudRepository<User, Long>, ListPagi
     Page<User> findAllByIdNotNullAndActivatedIsTrue(Pageable pageable);
 
     Optional<User> findByActivationKey(String activationKey);
+
+    Optional<User> findByAuthProviderAndProviderId(String authProvider, String providerId);
 
     @Cacheable(cacheNames = USERS_BY_EMAIL_CACHE)
     Optional<User> findByEmailIgnoreCase(String email);

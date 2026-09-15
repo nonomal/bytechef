@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,23 +16,22 @@
 
 package com.bytechef.component.script.action;
 
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.array;
-import static com.bytechef.component.definition.ComponentDSL.bool;
-import static com.bytechef.component.definition.ComponentDSL.date;
-import static com.bytechef.component.definition.ComponentDSL.dateTime;
-import static com.bytechef.component.definition.ComponentDSL.integer;
-import static com.bytechef.component.definition.ComponentDSL.nullable;
-import static com.bytechef.component.definition.ComponentDSL.number;
-import static com.bytechef.component.definition.ComponentDSL.object;
-import static com.bytechef.component.definition.ComponentDSL.string;
-import static com.bytechef.component.definition.ComponentDSL.time;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.array;
+import static com.bytechef.component.definition.ComponentDsl.bool;
+import static com.bytechef.component.definition.ComponentDsl.date;
+import static com.bytechef.component.definition.ComponentDsl.dateTime;
+import static com.bytechef.component.definition.ComponentDsl.integer;
+import static com.bytechef.component.definition.ComponentDsl.nullable;
+import static com.bytechef.component.definition.ComponentDsl.number;
+import static com.bytechef.component.definition.ComponentDsl.object;
+import static com.bytechef.component.definition.ComponentDsl.string;
+import static com.bytechef.component.definition.ComponentDsl.time;
 import static com.bytechef.component.script.constant.ScriptConstants.INPUT;
-import static com.bytechef.component.script.constant.ScriptConstants.JAVASCRIPT;
 import static com.bytechef.platform.component.definition.ScriptComponentDefinition.SCRIPT;
 
 import com.bytechef.component.definition.Property;
-import com.bytechef.component.script.definition.ScriptActionDefinition;
+import com.bytechef.component.script.action.definition.ScriptActionDefinition;
 import com.bytechef.component.script.engine.PolyglotEngine;
 
 /**
@@ -41,11 +40,9 @@ import com.bytechef.component.script.engine.PolyglotEngine;
  */
 public class ScriptJavaScriptAction {
 
-    public final ScriptActionDefinition actionDefinition;
-
-    public ScriptJavaScriptAction(PolyglotEngine polyglotEngine) {
-        this.actionDefinition = new ScriptActionDefinition(
-            action(JAVASCRIPT)
+    public static ScriptActionDefinition of(PolyglotEngine polyglotEngine) {
+        return new ScriptActionDefinition(
+            action("javascript")
                 .title("JavaScript")
                 .description("Executes custom JavaScript code.")
                 .properties(
@@ -57,13 +54,16 @@ public class ScriptJavaScriptAction {
                             time())
                         .expressionEnabled(false),
                     string(SCRIPT)
-                        .label("JavaScript code")
+                        .label("JavaScript Code")
                         .description("Add your JavaScript custom logic here.")
                         .controlType(Property.ControlType.CODE_EDITOR)
                         .languageId("javascript")
-                        .defaultValue("function perform(input) {\n\treturn null;\n}")
+                        .defaultValue("function perform(input, context) {\n\treturn null;\n}")
                         .required(true))
                 .output(),
             "js", polyglotEngine);
+    }
+
+    private ScriptJavaScriptAction() {
     }
 }

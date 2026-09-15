@@ -1,0 +1,175 @@
+---
+title: "Knowledge Base"
+description: "Search ByteChef's internal knowledge base to retrieve relevant document chunks using semantic similarity search powered by vector embeddings."
+---
+
+
+Categories: Artificial Intelligence
+
+
+Type: knowledgeBase/v1
+
+<hr />
+
+
+
+
+## Actions
+
+
+### Delete Documents
+Name: delete
+
+`Delete documents from the knowledge base by metadata filter.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| knowledgeBaseId | Knowledge Base | INTEGER | The knowledge base to delete documents from. | true |
+| metadataFilter | Metadata Filter | ARRAY <details> <summary> Items </summary> [&#123;&#125;] </details> | List of metadata key-value pairs to filter by. Entries within a group are ANDed; groups are ORed. | false |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Delete Documents",
+  "name" : "delete",
+  "parameters" : {
+    "knowledgeBaseId" : 1,
+    "metadataFilter" : [ { } ]
+  },
+  "type" : "knowledgeBase/v1/delete"
+}
+```
+
+#### Output
+
+This action does not produce any output.
+
+
+
+
+
+
+### Load Data
+Name: load
+
+`Loads data into the knowledge base.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| knowledgeBaseId | Knowledge Base | INTEGER | The knowledge base to load documents into. | true |
+| additionalMetadata | Additional Metadata | OBJECT <details> <summary> Properties </summary> &#123;&#125; </details> | Metadata key-value pairs to attach to the stored documents. | false |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Load Data",
+  "name" : "load",
+  "parameters" : {
+    "knowledgeBaseId" : 1,
+    "additionalMetadata" : { }
+  },
+  "type" : "knowledgeBase/v1/load"
+}
+```
+
+#### Output
+
+This action does not produce any output.
+
+
+
+
+
+
+### Search Data
+Name: search
+
+`Query data from the knowledge base. Supports three modes: tag-only search, vector search, or combined tag filtering with vector search.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| knowledgeBaseId | Knowledge Base | INTEGER | The knowledge base to search. | true |
+| query | Query | STRING | The search query for semantic similarity search. Leave empty for filter-only search. | false |
+| tagNames | Tags | ARRAY <details> <summary> Items </summary> [STRING] </details> | Filter results by tags. Documents with ANY of the selected tags will be returned (OR logic). | false |
+| metadataFilter | Metadata Filter | ARRAY <details> <summary> Items </summary> [&#123;&#125;] </details> | List of metadata key-value pairs to filter by. Entries within a group are ANDed; groups are ORed. | false |
+| topK | Top K | INTEGER | Maximum number of results to return. | false |
+| similarityThreshold | Similarity Threshold | NUMBER | Minimum similarity score (0.0 to 1.0). Only results with similarity above this threshold will be returned. | false |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Search Data",
+  "name" : "search",
+  "parameters" : {
+    "knowledgeBaseId" : 1,
+    "query" : "",
+    "tagNames" : [ "" ],
+    "metadataFilter" : [ { } ],
+    "topK" : 1,
+    "similarityThreshold" : 0.0
+  },
+  "type" : "knowledgeBase/v1/search"
+}
+```
+
+#### Output
+
+The output for this action is dynamic and may vary depending on the input parameters. To determine the exact structure of the output, you need to execute the action.
+
+
+
+
+
+
+### Update Documents
+Name: update
+
+`Updates documents in the knowledge base by deleting existing ones matching the selected document or chunk and loading new ones.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| updateMultiple | Update Multiple | BOOLEAN <details> <summary> Options </summary> <span>true</span>, <span>false</span> </details> | Whether to update multiple documents or chunks. | true |
+| knowledgeBaseId | Knowledge Base | INTEGER | The knowledge base to update documents in. | true |
+| knowledgeBaseDocumentId | Document | INTEGER <details> <summary> Depends On </summary> knowledgeBaseId </details> | The document to update in the knowledge base. | false |
+| knowledgeBaseDocumentChunkId | Document Chunk | INTEGER <details> <summary> Depends On </summary> knowledgeBaseDocumentId </details> | The specific chunk to update. If not selected, all chunks of the selected document will be replaced. | false |
+| additionalMetadata | Additional Metadata | OBJECT <details> <summary> Properties </summary> &#123;&#125; </details> | Additional metadata key-value pairs to add to the stored documents. | false |
+| metadataFilter | Metadata Filter | ARRAY <details> <summary> Items </summary> [&#123;&#125;] </details> | List of metadata key-value pairs to filter by. Entries within a group are AND-ed; groups are OR-ed. | false |
+| content | Content | STRING | The text content to update the knowledge base with. If not provided, uses the configured document reader. | false |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Update Documents",
+  "name" : "update",
+  "parameters" : {
+    "updateMultiple" : false,
+    "knowledgeBaseId" : 1,
+    "knowledgeBaseDocumentId" : 1,
+    "knowledgeBaseDocumentChunkId" : 1,
+    "additionalMetadata" : { },
+    "metadataFilter" : [ { } ],
+    "content" : ""
+  },
+  "type" : "knowledgeBase/v1/update"
+}
+```
+
+#### Output
+
+This action does not produce any output.
+
+
+
+
+
+
+
+

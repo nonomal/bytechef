@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,24 +16,27 @@
 
 package com.bytechef.component.schedule.trigger;
 
-import static com.bytechef.component.definition.ComponentDSL.integer;
-import static com.bytechef.component.definition.ComponentDSL.object;
-import static com.bytechef.component.definition.ComponentDSL.option;
-import static com.bytechef.component.definition.ComponentDSL.string;
-import static com.bytechef.component.definition.ComponentDSL.trigger;
-import static com.bytechef.component.schedule.constant.ScheduleConstants.DATETIME;
+import static com.bytechef.component.definition.ComponentDsl.dateTime;
+import static com.bytechef.component.definition.ComponentDsl.integer;
+import static com.bytechef.component.definition.ComponentDsl.object;
+import static com.bytechef.component.definition.ComponentDsl.option;
+import static com.bytechef.component.definition.ComponentDsl.outputSchema;
+import static com.bytechef.component.definition.ComponentDsl.string;
+import static com.bytechef.component.definition.ComponentDsl.trigger;
+import static com.bytechef.component.schedule.constant.ScheduleConstants.DATE_TIME;
+import static com.bytechef.component.schedule.constant.ScheduleConstants.FIRE_TIME;
 import static com.bytechef.component.schedule.constant.ScheduleConstants.INTERVAL;
+import static com.bytechef.component.schedule.constant.ScheduleConstants.TIMEZONE;
 import static com.bytechef.component.schedule.constant.ScheduleConstants.TIME_UNIT;
 
-import com.bytechef.component.definition.ComponentDSL.ModifiableTriggerDefinition;
+import com.bytechef.component.definition.ComponentDsl.ModifiableTriggerDefinition;
 import com.bytechef.component.definition.Parameters;
 import com.bytechef.component.definition.TriggerContext;
 import com.bytechef.component.definition.TriggerDefinition.ListenerEmitter;
 import com.bytechef.component.definition.TriggerDefinition.TriggerType;
+import com.bytechef.component.schedule.util.ScheduleUtils;
 import com.bytechef.platform.scheduler.TriggerScheduler;
-import com.bytechef.platform.workflow.execution.WorkflowExecutionId;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import java.time.ZoneId;
+import com.bytechef.platform.workflow.WorkflowExecutionId;
 import java.util.Map;
 
 /**
@@ -43,66 +46,86 @@ public class ScheduleIntervalTrigger {
     public final ModifiableTriggerDefinition triggerDefinition = trigger("interval")
         .title("Interval")
         .description(
-            "Trigger off periodically, for example every minute or day, based on a set interval.")
+            "Runs the workflow repeatedly at a fixed interval (for example, every 5 minutes or every 2 days).")
         .type(TriggerType.LISTENER)
         .properties(
             integer(INTERVAL)
                 .label("Interval")
-                .description("The hour at which a workflow will be triggered.")
+                .description(
+                    "How often the workflow runs, combined with the time unit. For example, an interval of 5 with " +
+                        "time unit 'Minute' runs the workflow every 5 minutes.")
                 .required(true)
                 .minValue(1),
             integer(TIME_UNIT)
-                .label("Day of week")
-                .description("Days at which a workflow will be triggered.")
+                .label("Time Unit")
+                .description("The unit of time used with the interval to determine how often the workflow runs.")
                 .options(
                     option("Minute", 1),
                     option("Hour", 2),
                     option("Day", 3),
                     option("Month", 4))
+                .required(true),
+            string(TIMEZONE)
+                .label("Timezone")
+                .description("The time zone used to interpret the schedule.")
+                .options(ScheduleUtils.getTimeZoneOptions())
                 .required(true))
-        .outputSchema(
-            object()
-                .properties(
-                    string(DATETIME),
-                    integer(INTERVAL),
-                    integer(TIME_UNIT)))
+        .output(
+            outputSchema(
+                object()
+                    .properties(
+                        string(FIRE_TIME)
+                            .description("The exact date and time when the trigger was activated."),
+                        dateTime(DATE_TIME)
+                            .description(
+                                "The date and time when the trigger was activated, formatted according to the " +
+                                    "specified timezone."),
+                        integer(INTERVAL)
+                            .description(
+                                "The interval value that determines how frequently the workflow is triggered, " +
+                                    "based on the selected time unit."),
+                        integer(TIME_UNIT)
+                            .description(
+                                "The unit of time (e.g., minute, hour, day, month) used in conjunction with the " +
+                                    "interval to schedule the trigger."),
+                        string(TIMEZONE)
+                            .description(
+                                "The timezone used for scheduling the cron expression, ensuring the trigger fires at " +
+                                    "the correct local time."))))
         .listenerDisable(this::listenerDisable)
         .listenerEnable(this::listenerEnable);
 
     private final TriggerScheduler triggerScheduler;
 
-    @SuppressFBWarnings("CT_CONSTRUCTOR_THROW")
     public ScheduleIntervalTrigger(TriggerScheduler triggerScheduler) {
         this.triggerScheduler = triggerScheduler;
     }
 
     protected void listenerDisable(
         Parameters inputParameters, Parameters connectionParameters, String workflowExecutionId,
-        TriggerContext context) {
+        TriggerContext contriggerContextext) {
 
         triggerScheduler.cancelScheduleTrigger(workflowExecutionId);
     }
 
     protected void listenerEnable(
         Parameters inputParameters, Parameters connectionParameters, String workflowExecutionId,
-        ListenerEmitter listenerEmitter, TriggerContext context) {
+        ListenerEmitter listenerEmitter, TriggerContext triggerContext) {
 
-        int interval = inputParameters.getInteger(INTERVAL);
-        ZoneId zoneId = ZoneId.systemDefault();
+        int interval = inputParameters.getRequiredInteger(INTERVAL);
+        int timeUnit = inputParameters.getRequiredInteger(TIME_UNIT);
+        String timezone = inputParameters.getRequiredString(TIMEZONE);
 
         triggerScheduler.scheduleScheduleTrigger(
-            switch (inputParameters.getInteger(TIME_UNIT)) {
+            switch (timeUnit) {
                 case 1 -> "0 */%s * ? * *".formatted(interval);
                 case 2 -> "0 0 */%s ? * *".formatted(interval);
                 case 3 -> "0 0 0 */%s * ?".formatted(interval);
                 case 4 -> "0 0 0 1 */%s ?".formatted(interval);
                 default -> throw new IllegalArgumentException("Unexpected time unit value.");
             },
-            zoneId.getId(),
-            Map.of(
-                INTERVAL, inputParameters.getInteger(INTERVAL),
-                TIME_UNIT, inputParameters.getInteger(TIME_UNIT)),
+            timezone,
+            Map.of(INTERVAL, interval, TIME_UNIT, timeUnit, TIMEZONE, timezone),
             WorkflowExecutionId.parse(workflowExecutionId));
-
     }
 }

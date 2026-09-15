@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,73 +16,69 @@
 
 package com.bytechef.component.affinity.action;
 
-import static com.bytechef.component.affinity.constant.AffinityConstants.BASE_URL;
-import static com.bytechef.component.affinity.constant.AffinityConstants.CREATE_PERSON;
-import static com.bytechef.component.affinity.constant.AffinityConstants.EMAILS;
-import static com.bytechef.component.affinity.constant.AffinityConstants.FIRST_NAME;
-import static com.bytechef.component.affinity.constant.AffinityConstants.LAST_NAME;
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.array;
-import static com.bytechef.component.definition.ComponentDSL.integer;
-import static com.bytechef.component.definition.ComponentDSL.object;
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.OpenApiComponentHandler.PropertyType;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.array;
+import static com.bytechef.component.definition.ComponentDsl.object;
+import static com.bytechef.component.definition.ComponentDsl.outputSchema;
+import static com.bytechef.component.definition.ComponentDsl.string;
+import static com.bytechef.component.definition.Context.Http.BodyContentType;
+import static com.bytechef.component.definition.Context.Http.ResponseType;
 
-import com.bytechef.component.definition.ActionContext;
-import com.bytechef.component.definition.ComponentDSL.ModifiableActionDefinition;
-import com.bytechef.component.definition.Context.ContextFunction;
-import com.bytechef.component.definition.Context.Http;
-import com.bytechef.component.definition.Context.TypeReference;
-import com.bytechef.component.definition.Parameters;
+import com.bytechef.component.definition.ComponentDsl;
+import java.util.Map;
 
 /**
- * @author Monika Domiter
+ * Provides a list of the component actions.
+ *
+ * @generated
  */
 public class AffinityCreatePersonAction {
+    public static final ComponentDsl.ModifiableActionDefinition ACTION_DEFINITION = action("createPerson")
+        .title("Create Person")
+        .description("Creates a new person.")
+        .metadata(
+            Map.of(
+                "method", "POST",
+                "path", "/persons", "bodyContentType", BodyContentType.JSON, "mimeType", "application/json"
 
-    public static final ModifiableActionDefinition ACTION_DEFINITION = action(CREATE_PERSON)
-        .title("Create person")
-        .description("Creates a new person")
-        .properties(
-            string(FIRST_NAME)
-                .label("First name")
-                .description("The first name of the person.")
-                .required(true),
-            string(LAST_NAME)
-                .label("Last name")
+            ))
+        .properties(string("first_name").metadata(
+            Map.of(
+                "type", PropertyType.BODY))
+            .label("First Name")
+            .description("The first name of the person.")
+            .required(true),
+            string("last_name").metadata(
+                Map.of(
+                    "type", PropertyType.BODY))
+                .label("Last Name")
                 .description("The last name of the person.")
                 .required(true),
-            array(EMAILS)
+            array("emails").items(string().metadata(
+                Map.of(
+                    "type", PropertyType.BODY))
+                .description("The email addresses of the person."))
+                .placeholder("Add to Emails")
+                .metadata(
+                    Map.of(
+                        "type", PropertyType.BODY))
                 .label("Emails")
                 .description("The email addresses of the person.")
-                .items(string())
                 .required(false))
-        .outputSchema(
-            object()
-                .properties(
-                    integer("id"),
-                    string(FIRST_NAME),
-                    string(LAST_NAME),
-                    array(EMAILS)
-                        .items(string())))
-        .perform(AffinityCreatePersonAction::perform);
-
-    protected static final ContextFunction<Http, Http.Executor> POST_PERSONS_CONTEXT_FUNCTION =
-        http -> http.post(BASE_URL + "persons");
+        .output(outputSchema(object().properties(string("id").description("The ID of the person.")
+            .required(false),
+            string("first_name").description("The first name of the person.")
+                .required(false),
+            string("last_name").description("The last name of the person.")
+                .required(false),
+            array("emails").items(string().description("The email addresses of the person."))
+                .description("The email addresses of the person.")
+                .required(false))
+            .metadata(
+                Map.of(
+                    "responseType", ResponseType.JSON))));
 
     private AffinityCreatePersonAction() {
-    }
-
-    public static Object perform(
-        Parameters inputParameters, Parameters connectionParameters, ActionContext actionContext) {
-
-        return actionContext.http(POST_PERSONS_CONTEXT_FUNCTION)
-            .body(
-                Http.Body.of(
-                    FIRST_NAME, inputParameters.getRequiredString(FIRST_NAME),
-                    LAST_NAME, inputParameters.getRequiredString(LAST_NAME),
-                    EMAILS, inputParameters.getList(EMAILS, String.class)))
-            .configuration(Http.responseType(Http.ResponseType.JSON))
-            .execute()
-            .getBody(new TypeReference<>() {});
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,7 +34,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -42,16 +41,9 @@ import org.junit.jupiter.api.Test;
  */
 class DataMapperMergeAndPivotByKeyActionTest {
 
-    private Parameters connectionParameters;
-    private ActionContext context;
-    private Parameters inputParameters;
-
-    @BeforeEach
-    public void setUp() {
-        connectionParameters = mock(Parameters.class);
-        context = mock(ActionContext.class);
-        inputParameters = mock(Parameters.class);
-    }
+    private final Parameters connectionParameters = mock(Parameters.class);
+    private final ActionContext context = mock(ActionContext.class);
+    private final Parameters inputParameters = mock(Parameters.class);
 
     @Test
     void testPerformWithStringType() {
@@ -164,9 +156,12 @@ class DataMapperMergeAndPivotByKeyActionTest {
     }
 
     private void setupAndAssertTest(List<Object> inputValue, Consumer<Map<String, Map<Object, Object>>> consumer) {
-        when(inputParameters.getRequiredString(FIELD_KEY)).thenReturn("key");
-        when(inputParameters.getRequiredString(FIELD_VALUE)).thenReturn("value");
-        when(inputParameters.getList(INPUT, Object.class, List.of())).thenReturn(inputValue);
+        when(inputParameters.getRequiredString(FIELD_KEY))
+            .thenReturn("key");
+        when(inputParameters.getRequiredString(FIELD_VALUE))
+            .thenReturn("value");
+        when(inputParameters.getList(INPUT, Object.class, List.of()))
+            .thenReturn(inputValue);
 
         Map<String, Map<Object, Object>> result = DataMapperMergeAndPivotByKeyAction.perform(
             inputParameters, connectionParameters, context);

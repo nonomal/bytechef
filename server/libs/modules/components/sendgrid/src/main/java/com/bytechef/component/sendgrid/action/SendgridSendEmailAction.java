@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,33 +16,29 @@
 
 package com.bytechef.component.sendgrid.action;
 
-import static com.bytechef.component.definition.ComponentDSL.ModifiableActionDefinition;
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.array;
-import static com.bytechef.component.definition.ComponentDSL.fileEntry;
-import static com.bytechef.component.definition.ComponentDSL.object;
-import static com.bytechef.component.definition.ComponentDSL.option;
-import static com.bytechef.component.definition.ComponentDSL.string;
-import static com.bytechef.component.definition.Context.Http.responseType;
+import static com.bytechef.component.definition.ComponentDsl.ModifiableActionDefinition;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.array;
+import static com.bytechef.component.definition.ComponentDsl.fileEntry;
+import static com.bytechef.component.definition.ComponentDsl.option;
+import static com.bytechef.component.definition.ComponentDsl.string;
 import static com.bytechef.component.sendgrid.constant.SendgridConstants.ATTACHMENTS;
-import static com.bytechef.component.sendgrid.constant.SendgridConstants.BASE_URL;
 import static com.bytechef.component.sendgrid.constant.SendgridConstants.CC;
 import static com.bytechef.component.sendgrid.constant.SendgridConstants.FROM;
-import static com.bytechef.component.sendgrid.constant.SendgridConstants.SEND_EMAIL;
 import static com.bytechef.component.sendgrid.constant.SendgridConstants.SUBJECT;
 import static com.bytechef.component.sendgrid.constant.SendgridConstants.TEXT;
 import static com.bytechef.component.sendgrid.constant.SendgridConstants.TO;
 import static com.bytechef.component.sendgrid.constant.SendgridConstants.TYPE;
+import static com.bytechef.component.sendgrid.util.SendgridUtils.convertToEmailList;
+import static com.bytechef.component.sendgrid.util.SendgridUtils.getAllAttachments;
+import static com.bytechef.component.sendgrid.util.SendgridUtils.sendEmail;
 
-import com.bytechef.component.definition.ActionContext;
-import com.bytechef.component.definition.Context.Http.Body;
-import com.bytechef.component.definition.Context.Http.ResponseType;
+import com.bytechef.component.definition.Context;
 import com.bytechef.component.definition.FileEntry;
 import com.bytechef.component.definition.Parameters;
+import com.bytechef.component.definition.Property;
 import com.bytechef.component.definition.Property.ControlType;
 import java.util.ArrayList;
-import java.util.Base64;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -53,22 +49,22 @@ import java.util.Map;
  */
 public final class SendgridSendEmailAction {
 
-    public static final ModifiableActionDefinition ACTION_DEFINITION = action(SEND_EMAIL)
-        .title("Send an email")
+    public static final ModifiableActionDefinition ACTION_DEFINITION = action("sendEmail")
+        .title("Send Email")
         .description("Sends an email.")
         .properties(
             string(FROM)
-                .label("From:")
+                .label("From")
                 .description("Email address from which you want to send.")
                 .maxLength(320)
                 .required(true),
             array(TO)
-                .label("To:")
+                .label("To")
                 .items(string().controlType(ControlType.EMAIL))
                 .description("Email addresses which you want to send to.")
                 .required(true),
             array(CC)
-                .label("CC:")
+                .label("CC")
                 .description("Email address which receives a copy.")
                 .items(string().controlType(ControlType.EMAIL))
                 .maxItems(1000)
@@ -76,18 +72,19 @@ public final class SendgridSendEmailAction {
                 .advancedOption(true),
             string(SUBJECT)
                 .label("Subject")
-                .description("Subject of your email")
+                .description("Subject of your email.")
                 .minLength(1)
                 .maxLength(998)
                 .required(true),
             string(TEXT)
                 .label("Message Body")
-                .description("This is the message you want to send")
+                .description("The message you want to send.")
                 .minLength(1)
+                .controlType(Property.ControlType.RICH_TEXT)
                 .required(true),
             string(TYPE)
-                .label("Message type")
-                .description("Message type for your content")
+                .label("Message Type")
+                .description("Message type for your content.")
                 .options(
                     option("Plain text", "text/plain"),
                     option("HTML", "text/html"))
@@ -98,22 +95,13 @@ public final class SendgridSendEmailAction {
                 .description("A list of attachments you want to include with the email.")
                 .items(fileEntry())
                 .required(false))
-        .outputSchema(
-            object()
-                .properties(
-                    string(TYPE),
-                    string(FROM),
-                    array(TO)
-                        .items(string()),
-                    string(SUBJECT),
-                    string(TEXT),
-                    array(ATTACHMENTS)
-                        .items(fileEntry())))
+        .help("", "https://docs.bytechef.io/reference/components/sendgrid_v1#send-email")
         .perform(SendgridSendEmailAction::perform);
 
-    private static final Base64.Encoder ENCODER = Base64.getEncoder();
+    private SendgridSendEmailAction() {
+    }
 
-    public static Object perform(Parameters inputParameters, Parameters connectionParameters, ActionContext context) {
+    public static Object perform(Parameters inputParameters, Parameters connectionParameters, Context context) {
         List<FileEntry> attachmentFiles = inputParameters.getList(ATTACHMENTS, FileEntry.class);
 
         List<Map<String, Object>> allAttachments = getAllAttachments(attachmentFiles, context);
@@ -125,53 +113,27 @@ public final class SendgridSendEmailAction {
 
         itemMap.put(TO, toList);
 
-        List<Map<?, ?>> personalization = new ArrayList<>(List.of(itemMap));
-
         if (!ccList.isEmpty()) {
             itemMap.put(CC, ccList);
         }
 
-        context.http(http -> http.post(BASE_URL + "/mail/send"))
-            .body(
-                Body.of(
-                    "personalizations", personalization,
-                    FROM, Map.of("email", inputParameters.getRequiredString(FROM)),
-                    SUBJECT, inputParameters.getRequiredString(SUBJECT),
-                    "content", List.of(
-                        Map.of(
-                            TYPE, inputParameters.getRequiredString(TYPE),
-                            "value", inputParameters.getRequiredString(TEXT))),
-                    ATTACHMENTS, allAttachments))
-            .configuration(responseType(ResponseType.JSON))
-            .execute();
+        List<Map<?, ?>> personalization = new ArrayList<>(List.of(itemMap));
 
-        return null;
-    }
+        Map<String, Object> body = new HashMap<>();
 
-    private static List<Map<String, Object>> getAllAttachments(List<FileEntry> attachmentFiles, ActionContext context) {
-        List<Map<String, Object>> allAttachments = new ArrayList<>();
+        body.put("personalizations", personalization);
+        body.put(FROM, Map.of("email", inputParameters.getRequiredString(FROM)));
+        body.put(SUBJECT, inputParameters.getRequiredString(SUBJECT));
+        body.put(
+            "content", List.of(
+                Map.of(
+                    TYPE, inputParameters.getRequiredString(TYPE),
+                    "value", inputParameters.getRequiredString(TEXT))));
 
-        for (FileEntry attachment : attachmentFiles) {
-            String fileContent = context.file(file -> ENCODER.encodeToString(file.readAllBytes(attachment)));
-
-            Map<String, Object> fileDetails = new HashMap<>();
-
-            fileDetails.put("content", fileContent);
-            fileDetails.put("filename", attachment.getName());
-            fileDetails.put("type", attachment.getMimeType());
-
-            allAttachments.add(fileDetails);
+        if (!allAttachments.isEmpty()) {
+            body.put(ATTACHMENTS, allAttachments);
         }
 
-        return allAttachments;
-    }
-
-    private static List<Map<String, String>> convertToEmailList(List<String> emailList) {
-        return emailList.stream()
-            .map(email -> Collections.singletonMap("email", email))
-            .toList();
-    }
-
-    private SendgridSendEmailAction() {
+        return sendEmail(context, body);
     }
 }

@@ -6,7 +6,6 @@ val generateOpenAPISpring by tasks.registering(org.openapitools.generator.gradle
     apiPackage.set("com.bytechef.platform.workflow.execution.web.rest")
     configOptions.set(
         mapOf(
-            "dateLibrary" to "java8-localdatetime",
             "interfaceOnly" to "true",
             "useSpringBoot3" to "true",
             "useTags" to "true"
@@ -19,8 +18,9 @@ val generateOpenAPISpring by tasks.registering(org.openapitools.generator.gradle
     outputDir.set("$projectDir/../platform-workflow-execution-rest-api/generated")
     schemaMappings.set(
         mapOf(
+            "ComponentConnection" to "com.bytechef.platform.configuration.web.rest.model.ComponentConnection",
             "ComponentDefinitionBasic" to "com.bytechef.platform.configuration.web.rest.model.ComponentDefinitionBasicModel",
-            "DataStreamComponent" to "com.bytechef.platform.configuration.web.rest.model.DataStreamComponentModel",
+            "FieldOption" to "com.bytechef.platform.configuration.web.rest.model.FieldOptionModel",
             "Page" to "org.springframework.data.domain.Page",
             "WorkflowConnection" to "com.bytechef.platform.configuration.web.rest.model.WorkflowConnectionModel",
             "WorkflowTask" to "com.bytechef.platform.configuration.web.rest.model.WorkflowTaskModel",
@@ -32,13 +32,7 @@ val generateOpenAPISpring by tasks.registering(org.openapitools.generator.gradle
 val generateOpenAPITypeScriptFetch by tasks.registering(org.openapitools.generator.gradle.plugin.tasks.GenerateTask::class) {
     generatorName.set("typescript-fetch")
     inputSpec.set("$projectDir/openapi.yaml")
-    modelNameSuffix.set("Model")
     outputDir.set("$rootDir/client/src/shared/middleware/platform/workflow/execution")
-    typeMappings.set(
-        mapOf(
-            "DateTime" to "Date"
-        )
-    )
 }
 
 tasks.register("generateOpenAPI") {
@@ -49,11 +43,14 @@ dependencies {
     implementation("org.apache.commons:commons-lang3")
     implementation("org.springframework:spring-web")
     implementation("org.springframework.boot:spring-boot-autoconfigure")
+    implementation(project(":server:libs:atlas:atlas-coordinator:atlas-coordinator-api"))
     implementation(project(":server:libs:core:commons:commons-util"))
+    implementation(project(":server:libs:platform:platform-workflow:platform-workflow-execution:platform-workflow-execution-api"))
     implementation(project(":server:libs:platform:platform-workflow:platform-workflow-execution:platform-workflow-execution-rest:platform-workflow-execution-rest-api"))
     implementation(project(":server:libs:platform:platform-oauth2:platform-oauth2-api"))
-    implementation(project(":server:libs:platform:platform-workflow:platform-workflow-task-dispatcher:platform-workflow-task-dispatcher-registry:platform-workflow-task-dispatcher-registry-api"))
+    implementation(project(":server:libs:platform:platform-workflow:platform-workflow-task-dispatcher:platform-workflow-task-dispatcher-api"))
 
     testImplementation("org.springframework:spring-webflux")
-    testImplementation("org.springframework.boot:spring-boot-starter-web")
+    testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
+    testImplementation(project(":server:libs:test:test-int-support"))
 }

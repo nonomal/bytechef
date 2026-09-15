@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,20 +19,23 @@ package com.bytechef.platform.connection.domain;
 import com.bytechef.commons.data.jdbc.wrapper.EncryptedMapWrapper;
 import com.bytechef.commons.util.CollectionUtils;
 import com.bytechef.commons.util.MapUtils;
-import com.bytechef.platform.constant.AppType;
+import com.bytechef.component.definition.Authorization.AuthorizationType;
+import com.bytechef.platform.constant.PlatformType;
 import com.bytechef.platform.tag.domain.Tag;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.jspecify.annotations.Nullable;
 import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.LastModifiedBy;
 import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.annotation.Transient;
 import org.springframework.data.annotation.Version;
 import org.springframework.data.relational.core.mapping.Column;
 import org.springframework.data.relational.core.mapping.MappedCollection;
@@ -48,8 +51,8 @@ public final class Connection {
         INVALID, VALID
     }
 
-    @Column("authorization_name")
-    private String authorizationName;
+    @Column("authorization_type")
+    private Integer authorizationType;
 
     @Column
     private int environment;
@@ -72,7 +75,7 @@ public final class Connection {
 
     @Column("created_date")
     @CreatedDate
-    private LocalDateTime createdDate;
+    private Instant createdDate;
 
     @Id
     private Long id;
@@ -83,10 +86,13 @@ public final class Connection {
 
     @Column("last_modified_date")
     @LastModifiedDate
-    private LocalDateTime lastModifiedDate;
+    private Instant lastModifiedDate;
 
     @Column
     private String name;
+
+    @Transient
+    private boolean credentialStatusUpdated;
 
     @Column("parameters")
     private EncryptedMapWrapper parameters;
@@ -130,10 +136,11 @@ public final class Connection {
     }
 
     /**
-     * Return the name of an authorization it is used with this connection.
+     * Return the type of an authorization it is used with this connection.
      */
-    public String getAuthorizationName() {
-        return authorizationName;
+    @Nullable
+    public AuthorizationType getAuthorizationType() {
+        return authorizationType == null ? null : AuthorizationType.values()[authorizationType];
     }
 
     /**
@@ -157,9 +164,9 @@ public final class Connection {
     /**
      * Return the time when the connection was originally created.
      *
-     * @return {@link LocalDateTime}
+     * @return {@link Instant}
      */
-    public LocalDateTime getCreatedDate() {
+    public Instant getCreatedDate() {
         return createdDate;
     }
 
@@ -167,8 +174,8 @@ public final class Connection {
         return CredentialStatus.values()[credentialStatus];
     }
 
-    public ConnectionEnvironment getEnvironment() {
-        return ConnectionEnvironment.values()[environment];
+    public int getEnvironmentId() {
+        return environment;
     }
 
     /**
@@ -185,9 +192,9 @@ public final class Connection {
     /**
      * Return the time when the connection was updated.
      *
-     * @return {@link LocalDateTime}
+     * @return {@link Instant}
      */
-    public LocalDateTime getLastModifiedDate() {
+    public Instant getLastModifiedDate() {
         return lastModifiedDate;
     }
 
@@ -211,14 +218,13 @@ public final class Connection {
     }
 
     public List<Long> getTagIds() {
-        return connectionTags
-            .stream()
+        return connectionTags.stream()
             .map(ConnectionTag::getTagId)
             .toList();
     }
 
-    public AppType getType() {
-        return AppType.values()[type];
+    public PlatformType getType() {
+        return PlatformType.values()[type];
     }
 
     public int getVersion() {
@@ -229,8 +235,8 @@ public final class Connection {
         this.parameters.putAll(parameters);
     }
 
-    public void setAuthorizationName(String authorizationName) {
-        this.authorizationName = authorizationName;
+    public void setAuthorizationType(AuthorizationType authorizationType) {
+        this.authorizationType = authorizationType == null ? null : authorizationType.ordinal();
     }
 
     public void setComponentName(String componentName) {
@@ -245,16 +251,24 @@ public final class Connection {
         this.credentialStatus = credentialStatus.ordinal();
     }
 
-    public void setEnvironment(ConnectionEnvironment environment) {
-        this.environment = environment.ordinal();
+    public void setEnvironmentId(int environmentId) {
+        this.environment = environmentId;
     }
 
     public void setId(Long id) {
         this.id = id;
     }
 
+    public boolean isCredentialsStatusUpdated() {
+        return credentialStatusUpdated;
+    }
+
     public void setName(String name) {
         this.name = name;
+    }
+
+    public void setCredentialsStatusUpdated() {
+        this.credentialStatusUpdated = true;
     }
 
     public void setParameters(Map<String, ?> parameters) {
@@ -263,7 +277,7 @@ public final class Connection {
         }
     }
 
-    public void setType(AppType type) {
+    public void setType(PlatformType type) {
         this.type = type.ordinal();
     }
 
@@ -278,7 +292,9 @@ public final class Connection {
     }
 
     public void setTags(List<Tag> tags) {
-        if (!CollectionUtils.isEmpty(tags)) {
+        if (CollectionUtils.isEmpty(tags)) {
+            setTagIds(List.of());
+        } else {
             setTagIds(CollectionUtils.map(tags, Tag::getId));
         }
     }
@@ -293,7 +309,7 @@ public final class Connection {
             "id=" + id +
             ", name='" + name + '\'' +
             ", componentName='" + componentName + '\'' +
-            ", authorizationName='" + authorizationName + '\'' +
+            ", authorizationType='" + authorizationType + '\'' +
             ", connectionVersion=" + connectionVersion +
             ", environment=" + environment +
             ", credentialStatus=" + credentialStatus +
@@ -310,21 +326,21 @@ public final class Connection {
 
     @SuppressFBWarnings("EI")
     public static final class Builder {
-        private String authorizationName;
+        private AuthorizationType authorizationType;
         private String componentName;
         private int connectionVersion;
         private Long id;
         private String name;
         private Map<String, Object> parameters;
         private List<Long> tagIds;
-        private AppType type;
+        private PlatformType type;
         private int version;
 
         private Builder() {
         }
 
-        public Builder authorizationName(String authorizationName) {
-            this.authorizationName = authorizationName;
+        public Builder authorizationType(AuthorizationType authorizationType) {
+            this.authorizationType = authorizationType;
 
             return this;
         }
@@ -365,7 +381,7 @@ public final class Connection {
             return this;
         }
 
-        public Builder type(AppType type) {
+        public Builder type(PlatformType type) {
             this.type = type;
 
             return this;
@@ -380,7 +396,7 @@ public final class Connection {
         public Connection build() {
             Connection connection = new Connection();
 
-            connection.setAuthorizationName(authorizationName);
+            connection.setAuthorizationType(authorizationType);
             connection.setComponentName(componentName);
             connection.setConnectionVersion(connectionVersion);
             connection.setId(id);

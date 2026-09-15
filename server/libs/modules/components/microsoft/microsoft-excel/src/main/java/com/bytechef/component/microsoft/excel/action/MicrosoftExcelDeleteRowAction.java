@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,58 +16,56 @@
 
 package com.bytechef.component.microsoft.excel.action;
 
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.integer;
-import static com.bytechef.component.microsoft.excel.constant.MicrosoftExcelConstants.BASE_URL;
-import static com.bytechef.component.microsoft.excel.constant.MicrosoftExcelConstants.DELETE_ROW;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.integer;
 import static com.bytechef.component.microsoft.excel.constant.MicrosoftExcelConstants.ROW_NUMBER;
 import static com.bytechef.component.microsoft.excel.constant.MicrosoftExcelConstants.WORKBOOK_ID;
 import static com.bytechef.component.microsoft.excel.constant.MicrosoftExcelConstants.WORKBOOK_ID_PROPERTY;
-import static com.bytechef.component.microsoft.excel.constant.MicrosoftExcelConstants.WORKBOOK_WORKSHEETS_PATH;
 import static com.bytechef.component.microsoft.excel.constant.MicrosoftExcelConstants.WORKSHEET_NAME;
 import static com.bytechef.component.microsoft.excel.constant.MicrosoftExcelConstants.WORKSHEET_NAME_PROPERTY;
 import static com.bytechef.component.microsoft.excel.util.MicrosoftExcelUtils.getLastUsedColumnLabel;
 
-import com.bytechef.component.definition.ActionContext;
-import com.bytechef.component.definition.ComponentDSL.ModifiableActionDefinition;
-import com.bytechef.component.definition.Context.Http;
+import com.bytechef.component.definition.ComponentDsl.ModifiableActionDefinition;
+import com.bytechef.component.definition.Context;
+import com.bytechef.component.definition.Context.Http.Body;
 import com.bytechef.component.definition.Parameters;
-import java.util.List;
+import com.bytechef.microsoft.commons.MicrosoftUtils;
+import java.util.Map;
 
 /**
  * @author Monika Domiter
  */
 public class MicrosoftExcelDeleteRowAction {
 
-    public static final ModifiableActionDefinition ACTION_DEFINITION = action(DELETE_ROW)
-        .title("Delete row")
-        .description("Delete row on an existing sheet")
+    public static final ModifiableActionDefinition ACTION_DEFINITION = action("deleteRow")
+        .title("Delete Row")
+        .description("Delete row on an existing sheet.")
+        .help("", "https://docs.bytechef.io/reference/components/microsoft-excel_v1#delete-row")
         .properties(
             WORKBOOK_ID_PROPERTY,
             WORKSHEET_NAME_PROPERTY,
             integer(ROW_NUMBER)
-                .label("Row number")
-                .description("The row number to delete")
+                .label("Row Number")
+                .description("The row number to delete.")
                 .required(true))
-        .perform(MicrosoftExcelDeleteRowAction::perform);
+        .perform(MicrosoftExcelDeleteRowAction::perform)
+        .processErrorResponse(MicrosoftUtils::processErrorResponse);
 
     private MicrosoftExcelDeleteRowAction() {
     }
 
-    public static Object perform(
-        Parameters inputParameters, Parameters connectionParameters, ActionContext context) {
-
+    public static Object perform(Parameters inputParameters, Parameters connectionParameters, Context context) {
         int rowNumber = inputParameters.getRequiredInteger(ROW_NUMBER);
 
         String range = "A" + rowNumber + ":" + getLastUsedColumnLabel(inputParameters, context) + rowNumber;
 
         context.http(http -> http
             .post(
-                BASE_URL + "/" + inputParameters.getRequiredString(WORKBOOK_ID) + WORKBOOK_WORKSHEETS_PATH +
-                    inputParameters.getRequiredString(WORKSHEET_NAME) + "/range(address='" + range + "')/delete"))
-            .configuration(Http.responseType(Http.ResponseType.JSON))
-            .body(Http.Body.of(List.of("shift", "Up")
-                .toArray()))
+                "/me/drive/items/%s/workbook/worksheets/%s/range(address='%s')/delete"
+                    .formatted(
+                        inputParameters.getRequiredString(WORKBOOK_ID),
+                        inputParameters.getRequiredString(WORKSHEET_NAME), range)))
+            .body(Body.of(Map.of("shift", "Up")))
             .execute();
 
         return null;

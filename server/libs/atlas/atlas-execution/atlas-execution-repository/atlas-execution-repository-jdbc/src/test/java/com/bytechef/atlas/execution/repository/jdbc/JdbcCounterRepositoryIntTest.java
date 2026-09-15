@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -76,20 +76,26 @@ public class JdbcCounterRepositoryIntTest {
 
     @Test
     public void testFindValueById() {
-        Long value = counterRepository.findValueByIdForUpdate(counter.getId());
+        Long value = counterRepository
+            .findValueByIdForUpdate(counter.getId())
+            .orElseThrow();
 
         Assertions.assertEquals(counter.getValue(), value);
     }
 
     @Test
     public void testUpdate() {
-        Long value = counterRepository.findValueByIdForUpdate(counter.getId());
+        Long value = counterRepository
+            .findValueByIdForUpdate(counter.getId())
+            .orElseThrow();
 
         Assertions.assertEquals(counter.getValue(), value);
 
         counterRepository.update(counter.getId(), 5);
 
-        value = counterRepository.findValueByIdForUpdate(counter.getId());
+        value = counterRepository
+            .findValueByIdForUpdate(counter.getId())
+            .orElseThrow();
 
         Assertions.assertEquals(5, value);
     }

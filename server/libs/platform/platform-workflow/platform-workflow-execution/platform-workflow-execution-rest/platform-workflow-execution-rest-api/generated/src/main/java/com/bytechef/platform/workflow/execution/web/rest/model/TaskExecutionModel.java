@@ -3,14 +3,19 @@ package com.bytechef.platform.workflow.execution.web.rest.model;
 import java.net.URI;
 import java.util.Objects;
 import com.bytechef.platform.workflow.execution.web.rest.model.ExecutionErrorModel;
+import com.bytechef.platform.workflow.execution.web.rest.model.JobModel;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.annotation.JsonValue;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.lang.Nullable;
 import org.openapitools.jackson.nullable.JsonNullable;
 import java.time.OffsetDateTime;
 import jakarta.validation.Valid;
@@ -27,53 +32,53 @@ import jakarta.annotation.Generated;
 
 @Schema(name = "TaskExecution", description = "Adds execution semantics to a task.")
 @JsonTypeName("TaskExecution")
-@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2024-06-30T07:20:55.672695+02:00[Europe/Zagreb]", comments = "Generator version: 7.5.0")
+@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2026-07-03T17:58:17.150015+02:00[Europe/Zagreb]", comments = "Generator version: 7.22.0")
 public class TaskExecutionModel {
 
-  private com.bytechef.platform.configuration.web.rest.model.ComponentDefinitionBasicModel component;
-
-  private String createdBy;
+  private @Nullable String createdBy;
 
   @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
-  private LocalDateTime createdDate;
+  private @Nullable OffsetDateTime createdDate;
 
   @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
-  private LocalDateTime endDate;
+  private @Nullable OffsetDateTime endDate;
 
-  private ExecutionErrorModel error;
+  private @Nullable ExecutionErrorModel error;
 
-  private Long executionTime;
+  private @Nullable Long executionTime;
 
-  private String id;
+  private @Nullable String icon;
+
+  private @Nullable String id;
 
   @Valid
   private Map<String, Object> input = new HashMap<>();
 
   private String jobId;
 
-  private String lastModifiedBy;
+  private @Nullable String lastModifiedBy;
 
   @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
-  private LocalDateTime lastModifiedDate;
+  private @Nullable OffsetDateTime lastModifiedDate;
 
-  private Integer maxRetries;
+  private @Nullable Integer maxRetries;
 
-  private Object output;
+  private @Nullable Object output;
 
-  private String parentId;
+  private @Nullable String parentId;
 
   private Integer priority;
 
-  private Integer progress;
+  private @Nullable Integer progress;
 
-  private Integer retryAttempts;
+  private @Nullable Integer retryAttempts;
 
-  private String retryDelay;
+  private @Nullable String retryDelay;
 
-  private Integer retryDelayFactor;
+  private @Nullable Integer retryDelayFactor;
 
   @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
-  private LocalDateTime startDate;
+  private OffsetDateTime startDate;
 
   /**
    * The current status of a task.
@@ -89,7 +94,7 @@ public class TaskExecutionModel {
     
     COMPLETED("COMPLETED");
 
-    private String value;
+    private final String value;
 
     StatusEnum(String value) {
       this.value = value;
@@ -118,13 +123,23 @@ public class TaskExecutionModel {
 
   private StatusEnum status;
 
-  private Integer taskNumber;
+  private @Nullable Integer taskNumber;
 
-  private Long retryDelayMillis;
+  private @Nullable String title;
 
-  private com.bytechef.platform.configuration.web.rest.model.WorkflowTaskModel workflowTask;
+  private @Nullable Long retryDelayMillis;
 
-  private String type;
+  private @Nullable com.bytechef.platform.configuration.web.rest.model.WorkflowTaskModel workflowTask;
+
+  private @Nullable String type;
+
+  @Valid
+  private List<@Valid TaskExecutionModel> children = new ArrayList<>();
+
+  @Valid
+  private List<List<@Valid TaskExecutionModel>> iterations = new ArrayList<>();
+
+  private @Nullable JobModel childJob;
 
   public TaskExecutionModel() {
     super();
@@ -133,34 +148,14 @@ public class TaskExecutionModel {
   /**
    * Constructor with only required parameters
    */
-  public TaskExecutionModel(String jobId, Integer priority, LocalDateTime startDate, StatusEnum status) {
+  public TaskExecutionModel(String jobId, Integer priority, OffsetDateTime startDate, StatusEnum status) {
     this.jobId = jobId;
     this.priority = priority;
     this.startDate = startDate;
     this.status = status;
   }
 
-  public TaskExecutionModel component(com.bytechef.platform.configuration.web.rest.model.ComponentDefinitionBasicModel component) {
-    this.component = component;
-    return this;
-  }
-
-  /**
-   * Get component
-   * @return component
-  */
-  @Valid 
-  @Schema(name = "component", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
-  @JsonProperty("component")
-  public com.bytechef.platform.configuration.web.rest.model.ComponentDefinitionBasicModel getComponent() {
-    return component;
-  }
-
-  public void setComponent(com.bytechef.platform.configuration.web.rest.model.ComponentDefinitionBasicModel component) {
-    this.component = component;
-  }
-
-  public TaskExecutionModel createdBy(String createdBy) {
+  public TaskExecutionModel createdBy(@Nullable String createdBy) {
     this.createdBy = createdBy;
     return this;
   }
@@ -168,19 +163,20 @@ public class TaskExecutionModel {
   /**
    * The created by.
    * @return createdBy
-  */
+   */
   
   @Schema(name = "createdBy", accessMode = Schema.AccessMode.READ_ONLY, description = "The created by.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("createdBy")
-  public String getCreatedBy() {
+  public @Nullable String getCreatedBy() {
     return createdBy;
   }
 
-  public void setCreatedBy(String createdBy) {
+  @JsonProperty("createdBy")
+  public void setCreatedBy(@Nullable String createdBy) {
     this.createdBy = createdBy;
   }
 
-  public TaskExecutionModel createdDate(LocalDateTime createdDate) {
+  public TaskExecutionModel createdDate(@Nullable OffsetDateTime createdDate) {
     this.createdDate = createdDate;
     return this;
   }
@@ -188,19 +184,20 @@ public class TaskExecutionModel {
   /**
    * The created date.
    * @return createdDate
-  */
+   */
   @Valid 
   @Schema(name = "createdDate", accessMode = Schema.AccessMode.READ_ONLY, description = "The created date.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("createdDate")
-  public LocalDateTime getCreatedDate() {
+  public @Nullable OffsetDateTime getCreatedDate() {
     return createdDate;
   }
 
-  public void setCreatedDate(LocalDateTime createdDate) {
+  @JsonProperty("createdDate")
+  public void setCreatedDate(@Nullable OffsetDateTime createdDate) {
     this.createdDate = createdDate;
   }
 
-  public TaskExecutionModel endDate(LocalDateTime endDate) {
+  public TaskExecutionModel endDate(@Nullable OffsetDateTime endDate) {
     this.endDate = endDate;
     return this;
   }
@@ -208,19 +205,20 @@ public class TaskExecutionModel {
   /**
    * The time when a task instance ended (CANCELLED, FAILED, COMPLETED).
    * @return endDate
-  */
+   */
   @Valid 
   @Schema(name = "endDate", accessMode = Schema.AccessMode.READ_ONLY, description = "The time when a task instance ended (CANCELLED, FAILED, COMPLETED).", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("endDate")
-  public LocalDateTime getEndDate() {
+  public @Nullable OffsetDateTime getEndDate() {
     return endDate;
   }
 
-  public void setEndDate(LocalDateTime endDate) {
+  @JsonProperty("endDate")
+  public void setEndDate(@Nullable OffsetDateTime endDate) {
     this.endDate = endDate;
   }
 
-  public TaskExecutionModel error(ExecutionErrorModel error) {
+  public TaskExecutionModel error(@Nullable ExecutionErrorModel error) {
     this.error = error;
     return this;
   }
@@ -228,19 +226,20 @@ public class TaskExecutionModel {
   /**
    * Get error
    * @return error
-  */
+   */
   @Valid 
   @Schema(name = "error", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("error")
-  public ExecutionErrorModel getError() {
+  public @Nullable ExecutionErrorModel getError() {
     return error;
   }
 
-  public void setError(ExecutionErrorModel error) {
+  @JsonProperty("error")
+  public void setError(@Nullable ExecutionErrorModel error) {
     this.error = error;
   }
 
-  public TaskExecutionModel executionTime(Long executionTime) {
+  public TaskExecutionModel executionTime(@Nullable Long executionTime) {
     this.executionTime = executionTime;
     return this;
   }
@@ -248,19 +247,41 @@ public class TaskExecutionModel {
   /**
    * The total time in ms for a task to execute (excluding wait time of the task in transit). i.e. actual execution time on a worker node.
    * @return executionTime
-  */
+   */
   
   @Schema(name = "executionTime", accessMode = Schema.AccessMode.READ_ONLY, description = "The total time in ms for a task to execute (excluding wait time of the task in transit). i.e. actual execution time on a worker node.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("executionTime")
-  public Long getExecutionTime() {
+  public @Nullable Long getExecutionTime() {
     return executionTime;
   }
 
-  public void setExecutionTime(Long executionTime) {
+  @JsonProperty("executionTime")
+  public void setExecutionTime(@Nullable Long executionTime) {
     this.executionTime = executionTime;
   }
 
-  public TaskExecutionModel id(String id) {
+  public TaskExecutionModel icon(@Nullable String icon) {
+    this.icon = icon;
+    return this;
+  }
+
+  /**
+   * The icon of the task.
+   * @return icon
+   */
+  
+  @Schema(name = "icon", accessMode = Schema.AccessMode.READ_ONLY, description = "The icon of the task.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+  @JsonProperty("icon")
+  public @Nullable String getIcon() {
+    return icon;
+  }
+
+  @JsonProperty("icon")
+  public void setIcon(@Nullable String icon) {
+    this.icon = icon;
+  }
+
+  public TaskExecutionModel id(@Nullable String id) {
     this.id = id;
     return this;
   }
@@ -268,15 +289,16 @@ public class TaskExecutionModel {
   /**
    * The id of a task execution.
    * @return id
-  */
+   */
   
   @Schema(name = "id", accessMode = Schema.AccessMode.READ_ONLY, description = "The id of a task execution.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("id")
-  public String getId() {
+  public @Nullable String getId() {
     return id;
   }
 
-  public void setId(String id) {
+  @JsonProperty("id")
+  public void setId(@Nullable String id) {
     this.id = id;
   }
 
@@ -296,7 +318,7 @@ public class TaskExecutionModel {
   /**
    * The input parameters for a task.
    * @return input
-  */
+   */
   
   @Schema(name = "input", accessMode = Schema.AccessMode.READ_ONLY, description = "The input parameters for a task.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("input")
@@ -304,6 +326,7 @@ public class TaskExecutionModel {
     return input;
   }
 
+  @JsonProperty("input")
   public void setInput(Map<String, Object> input) {
     this.input = input;
   }
@@ -316,7 +339,7 @@ public class TaskExecutionModel {
   /**
    * The id of a job for which a task belongs to.
    * @return jobId
-  */
+   */
   
   @Schema(name = "jobId", accessMode = Schema.AccessMode.READ_ONLY, description = "The id of a job for which a task belongs to.", requiredMode = Schema.RequiredMode.REQUIRED)
   @JsonProperty("jobId")
@@ -324,11 +347,12 @@ public class TaskExecutionModel {
     return jobId;
   }
 
+  @JsonProperty("jobId")
   public void setJobId(String jobId) {
     this.jobId = jobId;
   }
 
-  public TaskExecutionModel lastModifiedBy(String lastModifiedBy) {
+  public TaskExecutionModel lastModifiedBy(@Nullable String lastModifiedBy) {
     this.lastModifiedBy = lastModifiedBy;
     return this;
   }
@@ -336,19 +360,20 @@ public class TaskExecutionModel {
   /**
    * The last modified by.
    * @return lastModifiedBy
-  */
+   */
   
   @Schema(name = "lastModifiedBy", accessMode = Schema.AccessMode.READ_ONLY, description = "The last modified by.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("lastModifiedBy")
-  public String getLastModifiedBy() {
+  public @Nullable String getLastModifiedBy() {
     return lastModifiedBy;
   }
 
-  public void setLastModifiedBy(String lastModifiedBy) {
+  @JsonProperty("lastModifiedBy")
+  public void setLastModifiedBy(@Nullable String lastModifiedBy) {
     this.lastModifiedBy = lastModifiedBy;
   }
 
-  public TaskExecutionModel lastModifiedDate(LocalDateTime lastModifiedDate) {
+  public TaskExecutionModel lastModifiedDate(@Nullable OffsetDateTime lastModifiedDate) {
     this.lastModifiedDate = lastModifiedDate;
     return this;
   }
@@ -356,19 +381,20 @@ public class TaskExecutionModel {
   /**
    * The last modified date.
    * @return lastModifiedDate
-  */
+   */
   @Valid 
   @Schema(name = "lastModifiedDate", accessMode = Schema.AccessMode.READ_ONLY, description = "The last modified date.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("lastModifiedDate")
-  public LocalDateTime getLastModifiedDate() {
+  public @Nullable OffsetDateTime getLastModifiedDate() {
     return lastModifiedDate;
   }
 
-  public void setLastModifiedDate(LocalDateTime lastModifiedDate) {
+  @JsonProperty("lastModifiedDate")
+  public void setLastModifiedDate(@Nullable OffsetDateTime lastModifiedDate) {
     this.lastModifiedDate = lastModifiedDate;
   }
 
-  public TaskExecutionModel maxRetries(Integer maxRetries) {
+  public TaskExecutionModel maxRetries(@Nullable Integer maxRetries) {
     this.maxRetries = maxRetries;
     return this;
   }
@@ -376,19 +402,20 @@ public class TaskExecutionModel {
   /**
    * The maximum number of times that a task may retry.
    * @return maxRetries
-  */
+   */
   
   @Schema(name = "maxRetries", accessMode = Schema.AccessMode.READ_ONLY, description = "The maximum number of times that a task may retry.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("maxRetries")
-  public Integer getMaxRetries() {
+  public @Nullable Integer getMaxRetries() {
     return maxRetries;
   }
 
-  public void setMaxRetries(Integer maxRetries) {
+  @JsonProperty("maxRetries")
+  public void setMaxRetries(@Nullable Integer maxRetries) {
     this.maxRetries = maxRetries;
   }
 
-  public TaskExecutionModel output(Object output) {
+  public TaskExecutionModel output(@Nullable Object output) {
     this.output = output;
     return this;
   }
@@ -396,19 +423,20 @@ public class TaskExecutionModel {
   /**
    * The result output generated by the task handler which executed a task.
    * @return output
-  */
+   */
   
   @Schema(name = "output", accessMode = Schema.AccessMode.READ_ONLY, description = "The result output generated by the task handler which executed a task.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("output")
-  public Object getOutput() {
+  public @Nullable Object getOutput() {
     return output;
   }
 
-  public void setOutput(Object output) {
+  @JsonProperty("output")
+  public void setOutput(@Nullable Object output) {
     this.output = output;
   }
 
-  public TaskExecutionModel parentId(String parentId) {
+  public TaskExecutionModel parentId(@Nullable String parentId) {
     this.parentId = parentId;
     return this;
   }
@@ -416,15 +444,16 @@ public class TaskExecutionModel {
   /**
    * The id of the parent task, if this is a sub-task.
    * @return parentId
-  */
+   */
   
   @Schema(name = "parentId", accessMode = Schema.AccessMode.READ_ONLY, description = "The id of the parent task, if this is a sub-task.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("parentId")
-  public String getParentId() {
+  public @Nullable String getParentId() {
     return parentId;
   }
 
-  public void setParentId(String parentId) {
+  @JsonProperty("parentId")
+  public void setParentId(@Nullable String parentId) {
     this.parentId = parentId;
   }
 
@@ -436,7 +465,7 @@ public class TaskExecutionModel {
   /**
    * The priority value.
    * @return priority
-  */
+   */
   
   @Schema(name = "priority", accessMode = Schema.AccessMode.READ_ONLY, description = "The priority value.", requiredMode = Schema.RequiredMode.REQUIRED)
   @JsonProperty("priority")
@@ -444,11 +473,12 @@ public class TaskExecutionModel {
     return priority;
   }
 
+  @JsonProperty("priority")
   public void setPriority(Integer priority) {
     this.priority = priority;
   }
 
-  public TaskExecutionModel progress(Integer progress) {
+  public TaskExecutionModel progress(@Nullable Integer progress) {
     this.progress = progress;
     return this;
   }
@@ -456,19 +486,20 @@ public class TaskExecutionModel {
   /**
    * The current progress value, a number between 0 and 100.
    * @return progress
-  */
+   */
   
   @Schema(name = "progress", accessMode = Schema.AccessMode.READ_ONLY, description = "The current progress value, a number between 0 and 100.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("progress")
-  public Integer getProgress() {
+  public @Nullable Integer getProgress() {
     return progress;
   }
 
-  public void setProgress(Integer progress) {
+  @JsonProperty("progress")
+  public void setProgress(@Nullable Integer progress) {
     this.progress = progress;
   }
 
-  public TaskExecutionModel retryAttempts(Integer retryAttempts) {
+  public TaskExecutionModel retryAttempts(@Nullable Integer retryAttempts) {
     this.retryAttempts = retryAttempts;
     return this;
   }
@@ -476,19 +507,20 @@ public class TaskExecutionModel {
   /**
    * The number of times that a task has been retried.
    * @return retryAttempts
-  */
+   */
   
   @Schema(name = "retryAttempts", accessMode = Schema.AccessMode.READ_ONLY, description = "The number of times that a task has been retried.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("retryAttempts")
-  public Integer getRetryAttempts() {
+  public @Nullable Integer getRetryAttempts() {
     return retryAttempts;
   }
 
-  public void setRetryAttempts(Integer retryAttempts) {
+  @JsonProperty("retryAttempts")
+  public void setRetryAttempts(@Nullable Integer retryAttempts) {
     this.retryAttempts = retryAttempts;
   }
 
-  public TaskExecutionModel retryDelay(String retryDelay) {
+  public TaskExecutionModel retryDelay(@Nullable String retryDelay) {
     this.retryDelay = retryDelay;
     return this;
   }
@@ -496,19 +528,20 @@ public class TaskExecutionModel {
   /**
    * The delay to introduce between each retry. Values are to be specified using the ISO-8601 format (excluding the PT prefix). e.g. 10s (ten seconds), 1m (one minute) etc.
    * @return retryDelay
-  */
+   */
   
   @Schema(name = "retryDelay", accessMode = Schema.AccessMode.READ_ONLY, description = "The delay to introduce between each retry. Values are to be specified using the ISO-8601 format (excluding the PT prefix). e.g. 10s (ten seconds), 1m (one minute) etc.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("retryDelay")
-  public String getRetryDelay() {
+  public @Nullable String getRetryDelay() {
     return retryDelay;
   }
 
-  public void setRetryDelay(String retryDelay) {
+  @JsonProperty("retryDelay")
+  public void setRetryDelay(@Nullable String retryDelay) {
     this.retryDelay = retryDelay;
   }
 
-  public TaskExecutionModel retryDelayFactor(Integer retryDelayFactor) {
+  public TaskExecutionModel retryDelayFactor(@Nullable Integer retryDelayFactor) {
     this.retryDelayFactor = retryDelayFactor;
     return this;
   }
@@ -516,19 +549,20 @@ public class TaskExecutionModel {
   /**
    * The factor to use in order to calculate the actual delay time between each successive retry -- multiplying by the value of the retryDelay.
    * @return retryDelayFactor
-  */
+   */
   
   @Schema(name = "retryDelayFactor", accessMode = Schema.AccessMode.READ_ONLY, description = "The factor to use in order to calculate the actual delay time between each successive retry -- multiplying by the value of the retryDelay.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("retryDelayFactor")
-  public Integer getRetryDelayFactor() {
+  public @Nullable Integer getRetryDelayFactor() {
     return retryDelayFactor;
   }
 
-  public void setRetryDelayFactor(Integer retryDelayFactor) {
+  @JsonProperty("retryDelayFactor")
+  public void setRetryDelayFactor(@Nullable Integer retryDelayFactor) {
     this.retryDelayFactor = retryDelayFactor;
   }
 
-  public TaskExecutionModel startDate(LocalDateTime startDate) {
+  public TaskExecutionModel startDate(OffsetDateTime startDate) {
     this.startDate = startDate;
     return this;
   }
@@ -536,15 +570,16 @@ public class TaskExecutionModel {
   /**
    * The time when a task instance was started.
    * @return startDate
-  */
+   */
   @Valid 
   @Schema(name = "startDate", accessMode = Schema.AccessMode.READ_ONLY, description = "The time when a task instance was started.", requiredMode = Schema.RequiredMode.REQUIRED)
   @JsonProperty("startDate")
-  public LocalDateTime getStartDate() {
+  public OffsetDateTime getStartDate() {
     return startDate;
   }
 
-  public void setStartDate(LocalDateTime startDate) {
+  @JsonProperty("startDate")
+  public void setStartDate(OffsetDateTime startDate) {
     this.startDate = startDate;
   }
 
@@ -556,7 +591,7 @@ public class TaskExecutionModel {
   /**
    * The current status of a task.
    * @return status
-  */
+   */
   
   @Schema(name = "status", accessMode = Schema.AccessMode.READ_ONLY, description = "The current status of a task.", requiredMode = Schema.RequiredMode.REQUIRED)
   @JsonProperty("status")
@@ -564,11 +599,12 @@ public class TaskExecutionModel {
     return status;
   }
 
+  @JsonProperty("status")
   public void setStatus(StatusEnum status) {
     this.status = status;
   }
 
-  public TaskExecutionModel taskNumber(Integer taskNumber) {
+  public TaskExecutionModel taskNumber(@Nullable Integer taskNumber) {
     this.taskNumber = taskNumber;
     return this;
   }
@@ -576,19 +612,41 @@ public class TaskExecutionModel {
   /**
    * The numeric order of the task in the workflow.
    * @return taskNumber
-  */
+   */
   
   @Schema(name = "taskNumber", accessMode = Schema.AccessMode.READ_ONLY, description = "The numeric order of the task in the workflow.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("taskNumber")
-  public Integer getTaskNumber() {
+  public @Nullable Integer getTaskNumber() {
     return taskNumber;
   }
 
-  public void setTaskNumber(Integer taskNumber) {
+  @JsonProperty("taskNumber")
+  public void setTaskNumber(@Nullable Integer taskNumber) {
     this.taskNumber = taskNumber;
   }
 
-  public TaskExecutionModel retryDelayMillis(Long retryDelayMillis) {
+  public TaskExecutionModel title(@Nullable String title) {
+    this.title = title;
+    return this;
+  }
+
+  /**
+   * The title of the task.
+   * @return title
+   */
+  
+  @Schema(name = "title", accessMode = Schema.AccessMode.READ_ONLY, description = "The title of the task.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+  @JsonProperty("title")
+  public @Nullable String getTitle() {
+    return title;
+  }
+
+  @JsonProperty("title")
+  public void setTitle(@Nullable String title) {
+    this.title = title;
+  }
+
+  public TaskExecutionModel retryDelayMillis(@Nullable Long retryDelayMillis) {
     this.retryDelayMillis = retryDelayMillis;
     return this;
   }
@@ -596,19 +654,20 @@ public class TaskExecutionModel {
   /**
    * The calculated retry delay. i.e. delay * retryAttempts * retryDelayFactor.
    * @return retryDelayMillis
-  */
+   */
   
   @Schema(name = "retryDelayMillis", accessMode = Schema.AccessMode.READ_ONLY, description = "The calculated retry delay. i.e. delay * retryAttempts * retryDelayFactor.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("retryDelayMillis")
-  public Long getRetryDelayMillis() {
+  public @Nullable Long getRetryDelayMillis() {
     return retryDelayMillis;
   }
 
-  public void setRetryDelayMillis(Long retryDelayMillis) {
+  @JsonProperty("retryDelayMillis")
+  public void setRetryDelayMillis(@Nullable Long retryDelayMillis) {
     this.retryDelayMillis = retryDelayMillis;
   }
 
-  public TaskExecutionModel workflowTask(com.bytechef.platform.configuration.web.rest.model.WorkflowTaskModel workflowTask) {
+  public TaskExecutionModel workflowTask(@Nullable com.bytechef.platform.configuration.web.rest.model.WorkflowTaskModel workflowTask) {
     this.workflowTask = workflowTask;
     return this;
   }
@@ -616,19 +675,20 @@ public class TaskExecutionModel {
   /**
    * Get workflowTask
    * @return workflowTask
-  */
+   */
   @Valid 
   @Schema(name = "workflowTask", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("workflowTask")
-  public com.bytechef.platform.configuration.web.rest.model.WorkflowTaskModel getWorkflowTask() {
+  public @Nullable com.bytechef.platform.configuration.web.rest.model.WorkflowTaskModel getWorkflowTask() {
     return workflowTask;
   }
 
-  public void setWorkflowTask(com.bytechef.platform.configuration.web.rest.model.WorkflowTaskModel workflowTask) {
+  @JsonProperty("workflowTask")
+  public void setWorkflowTask(@Nullable com.bytechef.platform.configuration.web.rest.model.WorkflowTaskModel workflowTask) {
     this.workflowTask = workflowTask;
   }
 
-  public TaskExecutionModel type(String type) {
+  public TaskExecutionModel type(@Nullable String type) {
     this.type = type;
     return this;
   }
@@ -636,16 +696,96 @@ public class TaskExecutionModel {
   /**
    * The type of the task.
    * @return type
-  */
+   */
   
   @Schema(name = "type", accessMode = Schema.AccessMode.READ_ONLY, description = "The type of the task.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("type")
-  public String getType() {
+  public @Nullable String getType() {
     return type;
   }
 
-  public void setType(String type) {
+  @JsonProperty("type")
+  public void setType(@Nullable String type) {
     this.type = type;
+  }
+
+  public TaskExecutionModel children(List<@Valid TaskExecutionModel> children) {
+    this.children = children;
+    return this;
+  }
+
+  public TaskExecutionModel addChildrenItem(TaskExecutionModel childrenItem) {
+    if (this.children == null) {
+      this.children = new ArrayList<>();
+    }
+    this.children.add(childrenItem);
+    return this;
+  }
+
+  /**
+   * Get children
+   * @return children
+   */
+  @Valid 
+  @Schema(name = "children", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+  @JsonProperty("children")
+  public List<@Valid TaskExecutionModel> getChildren() {
+    return children;
+  }
+
+  @JsonProperty("children")
+  public void setChildren(List<@Valid TaskExecutionModel> children) {
+    this.children = children;
+  }
+
+  public TaskExecutionModel iterations(List<List<@Valid TaskExecutionModel>> iterations) {
+    this.iterations = iterations;
+    return this;
+  }
+
+  public TaskExecutionModel addIterationsItem(List<@Valid TaskExecutionModel> iterationsItem) {
+    if (this.iterations == null) {
+      this.iterations = new ArrayList<>();
+    }
+    this.iterations.add(iterationsItem);
+    return this;
+  }
+
+  /**
+   * Get iterations
+   * @return iterations
+   */
+  @Valid 
+  @Schema(name = "iterations", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+  @JsonProperty("iterations")
+  public List<List<@Valid TaskExecutionModel>> getIterations() {
+    return iterations;
+  }
+
+  @JsonProperty("iterations")
+  public void setIterations(List<List<@Valid TaskExecutionModel>> iterations) {
+    this.iterations = iterations;
+  }
+
+  public TaskExecutionModel childJob(@Nullable JobModel childJob) {
+    this.childJob = childJob;
+    return this;
+  }
+
+  /**
+   * Get childJob
+   * @return childJob
+   */
+  @Valid 
+  @Schema(name = "childJob", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+  @JsonProperty("childJob")
+  public @Nullable JobModel getChildJob() {
+    return childJob;
+  }
+
+  @JsonProperty("childJob")
+  public void setChildJob(@Nullable JobModel childJob) {
+    this.childJob = childJob;
   }
 
   @Override
@@ -657,12 +797,12 @@ public class TaskExecutionModel {
       return false;
     }
     TaskExecutionModel taskExecution = (TaskExecutionModel) o;
-    return Objects.equals(this.component, taskExecution.component) &&
-        Objects.equals(this.createdBy, taskExecution.createdBy) &&
+    return Objects.equals(this.createdBy, taskExecution.createdBy) &&
         Objects.equals(this.createdDate, taskExecution.createdDate) &&
         Objects.equals(this.endDate, taskExecution.endDate) &&
         Objects.equals(this.error, taskExecution.error) &&
         Objects.equals(this.executionTime, taskExecution.executionTime) &&
+        Objects.equals(this.icon, taskExecution.icon) &&
         Objects.equals(this.id, taskExecution.id) &&
         Objects.equals(this.input, taskExecution.input) &&
         Objects.equals(this.jobId, taskExecution.jobId) &&
@@ -679,26 +819,30 @@ public class TaskExecutionModel {
         Objects.equals(this.startDate, taskExecution.startDate) &&
         Objects.equals(this.status, taskExecution.status) &&
         Objects.equals(this.taskNumber, taskExecution.taskNumber) &&
+        Objects.equals(this.title, taskExecution.title) &&
         Objects.equals(this.retryDelayMillis, taskExecution.retryDelayMillis) &&
         Objects.equals(this.workflowTask, taskExecution.workflowTask) &&
-        Objects.equals(this.type, taskExecution.type);
+        Objects.equals(this.type, taskExecution.type) &&
+        Objects.equals(this.children, taskExecution.children) &&
+        Objects.equals(this.iterations, taskExecution.iterations) &&
+        Objects.equals(this.childJob, taskExecution.childJob);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(component, createdBy, createdDate, endDate, error, executionTime, id, input, jobId, lastModifiedBy, lastModifiedDate, maxRetries, output, parentId, priority, progress, retryAttempts, retryDelay, retryDelayFactor, startDate, status, taskNumber, retryDelayMillis, workflowTask, type);
+    return Objects.hash(createdBy, createdDate, endDate, error, executionTime, icon, id, input, jobId, lastModifiedBy, lastModifiedDate, maxRetries, output, parentId, priority, progress, retryAttempts, retryDelay, retryDelayFactor, startDate, status, taskNumber, title, retryDelayMillis, workflowTask, type, children, iterations, childJob);
   }
 
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
     sb.append("class TaskExecutionModel {\n");
-    sb.append("    component: ").append(toIndentedString(component)).append("\n");
     sb.append("    createdBy: ").append(toIndentedString(createdBy)).append("\n");
     sb.append("    createdDate: ").append(toIndentedString(createdDate)).append("\n");
     sb.append("    endDate: ").append(toIndentedString(endDate)).append("\n");
     sb.append("    error: ").append(toIndentedString(error)).append("\n");
     sb.append("    executionTime: ").append(toIndentedString(executionTime)).append("\n");
+    sb.append("    icon: ").append(toIndentedString(icon)).append("\n");
     sb.append("    id: ").append(toIndentedString(id)).append("\n");
     sb.append("    input: ").append(toIndentedString(input)).append("\n");
     sb.append("    jobId: ").append(toIndentedString(jobId)).append("\n");
@@ -715,9 +859,13 @@ public class TaskExecutionModel {
     sb.append("    startDate: ").append(toIndentedString(startDate)).append("\n");
     sb.append("    status: ").append(toIndentedString(status)).append("\n");
     sb.append("    taskNumber: ").append(toIndentedString(taskNumber)).append("\n");
+    sb.append("    title: ").append(toIndentedString(title)).append("\n");
     sb.append("    retryDelayMillis: ").append(toIndentedString(retryDelayMillis)).append("\n");
     sb.append("    workflowTask: ").append(toIndentedString(workflowTask)).append("\n");
     sb.append("    type: ").append(toIndentedString(type)).append("\n");
+    sb.append("    children: ").append(toIndentedString(children)).append("\n");
+    sb.append("    iterations: ").append(toIndentedString(iterations)).append("\n");
+    sb.append("    childJob: ").append(toIndentedString(childJob)).append("\n");
     sb.append("}");
     return sb.toString();
   }
@@ -726,11 +874,8 @@ public class TaskExecutionModel {
    * Convert the given object to string with each line indented by 4 spaces
    * (except the first line).
    */
-  private String toIndentedString(Object o) {
-    if (o == null) {
-      return "null";
-    }
-    return o.toString().replace("\n", "\n    ");
+  private String toIndentedString(@Nullable Object o) {
+    return o == null ? "null" : o.toString().replace("\n", "\n    ");
   }
 }
 

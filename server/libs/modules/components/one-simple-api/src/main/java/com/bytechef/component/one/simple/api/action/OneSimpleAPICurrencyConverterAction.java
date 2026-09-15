@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,72 +16,69 @@
 
 package com.bytechef.component.one.simple.api.action;
 
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.number;
-import static com.bytechef.component.definition.ComponentDSL.object;
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.number;
+import static com.bytechef.component.definition.ComponentDsl.object;
+import static com.bytechef.component.definition.ComponentDsl.outputSchema;
+import static com.bytechef.component.definition.ComponentDsl.string;
 import static com.bytechef.component.definition.Context.Http.ResponseType;
 import static com.bytechef.component.definition.Context.Http.responseType;
-import static com.bytechef.component.one.simple.api.constants.OneSimpleAPIConstants.ACCESS_TOKEN;
-import static com.bytechef.component.one.simple.api.constants.OneSimpleAPIConstants.BASE_URL;
-import static com.bytechef.component.one.simple.api.constants.OneSimpleAPIConstants.CURRENCY_CONVERTER;
+import static com.bytechef.component.one.simple.api.constants.OneSimpleAPIConstants.CURRENCY_OPTIONS;
 import static com.bytechef.component.one.simple.api.constants.OneSimpleAPIConstants.FROM_CURRENCY;
 import static com.bytechef.component.one.simple.api.constants.OneSimpleAPIConstants.FROM_VALUE;
 import static com.bytechef.component.one.simple.api.constants.OneSimpleAPIConstants.TO_CURRENCY;
 
-import com.bytechef.component.definition.ActionContext;
-import com.bytechef.component.definition.ComponentDSL.ModifiableActionDefinition;
-import com.bytechef.component.definition.Context.Http.Body;
-import com.bytechef.component.definition.Context.TypeReference;
-import com.bytechef.component.definition.OptionsDataSource.ActionOptionsFunction;
+import com.bytechef.component.definition.ComponentDsl.ModifiableActionDefinition;
+import com.bytechef.component.definition.Context;
 import com.bytechef.component.definition.Parameters;
-import com.bytechef.component.one.simple.api.util.OneSimpleAPIUtils;
+import com.bytechef.component.definition.TypeReference;
 
 /**
  * @author Luka Ljubić
+ * @author Monika Kušter
  */
 public class OneSimpleAPICurrencyConverterAction {
 
-    public static final ModifiableActionDefinition ACTION_DEFINITION = action(CURRENCY_CONVERTER)
+    public static final ModifiableActionDefinition ACTION_DEFINITION = action("currencyConverter")
         .title("Currency Converter")
-        .description("Convert your currency into any other")
+        .description("Convert currency from one to another.")
         .properties(
             string(FROM_CURRENCY)
-                .options((ActionOptionsFunction<String>) OneSimpleAPIUtils::getCurrencyOptions)
                 .label("From Currency")
-                .description("Select a currency from which you want to convert")
+                .description("Currency from which you want to convert.")
+                .options(CURRENCY_OPTIONS)
                 .required(true),
             string(TO_CURRENCY)
-                .options((ActionOptionsFunction<String>) OneSimpleAPIUtils::getCurrencyOptions)
                 .label("To Currency")
-                .description("Select a currency to which you want to convert")
+                .description("Currency to which you want to convert.")
+                .options(CURRENCY_OPTIONS)
                 .required(true),
             number(FROM_VALUE)
-                .defaultValue(0)
                 .label("Value")
-                .description("Input the number for conversion")
+                .description("Value to convert.")
+                .defaultValue(1)
                 .required(true))
-        .outputSchema(
-            object()
-                .properties(
-                    string(FROM_CURRENCY),
-                    string(TO_CURRENCY),
-                    string(TO_CURRENCY),
-                    string("to_value")))
+        .output(
+            outputSchema(
+                object()
+                    .properties(
+                        string(FROM_CURRENCY),
+                        string(FROM_VALUE),
+                        string(TO_CURRENCY),
+                        number("to_value"),
+                        string("to_exchange_rate"))))
+        .help("", "https://docs.bytechef.io/reference/components/one-simple-api_v1#currency-converter")
         .perform(OneSimpleAPICurrencyConverterAction::perform);
 
     private OneSimpleAPICurrencyConverterAction() {
     }
 
-    public static Object perform(Parameters inputParameters, Parameters connectionParameters, ActionContext context) {
-        return context.http(http -> http.get(BASE_URL + "/exchange_rate"))
-            .body(
-                Body.of(
-                    ACCESS_TOKEN, connectionParameters.getRequiredString(ACCESS_TOKEN),
-                    FROM_CURRENCY, inputParameters.getRequiredString(FROM_CURRENCY),
-                    TO_CURRENCY, inputParameters.getRequiredString(TO_CURRENCY),
-                    FROM_VALUE, inputParameters.getRequiredString(FROM_VALUE),
-                    "output", "json"))
+    public static Object perform(Parameters inputParameters, Parameters connectionParameters, Context context) {
+        return context.http(http -> http.get("/exchange_rate"))
+            .queryParameters(
+                FROM_CURRENCY, inputParameters.getRequiredString(FROM_CURRENCY),
+                TO_CURRENCY, inputParameters.getRequiredString(TO_CURRENCY),
+                FROM_VALUE, inputParameters.getRequiredDouble(FROM_VALUE))
             .configuration(responseType(ResponseType.JSON))
             .execute()
             .getBody(new TypeReference<>() {});

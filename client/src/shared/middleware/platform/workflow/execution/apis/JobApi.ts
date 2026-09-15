@@ -12,31 +12,22 @@
  * Do not edit the class manually.
  */
 
-
 import * as runtime from '../runtime';
-import type {
-  CreateJob200ResponseModel,
-  JobModel,
-  JobParametersModel,
-  PageModel,
-  TriggerExecutionModel,
-} from '../models/index';
 import {
-    CreateJob200ResponseModelFromJSON,
-    CreateJob200ResponseModelToJSON,
-    JobModelFromJSON,
-    JobModelToJSON,
-    JobParametersModelFromJSON,
-    JobParametersModelToJSON,
-    PageModelFromJSON,
-    PageModelToJSON,
-    TriggerExecutionModelFromJSON,
-    TriggerExecutionModelToJSON,
-} from '../models/index';
-
-export interface CreateJobRequest {
-    jobParametersModel: JobParametersModel;
-}
+    type Job,
+    JobFromJSON,
+    JobToJSON,
+} from '../models/Job';
+import {
+    type Page,
+    PageFromJSON,
+    PageToJSON,
+} from '../models/Page';
+import {
+    type TriggerExecution,
+    TriggerExecutionFromJSON,
+    TriggerExecutionToJSON,
+} from '../models/TriggerExecution';
 
 export interface GetJobRequest {
     id: number;
@@ -60,48 +51,9 @@ export interface StopJobRequest {
 export class JobApi extends runtime.BaseAPI {
 
     /**
-     * Create a request for running a new job.
-     * Create a request for running a new job
+     * Creates request options for getJob without sending the request
      */
-    async createJobRaw(requestParameters: CreateJobRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<CreateJob200ResponseModel>> {
-        if (requestParameters['jobParametersModel'] == null) {
-            throw new runtime.RequiredError(
-                'jobParametersModel',
-                'Required parameter "jobParametersModel" was null or undefined when calling createJob().'
-            );
-        }
-
-        const queryParameters: any = {};
-
-        const headerParameters: runtime.HTTPHeaders = {};
-
-        headerParameters['Content-Type'] = 'application/json';
-
-        const response = await this.request({
-            path: `/jobs`,
-            method: 'POST',
-            headers: headerParameters,
-            query: queryParameters,
-            body: JobParametersModelToJSON(requestParameters['jobParametersModel']),
-        }, initOverrides);
-
-        return new runtime.JSONApiResponse(response, (jsonValue) => CreateJob200ResponseModelFromJSON(jsonValue));
-    }
-
-    /**
-     * Create a request for running a new job.
-     * Create a request for running a new job
-     */
-    async createJob(requestParameters: CreateJobRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<CreateJob200ResponseModel> {
-        const response = await this.createJobRaw(requestParameters, initOverrides);
-        return await response.value();
-    }
-
-    /**
-     * Get a job by id.
-     * Get a job by id
-     */
-    async getJobRaw(requestParameters: GetJobRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<JobModel>> {
+    async getJobRequestOpts(requestParameters: GetJobRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['id'] == null) {
             throw new runtime.RequiredError(
                 'id',
@@ -113,30 +65,42 @@ export class JobApi extends runtime.BaseAPI {
 
         const headerParameters: runtime.HTTPHeaders = {};
 
-        const response = await this.request({
-            path: `/jobs/{id}`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))),
+
+        let urlPath = `/jobs/{id}`;
+        urlPath = urlPath.replace('{id}', encodeURIComponent(String(requestParameters['id'])));
+
+        return {
+            path: urlPath,
             method: 'GET',
             headers: headerParameters,
             query: queryParameters,
-        }, initOverrides);
-
-        return new runtime.JSONApiResponse(response, (jsonValue) => JobModelFromJSON(jsonValue));
+        };
     }
 
     /**
      * Get a job by id.
      * Get a job by id
      */
-    async getJob(requestParameters: GetJobRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<JobModel> {
+    async getJobRaw(requestParameters: GetJobRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Job>> {
+        const requestOptions = await this.getJobRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => JobFromJSON(jsonValue));
+    }
+
+    /**
+     * Get a job by id.
+     * Get a job by id
+     */
+    async getJob(requestParameters: GetJobRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Job> {
         const response = await this.getJobRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
     /**
-     * Get a page of jobs.
-     * Get a page of jobs
+     * Creates request options for getJobsPage without sending the request
      */
-    async getJobsPageRaw(requestParameters: GetJobsPageRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<PageModel>> {
+    async getJobsPageRequestOpts(requestParameters: GetJobsPageRequest): Promise<runtime.RequestOpts> {
         const queryParameters: any = {};
 
         if (requestParameters['pageNumber'] != null) {
@@ -145,86 +109,119 @@ export class JobApi extends runtime.BaseAPI {
 
         const headerParameters: runtime.HTTPHeaders = {};
 
-        const response = await this.request({
-            path: `/jobs`,
+
+        let urlPath = `/jobs`;
+
+        return {
+            path: urlPath,
             method: 'GET',
             headers: headerParameters,
             query: queryParameters,
-        }, initOverrides);
-
-        return new runtime.JSONApiResponse(response, (jsonValue) => PageModelFromJSON(jsonValue));
+        };
     }
 
     /**
      * Get a page of jobs.
      * Get a page of jobs
      */
-    async getJobsPage(requestParameters: GetJobsPageRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<PageModel> {
+    async getJobsPageRaw(requestParameters: GetJobsPageRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Page>> {
+        const requestOptions = await this.getJobsPageRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => PageFromJSON(jsonValue));
+    }
+
+    /**
+     * Get a page of jobs.
+     * Get a page of jobs
+     */
+    async getJobsPage(requestParameters: GetJobsPageRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Page> {
         const response = await this.getJobsPageRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
     /**
-     * Get the latest job.
-     * Get the latest job
+     * Creates request options for getLatestJob without sending the request
      */
-    async getLatestJobRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<JobModel>> {
+    async getLatestJobRequestOpts(): Promise<runtime.RequestOpts> {
         const queryParameters: any = {};
 
         const headerParameters: runtime.HTTPHeaders = {};
 
-        const response = await this.request({
-            path: `/jobs/latest`,
+
+        let urlPath = `/jobs/latest`;
+
+        return {
+            path: urlPath,
             method: 'GET',
             headers: headerParameters,
             query: queryParameters,
-        }, initOverrides);
-
-        return new runtime.JSONApiResponse(response, (jsonValue) => JobModelFromJSON(jsonValue));
+        };
     }
 
     /**
      * Get the latest job.
      * Get the latest job
      */
-    async getLatestJob(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<JobModel> {
+    async getLatestJobRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Job>> {
+        const requestOptions = await this.getLatestJobRequestOpts();
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => JobFromJSON(jsonValue));
+    }
+
+    /**
+     * Get the latest job.
+     * Get the latest job
+     */
+    async getLatestJob(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Job> {
         const response = await this.getLatestJobRaw(initOverrides);
         return await response.value();
     }
 
     /**
-     * Get the latest trigger execution.
-     * Get the latest trigger execution
+     * Creates request options for getLatestTriggerExecution without sending the request
      */
-    async getLatestTriggerExecutionRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<TriggerExecutionModel>> {
+    async getLatestTriggerExecutionRequestOpts(): Promise<runtime.RequestOpts> {
         const queryParameters: any = {};
 
         const headerParameters: runtime.HTTPHeaders = {};
 
-        const response = await this.request({
-            path: `/trigger-executions/latest`,
+
+        let urlPath = `/trigger-executions/latest`;
+
+        return {
+            path: urlPath,
             method: 'GET',
             headers: headerParameters,
             query: queryParameters,
-        }, initOverrides);
-
-        return new runtime.JSONApiResponse(response, (jsonValue) => TriggerExecutionModelFromJSON(jsonValue));
+        };
     }
 
     /**
      * Get the latest trigger execution.
      * Get the latest trigger execution
      */
-    async getLatestTriggerExecution(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<TriggerExecutionModel> {
+    async getLatestTriggerExecutionRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<TriggerExecution>> {
+        const requestOptions = await this.getLatestTriggerExecutionRequestOpts();
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => TriggerExecutionFromJSON(jsonValue));
+    }
+
+    /**
+     * Get the latest trigger execution.
+     * Get the latest trigger execution
+     */
+    async getLatestTriggerExecution(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<TriggerExecution> {
         const response = await this.getLatestTriggerExecutionRaw(initOverrides);
         return await response.value();
     }
 
     /**
-     * Restart a job.
-     * Restart a job
+     * Creates request options for restartJob without sending the request
      */
-    async restartJobRaw(requestParameters: RestartJobRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+    async restartJobRequestOpts(requestParameters: RestartJobRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['id'] == null) {
             throw new runtime.RequiredError(
                 'id',
@@ -236,12 +233,25 @@ export class JobApi extends runtime.BaseAPI {
 
         const headerParameters: runtime.HTTPHeaders = {};
 
-        const response = await this.request({
-            path: `/jobs/{id}/restart`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))),
+
+        let urlPath = `/jobs/{id}/restart`;
+        urlPath = urlPath.replace('{id}', encodeURIComponent(String(requestParameters['id'])));
+
+        return {
+            path: urlPath,
             method: 'PUT',
             headers: headerParameters,
             query: queryParameters,
-        }, initOverrides);
+        };
+    }
+
+    /**
+     * Restart a job.
+     * Restart a job
+     */
+    async restartJobRaw(requestParameters: RestartJobRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        const requestOptions = await this.restartJobRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
 
         return new runtime.VoidApiResponse(response);
     }
@@ -255,10 +265,9 @@ export class JobApi extends runtime.BaseAPI {
     }
 
     /**
-     * Stop a job.
-     * Stop a job
+     * Creates request options for stopJob without sending the request
      */
-    async stopJobRaw(requestParameters: StopJobRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+    async stopJobRequestOpts(requestParameters: StopJobRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['id'] == null) {
             throw new runtime.RequiredError(
                 'id',
@@ -270,12 +279,25 @@ export class JobApi extends runtime.BaseAPI {
 
         const headerParameters: runtime.HTTPHeaders = {};
 
-        const response = await this.request({
-            path: `/jobs/{id}/stop`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))),
+
+        let urlPath = `/jobs/{id}/stop`;
+        urlPath = urlPath.replace('{id}', encodeURIComponent(String(requestParameters['id'])));
+
+        return {
+            path: urlPath,
             method: 'PUT',
             headers: headerParameters,
             query: queryParameters,
-        }, initOverrides);
+        };
+    }
+
+    /**
+     * Stop a job.
+     * Stop a job
+     */
+    async stopJobRaw(requestParameters: StopJobRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        const requestOptions = await this.stopJobRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
 
         return new runtime.VoidApiResponse(response);
     }

@@ -1,0 +1,119 @@
+import LoadingDots from '@/components/LoadingDots';
+import {Skeleton} from '@/components/ui/skeleton';
+import {twMerge} from 'tailwind-merge';
+
+export const WorkflowRightSidebarSkeleton = ({itemCount = 4}: {itemCount?: number}) => (
+    <div className="absolute right-0 m-2 flex flex-col items-center gap-1 rounded-md border border-stroke-neutral-secondary bg-background p-1">
+        {Array.from({length: itemCount}).map((_, index) => (
+            <Skeleton className="size-9" key={index} />
+        ))}
+    </div>
+);
+
+export const FieldsetSkeleton = ({bottomBorder = false, label}: {bottomBorder?: boolean; label: string}) => (
+    <div className={twMerge('flex flex-col', bottomBorder && 'border-b border-muted p-4')}>
+        <span className="text-sm leading-6 font-medium">{label}</span>
+
+        <Skeleton className="h-9 w-full" />
+    </div>
+);
+
+export const PropertySkeleton = () => <Skeleton className="h-9 w-full" />;
+
+export const PropertyDynamicPropertiesSkeleton = () => (
+    <ul className="flex flex-col gap-4">
+        {Array.from({length: 3}).map((_, index) => (
+            <li className="flex flex-col space-y-1" key={index}>
+                <Skeleton className="h-5 w-1/4" />
+
+                <Skeleton className="h-9 w-full" />
+            </li>
+        ))}
+    </ul>
+);
+
+export const DescriptionTabSkeleton = () => (
+    <div className="flex flex-col gap-y-4 p-4">
+        <div className="flex flex-col gap-y-2">
+            <Skeleton className="h-6 w-1/4" />
+
+            <Skeleton className="h-8 w-full" />
+        </div>
+
+        <div className="flex flex-col gap-y-2">
+            <Skeleton className="h-6 w-1/4" />
+
+            <Skeleton className="h-24 w-full" />
+        </div>
+    </div>
+);
+
+const DATA_PILL_PANEL_SKELETON_BASE_CLASSES =
+    'z-10 w-screen max-w-data-pill-panel-width overflow-hidden border border-stroke-neutral-secondary bg-background';
+const DATA_PILL_PANEL_SKELETON_DEFAULT_PLACEMENT = 'absolute bottom-6 right-data-pill-panel-placement top-2 rounded-md';
+
+export const DataPillPanelSkeleton = ({
+    className = DATA_PILL_PANEL_SKELETON_DEFAULT_PLACEMENT,
+}: {
+    className?: string;
+}) => (
+    <div className={twMerge(DATA_PILL_PANEL_SKELETON_BASE_CLASSES, className)}>
+        <ul className="flex flex-col">
+            {Array.from({length: 12}).map((_, index) => (
+                <li className="flex items-center space-x-4 border-b border-border/50 p-4" key={index}>
+                    <Skeleton className="size-6" />
+
+                    <Skeleton className="h-6 w-2/3" />
+
+                    <Skeleton className="h-6 w-1/5" />
+                </li>
+            ))}
+        </ul>
+    </div>
+);
+
+export const PropertiesTabSkeleton = () => (
+    <div className="flex flex-col gap-4 p-4">
+        {Array.from({length: 4}).map((_, index) => (
+            <PropertySkeleton key={index} />
+        ))}
+    </div>
+);
+
+export const WorkflowSheetSkeleton = ({title}: {title: string}) => (
+    <div className="flex size-full flex-col">
+        <header className="flex w-full items-center justify-between">
+            <h2 className="text-lg font-semibold text-foreground">{title}</h2>
+
+            <Skeleton className="size-9" />
+        </header>
+
+        <div className="flex size-full flex-col items-center justify-center p-4">
+            <LoadingDots />
+        </div>
+    </div>
+);
+
+export const WorkflowNodesSidebarSkeleton = () => (
+    <aside className="absolute inset-y-2 right-14 flex w-96 flex-col gap-2 overflow-hidden rounded-md border border-stroke-neutral-secondary bg-surface-neutral-secondary p-4">
+        <Skeleton className="h-9 w-full" />
+
+        <div className="flex space-x-2">
+            {Array.from({length: 3}).map((_, index) => (
+                <Skeleton className="h-7 w-1/3" key={index} />
+            ))}
+        </div>
+
+        <div className="flex justify-between">
+            <Skeleton className="h-9 w-1/6" />
+
+            <Skeleton className="size-9" />
+        </div>
+
+        <div className="flex flex-col space-y-2">
+            {Array.from({length: 12}).map((_, index) => (
+                <Skeleton className="h-12 w-full" key={index} />
+            ))}
+        </div>
+    </aside>
+);

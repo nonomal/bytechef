@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * Modifications copyright (C) 2023 ByteChef Inc.
+ * Modifications copyright (C) 2025 ByteChef
  */
 
 package com.bytechef.message.broker.kafka;
@@ -23,25 +23,25 @@ import com.bytechef.message.broker.MessageBroker;
 import com.bytechef.message.route.MessageRoute;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.concurrent.TimeUnit;
-import org.apache.commons.lang3.Validate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.KafkaHeaders;
 import org.springframework.messaging.support.MessageBuilder;
+import org.springframework.util.Assert;
 
 /**
  * @author Arik Cohen
  */
 public class KafkaMessageBroker implements MessageBroker {
 
-    private static final Logger logger = LoggerFactory.getLogger(KafkaMessageBroker.class);
+    private static final Logger log = LoggerFactory.getLogger(KafkaMessageBroker.class);
 
-    private KafkaTemplate<Integer, Object> kafkaTemplate;
+    private KafkaTemplate<String, Object> kafkaTemplate;
 
     @Override
     public void send(MessageRoute messageRoute, Object message) {
-        Validate.notNull(messageRoute, "'queueName' key must not be null");
+        Assert.notNull(messageRoute, "'queueName' key must not be null");
 
         if (message instanceof Retryable retryable) {
             delay(retryable.getRetryDelayMillis());
@@ -59,14 +59,14 @@ public class KafkaMessageBroker implements MessageBroker {
         try {
             TimeUnit.MILLISECONDS.sleep(aValue);
         } catch (InterruptedException e) {
-            if (logger.isTraceEnabled()) {
-                logger.trace(e.getMessage(), e);
+            if (log.isTraceEnabled()) {
+                log.trace(e.getMessage(), e);
             }
         }
     }
 
     @SuppressFBWarnings("EI")
-    public void setKafkaTemplate(KafkaTemplate<Integer, Object> kafkaTemplate) {
+    public void setKafkaTemplate(KafkaTemplate<String, Object> kafkaTemplate) {
         this.kafkaTemplate = kafkaTemplate;
     }
 }

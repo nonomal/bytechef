@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,24 +18,29 @@ package com.bytechef.google.commons;
 
 import static com.bytechef.component.definition.Authorization.CLIENT_ID;
 import static com.bytechef.component.definition.Authorization.CLIENT_SECRET;
-import static com.bytechef.component.definition.ComponentDSL.authorization;
-import static com.bytechef.component.definition.ComponentDSL.connection;
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.definition.ComponentDsl.authorization;
+import static com.bytechef.component.definition.ComponentDsl.connection;
+import static com.bytechef.component.definition.ComponentDsl.string;
 
-import com.bytechef.component.definition.Authorization;
 import com.bytechef.component.definition.Authorization.AuthorizationType;
-import com.bytechef.component.definition.ComponentDSL.ModifiableConnectionDefinition;
+import com.bytechef.component.definition.Authorization.ScopesFunction;
+import com.bytechef.component.definition.ComponentDsl.ModifiableConnectionDefinition;
 import com.google.api.client.googleapis.auth.oauth2.GoogleOAuthConstants;
+import java.util.Map;
 
 /**
  * @author Ivica Cardic
  */
 public class GoogleConnection {
 
-    public static ModifiableConnectionDefinition createConnection(Authorization.ScopesFunction scopes) {
+    public static ModifiableConnectionDefinition createConnection(
+        String baseUri, int version, String helpLink, ScopesFunction scopes) {
+
         return connection()
-            .authorizations(authorization(
-                AuthorizationType.OAUTH2_AUTHORIZATION_CODE)
+            .baseUri((connectionParameters, context) -> baseUri)
+            .help("", helpLink)
+            .authorizations(
+                authorization(AuthorizationType.OAUTH2_AUTHORIZATION_CODE)
                     .title("OAuth2 Authorization Code")
                     .properties(
                         string(CLIENT_ID)
@@ -44,10 +49,13 @@ public class GoogleConnection {
                         string(CLIENT_SECRET)
                             .label("Client Secret")
                             .required(true))
-                    .authorizationUrl((connection, context) -> " https://accounts.google.com/o/oauth2/v2/auth")
+                    .authorizationUrl((connection, context) -> GoogleOAuthConstants.AUTHORIZATION_SERVER_URL)
+                    .oAuth2AuthorizationExtraQueryParameters(
+                        Map.of("access_type", "offline", "prompt", "select_account consent"))
                     .refreshUrl((connectionParameters, context) -> GoogleOAuthConstants.TOKEN_SERVER_URL)
-                    .refreshOn("^.*(4\\d\\d)(\\s(Unauthorized)?.*)?$")
+                    .refreshOn(401, "^.*(4\\d\\d)(\\s(Unauthorized)?.*)?$")
                     .scopes(scopes)
-                    .tokenUrl((connection, context) -> GoogleOAuthConstants.TOKEN_SERVER_URL));
+                    .tokenUrl((connection, context) -> GoogleOAuthConstants.TOKEN_SERVER_URL))
+            .version(version);
     }
 }

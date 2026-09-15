@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the ByteChef Enterprise license (the "Enterprise License");
  * you may not use this file except in compliance with the Enterprise License.
@@ -12,6 +12,7 @@ import com.bytechef.atlas.execution.service.TaskExecutionService;
 import com.bytechef.ee.remote.client.LoadBalancedRestClient;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Component;
 
@@ -54,6 +55,11 @@ public class RemoteTaskExecutionServiceClient implements TaskExecutionService {
     }
 
     @Override
+    public Optional<TaskExecution> fetchLastJobTaskExecution(long jobId) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
     public List<TaskExecution> getJobTaskExecutions(long jobId) {
         return loadBalancedRestClient.get(
             uriBuilder -> uriBuilder
@@ -79,6 +85,16 @@ public class RemoteTaskExecutionServiceClient implements TaskExecutionService {
             uriBuilder -> uriBuilder
                 .host(EXECUTION_APP)
                 .path(TASK_EXECUTION_SERVICE + "/get-task-execution/{id}")
+                .build(id),
+            TaskExecution.class);
+    }
+
+    @Override
+    public TaskExecution getTaskExecutionForUpdate(long id) {
+        return loadBalancedRestClient.get(
+            uriBuilder -> uriBuilder
+                .host(EXECUTION_APP)
+                .path(TASK_EXECUTION_SERVICE + "/get-task-execution-for-update/{id}")
                 .build(id),
             TaskExecution.class);
     }

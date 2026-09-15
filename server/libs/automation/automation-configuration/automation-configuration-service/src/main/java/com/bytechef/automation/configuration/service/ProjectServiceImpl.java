@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,15 +19,22 @@ package com.bytechef.automation.configuration.service;
 import com.bytechef.automation.configuration.domain.Project;
 import com.bytechef.automation.configuration.domain.ProjectVersion;
 import com.bytechef.automation.configuration.domain.ProjectVersion.Status;
+import com.bytechef.automation.configuration.listener.ProjectGitSyncEventListener;
 import com.bytechef.automation.configuration.repository.ProjectRepository;
 import com.bytechef.commons.util.CollectionUtils;
 import com.bytechef.commons.util.OptionalUtils;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
-import org.apache.commons.lang3.Validate;
+import java.util.UUID;
+import org.jspecify.annotations.Nullable;
+import org.springframework.context.ApplicationContext;
 import org.springframework.data.domain.Sort;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.Assert;
 
 /**
  * @author Ivica Cardic
@@ -36,21 +43,13 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 public class ProjectServiceImpl implements ProjectService {
 
+    private final ApplicationContext applicationContext;
     private final ProjectRepository projectRepository;
 
-    public ProjectServiceImpl(ProjectRepository projectRepository) {
+    @SuppressFBWarnings("EI")
+    public ProjectServiceImpl(ApplicationContext applicationContext, ProjectRepository projectRepository) {
+        this.applicationContext = applicationContext;
         this.projectRepository = projectRepository;
-    }
-
-    @Override
-    public int addVersion(long id) {
-        Project project = getProject(id);
-
-        int newVersion = project.addVersion();
-
-        projectRepository.save(project);
-
-        return newVersion;
     }
 
     @Override
@@ -60,14 +59,15 @@ public class ProjectServiceImpl implements ProjectService {
 
     @Override
     public Project create(Project project) {
-        Validate.notNull(project, "'project' must not be null");
-        Validate.isTrue(project.getId() == null, "'id' must be null");
-        Validate.notNull(project.getName(), "'name' must not be null");
+        Assert.notNull(project, "'project' must not be null");
+        Assert.isTrue(project.getId() == null, "'id' must be null");
+        Assert.notNull(project.getName(), "'name' must not be null");
 
         return projectRepository.save(project);
     }
 
     @Override
+    @PreAuthorize("hasPermission(#id, 'Project', 'PROJECT_DELETE')")
     public void delete(long id) {
         projectRepository.deleteById(id);
     }
@@ -80,20 +80,27 @@ public class ProjectServiceImpl implements ProjectService {
 
     @Override
     @Transactional(readOnly = true)
-    public Optional<Project> fetchWorkflowProject(String workflowId) {
-        return projectRepository.findByWorkflowId(workflowId);
+    public Optional<Project> fetchProject(String name, long workspaceId) {
+        return projectRepository.findByNameIgnoreCaseAndWorkspaceId(name, workspaceId);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public Project getProjectInstanceProject(long projectInstanceId) {
-        return projectRepository.findByProjectInstanceId(projectInstanceId);
+    public Project getProjectDeploymentProject(long projectDeploymentId) {
+        return OptionalUtils.get(projectRepository.findByProjectDeploymentId(projectDeploymentId));
     }
 
     @Override
     @Transactional(readOnly = true)
     public Project getProject(long id) {
         return OptionalUtils.get(projectRepository.findById(id));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Project getProject(UUID uuid) {
+        return projectRepository.findByUuid(uuid)
+            .orElseThrow(() -> new IllegalArgumentException("Project not found"));
     }
 
     @Override
@@ -120,9 +127,14 @@ public class ProjectServiceImpl implements ProjectService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<Project> getProjects(Long workspaceId, Long categoryId, List<Long> ids, Long tagId, Status status) {
-        return projectRepository.findAllProjects(
-            workspaceId, categoryId, ids, tagId, status == null ? null : status.ordinal());
+    public List<Project> getProjects(
+        Boolean apiCollections, Long categoryId, Boolean projectDeployments, Long tagId,
+        Status status, Long workspaceId) {
+
+        return projectRepository
+            .findAllProjects(
+                apiCollections, categoryId, projectDeployments, tagId, status == null ? null : status.ordinal(),
+                workspaceId);
     }
 
     @Override
@@ -132,15 +144,38 @@ public class ProjectServiceImpl implements ProjectService {
     }
 
     @Override
-    public Project publishProject(long id, String description) {
-        Project project = getProject(id);
-
-        project.publish(description);
-
-        return projectRepository.save(project);
+    public List<Long> getWorkspaceProjectIds(long workspaceId) {
+        return projectRepository.findProjectIdsByWorkspaceId(workspaceId);
     }
 
     @Override
+    @PreAuthorize("hasPermission(#id, 'Project', 'DEPLOYMENT_PUSH')")
+    public int publishProject(long id, String description, boolean syncWithGit) {
+        Project project = getProject(id);
+
+        int newVersion = project.publish(description);
+
+        if (syncWithGit) {
+            Map<String, ProjectGitSyncEventListener> beansOfType = applicationContext.getBeansOfType(
+                ProjectGitSyncEventListener.class);
+
+            if (!beansOfType.isEmpty()) {
+                ProjectGitSyncEventListener projectGitSyncEventListener = beansOfType.values()
+                    .stream()
+                    .findFirst()
+                    .get();
+
+                projectGitSyncEventListener.onBeforePublishProject(project);
+            }
+        }
+
+        projectRepository.save(project);
+
+        return newVersion;
+    }
+
+    @Override
+    @PreAuthorize("hasPermission(#id, 'Project', 'WORKFLOW_EDIT')")
     public Project update(long id, List<Long> tagIds) {
         Project project = getProject(id);
 
@@ -150,17 +185,29 @@ public class ProjectServiceImpl implements ProjectService {
     }
 
     @Override
+    @PreAuthorize("hasPermission(#project.id, 'Project', 'WORKFLOW_EDIT')")
     public Project update(Project project) {
-        Validate.notNull(project, "'project' must not be null");
+        Assert.notNull(project, "'project' must not be null");
+        Assert.notNull(project.getId(), "id");
+        Assert.notNull(project.getName(), "name");
 
-        Project curProject = getProject(Validate.notNull(project.getId(), "id"));
+        Project curProject = getProject(project.getId());
 
         curProject.setCategoryId(project.getCategoryId());
         curProject.setDescription(project.getDescription());
-        curProject.setName(Validate.notNull(project.getName(), "name"));
+        curProject.setName(project.getName());
         curProject.setTagIds(project.getTagIds());
         curProject.setVersion(project.getVersion());
 
         return projectRepository.save(curProject);
+    }
+
+    @Override
+    public Project updatePermissionExpression(long id, @Nullable String permissionExpression) {
+        Project project = getProject(id);
+
+        project.setPermissionExpression(permissionExpression);
+
+        return projectRepository.save(project);
     }
 }

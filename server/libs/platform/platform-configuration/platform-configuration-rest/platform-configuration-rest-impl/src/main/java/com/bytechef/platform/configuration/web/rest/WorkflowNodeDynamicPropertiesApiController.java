@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 
 package com.bytechef.platform.configuration.web.rest;
 
+import com.bytechef.atlas.coordinator.annotation.ConditionalOnCoordinator;
 import com.bytechef.commons.util.CollectionUtils;
 import com.bytechef.platform.configuration.facade.WorkflowNodeDynamicPropertiesFacade;
 import com.bytechef.platform.configuration.web.rest.model.PropertyModel;
@@ -30,6 +31,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @RestController
 @RequestMapping("${openapi.openAPIDefinition.base-path.platform:}/internal")
+@ConditionalOnCoordinator
 public class WorkflowNodeDynamicPropertiesApiController implements WorkflowNodeDynamicPropertiesApi {
 
     private final ConversionService conversionService;
@@ -43,14 +45,28 @@ public class WorkflowNodeDynamicPropertiesApiController implements WorkflowNodeD
     }
 
     @Override
+    public ResponseEntity<List<PropertyModel>> getClusterElementNodeDynamicProperties(
+        String workflowId, String workflowNodeName, String clusterElementType, String clusterElementWorkflowNodeName,
+        String propertyName, Long environmentId, List<String> lookupDependsOnPaths) {
+
+        return ResponseEntity.ok(
+            CollectionUtils.map(
+                workflowNodeDynamicPropertiesFacade.getClusterElementDynamicProperties(
+                    workflowId, workflowNodeName, clusterElementType, clusterElementWorkflowNodeName, propertyName,
+                    lookupDependsOnPaths == null ? List.of() : lookupDependsOnPaths, environmentId),
+                property -> conversionService.convert(property, PropertyModel.class)));
+    }
+
+    @Override
     public ResponseEntity<List<PropertyModel>> getWorkflowNodeDynamicProperties(
-        String workflowId, String workflowNodeName, String propertyName, List<String> lookupDependsOnPaths) {
+        String workflowId, String workflowNodeName, String propertyName, Long environmentId,
+        List<String> lookupDependsOnPaths) {
 
         return ResponseEntity.ok(
             CollectionUtils.map(
                 workflowNodeDynamicPropertiesFacade.getWorkflowNodeDynamicProperties(
                     workflowId, workflowNodeName, propertyName,
-                    lookupDependsOnPaths == null ? List.of() : lookupDependsOnPaths),
+                    lookupDependsOnPaths == null ? List.of() : lookupDependsOnPaths, environmentId),
                 property -> conversionService.convert(property, PropertyModel.class)));
     }
 }

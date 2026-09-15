@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,15 +33,17 @@ import com.bytechef.atlas.execution.service.ContextService;
 import com.bytechef.atlas.execution.service.TaskExecutionService;
 import com.bytechef.atlas.file.storage.TaskFileStorage;
 import com.bytechef.commons.util.MapUtils;
+import com.bytechef.evaluator.Evaluator;
 import com.bytechef.file.storage.domain.FileEntry;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import org.apache.commons.lang3.Validate;
-import org.springframework.lang.NonNull;
+import tools.jackson.core.type.TypeReference;
 
 /**
  * @author Ivica Cardic
@@ -50,6 +52,7 @@ import org.springframework.lang.NonNull;
 public class LoopTaskCompletionHandler implements TaskCompletionHandler {
 
     private final ContextService contextService;
+    private final Evaluator evaluator;
     private final TaskDispatcher<? super Task> taskDispatcher;
     private final TaskExecutionService taskExecutionService;
     private final TaskCompletionHandler taskCompletionHandler;
@@ -57,11 +60,12 @@ public class LoopTaskCompletionHandler implements TaskCompletionHandler {
 
     @SuppressFBWarnings("EI")
     public LoopTaskCompletionHandler(
-        ContextService contextService, TaskCompletionHandler taskCompletionHandler,
+        ContextService contextService, Evaluator evaluator, TaskCompletionHandler taskCompletionHandler,
         TaskDispatcher<? super Task> taskDispatcher, TaskExecutionService taskExecutionService,
         TaskFileStorage taskFileStorage) {
 
         this.contextService = contextService;
+        this.evaluator = evaluator;
         this.taskCompletionHandler = taskCompletionHandler;
         this.taskDispatcher = taskDispatcher;
         this.taskExecutionService = taskExecutionService;
@@ -92,8 +96,12 @@ public class LoopTaskCompletionHandler implements TaskCompletionHandler {
 
         taskExecution = taskExecutionService.update(taskExecution);
 
-        List<WorkflowTask> iterateeWorkflowTasks = MapUtils.getRequiredList(
-            loopTaskExecution.getParameters(), ITERATEE, WorkflowTask.class);
+        List<WorkflowTask> iterateeWorkflowTasks = MapUtils
+            .getList(
+                loopTaskExecution.getParameters(), ITERATEE, new TypeReference<Map<String, ?>>() {}, List.of())
+            .stream()
+            .map(WorkflowTask::new)
+            .toList();
 
         Map<String, Object> parentContextValue = updateParentContextValue(taskExecution, loopTaskExecution);
 
@@ -126,22 +134,26 @@ public class LoopTaskCompletionHandler implements TaskCompletionHandler {
         if (loopForever || index < items.size()) {
             handleNewIterationFirstChildTaskExecution(loopTaskExecution, iterateeWorkflowTasks, items, index);
         } else {
-            loopTaskExecution.setEndDate(LocalDateTime.now());
+            loopTaskExecution.setEndDate(Instant.now());
+
+            loopTaskExecution = taskExecutionService.update(loopTaskExecution);
 
             taskCompletionHandler.handle(loopTaskExecution);
         }
     }
 
     private void handleNewIterationFirstChildTaskExecution(
-        @NonNull TaskExecution parentTaskExecution, List<WorkflowTask> iterateeWorkflowTasks, List<?> items,
-        Integer index) {
+        TaskExecution parentTaskExecution, List<WorkflowTask> iterateeWorkflowTasks, List<?> items, Integer index) {
+
+        WorkflowTask iterateeWorkflowTask = iterateeWorkflowTasks.getFirst();
 
         TaskExecution firstChildTaskExecution = TaskExecution.builder()
             .jobId(parentTaskExecution.getJobId())
+            .maxRetries(iterateeWorkflowTask.getMaxRetries())
             .parentId(parentTaskExecution.getId())
             .priority(parentTaskExecution.getPriority())
             .taskNumber(0)
-            .workflowTask(iterateeWorkflowTasks.getFirst())
+            .workflowTask(iterateeWorkflowTask)
             .build();
 
         FileEntry contextValueFileEntry = contextService.peek(
@@ -162,7 +174,8 @@ public class LoopTaskCompletionHandler implements TaskCompletionHandler {
 
         firstChildContextValue.put(parentWorkflowTask.getName(), workflowTaskNameMap);
 
-        firstChildTaskExecution = taskExecutionService.create(firstChildTaskExecution.evaluate(firstChildContextValue));
+        firstChildTaskExecution = taskExecutionService.create(
+            firstChildTaskExecution.evaluate(firstChildContextValue, evaluator));
 
         contextService.push(
             Validate.notNull(firstChildTaskExecution.getId(), "id"), Classname.TASK_EXECUTION,
@@ -179,6 +192,7 @@ public class LoopTaskCompletionHandler implements TaskCompletionHandler {
 
         TaskExecution nextChildTaskExecution = TaskExecution.builder()
             .jobId(parentTaskExecution.getJobId())
+            .maxRetries(nextIterateeWorkflowTask.getMaxRetries())
             .parentId(parentTaskExecution.getId())
             .priority(parentTaskExecution.getPriority())
             .taskNumber(nextTaskIndex)
@@ -196,7 +210,7 @@ public class LoopTaskCompletionHandler implements TaskCompletionHandler {
         }
 
         nextChildTaskExecution = taskExecutionService.create(
-            nextChildTaskExecution.evaluate(nextChildContextValue));
+            nextChildTaskExecution.evaluate(nextChildContextValue, evaluator));
 
         contextService.push(
             Validate.notNull(nextChildTaskExecution.getId(), "id"), Classname.TASK_EXECUTION,
@@ -207,23 +221,25 @@ public class LoopTaskCompletionHandler implements TaskCompletionHandler {
         taskDispatcher.dispatch(nextChildTaskExecution);
     }
 
-    private Map<String, Object>
-        updateParentContextValue(TaskExecution taskExecution, TaskExecution parentTaskExecution) {
-        Map<String, Object> contextValue = new HashMap<>(
-            taskFileStorage.readContextValue(
-                contextService.peek(
-                    Validate.notNull(parentTaskExecution.getId(), "id"), Classname.TASK_EXECUTION)));
+    private Map<String, Object> updateParentContextValue(
+        TaskExecution taskExecution, TaskExecution parentTaskExecution) {
 
-        if (taskExecution.getOutput() != null && taskExecution.getName() != null) {
-            contextValue.put(
-                taskExecution.getName(),
-                taskFileStorage.readTaskExecutionOutput(taskExecution.getOutput()));
+        long parentTaskExecutionId = Objects.requireNonNull(parentTaskExecution.getId());
+
+        Map<String, Object> contextValue = new HashMap<>(
+            taskFileStorage.readContextValue(contextService.peek(parentTaskExecutionId, Classname.TASK_EXECUTION)));
+
+        if (taskExecution.getName() != null) {
+            if (taskExecution.getOutput() != null) {
+                contextValue.put(
+                    taskExecution.getName(), taskFileStorage.readTaskExecutionOutput(taskExecution.getOutput()));
+            } else {
+                contextValue.put(taskExecution.getName(), null);
+            }
 
             contextService.push(
-                Validate.notNull(parentTaskExecution.getId(), "id"), Classname.TASK_EXECUTION,
-                taskFileStorage.storeContextValue(
-                    Validate.notNull(parentTaskExecution.getId(), "id"), Classname.TASK_EXECUTION,
-                    contextValue));
+                parentTaskExecutionId, Classname.TASK_EXECUTION,
+                taskFileStorage.storeContextValue(parentTaskExecutionId, Classname.TASK_EXECUTION, contextValue));
         }
 
         return contextValue;

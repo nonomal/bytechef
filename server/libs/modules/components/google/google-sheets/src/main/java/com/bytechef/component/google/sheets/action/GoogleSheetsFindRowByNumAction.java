@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,14 +16,8 @@
 
 package com.bytechef.component.google.sheets.action;
 
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.bool;
-import static com.bytechef.component.definition.ComponentDSL.integer;
-import static com.bytechef.component.definition.ComponentDSL.number;
-import static com.bytechef.component.definition.ComponentDSL.object;
-import static com.bytechef.component.definition.ComponentDSL.string;
-import static com.bytechef.component.google.sheets.constant.GoogleSheetsConstants.FIND_ROW_BY_NUM;
-import static com.bytechef.component.google.sheets.constant.GoogleSheetsConstants.INCLUDE_ITEMS_FROM_ALL_DRIVES_PROPERTY;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.integer;
 import static com.bytechef.component.google.sheets.constant.GoogleSheetsConstants.IS_THE_FIRST_ROW_HEADER_PROPERTY;
 import static com.bytechef.component.google.sheets.constant.GoogleSheetsConstants.ROW_NUMBER;
 import static com.bytechef.component.google.sheets.constant.GoogleSheetsConstants.SHEET_NAME;
@@ -33,8 +27,8 @@ import static com.bytechef.component.google.sheets.constant.GoogleSheetsConstant
 import static com.bytechef.component.google.sheets.util.GoogleSheetsRowUtils.getRowValues;
 import static com.bytechef.component.google.sheets.util.GoogleSheetsUtils.getMapOfValuesForRow;
 
-import com.bytechef.component.definition.ActionContext;
-import com.bytechef.component.definition.ComponentDSL.ModifiableActionDefinition;
+import com.bytechef.component.definition.ComponentDsl.ModifiableActionDefinition;
+import com.bytechef.component.definition.Context;
 import com.bytechef.component.definition.Parameters;
 import com.bytechef.google.commons.GoogleServices;
 import com.google.api.services.sheets.v4.Sheets;
@@ -42,32 +36,30 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * @author Monika Domiter
+ * @author Monika Kušter
  */
 public class GoogleSheetsFindRowByNumAction {
 
-    public static final ModifiableActionDefinition ACTION_DEFINITION = action(FIND_ROW_BY_NUM)
-        .title("Find row by number")
-        .description("Get a row in a Google Sheet by row number")
+    public static final ModifiableActionDefinition ACTION_DEFINITION = action("findRowByNum")
+        .title("Find Row by Number")
+        .description("Get a row in a Google Sheet by row number.")
         .properties(
             SPREADSHEET_ID_PROPERTY,
-            INCLUDE_ITEMS_FROM_ALL_DRIVES_PROPERTY,
             SHEET_NAME_PROPERTY,
             IS_THE_FIRST_ROW_HEADER_PROPERTY,
             integer(ROW_NUMBER)
-                .label("Row number")
+                .label("Row Number")
                 .required(true)
                 .description("The row number to get from the sheet."))
-        .outputSchema(
-            object()
-                .additionalProperties(bool(), number(), string()))
-        .perform(GoogleSheetsFindRowByNumAction::perform);
+        .output()
+        .perform(GoogleSheetsFindRowByNumAction::perform)
+        .help("", "https://docs.bytechef.io/reference/components/google-sheets_v1#find-row-by-number");
 
     private GoogleSheetsFindRowByNumAction() {
     }
 
     public static Map<String, Object> perform(
-        Parameters inputParameters, Parameters connectionParameters, ActionContext actionContext) throws Exception {
+        Parameters inputParameters, Parameters connectionParameters, Context context) {
 
         Sheets sheets = GoogleServices.getSheets(connectionParameters);
 
@@ -76,7 +68,5 @@ public class GoogleSheetsFindRowByNumAction {
             inputParameters.getRequiredInteger(ROW_NUMBER));
 
         return getMapOfValuesForRow(inputParameters, sheets, row);
-
     }
-
 }

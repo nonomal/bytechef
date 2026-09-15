@@ -36,3 +36,12 @@ yarn-error.log*
 .vercel
 
 *storybook.log
+
+# yalc
+yalc.lock
+.yalc
+
+# playwright
+/test-results/
+/playwright-report/
+/playwright/.cache/

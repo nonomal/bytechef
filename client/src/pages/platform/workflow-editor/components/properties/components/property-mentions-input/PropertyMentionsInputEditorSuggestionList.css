@@ -1,0 +1,43 @@
+@reference '../../../../../../../styles/index.css';
+
+.property-mentions-suggestion-menu {
+    @apply bg-background;
+    @apply border;
+    @apply rounded-md;
+    @apply shadow-md;
+    @apply flex;
+    @apply flex-col;
+    @apply overflow-auto;
+    @apply p-1;
+    @apply relative;
+    @apply text-sm;
+
+    /*
+     * Inside a Radix modal dialog (the cluster elements canvas), DismissableLayer sets
+     * document.body pointer-events to "none", and the tippy popup is portaled to the body.
+     * The popup cannot re-enable pointer events on its own root: tippy's handleStyles() resets
+     * popper.style.pointerEvents to "" on every setProps() call, and the suggestion's onUpdate
+     * calls setProps() on each keystroke to reposition the popup. Claiming pointer events here,
+     * on the menu itself, survives that reset because a child may always override an inherited
+     * "none". Without this the popup is inert: it neither scrolls nor accepts clicks.
+     */
+    @apply pointer-events-auto;
+
+    button {
+        @apply items-center;
+        @apply flex;
+        @apply p-1;
+        @apply rounded-md;
+        @apply text-left;
+        @apply w-full;
+
+        &:hover,
+        &:hover.is-selected {
+            @apply bg-muted;
+        }
+
+        &.is-selected {
+            @apply bg-muted;
+        }
+    }
+}

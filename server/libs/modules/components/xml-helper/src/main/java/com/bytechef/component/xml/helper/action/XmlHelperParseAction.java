@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,14 +16,12 @@
 
 package com.bytechef.component.xml.helper.action;
 
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.object;
-import static com.bytechef.component.definition.ComponentDSL.string;
-import static com.bytechef.component.xml.helper.constant.XmlHelperConstants.PARSE;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.string;
 import static com.bytechef.component.xml.helper.constant.XmlHelperConstants.SOURCE;
 
 import com.bytechef.component.definition.ActionContext;
-import com.bytechef.component.definition.ComponentDSL.ModifiableActionDefinition;
+import com.bytechef.component.definition.ComponentDsl.ModifiableActionDefinition;
 import com.bytechef.component.definition.Parameters;
 
 /**
@@ -31,15 +29,15 @@ import com.bytechef.component.definition.Parameters;
  */
 public class XmlHelperParseAction {
 
-    public static final ModifiableActionDefinition ACTION_DEFINITION = action(PARSE)
-        .title("Convert from XML string")
+    public static final ModifiableActionDefinition ACTION_DEFINITION = action("parse")
+        .title("Convert from XML String")
         .description("Converts the XML string to object/array.")
         .properties(
             string(SOURCE)
                 .label("Source")
                 .description("The XML string to convert to the data.")
                 .required(true))
-        .outputSchema(object())
+        .output()
         .perform(XmlHelperParseAction::perform);
 
     protected static Object perform(

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,15 +16,14 @@
 
 package com.bytechef.component.encharge.util;
 
-import static com.bytechef.component.definition.ComponentDSL.option;
+import static com.bytechef.component.definition.ComponentDsl.option;
 import static com.bytechef.component.encharge.constant.EnchargeConstants.EMAIL;
 
 import com.bytechef.component.definition.ActionContext;
-import com.bytechef.component.definition.Context.ContextFunction;
 import com.bytechef.component.definition.Context.Http;
-import com.bytechef.component.definition.Context.TypeReference;
 import com.bytechef.component.definition.Option;
 import com.bytechef.component.definition.Parameters;
+import com.bytechef.component.definition.TypeReference;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -37,14 +36,11 @@ public class EnchargeUtils {
     private EnchargeUtils() {
     }
 
-    protected static final ContextFunction<Http, Http.Executor> GET_PEOPLE_CONTEXT_FUNCTION =
-        http -> http.get("https://api.encharge.io/v1/people/all");
-
     public static List<Option<String>> getUserEmailOptions(
-        Parameters inputParameters, Parameters connectionParameters, Map<String, String> dependencyPaths,
+        Parameters inputParameters, Parameters connectionParameters, Map<String, String> lookupDependsOnPaths,
         String searchText, ActionContext context) {
 
-        Map<String, ?> body = context.http(GET_PEOPLE_CONTEXT_FUNCTION)
+        Map<String, ?> body = context.http(http -> http.get("/people/all"))
             .configuration(Http.responseType(Http.ResponseType.JSON))
             .execute()
             .getBody(new TypeReference<>() {});
@@ -56,7 +52,9 @@ public class EnchargeUtils {
                 if (item instanceof Map<?, ?> map) {
                     String email = (String) map.get(EMAIL);
 
-                    options.add(option(email, email));
+                    if (email != null && !email.isEmpty()) {
+                        options.add(option(email, email));
+                    }
                 }
             }
         }

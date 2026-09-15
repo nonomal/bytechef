@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,24 +17,25 @@
 package com.bytechef.component.mailchimp.trigger;
 
 import static com.bytechef.component.definition.Authorization.ACCESS_TOKEN;
-import static com.bytechef.component.definition.ComponentDSL.dateTime;
-import static com.bytechef.component.definition.ComponentDSL.object;
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.definition.ComponentDsl.dateTime;
+import static com.bytechef.component.definition.ComponentDsl.object;
+import static com.bytechef.component.definition.ComponentDsl.outputSchema;
+import static com.bytechef.component.definition.ComponentDsl.string;
+import static com.bytechef.component.definition.ComponentDsl.trigger;
 
-import com.bytechef.component.definition.ComponentDSL;
-import com.bytechef.component.definition.ComponentDSL.ModifiableTriggerDefinition;
+import com.bytechef.component.definition.ComponentDsl.ModifiableTriggerDefinition;
 import com.bytechef.component.definition.Context.Http;
 import com.bytechef.component.definition.Context.Http.Body;
-import com.bytechef.component.definition.Context.TypeReference;
-import com.bytechef.component.definition.OptionsDataSource;
 import com.bytechef.component.definition.Parameters;
 import com.bytechef.component.definition.TriggerContext;
-import com.bytechef.component.definition.TriggerDefinition.DynamicWebhookEnableOutput;
 import com.bytechef.component.definition.TriggerDefinition.HttpHeaders;
 import com.bytechef.component.definition.TriggerDefinition.HttpParameters;
+import com.bytechef.component.definition.TriggerDefinition.OptionsFunction;
 import com.bytechef.component.definition.TriggerDefinition.TriggerType;
 import com.bytechef.component.definition.TriggerDefinition.WebhookBody;
+import com.bytechef.component.definition.TriggerDefinition.WebhookEnableOutput;
 import com.bytechef.component.definition.TriggerDefinition.WebhookMethod;
+import com.bytechef.component.definition.TypeReference;
 import com.bytechef.component.mailchimp.util.MailchimpUtils;
 import java.util.List;
 import java.util.Map;
@@ -44,46 +45,52 @@ import java.util.Map;
  */
 public class MailchimpSubscribeTrigger {
 
-    private static final String LIST_ID = "listId";
-    private static final String SUBSCRIBE = "subscribe";
+    protected static final String LIST_ID = "listId";
+    protected static final String SUBSCRIBE = "subscribe";
 
-    public static final ModifiableTriggerDefinition TRIGGER_DEFINITION = ComponentDSL.trigger(SUBSCRIBE)
+    public static final ModifiableTriggerDefinition TRIGGER_DEFINITION = trigger(SUBSCRIBE)
         .title("Subscribe")
         .description("Triggers when an Audience subscriber is added to the list.")
+        .help("", "https://docs.bytechef.io/reference/components/mailchimp_v1#subscribe")
         .type(TriggerType.DYNAMIC_WEBHOOK)
         .properties(
             string(LIST_ID)
-                .options(
-                    (OptionsDataSource.TriggerOptionsFunction<String>) (
-                        inputParameters, connectionParameters, arrayIndex, searchText,
-                        context) -> MailchimpUtils.getListIdOptions(connectionParameters, context))
+                .options((OptionsFunction<String>) MailchimpUtils::getListIdOptions)
                 .label("List Id")
                 .description("The list id of intended audience to which you would like to add the contact.")
                 .required(true))
-        .outputSchema(
-            object()
-                .properties(
-                    object("data")
-                        .properties(
-                            string("email"),
-                            string("email_type"),
-                            string("id"),
-                            string("ip_opt"),
-                            string("ip_signup"),
-                            string("list_id"),
-                            object("merges")
-                                .properties(
-                                    string("EMAIL"),
-                                    string("FNAME"),
-                                    string("INTERESTS"),
-                                    string("LNAME"))),
-                    dateTime("fired_at"),
-                    string("type")))
-        .dynamicWebhookDisable(MailchimpSubscribeTrigger::dynamicWebhookDisable)
-        .dynamicWebhookEnable(MailchimpSubscribeTrigger::dynamicWebhookEnable)
-        .dynamicWebhookRequest(MailchimpSubscribeTrigger::dynamicWebhookRequest);
+        .output(
+            outputSchema(
+                object()
+                    .properties(
+                        object("data")
+                            .properties(
+                                string("email")
+                                    .description("The email address of the subscriber."),
+                                string("email_type")
+                                    .description("The type of email address used for the subscriber."),
+                                string("id")
+                                    .description(
+                                        "The MD5 hash of the lowercase version of the list member's email address."),
+                                string("ip_opt"),
+                                string("ip_signup"),
+                                string("list_id")
+                                    .description("The ID of the list the subscriber was added to."),
+                                object("merges")
+                                    .properties(
+                                        string("EMAIL"),
+                                        string("FNAME"),
+                                        string("INTERESTS"),
+                                        string("LNAME"))),
+                        dateTime("fired_at")
+                            .description("The date and time the webhook was triggered."),
+                        string("type")
+                            .description("The type of webhook that was triggered."))))
+        .webhookDisable(MailchimpSubscribeTrigger::webhookDisable)
+        .webhookEnable(MailchimpSubscribeTrigger::webhookEnable)
+        .webhookRequest(MailchimpSubscribeTrigger::webhookRequest);
 
-    protected static void dynamicWebhookDisable(
+    protected static void webhookDisable(
         Parameters inputParameters, Parameters connectionParameters, Parameters outputParameters,
         String workflowExecutionId, TriggerContext context) {
 
@@ -96,9 +103,9 @@ public class MailchimpSubscribeTrigger {
             .execute();
     }
 
-    protected static DynamicWebhookEnableOutput dynamicWebhookEnable(
-        Parameters inputParameters, Parameters connectionParameters, String webhookUrl,
-        String workflowExecutionId, TriggerContext context) {
+    protected static WebhookEnableOutput webhookEnable(
+        Parameters inputParameters, Parameters connectionParameters, String webhookUrl, String workflowExecutionId,
+        TriggerContext context) {
 
         String server = MailchimpUtils.getMailChimpServer(
             connectionParameters.getRequiredString(ACCESS_TOKEN), context);
@@ -109,13 +116,12 @@ public class MailchimpSubscribeTrigger {
                     server, inputParameters.getRequiredString(LIST_ID))))
             .body(
                 Body.of(
-                    Map.of(
-                        "url", webhookUrl,
-                        "events", Map.of(SUBSCRIBE, true),
-                        "sources", Map.of(
-                            "user", true,
-                            "admin", true,
-                            "api", true))))
+                    "url", webhookUrl,
+                    "events", Map.of(SUBSCRIBE, true),
+                    "sources", Map.of(
+                        "user", true,
+                        "admin", true,
+                        "api", true)))
             .configuration(Http.responseType(Http.ResponseType.JSON))
             .execute()
             .getBody(new TypeReference<>() {});
@@ -128,13 +134,12 @@ public class MailchimpSubscribeTrigger {
             throw new IllegalStateException((String) firstError.get("message"));
         }
 
-        return new DynamicWebhookEnableOutput(Map.of("id", response.get("id")), null);
+        return new WebhookEnableOutput(Map.of("id", response.get("id")), null);
     }
 
-    protected static Object dynamicWebhookRequest(
-        Map<String, ?> inputParameters, Parameters connectionParameters, HttpHeaders headers,
-        HttpParameters parameters, WebhookBody body, WebhookMethod method, DynamicWebhookEnableOutput output,
-        TriggerContext context) {
+    protected static Object webhookRequest(
+        Map<String, ?> inputParameters, Parameters connectionParameters, HttpHeaders headers, HttpParameters parameters,
+        WebhookBody body, WebhookMethod method, Parameters output, TriggerContext context) {
 
         if (body == null) {
             return null;

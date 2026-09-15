@@ -1,0 +1,6 @@
+bytechef:
+  edition: EE
+  workflow:
+    repository:
+      filesystem:
+        enabled: false

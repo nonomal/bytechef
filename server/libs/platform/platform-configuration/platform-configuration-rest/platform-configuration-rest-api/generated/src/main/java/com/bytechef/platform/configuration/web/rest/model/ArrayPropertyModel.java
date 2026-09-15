@@ -17,7 +17,10 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.annotation.JsonValue;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import org.springframework.lang.Nullable;
 import org.openapitools.jackson.nullable.JsonNullable;
 import java.time.OffsetDateTime;
 import jakarta.validation.Valid;
@@ -34,7 +37,7 @@ import jakarta.annotation.Generated;
 
 @Schema(name = "ArrayProperty", description = "An array property type.")
 
-@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2024-06-30T07:20:54.243996+02:00[Europe/Zagreb]", comments = "Generator version: 7.5.0")
+@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2026-07-03T17:58:15.504637+02:00[Europe/Zagreb]", comments = "Generator version: 7.22.0")
 public class ArrayPropertyModel extends ValuePropertyModel {
 
   @Valid
@@ -46,16 +49,16 @@ public class ArrayPropertyModel extends ValuePropertyModel {
   @Valid
   private List<@Valid PropertyModel> items = new ArrayList<>();
 
-  private Long maxItems;
+  private @Nullable Long maxItems;
 
-  private Long minItems;
+  private @Nullable Long minItems;
 
-  private Boolean multipleValues;
+  private @Nullable Boolean multipleValues;
 
   @Valid
   private List<@Valid OptionModel> options = new ArrayList<>();
 
-  private OptionsDataSourceModel optionsDataSource;
+  private @Nullable OptionsDataSourceModel optionsDataSource;
 
   public ArrayPropertyModel() {
     super();
@@ -84,7 +87,7 @@ public class ArrayPropertyModel extends ValuePropertyModel {
   /**
    * The property default value.
    * @return defaultValue
-  */
+   */
   
   @Schema(name = "defaultValue", description = "The property default value.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("defaultValue")
@@ -92,6 +95,7 @@ public class ArrayPropertyModel extends ValuePropertyModel {
     return defaultValue;
   }
 
+  @JsonProperty("defaultValue")
   public void setDefaultValue(List<Object> defaultValue) {
     this.defaultValue = defaultValue;
   }
@@ -112,7 +116,7 @@ public class ArrayPropertyModel extends ValuePropertyModel {
   /**
    * The property sample value.
    * @return exampleValue
-  */
+   */
   
   @Schema(name = "exampleValue", description = "The property sample value.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("exampleValue")
@@ -120,6 +124,7 @@ public class ArrayPropertyModel extends ValuePropertyModel {
     return exampleValue;
   }
 
+  @JsonProperty("exampleValue")
   public void setExampleValue(List<Object> exampleValue) {
     this.exampleValue = exampleValue;
   }
@@ -140,7 +145,7 @@ public class ArrayPropertyModel extends ValuePropertyModel {
   /**
    * Types of the array items.
    * @return items
-  */
+   */
   @Valid 
   @Schema(name = "items", description = "Types of the array items.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("items")
@@ -148,11 +153,12 @@ public class ArrayPropertyModel extends ValuePropertyModel {
     return items;
   }
 
+  @JsonProperty("items")
   public void setItems(List<@Valid PropertyModel> items) {
     this.items = items;
   }
 
-  public ArrayPropertyModel maxItems(Long maxItems) {
+  public ArrayPropertyModel maxItems(@Nullable Long maxItems) {
     this.maxItems = maxItems;
     return this;
   }
@@ -160,19 +166,20 @@ public class ArrayPropertyModel extends ValuePropertyModel {
   /**
    * Get maxItems
    * @return maxItems
-  */
+   */
   
   @Schema(name = "maxItems", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("maxItems")
-  public Long getMaxItems() {
+  public @Nullable Long getMaxItems() {
     return maxItems;
   }
 
-  public void setMaxItems(Long maxItems) {
+  @JsonProperty("maxItems")
+  public void setMaxItems(@Nullable Long maxItems) {
     this.maxItems = maxItems;
   }
 
-  public ArrayPropertyModel minItems(Long minItems) {
+  public ArrayPropertyModel minItems(@Nullable Long minItems) {
     this.minItems = minItems;
     return this;
   }
@@ -180,19 +187,20 @@ public class ArrayPropertyModel extends ValuePropertyModel {
   /**
    * Get minItems
    * @return minItems
-  */
+   */
   
   @Schema(name = "minItems", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("minItems")
-  public Long getMinItems() {
+  public @Nullable Long getMinItems() {
     return minItems;
   }
 
-  public void setMinItems(Long minItems) {
+  @JsonProperty("minItems")
+  public void setMinItems(@Nullable Long minItems) {
     this.minItems = minItems;
   }
 
-  public ArrayPropertyModel multipleValues(Boolean multipleValues) {
+  public ArrayPropertyModel multipleValues(@Nullable Boolean multipleValues) {
     this.multipleValues = multipleValues;
     return this;
   }
@@ -200,15 +208,16 @@ public class ArrayPropertyModel extends ValuePropertyModel {
   /**
    * If the array can contain multiple items.
    * @return multipleValues
-  */
+   */
   
   @Schema(name = "multipleValues", description = "If the array can contain multiple items.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("multipleValues")
-  public Boolean getMultipleValues() {
+  public @Nullable Boolean getMultipleValues() {
     return multipleValues;
   }
 
-  public void setMultipleValues(Boolean multipleValues) {
+  @JsonProperty("multipleValues")
+  public void setMultipleValues(@Nullable Boolean multipleValues) {
     this.multipleValues = multipleValues;
   }
 
@@ -228,7 +237,7 @@ public class ArrayPropertyModel extends ValuePropertyModel {
   /**
    * The list of valid property options.
    * @return options
-  */
+   */
   @Valid 
   @Schema(name = "options", description = "The list of valid property options.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("options")
@@ -236,11 +245,12 @@ public class ArrayPropertyModel extends ValuePropertyModel {
     return options;
   }
 
+  @JsonProperty("options")
   public void setOptions(List<@Valid OptionModel> options) {
     this.options = options;
   }
 
-  public ArrayPropertyModel optionsDataSource(OptionsDataSourceModel optionsDataSource) {
+  public ArrayPropertyModel optionsDataSource(@Nullable OptionsDataSourceModel optionsDataSource) {
     this.optionsDataSource = optionsDataSource;
     return this;
   }
@@ -248,15 +258,16 @@ public class ArrayPropertyModel extends ValuePropertyModel {
   /**
    * Get optionsDataSource
    * @return optionsDataSource
-  */
+   */
   @Valid 
   @Schema(name = "optionsDataSource", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("optionsDataSource")
-  public OptionsDataSourceModel getOptionsDataSource() {
+  public @Nullable OptionsDataSourceModel getOptionsDataSource() {
     return optionsDataSource;
   }
 
-  public void setOptionsDataSource(OptionsDataSourceModel optionsDataSource) {
+  @JsonProperty("optionsDataSource")
+  public void setOptionsDataSource(@Nullable OptionsDataSourceModel optionsDataSource) {
     this.optionsDataSource = optionsDataSource;
   }
 
@@ -298,6 +309,16 @@ public class ArrayPropertyModel extends ValuePropertyModel {
 
   public ArrayPropertyModel hidden(Boolean hidden) {
     super.hidden(hidden);
+    return this;
+  }
+
+  public ArrayPropertyModel metadata(Map<String, Object> metadata) {
+    super.metadata(metadata);
+    return this;
+  }
+
+  public ArrayPropertyModel putMetadataItem(String key, Object metadataItem) {
+    super.putMetadataItem(key, metadataItem);
     return this;
   }
 
@@ -361,11 +382,8 @@ public class ArrayPropertyModel extends ValuePropertyModel {
    * Convert the given object to string with each line indented by 4 spaces
    * (except the first line).
    */
-  private String toIndentedString(Object o) {
-    if (o == null) {
-      return "null";
-    }
-    return o.toString().replace("\n", "\n    ");
+  private String toIndentedString(@Nullable Object o) {
+    return o == null ? "null" : o.toString().replace("\n", "\n    ");
   }
 }
 

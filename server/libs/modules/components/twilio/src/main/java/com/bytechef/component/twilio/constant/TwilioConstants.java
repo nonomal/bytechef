@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,44 +16,66 @@
 
 package com.bytechef.component.twilio.constant;
 
+import static com.bytechef.component.definition.ComponentDsl.dateTime;
+import static com.bytechef.component.definition.ComponentDsl.integer;
+import static com.bytechef.component.definition.ComponentDsl.object;
+import static com.bytechef.component.definition.ComponentDsl.string;
+
+import com.bytechef.component.definition.ComponentDsl;
+
 /**
- * @author Monika Domiter
+ * @author Monika Kušter
  */
 public class TwilioConstants {
 
     private TwilioConstants() {
     }
 
-    public static final String AUTH_TOKEN = "authToken";
-    public static final String TWILIO = "twilio";
-    public static final String BASE_URL = "https://api.twilio.com/2010-04-01/Accounts";
-    public static final String SEND_SMS = "sendSMS";
-    public static final String ACCOUNT_SID = "accountSid";
-    public static final String ADDRESS_RETENTION = "addressRetention";
-    public static final String APPLICATION_SID = "applicationSid";
-    public static final String ATTEMPT = "attempt";
-    public static final String BODY = "body";
-    public static final String CONTENT = "content";
-    public static final String CONTENT_RETENTION = "contentRetention";
-    public static final String CONTENT_SID = "contentSid";
-    public static final String CONTENT_VARIABLES = "contentVariables";
+    public static final String CONTENT_SID = "ContentSid";
+    public static final String CONTENT_VARIABLES = "ContentVariables";
+    public static final String BODY = "Body";
     public static final String DATE_TIME = "dateTime";
-    public static final String FORCE_DELIVERY = "forceDelivery";
-    public static final String FROM = "from";
-    public static final String MAX_PRICE = "maxPrice";
-    public static final String MEDIA_URL = "mediaUrl";
-    public static final String MESSAGING_SERVICE_SID = "messagingServiceSid";
-    public static final String PERSISTENT_ACTION = "persistentAction";
-    public static final String PROVIDE_FEEDBACK = "provideFeedback";
-    public static final String RISK_CHECK = "riskCheck";
-    public static final String SCHEDULE_TYPE = "scheduleType";
-    public static final String SEND_AT = "sendAt";
-    public static final String SEND_AS_MMS = "sendAsMms";
-    public static final String SHORTEN_URLS = "shortenUrls";
-    public static final String SOURCE = "source";
-    public static final String STATUS_CALLBACK = "statusCallback";
-    public static final String SMART_ENCODED = "smartEncoded";
-    public static final String TO = "to";
-    public static final String VALIDITY_PERIOD = "validityPeriod";
+    public static final String FROM = "From";
+    public static final String TO = "To";
+    public static final String USE_TEMPLATE = "useTemplate";
     public static final String ZONE_ID = "zoneId";
+
+    public static final ComponentDsl.ModifiableObjectProperty MESSAGE_OUTPUT_PROPERTY = object()
+        .properties(
+            string("body"),
+            string("numSegments"),
+            string("direction"),
+            object("from")
+                .properties(
+                    string("rawNumber")),
+            string("to"),
+            object("dateUpdated")
+                .properties(
+                    dateTime(DATE_TIME),
+                    string(ZONE_ID)),
+            string("price"),
+            string("errorMessage"),
+            string("uri"),
+            string("accountSid"),
+            string("numMedia"),
+            string("status"),
+            string("messagingServiceSid"),
+            string("sid"),
+            object("dateSent")
+                .properties(
+                    dateTime(DATE_TIME),
+                    string(ZONE_ID)),
+            object("dateCreated")
+                .properties(
+                    dateTime(DATE_TIME),
+                    string(ZONE_ID)),
+            integer("errorCode"),
+            object("currency")
+                .properties(
+                    string("currencyCode"),
+                    integer("defaultFractionDigits"),
+                    integer("numericCode")),
+            string("apiVersion"),
+            object("subresourceUris")
+                .additionalProperties(string()));
 }

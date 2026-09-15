@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,58 +18,60 @@ package com.bytechef.component.shopify.trigger;
 
 import static com.bytechef.component.shopify.constant.ShopifyConstants.ID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.Mockito.when;
 
-import com.bytechef.component.definition.TriggerDefinition.DynamicWebhookEnableOutput;
-import com.bytechef.component.shopify.util.ShopifyUtils;
-import java.time.LocalDateTime;
+import com.bytechef.component.definition.TriggerDefinition.WebhookEnableOutput;
+import com.bytechef.component.shopify.util.ShopifyTriggerUtils;
+import com.bytechef.component.test.definition.MockParametersFactory;
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 /**
  * @author Monika Domiter
+ * @author Nikolina Spehar
  */
 class ShopifyNewOrderTriggerTest extends AbstractShopifyTriggerTest {
 
     @Test
-    void testDynamicWebhookEnable() {
+    void testWebhookEnable() {
         String webhookUrl = "testWebhookUrl";
 
-        shopifyUtilsMockedStatic.when(
-            () -> ShopifyUtils.subscribeWebhook(mockedParameters, webhookUrl, mockedTriggerContext, "orders/create"))
-            .thenReturn(123L);
-        DynamicWebhookEnableOutput dynamicWebhookEnableOutput = ShopifyNewOrderTrigger.dynamicWebhookEnable(
+        shopifyTriggerUtilsMockedStatic
+            .when(() -> ShopifyTriggerUtils.subscribeWebhook(
+                stringArgumentCaptor.capture(), stringArgumentCaptor.capture(), contextArgumentCaptor.capture()))
+            .thenReturn("webhookId");
+
+        WebhookEnableOutput webhookEnableOutput = ShopifyNewOrderTrigger.webhookEnable(
             mockedParameters, mockedParameters, webhookUrl, workflowExecutionId, mockedTriggerContext);
 
-        Map<String, ?> parameters = dynamicWebhookEnableOutput.parameters();
-        LocalDateTime webhookExpirationDate = dynamicWebhookEnableOutput.webhookExpirationDate();
+        WebhookEnableOutput expectedWebhookEnableOutput = new WebhookEnableOutput(
+            Map.of(ID, "webhookId"), null);
 
-        Map<String, Object> expectedParameters = Map.of(ID, 123L);
-
-        assertEquals(expectedParameters, parameters);
-        assertNull(webhookExpirationDate);
+        assertEquals(expectedWebhookEnableOutput, webhookEnableOutput);
+        assertEquals(List.of(webhookUrl, "DRAFT_ORDERS_CREATE"), stringArgumentCaptor.getAllValues());
+        assertEquals(mockedTriggerContext, contextArgumentCaptor.getValue());
     }
 
     @Test
-    void testDynamicWebhookDisable() {
+    void testWebhookDisable() {
+        mockedParameters = MockParametersFactory.create(Map.of(ID, "webhookId"));
 
-        ShopifyNewOrderTrigger.dynamicWebhookDisable(
+        ShopifyNewOrderTrigger.webhookDisable(
             mockedParameters, mockedParameters, mockedParameters, workflowExecutionId, mockedTriggerContext);
 
-        shopifyUtilsMockedStatic
-            .verify(() -> ShopifyUtils.unsubscribeWebhook(mockedParameters, mockedParameters, mockedTriggerContext));
-
+        shopifyTriggerUtilsMockedStatic
+            .verify(() -> ShopifyTriggerUtils.unsubscribeWebhook(mockedParameters, mockedTriggerContext));
     }
 
     @Test
-    void testDynamicWebhookRequest() {
+    void testWebhookRequest() {
         when(mockedWebhookBody.getContent())
             .thenReturn(mockedObject);
 
-        Object result = ShopifyNewOrderTrigger.dynamicWebhookRequest(
+        Object result = ShopifyNewOrderTrigger.webhookRequest(
             mockedParameters, mockedParameters, mockedHttpHeaders, mockedHttpParameters, mockedWebhookBody,
-            mockedWebhookMethod, mockedDynamicWebhookEnableOutput, mockedTriggerContext);
+            mockedWebhookMethod, mockedParameters, mockedTriggerContext);
 
         assertEquals(mockedObject, result);
 

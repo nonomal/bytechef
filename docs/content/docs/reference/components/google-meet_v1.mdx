@@ -1,0 +1,264 @@
+---
+title: "Google Meet"
+description: "Google Meet is a communication service designed to help you have interactions with your friends, family, colleagues and classmates."
+---
+
+
+Categories: Communication
+
+
+Type: googleMeet/v1
+
+<hr />
+
+
+
+
+## Connections
+
+Version: 1
+
+
+### OAuth2 Authorization Code
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| clientId | Client Id | STRING |  | true |
+| clientSecret | Client Secret | STRING |  | true |
+
+
+
+## Connection Setup
+
+### Create OAuth 2.0 Application
+
+Creation of OAuth 2.0 application is documented [here](/reference/components/google-application-setup_v1#create-oauth-20-application).
+
+### Enable Google Meet REST API
+
+1. In the [Google Cloud Console](https://console.cloud.google.com/), select your project.
+2. Go to the **APIs & Services**.
+3. Click on **ENABLE APIS AND SERVICES**.
+4. Search for "google meet rest api" in the search bar.
+5. Click on **Google Meet REST API**.
+6. Click **Enable**.
+
+<div style={{ position: 'relative', height: 0, width: '100%', overflow: 'hidden', zindex: 49, boxSizing: 'border-box', paddingBottom: 'calc(50.05219207% + 32px)' }}>
+    <iframe src="https://www.guidejar.com/embed/1CkDQzRt6lbwhSWkjhQu?type=1&controls=on" width="100%" height="100%" style={{ position: 'absolute', inset: 0 }} allowFullScreen frameBorder="0"></iframe>
+</div>
+
+
+
+<hr />
+
+
+## Actions
+
+
+### Create Meeting Space
+Name: createMeetingSpace
+
+`Creates a meeting space.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| accessType | Access Type | STRING <details> <summary> Options </summary> <span title="Default value specified by the user's organization.">ACCESS_TYPE_UNSPECIFIED</span>, <span title="Anyone with the join information can join without knocking.">OPEN</span>, <span title="Members of the host's organization, invited external users, and dial-in users can join without knocking. Everyone else must knock.">TRUSTED</span>, <span title="Only invitees can join without knocking. Everyone else must knock.">RESTRICTED</span> </details> | Access type of the meeting space that determines who can join without knocking. | false |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Create Meeting Space",
+  "name" : "createMeetingSpace",
+  "parameters" : {
+    "accessType" : ""
+  },
+  "type" : "googleMeet/v1/createMeetingSpace"
+}
+```
+
+#### Output
+
+
+
+Type: OBJECT
+
+
+#### Properties
+
+|     Name     |     Type     |     Description     |
+|:------------:|:------------:|:-------------------:|
+| name | STRING | The name of the meeting space. |
+| meetingUri | STRING | URI used to join meetings. |
+| meetingCode | STRING | Type friendly unique string used to join the meeting. |
+| config | OBJECT <details> <summary> Properties </summary> &#123;STRING\(accessType), STRING\(entryPointAccess)&#125; </details> |  |
+
+
+
+
+#### Output Example
+```json
+{
+  "name" : "",
+  "meetingUri" : "",
+  "meetingCode" : "",
+  "config" : {
+    "accessType" : "",
+    "entryPointAccess" : ""
+  }
+}
+```
+
+
+
+
+### Get Meeting Space
+Name: getMeetingSpace
+
+`Gets details about a meeting space.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| name | Name | STRING | The name of the meeting space or meeting code in format spaces/&#123;meetingCode&#125;. | true |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Get Meeting Space",
+  "name" : "getMeetingSpace",
+  "parameters" : {
+    "name" : ""
+  },
+  "type" : "googleMeet/v1/getMeetingSpace"
+}
+```
+
+#### Output
+
+
+
+Type: OBJECT
+
+
+#### Properties
+
+|     Name     |     Type     |     Description     |
+|:------------:|:------------:|:-------------------:|
+| name | STRING | The name of the meeting space. |
+| meetingUri | STRING | URI used to join meetings. |
+| meetingCode | STRING | Type friendly unique string used to join the meeting. |
+| config | OBJECT <details> <summary> Properties </summary> &#123;STRING\(accessType), STRING\(entryPointAccess)&#125; </details> |  |
+
+
+
+
+#### Output Example
+```json
+{
+  "name" : "",
+  "meetingUri" : "",
+  "meetingCode" : "",
+  "config" : {
+    "accessType" : "",
+    "entryPointAccess" : ""
+  }
+}
+```
+
+#### Find Meeting Code
+
+To find the Meeting Code, click [here](/reference/components/google-meet_v1#how-to-find-meeting-code)
+
+
+
+### List Participants
+Name: listParticipants
+
+`Lists the participants in a conference record. By default, ordered by join time and in descending order.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| conferenceRecords | Conference Records | STRING | Conference Records | true |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "List Participants",
+  "name" : "listParticipants",
+  "parameters" : {
+    "conferenceRecords" : ""
+  },
+  "type" : "googleMeet/v1/listParticipants"
+}
+```
+
+#### Output
+
+
+
+Type: ARRAY
+
+
+Items Type: OBJECT
+
+
+#### Properties
+|     Name     |     Type     |     Description     |
+|:------------:|:------------:|:-------------------:|
+| name | STRING | Resource name of the participant.Format: conferenceRecords/&#123;conferenceRecord&#125;/participants/&#123;participant&#125; |
+| user | OBJECT <details> <summary> Properties </summary> &#123;&#125; </details> | User can be of type: signedinUser, anonymousUser, phoneUser |
+| earliestStartTime | STRING | Time when the participant first joined the meeting. |
+| latestEndTime | STRING | Time when the participant left the meeting for the last time. This can be null if it's an active meeting. |
+
+
+
+
+
+#### Output Example
+```json
+[ {
+  "name" : "",
+  "user" : { },
+  "earliestStartTime" : "",
+  "latestEndTime" : ""
+} ]
+```
+
+#### Find Conference Records
+
+To find the Conference Records, click [here](/reference/components/google-meet_v1#how-to-find-conference-records)
+
+
+
+
+
+## What to do if your action is not listed here?
+
+If this component doesn't have the action you need, you can use **Custom Action** to create your own. Custom Actions empower you to define HTTP requests tailored to your specific requirements, allowing for greater flexibility in integrating with external services or APIs.
+
+To create a Custom Action, simply specify the desired HTTP method, path, and any necessary parameters. This way, you can extend the functionality of your component beyond the predefined actions, ensuring that you can meet all your integration needs effectively.
+
+<hr />
+
+# Additional Instructions
+
+### How to find Meeting Code
+
+You can find Meeting Code in meetings URL; for example if this is the meeting URL "https://meet.google.com/emx-oith-mwx" then the meeting code is **emx-oith-mwx**.
+
+### How to find Conference Records
+
+Conference records can be found only by using this endpoint `https://meet.googleapis.com/v2/conferenceRecords`.
+
+## Troubleshooting
+
+### Access Blocked: Verification Process Not Completed
+
+Documentation for how to add a test user can be found [here](/reference/components/google-application-setup_v1#access-blocked-verification-process-not-completed)

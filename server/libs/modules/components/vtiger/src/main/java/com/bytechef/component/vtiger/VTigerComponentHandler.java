@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,8 +16,7 @@
 
 package com.bytechef.component.vtiger;
 
-import static com.bytechef.component.definition.ComponentDSL.component;
-import static com.bytechef.component.vtiger.constant.VTigerConstants.VTIGER;
+import static com.bytechef.component.definition.ComponentDsl.component;
 
 import com.bytechef.component.ComponentHandler;
 import com.bytechef.component.definition.ComponentCategory;
@@ -30,20 +29,26 @@ import com.google.auto.service.AutoService;
 
 /**
  * @author Luka Ljubić
+ * @author Monika Kušter
  */
 @AutoService(ComponentHandler.class)
 public class VTigerComponentHandler implements ComponentHandler {
 
-    private static final ComponentDefinition COMPONENT_DEFINITION = component(VTIGER)
+    private static final ComponentDefinition COMPONENT_DEFINITION = component("vtiger")
         .title("VTiger")
-        .description("CRM software for sales, marketing, and support teams")
+        .description(
+            "VTiger is a comprehensive customer relationship management (CRM) platform that offers sales, marketing, " +
+                "and support solutions to streamline business.")
+        .customAction(true)
+        .customActionHelp("", "https://vtap.vtiger.com/platform/rest-apis.html")
         .icon("path:assets/vtiger.svg")
         .categories(ComponentCategory.CRM)
         .connection(VTigerConnection.CONNECTION_DEFINITION)
         .actions(
             VTigerCreateContactAction.ACTION_DEFINITION,
             VTigerCreateProductAction.ACTION_DEFINITION,
-            VTigerGetMeAction.ACTION_DEFINITION);
+            VTigerGetMeAction.ACTION_DEFINITION)
+        .version(1);
 
     @Override
     public ComponentDefinition getDefinition() {

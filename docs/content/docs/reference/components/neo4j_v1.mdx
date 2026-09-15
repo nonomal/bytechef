@@ -1,0 +1,185 @@
+---
+title: "Neo4j"
+description: "Neo4j is an open-source NoSQL graph database. It is a fully transactional database (ACID) that stores data structured as graphs consisting of nodes, connected by relationships."
+---
+
+
+Categories: Artificial Intelligence
+
+
+Type: neo4j/v1
+
+<hr />
+
+
+
+
+## Connections
+
+Version: 1
+
+
+### custom
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| uri | URI | STRING | URI for connecting to the Neo4j instance. | true |
+| username | Username | STRING | Username for authentication with Neo4j. | true |
+| password | Password | STRING | Password for authentication with Neo4j. | true |
+| initializeSchema | Initialize Schema | BOOLEAN <details> <summary> Options </summary> <span>true</span>, <span>false</span> </details> | Whether to initialize the required schema | false |
+| databaseName | Database Name | STRING | The name of the Neo4j database to use. | false |
+| indexName | Index Name | STRING | The name of the index to store the vectors. | false |
+| embeddingDimension | Embedding Dimension | INTEGER | The number of dimensions in the vector. | false |
+| distanceType | Distance Type | STRING <details> <summary> Options </summary> <span title="Suitable for most use cases. Measures cosine similarity between vectors.">COSINE</span>, <span title=" Euclidean distance between vectors. Lower values indicate higher similarity.">EUCLIDEAN</span> </details> | The distance function to use. | false |
+| label | Label | STRING | The label used for document nodes. | false |
+| embeddingProperty | Embedding Property | STRING | The property name used to store embeddings. | false |
+
+
+
+
+
+
+<hr />
+
+
+## Actions
+
+
+### Delete Documents
+Name: delete
+
+`Delete documents from the vector store by metadata`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| metadataFilter | Metadata Filter | ARRAY <details> <summary> Items </summary> [&#123;&#125;] </details> | List of metadata key-value pairs to filter by. Entries within a group are ANDed; groups are ORed. | false |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Delete Documents",
+  "name" : "delete",
+  "parameters" : {
+    "metadataFilter" : [ { } ]
+  },
+  "type" : "neo4j/v1/delete"
+}
+```
+
+#### Output
+
+This action does not produce any output.
+
+
+
+
+
+
+### Load Documents
+Name: load
+
+`Loads documents into the vector store using LLM embeddings.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| metadataFilter | Metadata Filter | ARRAY <details> <summary> Items </summary> [&#123;&#125;] </details> | List of metadata key-value pairs to filter by. Entries within a group are ANDed; groups are ORed. | false |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Load Documents",
+  "name" : "load",
+  "parameters" : {
+    "metadataFilter" : [ { } ]
+  },
+  "type" : "neo4j/v1/load"
+}
+```
+
+#### Output
+
+This action does not produce any output.
+
+
+
+
+
+
+### Search Documents
+Name: search
+
+`Query documents from the vector store using LLM embeddings.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| query | Query | STRING | The query to be executed. | true |
+| metadataFilter | Metadata Filter | ARRAY <details> <summary> Items </summary> [&#123;&#125;] </details> | List of metadata key-value pairs to filter by. Entries within a group are ANDed; groups are ORed. | false |
+| topK | Top K | INTEGER | The top 'k' similar results to return. | false |
+| similarityThreshold | Similarity Threshold | NUMBER | Similarity threshold score to filter the search response by. Only documents with similarity score equal or greater than the threshold will be returned. A threshold value of 0 means any similarity is accepted. A threshold value of 1 means an exact match is required. | false |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Search Documents",
+  "name" : "search",
+  "parameters" : {
+    "query" : "",
+    "metadataFilter" : [ { } ],
+    "topK" : 1,
+    "similarityThreshold" : 0.0
+  },
+  "type" : "neo4j/v1/search"
+}
+```
+
+#### Output
+
+The output for this action is dynamic and may vary depending on the input parameters. To determine the exact structure of the output, you need to execute the action.
+
+
+
+
+
+
+### Update Documents
+Name: update
+
+`Updates documents in the vector store by deleting existing ones matching the metadata filter and loading new ones using LLM embeddings.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| metadataFilter | Metadata Filter | ARRAY <details> <summary> Items </summary> [&#123;&#125;] </details> | List of metadata key-value pairs to filter by. Entries within a group are ANDed; groups are ORed. | false |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Update Documents",
+  "name" : "update",
+  "parameters" : {
+    "metadataFilter" : [ { } ]
+  },
+  "type" : "neo4j/v1/update"
+}
+```
+
+#### Output
+
+This action does not produce any output.
+
+
+
+
+
+
+
+

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,42 +19,30 @@ package com.bytechef.component.capsule.crm.action;
 import static com.bytechef.component.capsule.crm.constant.CapsuleCRMConstants.ABOUT;
 import static com.bytechef.component.capsule.crm.constant.CapsuleCRMConstants.ADDRESS;
 import static com.bytechef.component.capsule.crm.constant.CapsuleCRMConstants.ADDRESSES;
-import static com.bytechef.component.capsule.crm.constant.CapsuleCRMConstants.BASE_URL;
 import static com.bytechef.component.capsule.crm.constant.CapsuleCRMConstants.CITY;
-import static com.bytechef.component.capsule.crm.constant.CapsuleCRMConstants.COUNTRY;
-import static com.bytechef.component.capsule.crm.constant.CapsuleCRMConstants.CREATE_CONTACT;
 import static com.bytechef.component.capsule.crm.constant.CapsuleCRMConstants.EMAIL_ADDRESSES;
 import static com.bytechef.component.capsule.crm.constant.CapsuleCRMConstants.FIRST_NAME;
 import static com.bytechef.component.capsule.crm.constant.CapsuleCRMConstants.LAST_NAME;
 import static com.bytechef.component.capsule.crm.constant.CapsuleCRMConstants.NAME;
 import static com.bytechef.component.capsule.crm.constant.CapsuleCRMConstants.NUMBER;
-import static com.bytechef.component.capsule.crm.constant.CapsuleCRMConstants.PERSON;
 import static com.bytechef.component.capsule.crm.constant.CapsuleCRMConstants.PHONE_NUMBERS;
-import static com.bytechef.component.capsule.crm.constant.CapsuleCRMConstants.STATE;
 import static com.bytechef.component.capsule.crm.constant.CapsuleCRMConstants.STREET;
-import static com.bytechef.component.capsule.crm.constant.CapsuleCRMConstants.STRING_DISPLAY_CONDITION;
 import static com.bytechef.component.capsule.crm.constant.CapsuleCRMConstants.TYPE;
-import static com.bytechef.component.capsule.crm.constant.CapsuleCRMConstants.ZIP;
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.array;
-import static com.bytechef.component.definition.ComponentDSL.bool;
-import static com.bytechef.component.definition.ComponentDSL.date;
-import static com.bytechef.component.definition.ComponentDSL.dateTime;
-import static com.bytechef.component.definition.ComponentDSL.integer;
-import static com.bytechef.component.definition.ComponentDSL.nullable;
-import static com.bytechef.component.definition.ComponentDSL.number;
-import static com.bytechef.component.definition.ComponentDSL.object;
-import static com.bytechef.component.definition.ComponentDSL.option;
-import static com.bytechef.component.definition.ComponentDSL.string;
-import static com.bytechef.component.definition.ComponentDSL.time;
+import static com.bytechef.component.capsule.crm.constant.ContactType.ORGANIZATION;
+import static com.bytechef.component.capsule.crm.constant.ContactType.PERSON;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.array;
+import static com.bytechef.component.definition.ComponentDsl.object;
+import static com.bytechef.component.definition.ComponentDsl.option;
+import static com.bytechef.component.definition.ComponentDsl.string;
 
+import com.bytechef.component.capsule.crm.constant.ContactType;
 import com.bytechef.component.capsule.crm.util.CapsuleCRMUtils;
 import com.bytechef.component.definition.ActionContext;
-import com.bytechef.component.definition.ComponentDSL.ModifiableActionDefinition;
-import com.bytechef.component.definition.Context.ContextFunction;
+import com.bytechef.component.definition.ActionDefinition.OptionsFunction;
+import com.bytechef.component.definition.ComponentDsl.ModifiableActionDefinition;
 import com.bytechef.component.definition.Context.Http;
-import com.bytechef.component.definition.Context.TypeReference;
-import com.bytechef.component.definition.OptionsDataSource.ActionOptionsFunction;
+import com.bytechef.component.definition.Context.Http.Body;
 import com.bytechef.component.definition.Parameters;
 
 /**
@@ -62,49 +50,50 @@ import com.bytechef.component.definition.Parameters;
  */
 public class CapsuleCRMCreateContactAction {
 
-    public static final ModifiableActionDefinition ACTION_DEFINITION = action(CREATE_CONTACT)
+    public static final ModifiableActionDefinition ACTION_DEFINITION = action("createContact")
         .title("Create Contact")
-        .description("Creates a new Person or Organization")
+        .description("Creates a new person or organization.")
+        .help("", "https://docs.bytechef.io/reference/components/capsule-crm_v1#create-contact")
         .properties(
             string(TYPE)
                 .label("Type")
-                .description("Represents if this party is a person or an organisation.")
+                .description("Represents if this party is a person or an organization.")
                 .options(
-                    option("Person", PERSON),
-                    option("Organization", "organization"))
+                    option("Person", PERSON.getValue()),
+                    option("Organization", ORGANIZATION.getValue()))
                 .required(true),
             string(FIRST_NAME)
-                .label("First name")
+                .label("First Name")
                 .description("The first name of the person.")
-                .displayCondition(STRING_DISPLAY_CONDITION.formatted(TYPE, PERSON))
+                .displayCondition("%s == '%s'".formatted(TYPE, PERSON.getValue()))
                 .required(true),
             string(LAST_NAME)
-                .label("Last name")
+                .label("Last Name")
                 .description("The last name of the person.")
-                .displayCondition(STRING_DISPLAY_CONDITION.formatted(TYPE, PERSON))
+                .displayCondition("%s == '%s'".formatted(TYPE, PERSON.getValue()))
                 .required(true),
             string(NAME)
                 .label("Name")
-                .description("The name of the organisation.")
-                .displayCondition(STRING_DISPLAY_CONDITION.formatted(TYPE, "organization"))
+                .description("The name of the organization.")
+                .displayCondition("%s == '%s'".formatted(TYPE, ORGANIZATION.getValue()))
                 .required(true),
             string(ABOUT)
                 .label("About")
                 .description("A short description of the party.")
                 .required(false),
             array(EMAIL_ADDRESSES)
-                .label("Email addresses")
+                .label("Email Addresses")
                 .description("An array of all the email addresses associated with this party.")
                 .items(
                     object()
                         .properties(
                             string(ADDRESS)
-                                .label("Email address")
+                                .label("Email Address")
                                 .description("The email address string.")
                                 .required(true),
                             string(TYPE)
                                 .label("Type")
-                                .description("The type of the email address")
+                                .description("The type of the email address.")
                                 .options(
                                     option("Home", "Home"),
                                     option("Work", "Work"))
@@ -134,22 +123,22 @@ public class CapsuleCRMCreateContactAction {
                                 .label("City")
                                 .description("The city of the address.")
                                 .required(false),
-                            string(STATE)
+                            string("state")
                                 .label("State")
                                 .description("The state or province of the address.")
                                 .required(false),
-                            string(COUNTRY)
+                            string("country")
                                 .label("Country")
                                 .description("The country of the address.")
-                                .options((ActionOptionsFunction<String>) CapsuleCRMUtils::getCountryOptions)
+                                .options((OptionsFunction<String>) CapsuleCRMUtils::getCountryOptions)
                                 .required(false),
-                            string(ZIP)
+                            string("zip")
                                 .label("Zip")
                                 .description("The zip/postal code.")
                                 .required(false)))
                 .required(false),
             array(PHONE_NUMBERS)
-                .label("Phone numbers")
+                .label("Phone Numbers")
                 .description("An array of all the phone numbers associated with this party.")
                 .items(
                     object()
@@ -169,14 +158,8 @@ public class CapsuleCRMCreateContactAction {
                                 .description("The actual phone number.")
                                 .required(true)))
                 .required(false))
-        .outputSchema(
-            object()
-                .additionalProperties(
-                    array(), bool(), date(), dateTime(), integer(), nullable(), number(), object(), string(), time()))
+        .output()
         .perform(CapsuleCRMCreateContactAction::perform);
-
-    protected static final ContextFunction<Http, Http.Executor> POST_PARTIES_CONTEXT_FUNCTION =
-        http -> http.post(BASE_URL + "/parties");
 
     private CapsuleCRMCreateContactAction() {
     }
@@ -184,12 +167,14 @@ public class CapsuleCRMCreateContactAction {
     public static Object perform(
         Parameters inputParameters, Parameters connectionParameters, ActionContext actionContext) {
 
-        return actionContext.http(POST_PARTIES_CONTEXT_FUNCTION)
+        ContactType contactType = inputParameters.getRequired(TYPE, ContactType.class);
+
+        return actionContext.http(http -> http.post("/parties"))
             .body(
-                Http.Body.of(
+                Body.of(
                     "party",
                     new Object[] {
-                        TYPE, inputParameters.getRequiredString(TYPE),
+                        TYPE, contactType.getValue(),
                         FIRST_NAME, inputParameters.getString(FIRST_NAME),
                         LAST_NAME, inputParameters.getString(LAST_NAME),
                         NAME, inputParameters.getString(NAME),
@@ -200,6 +185,6 @@ public class CapsuleCRMCreateContactAction {
                     }))
             .configuration(Http.responseType(Http.ResponseType.JSON))
             .execute()
-            .getBody(new TypeReference<>() {});
+            .getBody();
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,52 +17,15 @@
 package com.bytechef.component.http.client;
 
 import com.bytechef.test.jsonasssert.JsonFileAssert;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 /**
  * @author Ivica Cardic
  */
-public class HttpClientComponentHandlerTest {
+class HttpClientComponentHandlerTest {
 
     @Test
-    public void testGetComponentDefinition() {
+    void testGetComponentDefinition() {
         JsonFileAssert.assertEquals("definition/http-client_v1.json", new HttpClientComponentHandler().getDefinition());
-    }
-
-    @Disabled
-    @Test
-    public void testPerformDelete() {
-        // TODO
-    }
-
-    @Disabled
-    @Test
-    public void testPerformGet() {
-        // TODO
-    }
-
-    @Disabled
-    @Test
-    public void testPerformHead() {
-        // TODO
-    }
-
-    @Disabled
-    @Test
-    public void testPerformPatch() {
-        // TODO
-    }
-
-    @Disabled
-    @Test
-    public void testPerformPost() {
-        // TODO
-    }
-
-    @Disabled
-    @Test
-    public void testPerformPut() {
-        // TODO
     }
 }

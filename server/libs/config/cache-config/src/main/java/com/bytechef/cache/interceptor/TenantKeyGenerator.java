@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,8 +16,9 @@
 
 package com.bytechef.cache.interceptor;
 
-import com.bytechef.tenant.cache.TenantCacheKeyGenerator;
+import com.bytechef.tenant.util.TenantCacheKeyUtils;
 import java.lang.reflect.Method;
+import org.jspecify.annotations.Nullable;
 import org.springframework.cache.interceptor.KeyGenerator;
 
 /**
@@ -26,7 +27,7 @@ import org.springframework.cache.interceptor.KeyGenerator;
 public class TenantKeyGenerator implements KeyGenerator {
 
     @Override
-    public Object generate(Object target, Method method, Object... params) {
-        return TenantCacheKeyGenerator.generateKey(params);
+    public Object generate(Object target, Method method, @Nullable Object... params) {
+        return TenantCacheKeyUtils.getKey(params);
     }
 }

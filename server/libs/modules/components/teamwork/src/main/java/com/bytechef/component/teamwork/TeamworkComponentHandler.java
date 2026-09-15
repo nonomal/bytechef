@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,23 +17,16 @@
 package com.bytechef.component.teamwork;
 
 import static com.bytechef.component.definition.Authorization.USERNAME;
-import static com.bytechef.component.definition.ComponentDSL.authorization;
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.definition.ComponentDsl.authorization;
+import static com.bytechef.component.definition.ComponentDsl.string;
 import static com.bytechef.component.teamwork.constant.TeamworkConstants.SITE_NAME;
-import static com.bytechef.component.teamwork.util.TeamworkUtils.getBaseUrl;
 
 import com.bytechef.component.OpenApiComponentHandler;
-import com.bytechef.component.definition.ActionDefinition;
 import com.bytechef.component.definition.Authorization.AuthorizationType;
 import com.bytechef.component.definition.ComponentCategory;
-import com.bytechef.component.definition.ComponentDSL.ModifiableComponentDefinition;
-import com.bytechef.component.definition.ComponentDSL.ModifiableConnectionDefinition;
-import com.bytechef.component.definition.ComponentDSL.ModifiableIntegerProperty;
-import com.bytechef.component.definition.ComponentDSL.ModifiableProperty;
-import com.bytechef.component.definition.OptionsDataSource.ActionOptionsFunction;
-import com.bytechef.component.teamwork.util.TeamworkUtils;
+import com.bytechef.component.definition.ComponentDsl.ModifiableComponentDefinition;
+import com.bytechef.component.definition.ComponentDsl.ModifiableConnectionDefinition;
 import com.google.auto.service.AutoService;
-import java.util.Objects;
 
 /**
  * @author Monika Domiter
@@ -45,6 +38,7 @@ public class TeamworkComponentHandler extends AbstractTeamworkComponentHandler {
     public ModifiableComponentDefinition modifyComponent(ModifiableComponentDefinition modifiableComponentDefinition) {
         return modifiableComponentDefinition
             .customAction(true)
+            .customActionHelp("", "https://apidocs.teamwork.com/docs/teamwork/v3")
             .icon("path:assets/teamwork.svg")
             .categories(ComponentCategory.CRM, ComponentCategory.PROJECT_MANAGEMENT);
     }
@@ -65,20 +59,9 @@ public class TeamworkComponentHandler extends AbstractTeamworkComponentHandler {
                         string(USERNAME)
                             .label("API Key")
                             .required(true)))
-            .baseUri((connectionParameters, context) -> getBaseUrl(connectionParameters));
-    }
-
-    @Override
-    public ModifiableProperty<?> modifyProperty(
-        ActionDefinition actionDefinition, ModifiableProperty<?> modifiableProperty) {
-
-        if (Objects.equals(actionDefinition.getName(), "createTask") &&
-            Objects.equals(modifiableProperty.getName(), "tasklistId")) {
-
-            ((ModifiableIntegerProperty) modifiableProperty)
-                .options((ActionOptionsFunction<String>) TeamworkUtils::getTaskListIdOptions);
-        }
-
-        return modifiableProperty;
+            .baseUri((connectionParameters, context) -> "https://" + connectionParameters.getRequiredString(SITE_NAME)
+                + ".teamwork.com/projects/api/v3")
+            .help("", "https://docs.bytechef.io/reference/components/teamwork_v1#connection-setup")
+            .version(1);
     }
 }

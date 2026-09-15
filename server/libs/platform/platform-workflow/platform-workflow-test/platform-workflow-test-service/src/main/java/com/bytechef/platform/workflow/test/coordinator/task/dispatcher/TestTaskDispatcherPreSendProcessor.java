@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,35 +21,94 @@ import com.bytechef.atlas.execution.domain.Job;
 import com.bytechef.atlas.execution.domain.TaskExecution;
 import com.bytechef.atlas.execution.service.JobService;
 import com.bytechef.commons.util.MapUtils;
+import com.bytechef.component.definition.ActionContext;
+import com.bytechef.component.definition.ActionDefinition.ResumePerformFunction.ResumeResponse;
 import com.bytechef.platform.component.constant.MetadataConstants;
-import com.fasterxml.jackson.core.type.TypeReference;
+import com.bytechef.platform.configuration.domain.Environment;
+import com.bytechef.platform.configuration.domain.WorkflowTestConfigurationConnection;
+import com.bytechef.platform.configuration.dto.WorkflowNodeOutputDTO;
+import com.bytechef.platform.configuration.facade.WorkflowNodeOutputFacade;
+import com.bytechef.platform.configuration.service.WorkflowTestConfigurationService;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import org.apache.commons.lang3.Validate;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.expression.EvaluationException;
 
 /**
  * @author Ivica Cardic
  */
 public class TestTaskDispatcherPreSendProcessor implements TaskDispatcherPreSendProcessor {
 
+    private static final Logger log = LoggerFactory.getLogger(TestTaskDispatcherPreSendProcessor.class);
     private final JobService jobService;
+    private final WorkflowNodeOutputFacade workflowNodeOutputFacade;
+    private final WorkflowTestConfigurationService workflowTestConfigurationService;
 
-    @SuppressFBWarnings
-    public TestTaskDispatcherPreSendProcessor(JobService jobService) {
+    @SuppressFBWarnings("EI")
+    public TestTaskDispatcherPreSendProcessor(
+        JobService jobService, WorkflowNodeOutputFacade workflowNodeOutputFacade,
+        WorkflowTestConfigurationService workflowTestConfigurationService) {
+
         this.jobService = jobService;
+        this.workflowNodeOutputFacade = workflowNodeOutputFacade;
+        this.workflowTestConfigurationService = workflowTestConfigurationService;
     }
 
     @Override
+    @SuppressWarnings({
+        "rawtypes", "unchecked"
+    })
     public TaskExecution process(TaskExecution taskExecution) {
         Job job = jobService.getJob(Validate.notNull(taskExecution.getJobId(), "jobId"));
 
-        Map<String, Map<String, Long>> connectionIdsMap = MapUtils.getMap(
-            job.getMetadata(), MetadataConstants.CONNECTION_IDS, new TypeReference<>() {}, Map.of());
+        Map<String, Long> connectionIdMap = getConnectionIdMap(job.getWorkflowId(), taskExecution.getName());
 
-        if (connectionIdsMap.containsKey(taskExecution.getName())) {
-            taskExecution.putMetadata(MetadataConstants.CONNECTION_IDS, connectionIdsMap.get(taskExecution.getName()));
+        if (!connectionIdMap.isEmpty()) {
+            taskExecution.putMetadata(MetadataConstants.CONNECTION_IDS, connectionIdMap);
         }
 
+        taskExecution.putMetadata(MetadataConstants.ENVIRONMENT_ID, Environment.DEVELOPMENT.ordinal());
+        taskExecution.putMetadata(MetadataConstants.EDITOR_ENVIRONMENT, true);
+
+        WorkflowNodeOutputDTO workflowNodeOutputDTO = null;
+        try {
+            workflowNodeOutputDTO = workflowNodeOutputFacade.getWorkflowNodeOutput(
+                job.getWorkflowId(), taskExecution.getName(), Environment.DEVELOPMENT.ordinal());
+        } catch (EvaluationException e) {
+            log.error("Couldn't evaluate expression with sample output", e);
+        }
+
+        if (workflowNodeOutputDTO != null && workflowNodeOutputDTO.getSampleOutput() instanceof Map map &&
+            MapUtils.getBoolean(map, ResumeResponse.RESUMED, false)) {
+
+            taskExecution.putMetadata(MetadataConstants.RESUME_DATA, map.get(ResumeResponse.DATA));
+            taskExecution.putMetadata(MetadataConstants.SUSPEND, new ActionContext.Suspend(Map.of(), null));
+        }
+
+        taskExecution.putMetadata(MetadataConstants.WORKFLOW_ID, job.getWorkflowId());
+
         return taskExecution;
+    }
+
+    @Override
+    public boolean canProcess(TaskExecution taskExecution) {
+        return true;
+    }
+
+    private Map<String, Long> getConnectionIdMap(String workflowId, String workflowNodeName) {
+        List<WorkflowTestConfigurationConnection> connections =
+            workflowTestConfigurationService.getWorkflowTestConfigurationConnections(workflowId, workflowNodeName, 0);
+
+        Map<String, Long> connectionIdMap = new HashMap<>();
+
+        for (WorkflowTestConfigurationConnection connection : connections) {
+            connectionIdMap.put(connection.getWorkflowConnectionKey(), connection.getConnectionId());
+        }
+
+        return connectionIdMap;
     }
 }

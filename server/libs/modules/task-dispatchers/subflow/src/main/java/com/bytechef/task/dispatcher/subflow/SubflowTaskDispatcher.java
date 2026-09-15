@@ -13,23 +13,33 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * Modifications copyright (C) 2023 ByteChef Inc.
+ * Modifications copyright (C) 2025 ByteChef
  */
 
 package com.bytechef.task.dispatcher.subflow;
 
+import static com.bytechef.platform.component.constant.WorkflowConstants.NEW_WORKFLOW_CALL;
 import static com.bytechef.task.dispatcher.subflow.constant.SubflowTaskDispatcherConstants.SUBFLOW;
+import static com.bytechef.task.dispatcher.subflow.constant.SubflowTaskDispatcherConstants.WORKFLOW_UUID;
 
 import com.bytechef.atlas.configuration.constant.WorkflowConstants;
 import com.bytechef.atlas.configuration.domain.Task;
 import com.bytechef.atlas.coordinator.task.dispatcher.TaskDispatcher;
 import com.bytechef.atlas.coordinator.task.dispatcher.TaskDispatcherResolver;
+import com.bytechef.atlas.execution.domain.Job;
 import com.bytechef.atlas.execution.domain.TaskExecution;
-import com.bytechef.atlas.execution.dto.JobParameters;
-import com.bytechef.atlas.execution.facade.JobFacade;
+import com.bytechef.atlas.execution.dto.JobParametersDTO;
+import com.bytechef.atlas.execution.service.JobService;
 import com.bytechef.commons.util.MapUtils;
+import com.bytechef.platform.component.constant.MetadataConstants;
+import com.bytechef.platform.workflow.task.dispatcher.subflow.ChildJobPrincipalFactory;
+import com.bytechef.platform.workflow.task.dispatcher.subflow.SubflowResolver;
+import com.bytechef.platform.workflow.task.dispatcher.subflow.SubflowResolver.Subflow;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -41,21 +51,46 @@ import java.util.Objects;
  */
 public class SubflowTaskDispatcher implements TaskDispatcher<TaskExecution>, TaskDispatcherResolver {
 
-    private final JobFacade jobFacade;
+    private final ChildJobPrincipalFactory childJobPrincipalFactory;
+    private final JobService jobService;
+    private final SubflowResolver subflowResolver;
 
     @SuppressFBWarnings("EI")
-    public SubflowTaskDispatcher(JobFacade jobFacade) {
-        this.jobFacade = jobFacade;
+    public SubflowTaskDispatcher(
+        ChildJobPrincipalFactory childJobPrincipalFactory, JobService jobService, SubflowResolver subflowResolver) {
+
+        this.childJobPrincipalFactory = childJobPrincipalFactory;
+        this.jobService = jobService;
+        this.subflowResolver = subflowResolver;
     }
 
     @Override
     public void dispatch(TaskExecution taskExecution) {
-        JobParameters jobParameters = new JobParameters(
-            MapUtils.getRequiredString(taskExecution.getParameters(), WorkflowConstants.WORKFLOW_ID),
-            taskExecution.getId(),
+        Job job = jobService.getJob(Objects.requireNonNull(taskExecution.getJobId()));
+
+        boolean editorEnvironment = MapUtils.getBoolean(job.getMetadata(), MetadataConstants.EDITOR_ENVIRONMENT, false);
+        String workflowUuid = MapUtils.getRequiredString(taskExecution.getParameters(), WORKFLOW_UUID);
+
+        Subflow subflow = subflowResolver.resolveSubflow(workflowUuid, NEW_WORKFLOW_CALL, editorEnvironment);
+
+        String workflowId = subflow.workflowId();
+
+        if (workflowId == null || workflowId.isEmpty()) {
+            throw new IllegalStateException(
+                "SubflowResolver returned an empty workflow ID for UUID '%s' (editorEnvironment=%s)".formatted(
+                    workflowUuid, editorEnvironment));
+        }
+
+        Map<String, ? extends Map<Object, ?>> inputs = Map.of(
+            subflow.inputsName(),
             MapUtils.getMap(taskExecution.getParameters(), WorkflowConstants.INPUTS, Collections.emptyMap()));
 
-        jobFacade.createJob(jobParameters);
+        Map<String, Object> childMetadata = new HashMap<>(job.getMetadata());
+
+        JobParametersDTO jobParametersDTO = new JobParametersDTO(
+            workflowId, taskExecution.getId(), inputs, null, null, List.of(), childMetadata);
+
+        childJobPrincipalFactory.createChildJob(Objects.requireNonNull(job.getId()), jobParametersDTO);
     }
 
     @Override

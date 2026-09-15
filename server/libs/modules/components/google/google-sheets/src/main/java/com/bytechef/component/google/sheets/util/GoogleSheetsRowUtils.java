@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,8 +16,11 @@
 
 package com.bytechef.component.google.sheets.util;
 
+import com.bytechef.google.commons.GoogleUtils;
 import com.google.api.services.sheets.v4.Sheets;
+import com.google.api.services.sheets.v4.model.BatchGetValuesResponse;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -28,20 +31,25 @@ public class GoogleSheetsRowUtils {
     private GoogleSheetsRowUtils() {
     }
 
-    public static List<Object> getRowValues(
-        Sheets sheets, String spreadSheetId, String sheetName, Integer rowNumber) throws IOException {
+    public static List<Object> getRowValues(Sheets sheets, String spreadSheetId, String sheetName, Integer rowNumber) {
+        try {
+            BatchGetValuesResponse batchGetValuesResponse = sheets.spreadsheets()
+                .values()
+                .batchGet(spreadSheetId)
+                .setRanges(List.of(GoogleSheetsUtils.createRange(sheetName, rowNumber)))
+                .setValueRenderOption("UNFORMATTED_VALUE")
+                .setDateTimeRenderOption("FORMATTED_STRING")
+                .setMajorDimension("ROWS")
+                .execute();
 
-        return sheets.spreadsheets()
-            .values()
-            .batchGet(spreadSheetId)
-            .setRanges(List.of(GoogleSheetsUtils.createRange(sheetName, rowNumber)))
-            .setValueRenderOption("UNFORMATTED_VALUE")
-            .setDateTimeRenderOption("FORMATTED_STRING")
-            .setMajorDimension("ROWS")
-            .execute()
-            .getValueRanges()
-            .getFirst()
-            .getValues()
-            .getFirst();
+            List<List<Object>> sheetRowValues = batchGetValuesResponse
+                .getValueRanges()
+                .getFirst()
+                .getValues();
+
+            return sheetRowValues == null ? new ArrayList<>() : sheetRowValues.getFirst();
+        } catch (IOException e) {
+            throw GoogleUtils.translateGoogleIOException(e);
+        }
     }
 }

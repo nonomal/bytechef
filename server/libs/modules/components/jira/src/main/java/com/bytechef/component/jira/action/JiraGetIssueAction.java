@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,19 +16,17 @@
 
 package com.bytechef.component.jira.action;
 
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.string;
-import static com.bytechef.component.jira.constant.JiraConstants.GET_ISSUE;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.outputSchema;
+import static com.bytechef.component.definition.ComponentDsl.string;
 import static com.bytechef.component.jira.constant.JiraConstants.ISSUE_ID;
 import static com.bytechef.component.jira.constant.JiraConstants.ISSUE_OUTPUT_PROPERTY;
 import static com.bytechef.component.jira.constant.JiraConstants.PROJECT;
-import static com.bytechef.component.jira.util.JiraUtils.getBaseUrl;
 
-import com.bytechef.component.definition.ActionContext;
-import com.bytechef.component.definition.ComponentDSL.ModifiableActionDefinition;
+import com.bytechef.component.definition.ActionDefinition.OptionsFunction;
+import com.bytechef.component.definition.ComponentDsl.ModifiableActionDefinition;
+import com.bytechef.component.definition.Context;
 import com.bytechef.component.definition.Context.Http;
-import com.bytechef.component.definition.Context.TypeReference;
-import com.bytechef.component.definition.OptionsDataSource.ActionOptionsFunction;
 import com.bytechef.component.definition.Parameters;
 import com.bytechef.component.jira.util.JiraOptionsUtils;
 
@@ -37,34 +35,31 @@ import com.bytechef.component.jira.util.JiraOptionsUtils;
  */
 public class JiraGetIssueAction {
 
-    public static final ModifiableActionDefinition ACTION_DEFINITION = action(GET_ISSUE)
-        .title("Get issue")
+    public static final ModifiableActionDefinition ACTION_DEFINITION = action("getIssue")
+        .title("Get Issue")
         .description("Get issue details in selected project.")
+        .help("", "https://docs.bytechef.io/reference/components/jira_v1#get-issue")
         .properties(
             string(PROJECT)
-                .label("Project Name")
-                .description("Project where the issue is located.")
-                .options((ActionOptionsFunction<String>) JiraOptionsUtils::getProjectIdOptions)
-                .required(true),
+                .label("Project ID")
+                .description("ID of the project where the issue is located.")
+                .options((OptionsFunction<String>) JiraOptionsUtils::getProjectIdOptions)
+                .required(false),
             string(ISSUE_ID)
-                .label("Issue name")
-                .options((ActionOptionsFunction<String>) JiraOptionsUtils::getIssueIdOptions)
+                .label("Issue ID")
+                .options((OptionsFunction<String>) JiraOptionsUtils::getIssueIdOptions)
                 .optionsLookupDependsOn(PROJECT)
                 .required(true))
-        .outputSchema(ISSUE_OUTPUT_PROPERTY)
+        .output(outputSchema(ISSUE_OUTPUT_PROPERTY))
         .perform(JiraGetIssueAction::perform);
 
     private JiraGetIssueAction() {
     }
 
-    public static Object perform(
-        Parameters inputParameters, Parameters connectionParameters, ActionContext context) {
-
-        return context
-            .http(http -> http
-                .get(getBaseUrl(context) + "/issue/" + inputParameters.getRequiredString(ISSUE_ID)))
+    public static Object perform(Parameters inputParameters, Parameters connectionParameters, Context context) {
+        return context.http(http -> http.get("/issue/" + inputParameters.getRequiredString(ISSUE_ID)))
             .configuration(Http.responseType(Http.ResponseType.JSON))
             .execute()
-            .getBody(new TypeReference<>() {});
+            .getBody();
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,8 @@
 
 package com.bytechef.component.http.client;
 
-import static com.bytechef.component.definition.ComponentDSL.component;
+import static com.bytechef.component.definition.ComponentDsl.component;
+import static com.bytechef.component.definition.ComponentDsl.tool;
 
 import com.bytechef.component.ComponentHandler;
 import com.bytechef.component.definition.ComponentCategory;
@@ -28,7 +29,6 @@ import com.bytechef.component.http.client.action.HttpClientPatchAction;
 import com.bytechef.component.http.client.action.HttpClientPostAction;
 import com.bytechef.component.http.client.action.HttpClientPutAction;
 import com.bytechef.component.http.client.connection.HttpClientConnection;
-import com.bytechef.component.http.client.constant.HttpClientComponentConstants;
 import com.google.auto.service.AutoService;
 
 /**
@@ -37,7 +37,7 @@ import com.google.auto.service.AutoService;
 @AutoService(ComponentHandler.class)
 public class HttpClientComponentHandler implements ComponentHandler {
 
-    private static final ComponentDefinition COMPONENT_DEFINITION = component(HttpClientComponentConstants.HTTP_CLIENT)
+    private static final ComponentDefinition COMPONENT_DEFINITION = component("httpClient")
         .title("HTTP Client")
         .description("Makes an HTTP request and returns the response data.")
         .icon("path:assets/http-client.svg")
@@ -49,7 +49,14 @@ public class HttpClientComponentHandler implements ComponentHandler {
             HttpClientPutAction.ACTION_DEFINITION,
             HttpClientPatchAction.ACTION_DEFINITION,
             HttpClientDeleteAction.ACTION_DEFINITION,
-            HttpClientHeadAction.ACTION_DEFINITION);
+            HttpClientHeadAction.ACTION_DEFINITION)
+        .clusterElements(
+            tool(HttpClientDeleteAction.ACTION_DEFINITION),
+            tool(HttpClientGetAction.ACTION_DEFINITION),
+            tool(HttpClientHeadAction.ACTION_DEFINITION),
+            tool(HttpClientPatchAction.ACTION_DEFINITION),
+            tool(HttpClientPostAction.ACTION_DEFINITION),
+            tool(HttpClientPutAction.ACTION_DEFINITION));
 
     @Override
     public ComponentDefinition getDefinition() {

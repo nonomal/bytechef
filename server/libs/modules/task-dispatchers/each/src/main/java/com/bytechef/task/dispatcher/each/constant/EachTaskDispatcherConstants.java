@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,8 +22,8 @@ package com.bytechef.task.dispatcher.each.constant;
 public class EachTaskDispatcherConstants {
 
     public static final String EACH = "each";
-    public static final String LIST = "list";
-    public static final String ITEM = "item";
     public static final String INDEX = "index";
+    public static final String ITEM = "item";
+    public static final String ITEMS = "items";
     public static final String ITERATEE = "iteratee";
 }

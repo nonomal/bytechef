@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,13 +19,13 @@ package com.bytechef.component.data.mapper.action;
 import static com.bytechef.component.data.mapper.constant.DataMapperConstants.FIELD_KEY;
 import static com.bytechef.component.data.mapper.constant.DataMapperConstants.FIELD_VALUE;
 import static com.bytechef.component.data.mapper.constant.DataMapperConstants.INPUT;
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.array;
-import static com.bytechef.component.definition.ComponentDSL.object;
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.array;
+import static com.bytechef.component.definition.ComponentDsl.object;
+import static com.bytechef.component.definition.ComponentDsl.string;
 
-import com.bytechef.component.definition.ActionContext;
-import com.bytechef.component.definition.ComponentDSL.ModifiableActionDefinition;
+import com.bytechef.component.definition.ComponentDsl.ModifiableActionDefinition;
+import com.bytechef.component.definition.Context;
 import com.bytechef.component.definition.Parameters;
 import java.util.HashMap;
 import java.util.List;
@@ -38,9 +38,11 @@ import java.util.Map;
 public class DataMapperMergeAndPivotByKeyAction {
 
     public static final ModifiableActionDefinition ACTION_DEFINITION = action("mergeAndPivotPropertiesByKey")
-        .title("Merge and pivot properties by key")
+        .title("Merge and Pivot Properties by Key")
         .description(
-            "Creates a new object out of all objects that have the same key as the specified field kay and an object as value. That value of the new object contains values of all properties that share the specified field key as keys and the they all have the specified field value as a value.")
+            "Creates a new object out of all objects that have the same key as the specified field key and an object " +
+                "as value. That value of the new object contains values of all properties that share the specified " +
+                "field key as keys and the they all have the specified field value as a value.")
         .properties(
             array(INPUT)
                 .label("Input")
@@ -56,14 +58,15 @@ public class DataMapperMergeAndPivotByKeyAction {
                 .description("The value of each property in the newly created objects value.")
                 .required(true))
         .output()
+        .help("", "https://docs.bytechef.io/reference/components/data-mapper_v1#merge-and-pivot-properties-by-key")
         .perform(DataMapperMergeAndPivotByKeyAction::perform);
 
     private DataMapperMergeAndPivotByKeyAction() {
     }
 
     @SuppressWarnings("unchecked")
-    protected static Map<String, Map<Object, Object>> perform(
-        Parameters inputParameters, Parameters connectionParameters, ActionContext context) {
+    public static Map<String, Map<Object, Object>> perform(
+        Parameters inputParameters, Parameters connectionParameters, Context context) {
 
         List<Object> input = inputParameters.getList(INPUT, Object.class, List.of());
         String fieldKey = inputParameters.getRequiredString(FIELD_KEY);

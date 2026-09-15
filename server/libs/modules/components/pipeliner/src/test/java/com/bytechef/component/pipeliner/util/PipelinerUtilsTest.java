@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,17 +16,17 @@
 
 package com.bytechef.component.pipeliner.util;
 
-import static com.bytechef.component.definition.ComponentDSL.option;
+import static com.bytechef.component.definition.ComponentDsl.option;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import com.bytechef.component.definition.ActionContext;
+import com.bytechef.component.definition.Context;
 import com.bytechef.component.definition.Context.Http;
-import com.bytechef.component.definition.Context.TypeReference;
 import com.bytechef.component.definition.Option;
 import com.bytechef.component.definition.Parameters;
+import com.bytechef.component.definition.TypeReference;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -39,7 +39,7 @@ import org.junit.jupiter.api.Test;
  */
 class PipelinerUtilsTest {
 
-    private final ActionContext mockedContext = mock(ActionContext.class);
+    private final Context mockedContext = mock(Context.class);
     private final Http.Executor mockedExecutor = mock(Http.Executor.class);
     private final Parameters mockedParameters = mock(Parameters.class);
     private final Http.Response mockedResponse = mock(Http.Response.class);
@@ -106,7 +106,7 @@ class PipelinerUtilsTest {
     }
 
     @Test
-    void testGetSalesUnitsIdOptions() {
+    void testGetUnitIdOptions() {
         Map<String, Object> map = new LinkedHashMap<>();
         List<Map<String, String>> data = new ArrayList<>();
         Map<String, String> salesUnitsMap = new LinkedHashMap<>();
@@ -127,6 +127,6 @@ class PipelinerUtilsTest {
 
         assertEquals(
             expectedOptions,
-            PipelinerUtils.getSalesUnitsIdOptions(mockedParameters, mockedParameters, Map.of(), "", mockedContext));
+            PipelinerUtils.getUnitIdOptions(mockedParameters, mockedParameters, Map.of(), "", mockedContext));
     }
 }

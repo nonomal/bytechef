@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,52 +16,43 @@
 
 package com.bytechef.component.twilio.util;
 
-import com.bytechef.component.definition.ActionContext;
-import com.bytechef.component.definition.ComponentDSL;
+import static com.bytechef.component.definition.ComponentDsl.option;
+
+import com.bytechef.component.definition.Context;
+import com.bytechef.component.definition.Context.Http;
 import com.bytechef.component.definition.Option;
 import com.bytechef.component.definition.Parameters;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.time.ZoneOffset;
-import java.time.ZonedDateTime;
+import com.bytechef.component.definition.TypeReference;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 /**
- * @author Monika Domiter
+ * @author Monika Kušter
  */
 public class TwilioUtils {
 
     private TwilioUtils() {
     }
 
-    public static List<Option<String>> getZoneIdOptions(
-        Parameters inputParameters, Parameters connectionParameters, Map<String, String> dependencyPaths,
-        String searchText, ActionContext context) {
+    public static List<Option<String>> getContentSidOptions(
+        Parameters inputParameters, Parameters connectionParameters, Map<String, String> lookupDependsOnPaths,
+        String searchText, Context context) {
+
+        Map<String, Object> body = context.http(http -> http.get("https://content.twilio.com/v1/Content"))
+            .configuration(Http.responseType(Http.ResponseType.JSON))
+            .execute()
+            .getBody(new TypeReference<>() {});
 
         List<Option<String>> options = new ArrayList<>();
-        LocalDateTime now = LocalDateTime.now();
-        Set<String> zoneIds = ZoneId.getAvailableZoneIds();
 
-        for (String zoneId : zoneIds) {
-            if ((zoneId.startsWith("Etc/GMT+") || zoneId.startsWith("Etc/GMT-")) && !zoneId.equals("Etc/GMT-0")) {
-                ZonedDateTime zonedDateTime = now.atZone(ZoneId.of(zoneId));
-
-                ZoneOffset zoneOffset = zonedDateTime.getOffset();
-
-                String zoneOffsetId = zoneOffset.getId();
-
-                options.add(ComponentDSL.option("GMT" + zoneOffsetId.replace("Z", "+00:00"), zoneId));
+        if (body.get("contents") instanceof List<?> contents) {
+            for (Object content : contents) {
+                if (content instanceof Map<?, ?> map) {
+                    options.add(option((String) map.get("friendly_name"), (String) map.get("sid")));
+                }
             }
         }
-
-        options.sort((o1, o2) -> {
-            String name = o1.getLabel();
-
-            return name.compareTo(o2.getLabel());
-        });
 
         return options;
     }

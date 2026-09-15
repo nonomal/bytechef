@@ -1,13 +1,32 @@
 /* eslint-disable sort-keys */
-import {TaskDispatcherDefinitionApi, TaskDispatcherDefinitionModel} from '@/shared/middleware/platform/configuration';
+import {
+    GetTaskDispatcherDefinitionRequest,
+    TaskDispatcherDefinition,
+    TaskDispatcherDefinitionApi,
+} from '@/shared/middleware/platform/configuration';
+import {DEFINITION_STALE_TIME} from '@/shared/queries/queryConstants';
 import {useQuery} from '@tanstack/react-query';
 
 export const TaskDispatcherKeys = {
+    taskDispatcherDefinition: (request: GetTaskDispatcherDefinitionRequest) => [
+        ...TaskDispatcherKeys.taskDispatcherDefinitions,
+        request.taskDispatcherName,
+        request.taskDispatcherVersion,
+    ],
     taskDispatcherDefinitions: ['taskDispatcherDefinitions'] as const,
 };
 
 export const useGetTaskDispatcherDefinitionsQuery = () =>
-    useQuery<TaskDispatcherDefinitionModel[], Error>({
+    useQuery<TaskDispatcherDefinition[], Error>({
         queryKey: TaskDispatcherKeys.taskDispatcherDefinitions,
         queryFn: () => new TaskDispatcherDefinitionApi().getTaskDispatcherDefinitions(),
+        staleTime: DEFINITION_STALE_TIME,
+    });
+
+export const useGetTaskDispatcherDefinitionQuery = (request: GetTaskDispatcherDefinitionRequest, enabled?: boolean) =>
+    useQuery<TaskDispatcherDefinition, Error>({
+        queryKey: TaskDispatcherKeys.taskDispatcherDefinition(request),
+        queryFn: () => new TaskDispatcherDefinitionApi().getTaskDispatcherDefinition(request),
+        enabled: enabled === undefined ? true : enabled,
+        staleTime: DEFINITION_STALE_TIME,
     });

@@ -1,0 +1,186 @@
+---
+title: "Reddit"
+description: "Reddit is a social news aggregation, discussion, and content-sharing platform where users post and vote on content organized into communities called subreddits."
+---
+
+
+Categories: Social Media
+
+
+Type: reddit/v1
+
+<hr />
+
+
+
+
+## Connections
+
+Version: 1
+
+
+### OAuth2 Authorization Code
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| clientId | Client Id | STRING |  | true |
+| clientSecret | Client Secret | STRING |  | true |
+
+
+
+## Connection Setup
+
+### Create OAuth 2.0 Application
+
+1. Login to your account at https://www.reddit.com/prefs/apps.
+2. Click on **are you a developer? create an app...**
+3. Fill in the required fields, choose web app as type and click **create app**.
+4. Here you will find Client ID.
+5. Click on **edit** and here you will find Client Secret.
+
+<div style={{ position: 'relative', height:0, width: '100%', overflow: 'hidden', zIndex: 49, boxSizing: 'border-box', paddingBottom: 'calc(50.05219207% + 32px)'}}>
+    <iframe src="https://www.guidejar.com/embed/mB65BPSEYnEwC7VKnovG?type=1&controls=on" width="100%" height="100%" style={{height:'100%', position:'absolute', inset:0}} allowFullScreen frameBorder="0"></iframe>
+</div>
+
+
+
+<hr />
+
+
+## Actions
+
+
+### Create Comment
+Name: createComment
+
+`Creates comment on a Reddit post or replies to a comment.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| thing_id | Parent ID | STRING | Post ID (t3_*) or comment ID (t1_*) to reply to. | true |
+| text | Comment Text | STRING | Comment text. | true |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Create Comment",
+  "name" : "createComment",
+  "parameters" : {
+    "thing_id" : "",
+    "text" : ""
+  },
+  "type" : "reddit/v1/createComment"
+}
+```
+
+#### Output
+
+
+
+Type: OBJECT
+
+
+#### Properties
+
+|     Name     |     Type     |     Description     |
+|:------------:|:------------:|:-------------------:|
+| jquery | ARRAY <details> <summary> Items </summary> [] </details> | An array with response data. |
+| success | BOOLEAN <details> <summary> Options </summary> <span>true</span>, <span>false</span> </details> | Boolean value that indicates the success or failure of the request. |
+
+
+
+
+#### Output Example
+```json
+{
+  "jquery" : [ ],
+  "success" : false
+}
+```
+
+#### Find Parent ID
+
+To find the Parent ID, click [here](/reference/components/reddit_v1#how-to-find-parent-id).
+
+
+
+### Create Post
+Name: createPost
+
+`Creates a new reddit post.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| sr | Subreddit Name | STRING | Subreddit name. | true |
+| title | Title | STRING | Post title. | true |
+| kind | Kind | STRING <details> <summary> Options </summary> <span>link</span>, <span>self</span> </details> | Type of post. | true |
+| url | URL | STRING | Link URL. | true |
+| text | Text | STRING | Post text. | true |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Create Post",
+  "name" : "createPost",
+  "parameters" : {
+    "sr" : "",
+    "title" : "",
+    "kind" : "",
+    "url" : "",
+    "text" : ""
+  },
+  "type" : "reddit/v1/createPost"
+}
+```
+
+#### Output
+
+
+
+Type: OBJECT
+
+
+#### Properties
+
+|     Name     |     Type     |     Description     |
+|:------------:|:------------:|:-------------------:|
+| jquery | ARRAY <details> <summary> Items </summary> [] </details> | An array with response data. |
+| success | BOOLEAN <details> <summary> Options </summary> <span>true</span>, <span>false</span> </details> | Boolean value that indicates the success or failure of the request. |
+
+
+
+
+#### Output Example
+```json
+{
+  "jquery" : [ ],
+  "success" : false
+}
+```
+
+
+
+
+
+
+## What to do if your action is not listed here?
+
+If this component doesn't have the action you need, you can use **Custom Action** to create your own. Custom Actions empower you to define HTTP requests tailored to your specific requirements, allowing for greater flexibility in integrating with external services or APIs.
+
+To create a Custom Action, simply specify the desired HTTP method, path, and any necessary parameters. This way, you can extend the functionality of your component beyond the predefined actions, ensuring that you can meet all your integration needs effectively.
+
+<hr />
+
+# Additional Instructions
+
+### How to find Parent ID
+
+Open the Reddit post on your browser and you can find ID in the URL (just add t3_ or t1_). For example in `https://www.reddit.com/r/subreddit/comments/123/title/`, post ID is t3_123.
+If you want to respond to a comment, open that comment and find ID in the URL. For example in `https://www.reddit.com/r/subreddit/comments/123/comment/456/`, comment ID is t1_456.
+

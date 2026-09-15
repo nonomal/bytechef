@@ -1,10 +1,11 @@
+import useCopilotStateContributorRegistry from '@/shared/components/copilot/stores/useCopilotStateContributorRegistry';
 import {create} from 'zustand';
 import {devtools, persist} from 'zustand/middleware';
 
 interface WorkspaceStateI {
     clearCurrentWorkspaceId: () => void;
 
-    currentWorkspaceId: number | undefined;
+    currentWorkspaceId: number;
     setCurrentWorkspaceId: (currentWorkspaceId: number) => void;
 }
 
@@ -18,15 +19,19 @@ export const useWorkspaceStore = create<WorkspaceStateI>()(
                     }));
                 },
 
-                currentWorkspaceId: undefined,
+                currentWorkspaceId: 1049, // Default workspace id,
                 setCurrentWorkspaceId: (currentWorkspaceId: number) =>
                     set(() => ({
                         currentWorkspaceId,
                     })),
             }),
             {
-                name: 'workspace',
+                name: 'bytechef.workspace',
             }
         )
     )
 );
+
+useCopilotStateContributorRegistry
+    .getState()
+    .register(() => ({workspaceId: useWorkspaceStore.getState().currentWorkspaceId}));

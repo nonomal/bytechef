@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,17 +17,20 @@
 package com.bytechef.component.pipedrive.action;
 
 import static com.bytechef.component.OpenApiComponentHandler.PropertyType;
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.array;
-import static com.bytechef.component.definition.ComponentDSL.bool;
-import static com.bytechef.component.definition.ComponentDSL.integer;
-import static com.bytechef.component.definition.ComponentDSL.object;
-import static com.bytechef.component.definition.ComponentDSL.option;
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.array;
+import static com.bytechef.component.definition.ComponentDsl.bool;
+import static com.bytechef.component.definition.ComponentDsl.integer;
+import static com.bytechef.component.definition.ComponentDsl.object;
+import static com.bytechef.component.definition.ComponentDsl.option;
+import static com.bytechef.component.definition.ComponentDsl.outputSchema;
+import static com.bytechef.component.definition.ComponentDsl.string;
 import static com.bytechef.component.definition.Context.Http.BodyContentType;
 import static com.bytechef.component.definition.Context.Http.ResponseType;
 
-import com.bytechef.component.definition.ComponentDSL;
+import com.bytechef.component.definition.ActionDefinition;
+import com.bytechef.component.definition.ComponentDsl;
+import com.bytechef.component.pipedrive.util.PipedriveUtils;
 import java.util.Map;
 
 /**
@@ -36,8 +39,8 @@ import java.util.Map;
  * @generated
  */
 public class PipedriveAddPersonAction {
-    public static final ComponentDSL.ModifiableActionDefinition ACTION_DEFINITION = action("addPerson")
-        .title("Add person")
+    public static final ComponentDsl.ModifiableActionDefinition ACTION_DEFINITION = action("addPerson")
+        .title("Add Person")
         .description("Adds a new person.")
         .metadata(
             Map.of(
@@ -45,16 +48,27 @@ public class PipedriveAddPersonAction {
                 "path", "/persons", "bodyContentType", BodyContentType.JSON, "mimeType", "application/json"
 
             ))
-        .properties(object("__item").properties(string("name").label("Name")
+        .properties(string("name").metadata(
+            Map.of(
+                "type", PropertyType.BODY))
+            .label("Name")
             .description("Person full name")
             .required(true),
-            integer("owner_id").label("Owner")
-                .description("User who will be marked as the owner of this person.")
-                .required(false),
-            integer("org_id").label("Organization")
-                .description("Organization this person will belong to.")
-                .required(false),
-            array("email").items(object().properties(string("value").label("Email   Address")
+            integer("owner_id").metadata(
+                Map.of(
+                    "type", PropertyType.BODY))
+                .label("Owner ID")
+                .description("ID of the user who will be marked as the owner of this person.")
+                .required(false)
+                .options((ActionDefinition.OptionsFunction<Long>) PipedriveUtils::getOwnerIdOptions),
+            integer("org_id").metadata(
+                Map.of(
+                    "type", PropertyType.BODY))
+                .label("Organization ID")
+                .description("ID of the organization this person will belong to.")
+                .required(false)
+                .options((ActionDefinition.OptionsFunction<Long>) PipedriveUtils::getOrgIdOptions),
+            array("email").items(object().properties(string("value").label("Email Address")
                 .required(true),
                 bool("primary").label("Primary")
                     .description("If email is primary for the person or not.")
@@ -65,10 +79,13 @@ public class PipedriveAddPersonAction {
                     .required(false))
                 .description("An email addresses related to the person."))
                 .placeholder("Add to Email")
+                .metadata(
+                    Map.of(
+                        "type", PropertyType.BODY))
                 .label("Email")
                 .description("An email addresses related to the person.")
                 .required(false),
-            array("phone").items(object().properties(string("value").label("Phone   Number")
+            array("phone").items(object().properties(string("value").label("Phone Number")
                 .description("The phone number")
                 .required(true),
                 bool("primary").label("Primary")
@@ -81,39 +98,36 @@ public class PipedriveAddPersonAction {
                     .required(false))
                 .description("A phone numbers related to the person."))
                 .placeholder("Add to Phone")
+                .metadata(
+                    Map.of(
+                        "type", PropertyType.BODY))
                 .label("Phone")
                 .description("A phone numbers related to the person.")
                 .required(false))
-            .label("Person")
-            .metadata(
-                Map.of(
-                    "type", PropertyType.BODY)))
-        .outputSchema(object()
-            .properties(object("body")
-                .properties(object("data")
-                    .properties(integer("id").required(false), integer("company_id").required(false),
-                        object("owner_id")
-                            .properties(integer("id").required(false), string("name").required(false),
-                                string("email").required(false))
-                            .required(false),
-                        object("org_id")
-                            .properties(string("name").required(false), integer("owner_id").required(false),
-                                string("cc_email").required(false))
-                            .required(false),
-                        string("name").required(false),
-                        array("phone")
-                            .items(object().properties(string("value").required(false), bool("primary").required(false),
-                                string("label").required(false)))
-                            .required(false),
-                        array("email")
-                            .items(object().properties(string("value").required(false), bool("primary").required(false),
-                                string("label").required(false)))
-                            .required(false))
-                    .required(false))
+        .output(outputSchema(object()
+            .properties(object("data")
+                .properties(integer("id").required(false), integer("company_id").required(false),
+                    object("owner_id")
+                        .properties(integer("id").required(false), string("name").required(false),
+                            string("email").required(false))
+                        .required(false),
+                    object("org_id")
+                        .properties(string("name").required(false), integer("owner_id").required(false),
+                            string("cc_email").required(false))
+                        .required(false),
+                    string("name").required(false),
+                    array("phone")
+                        .items(object().properties(string("value").required(false), bool("primary").required(false),
+                            string("label").required(false)))
+                        .required(false),
+                    array("email")
+                        .items(object().properties(string("value").required(false), bool("primary").required(false),
+                            string("label").required(false)))
+                        .required(false))
                 .required(false))
             .metadata(
                 Map.of(
-                    "responseType", ResponseType.JSON)));
+                    "responseType", ResponseType.JSON))));
 
     private PipedriveAddPersonAction() {
     }

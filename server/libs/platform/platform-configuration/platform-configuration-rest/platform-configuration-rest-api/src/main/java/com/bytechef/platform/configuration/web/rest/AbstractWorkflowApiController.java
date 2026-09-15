@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,20 +42,16 @@ public abstract class AbstractWorkflowApiController {
     protected ResponseEntity<Resource> doExportWorkflow(String id) {
         Workflow workflow = workflowService.getWorkflow(id);
 
-        ResponseEntity.BodyBuilder bodyBuilder = ResponseEntity.ok();
-
-        bodyBuilder.contentType(MediaType.APPLICATION_OCTET_STREAM);
-
+        String definition = workflow.getDefinition();
         Workflow.Format format = workflow.getFormat();
 
         String fileName = String.format(
             "%s.%s", StringUtils.isEmpty(workflow.getLabel()) ? workflow.getId() : workflow.getLabel(),
             StringUtils.lowerCase(format.name()));
 
-        bodyBuilder.header(HttpHeaders.CONTENT_DISPOSITION, "filename=\"" + fileName + "\"");
-
-        String definition = workflow.getDefinition();
-
-        return bodyBuilder.body(new ByteArrayResource(definition.getBytes(StandardCharsets.UTF_8)));
+        return ResponseEntity.ok()
+            .contentType(MediaType.APPLICATION_OCTET_STREAM)
+            .header(HttpHeaders.CONTENT_DISPOSITION, "filename=\"" + fileName + "\"")
+            .body(new ByteArrayResource(definition.getBytes(StandardCharsets.UTF_8)));
     }
 }

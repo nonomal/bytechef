@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,13 +17,14 @@
 package com.bytechef.component.aws.s3.action;
 
 import static com.bytechef.component.aws.s3.constant.AwsS3Constants.BUCKET_NAME;
-import static com.bytechef.component.aws.s3.constant.AwsS3Constants.GET_URL;
 import static com.bytechef.component.aws.s3.constant.AwsS3Constants.KEY;
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.outputSchema;
+import static com.bytechef.component.definition.ComponentDsl.sampleOutput;
+import static com.bytechef.component.definition.ComponentDsl.string;
 
 import com.bytechef.component.aws.s3.util.AwsS3Utils;
-import com.bytechef.component.definition.ComponentDSL.ModifiableActionDefinition;
+import com.bytechef.component.definition.ComponentDsl.ModifiableActionDefinition;
 import com.bytechef.component.definition.Context;
 import com.bytechef.component.definition.Parameters;
 import software.amazon.awssdk.services.s3.S3Client;
@@ -34,7 +35,7 @@ import software.amazon.awssdk.services.s3.model.GetUrlRequest;
  */
 public class AwsS3GetUrlAction {
 
-    public static final ModifiableActionDefinition ACTION_DEFINITION = action(GET_URL)
+    public static final ModifiableActionDefinition ACTION_DEFINITION = action("getUrl")
         .title("Get URL")
         .description("Get the url of an AWS S3 object.")
         .properties(
@@ -43,7 +44,7 @@ public class AwsS3GetUrlAction {
                 .description("Key is most likely the name of the file.")
                 .placeholder("file.txt")
                 .required(true))
-        .outputSchema(string())
+        .output(outputSchema(string()), sampleOutput("https://s3.amazonaws.com/bucket-name/key"))
         .perform(AwsS3GetUrlAction::perform);
 
     protected static String perform(

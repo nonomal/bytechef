@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,56 +16,43 @@
 
 package com.bytechef.component.intercom.action;
 
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.object;
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.outputSchema;
+import static com.bytechef.component.definition.ComponentDsl.string;
 import static com.bytechef.component.definition.Context.Http;
-import static com.bytechef.component.intercom.constant.IntercomConstants.BASE_URL;
-import static com.bytechef.component.intercom.constant.IntercomConstants.CONTACT_NAME;
-import static com.bytechef.component.intercom.constant.IntercomConstants.EMAIL;
-import static com.bytechef.component.intercom.constant.IntercomConstants.NAME;
-import static com.bytechef.component.intercom.constant.IntercomConstants.PHONE;
-import static com.bytechef.component.intercom.constant.IntercomConstants.ROLE;
-import static com.bytechef.component.intercom.constant.IntercomConstants.TYPE;
+import static com.bytechef.component.intercom.constant.IntercomConstants.CONTACT_OUTPUT_PROPERTY;
+import static com.bytechef.component.intercom.constant.IntercomConstants.ID;
 
-import com.bytechef.component.definition.ActionContext;
-import com.bytechef.component.definition.ComponentDSL;
+import com.bytechef.component.definition.ActionDefinition.OptionsFunction;
+import com.bytechef.component.definition.ComponentDsl.ModifiableActionDefinition;
 import com.bytechef.component.definition.Context;
-import com.bytechef.component.definition.OptionsDataSource.ActionOptionsFunction;
 import com.bytechef.component.definition.Parameters;
-import com.bytechef.component.intercom.constant.IntercomConstants;
-import com.bytechef.component.intercom.util.IntercomOptionUtils;
+import com.bytechef.component.definition.TypeReference;
+import com.bytechef.component.intercom.util.IntercomUtils;
 
+/**
+ * @author Luka Ljubić
+ * @author Monika Kušter
+ */
 public class IntercomGetContactAction {
 
-    public static final ComponentDSL.ModifiableActionDefinition ACTION_DEFINITION =
-        action(IntercomConstants.GET_CONTACT)
-            .title("Get Contact")
-            .description("Get a single Contact")
-            .properties(
-                string(CONTACT_NAME)
-                    .label("Contact Name")
-                    .required(true)
-                    .options((ActionOptionsFunction<String>) IntercomOptionUtils::getContactIdOptions))
-            .outputSchema(
-                object()
-                    .properties(
-                        string(TYPE),
-                        string(CONTACT_NAME),
-                        string(ROLE),
-                        string(EMAIL),
-                        string(PHONE),
-                        string(NAME)))
-            .perform(IntercomGetContactAction::perform);
+    public static final ModifiableActionDefinition ACTION_DEFINITION = action("getContact")
+        .title("Get Contact")
+        .description("Get a single Contact")
+        .properties(
+            string(ID)
+                .label("Contact ID")
+                .required(true)
+                .options((OptionsFunction<String>) IntercomUtils::getContactIdOptions))
+        .output(outputSchema(CONTACT_OUTPUT_PROPERTY))
+        .perform(IntercomGetContactAction::perform);
 
-    public static Object
-        perform(Parameters inputParameters, Parameters connectionParameters, ActionContext actionContext) {
-
-        return actionContext
-            .http(http -> http.get(BASE_URL + "/contacts/" + inputParameters.getRequiredString(CONTACT_NAME)))
+    public static Object perform(Parameters inputParameters, Parameters connectionParameters, Context context) {
+        return context
+            .http(http -> http.get("/contacts/" + inputParameters.getRequiredString(ID)))
             .configuration(Http.responseType(Http.ResponseType.JSON))
             .execute()
-            .getBody(new Context.TypeReference<>() {});
+            .getBody(new TypeReference<>() {});
     }
 
     private IntercomGetContactAction() {

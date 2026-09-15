@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,10 +17,9 @@
 package com.bytechef.component.definition;
 
 import java.util.Optional;
-import java.util.function.Consumer;
 
 /**
- *
+ * @author Ivica Cardic
  */
 public interface TriggerContext extends Context {
 
@@ -30,18 +29,6 @@ public interface TriggerContext extends Context {
      * @return
      */
     <R> R data(ContextFunction<Data, R> dataFunction);
-
-    /**
-     * @param eventConsumer
-     */
-    void event(Consumer<ActionContext.Event> eventConsumer);
-
-    /**
-     * @param fileFunction
-     * @param <R>
-     * @return
-     */
-    <R> R file(ContextFunction<File, R> fileFunction);
 
     interface Data {
 
@@ -58,10 +45,6 @@ public interface TriggerContext extends Context {
             public String getLabel() {
                 return label;
             }
-
-            public ActionContext.Data.Scope toActionScope() {
-                return ActionContext.Data.Scope.valueOf(label.toUpperCase());
-            }
         }
 
         /**
@@ -70,7 +53,7 @@ public interface TriggerContext extends Context {
          * @param key
          * @return
          */
-        <T> Optional<T> fetchValue(Data.Scope scope, String key);
+        <T> Optional<T> fetch(Data.Scope scope, String key);
 
         /**
          * @param <T>
@@ -78,19 +61,19 @@ public interface TriggerContext extends Context {
          * @param key
          * @return
          */
-        <T> T getValue(Data.Scope scope, String key);
+        <T> T get(Data.Scope scope, String key);
 
         /**
          * @param scope
          * @param key
          * @param data
          */
-        Void setValue(Data.Scope scope, String key, Object data);
+        Void put(Data.Scope scope, String key, Object data);
 
         /**
          * @param scope
          * @param key
          */
-        Void deleteValue(Data.Scope scope, String key);
+        Void remove(Data.Scope scope, String key);
     }
 }

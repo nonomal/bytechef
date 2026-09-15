@@ -8,6 +8,7 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import org.springframework.lang.Nullable;
 import org.openapitools.jackson.nullable.JsonNullable;
 import java.time.OffsetDateTime;
 import jakarta.validation.Valid;
@@ -23,15 +24,15 @@ import jakarta.annotation.Generated;
  */
 
 @JsonTypeName("OAuth2Properties")
-@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2024-06-30T07:20:54.243996+02:00[Europe/Zagreb]", comments = "Generator version: 7.5.0")
+@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2026-07-03T17:58:15.504637+02:00[Europe/Zagreb]", comments = "Generator version: 7.22.0")
 public class OAuth2PropertiesModel {
 
-  private String redirectUri;
+  private @Nullable String redirectUri;
 
   @Valid
   private List<String> predefinedApps = new ArrayList<>();
 
-  public OAuth2PropertiesModel redirectUri(String redirectUri) {
+  public OAuth2PropertiesModel redirectUri(@Nullable String redirectUri) {
     this.redirectUri = redirectUri;
     return this;
   }
@@ -39,15 +40,16 @@ public class OAuth2PropertiesModel {
   /**
    * The redirect URI used for OAuth2 callback URL.
    * @return redirectUri
-  */
+   */
   
   @Schema(name = "redirectUri", accessMode = Schema.AccessMode.READ_ONLY, description = "The redirect URI used for OAuth2 callback URL.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("redirectUri")
-  public String getRedirectUri() {
+  public @Nullable String getRedirectUri() {
     return redirectUri;
   }
 
-  public void setRedirectUri(String redirectUri) {
+  @JsonProperty("redirectUri")
+  public void setRedirectUri(@Nullable String redirectUri) {
     this.redirectUri = redirectUri;
   }
 
@@ -67,7 +69,7 @@ public class OAuth2PropertiesModel {
   /**
    * The list of predefined OAuth2 apps.
    * @return predefinedApps
-  */
+   */
   
   @Schema(name = "predefinedApps", accessMode = Schema.AccessMode.READ_ONLY, description = "The list of predefined OAuth2 apps.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("predefinedApps")
@@ -75,6 +77,7 @@ public class OAuth2PropertiesModel {
     return predefinedApps;
   }
 
+  @JsonProperty("predefinedApps")
   public void setPredefinedApps(List<String> predefinedApps) {
     this.predefinedApps = predefinedApps;
   }
@@ -111,11 +114,8 @@ public class OAuth2PropertiesModel {
    * Convert the given object to string with each line indented by 4 spaces
    * (except the first line).
    */
-  private String toIndentedString(Object o) {
-    if (o == null) {
-      return "null";
-    }
-    return o.toString().replace("\n", "\n    ");
+  private String toIndentedString(@Nullable Object o) {
+    return o == null ? "null" : o.toString().replace("\n", "\n    ");
   }
 }
 

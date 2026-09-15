@@ -9,11 +9,12 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.annotation.JsonValue;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.lang.Nullable;
 import org.openapitools.jackson.nullable.JsonNullable;
 import java.time.OffsetDateTime;
 import jakarta.validation.Valid;
@@ -30,43 +31,45 @@ import jakarta.annotation.Generated;
 
 @Schema(name = "Project", description = "A group of workflows that make one logical project.")
 @JsonTypeName("Project")
-@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2024-07-08T07:14:48.742903+02:00[Europe/Zagreb]", comments = "Generator version: 7.5.0")
+@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2026-07-03T17:58:17.010679+02:00[Europe/Zagreb]", comments = "Generator version: 7.22.0")
 public class ProjectModel {
 
-  private CategoryModel category;
-
-  private String createdBy;
+  private @Nullable String createdBy;
 
   @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
-  private LocalDateTime createdDate;
+  private @Nullable OffsetDateTime createdDate;
 
-  private String description;
+  private @Nullable String description;
 
-  private Long id;
+  private @Nullable Long id;
 
-  private String lastModifiedBy;
+  private @Nullable String lastModifiedBy;
 
   @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
-  private LocalDateTime lastModifiedDate;
+  private @Nullable OffsetDateTime lastModifiedDate;
 
   private String name;
 
   @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
-  private LocalDateTime publishedDate;
+  private @Nullable OffsetDateTime lastPublishedDate;
 
-  private Integer projectVersion;
+  private @Nullable ProjectStatusModel lastStatus;
+
+  private @Nullable Integer lastProjectVersion;
+
+  private @Nullable String uuid;
+
+  private @Nullable CategoryModel category;
 
   @Valid
-  private List<String> projectWorkflowIds = new ArrayList<>();
-
-  private ProjectStatusModel status;
+  private List<Long> projectWorkflowIds = new ArrayList<>();
 
   @Valid
   private List<@Valid TagModel> tags = new ArrayList<>();
 
   private Long workspaceId;
 
-  private Integer version;
+  private @Nullable Integer version;
 
   public ProjectModel() {
     super();
@@ -80,27 +83,7 @@ public class ProjectModel {
     this.workspaceId = workspaceId;
   }
 
-  public ProjectModel category(CategoryModel category) {
-    this.category = category;
-    return this;
-  }
-
-  /**
-   * Get category
-   * @return category
-  */
-  @Valid 
-  @Schema(name = "category", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
-  @JsonProperty("category")
-  public CategoryModel getCategory() {
-    return category;
-  }
-
-  public void setCategory(CategoryModel category) {
-    this.category = category;
-  }
-
-  public ProjectModel createdBy(String createdBy) {
+  public ProjectModel createdBy(@Nullable String createdBy) {
     this.createdBy = createdBy;
     return this;
   }
@@ -108,19 +91,20 @@ public class ProjectModel {
   /**
    * The created by.
    * @return createdBy
-  */
+   */
   
   @Schema(name = "createdBy", accessMode = Schema.AccessMode.READ_ONLY, description = "The created by.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("createdBy")
-  public String getCreatedBy() {
+  public @Nullable String getCreatedBy() {
     return createdBy;
   }
 
-  public void setCreatedBy(String createdBy) {
+  @JsonProperty("createdBy")
+  public void setCreatedBy(@Nullable String createdBy) {
     this.createdBy = createdBy;
   }
 
-  public ProjectModel createdDate(LocalDateTime createdDate) {
+  public ProjectModel createdDate(@Nullable OffsetDateTime createdDate) {
     this.createdDate = createdDate;
     return this;
   }
@@ -128,19 +112,20 @@ public class ProjectModel {
   /**
    * The created date.
    * @return createdDate
-  */
+   */
   @Valid 
   @Schema(name = "createdDate", accessMode = Schema.AccessMode.READ_ONLY, description = "The created date.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("createdDate")
-  public LocalDateTime getCreatedDate() {
+  public @Nullable OffsetDateTime getCreatedDate() {
     return createdDate;
   }
 
-  public void setCreatedDate(LocalDateTime createdDate) {
+  @JsonProperty("createdDate")
+  public void setCreatedDate(@Nullable OffsetDateTime createdDate) {
     this.createdDate = createdDate;
   }
 
-  public ProjectModel description(String description) {
+  public ProjectModel description(@Nullable String description) {
     this.description = description;
     return this;
   }
@@ -148,19 +133,20 @@ public class ProjectModel {
   /**
    * The description of a project.
    * @return description
-  */
+   */
   
   @Schema(name = "description", description = "The description of a project.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("description")
-  public String getDescription() {
+  public @Nullable String getDescription() {
     return description;
   }
 
-  public void setDescription(String description) {
+  @JsonProperty("description")
+  public void setDescription(@Nullable String description) {
     this.description = description;
   }
 
-  public ProjectModel id(Long id) {
+  public ProjectModel id(@Nullable Long id) {
     this.id = id;
     return this;
   }
@@ -168,19 +154,20 @@ public class ProjectModel {
   /**
    * The id of a project.
    * @return id
-  */
+   */
   
   @Schema(name = "id", accessMode = Schema.AccessMode.READ_ONLY, description = "The id of a project.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("id")
-  public Long getId() {
+  public @Nullable Long getId() {
     return id;
   }
 
-  public void setId(Long id) {
+  @JsonProperty("id")
+  public void setId(@Nullable Long id) {
     this.id = id;
   }
 
-  public ProjectModel lastModifiedBy(String lastModifiedBy) {
+  public ProjectModel lastModifiedBy(@Nullable String lastModifiedBy) {
     this.lastModifiedBy = lastModifiedBy;
     return this;
   }
@@ -188,19 +175,20 @@ public class ProjectModel {
   /**
    * The last modified by.
    * @return lastModifiedBy
-  */
+   */
   
   @Schema(name = "lastModifiedBy", accessMode = Schema.AccessMode.READ_ONLY, description = "The last modified by.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("lastModifiedBy")
-  public String getLastModifiedBy() {
+  public @Nullable String getLastModifiedBy() {
     return lastModifiedBy;
   }
 
-  public void setLastModifiedBy(String lastModifiedBy) {
+  @JsonProperty("lastModifiedBy")
+  public void setLastModifiedBy(@Nullable String lastModifiedBy) {
     this.lastModifiedBy = lastModifiedBy;
   }
 
-  public ProjectModel lastModifiedDate(LocalDateTime lastModifiedDate) {
+  public ProjectModel lastModifiedDate(@Nullable OffsetDateTime lastModifiedDate) {
     this.lastModifiedDate = lastModifiedDate;
     return this;
   }
@@ -208,15 +196,16 @@ public class ProjectModel {
   /**
    * The last modified date.
    * @return lastModifiedDate
-  */
+   */
   @Valid 
   @Schema(name = "lastModifiedDate", accessMode = Schema.AccessMode.READ_ONLY, description = "The last modified date.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("lastModifiedDate")
-  public LocalDateTime getLastModifiedDate() {
+  public @Nullable OffsetDateTime getLastModifiedDate() {
     return lastModifiedDate;
   }
 
-  public void setLastModifiedDate(LocalDateTime lastModifiedDate) {
+  @JsonProperty("lastModifiedDate")
+  public void setLastModifiedDate(@Nullable OffsetDateTime lastModifiedDate) {
     this.lastModifiedDate = lastModifiedDate;
   }
 
@@ -228,7 +217,7 @@ public class ProjectModel {
   /**
    * The name of a project.
    * @return name
-  */
+   */
   @NotNull 
   @Schema(name = "name", description = "The name of a project.", requiredMode = Schema.RequiredMode.REQUIRED)
   @JsonProperty("name")
@@ -236,56 +225,122 @@ public class ProjectModel {
     return name;
   }
 
+  @JsonProperty("name")
   public void setName(String name) {
     this.name = name;
   }
 
-  public ProjectModel publishedDate(LocalDateTime publishedDate) {
-    this.publishedDate = publishedDate;
+  public ProjectModel lastPublishedDate(@Nullable OffsetDateTime lastPublishedDate) {
+    this.lastPublishedDate = lastPublishedDate;
     return this;
   }
 
   /**
-   * The published date.
-   * @return publishedDate
-  */
+   * The last published date.
+   * @return lastPublishedDate
+   */
   @Valid 
-  @Schema(name = "publishedDate", description = "The published date.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
-  @JsonProperty("publishedDate")
-  public LocalDateTime getPublishedDate() {
-    return publishedDate;
+  @Schema(name = "lastPublishedDate", accessMode = Schema.AccessMode.READ_ONLY, description = "The last published date.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+  @JsonProperty("lastPublishedDate")
+  public @Nullable OffsetDateTime getLastPublishedDate() {
+    return lastPublishedDate;
   }
 
-  public void setPublishedDate(LocalDateTime publishedDate) {
-    this.publishedDate = publishedDate;
+  @JsonProperty("lastPublishedDate")
+  public void setLastPublishedDate(@Nullable OffsetDateTime lastPublishedDate) {
+    this.lastPublishedDate = lastPublishedDate;
   }
 
-  public ProjectModel projectVersion(Integer projectVersion) {
-    this.projectVersion = projectVersion;
+  public ProjectModel lastStatus(@Nullable ProjectStatusModel lastStatus) {
+    this.lastStatus = lastStatus;
     return this;
   }
 
   /**
-   * The version of a project.
-   * @return projectVersion
-  */
+   * Get lastStatus
+   * @return lastStatus
+   */
+  @Valid 
+  @Schema(name = "lastStatus", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+  @JsonProperty("lastStatus")
+  public @Nullable ProjectStatusModel getLastStatus() {
+    return lastStatus;
+  }
+
+  @JsonProperty("lastStatus")
+  public void setLastStatus(@Nullable ProjectStatusModel lastStatus) {
+    this.lastStatus = lastStatus;
+  }
+
+  public ProjectModel lastProjectVersion(@Nullable Integer lastProjectVersion) {
+    this.lastProjectVersion = lastProjectVersion;
+    return this;
+  }
+
+  /**
+   * The last version of a project.
+   * @return lastProjectVersion
+   */
   
-  @Schema(name = "projectVersion", accessMode = Schema.AccessMode.READ_ONLY, description = "The version of a project.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
-  @JsonProperty("projectVersion")
-  public Integer getProjectVersion() {
-    return projectVersion;
+  @Schema(name = "lastProjectVersion", accessMode = Schema.AccessMode.READ_ONLY, description = "The last version of a project.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+  @JsonProperty("lastProjectVersion")
+  public @Nullable Integer getLastProjectVersion() {
+    return lastProjectVersion;
   }
 
-  public void setProjectVersion(Integer projectVersion) {
-    this.projectVersion = projectVersion;
+  @JsonProperty("lastProjectVersion")
+  public void setLastProjectVersion(@Nullable Integer lastProjectVersion) {
+    this.lastProjectVersion = lastProjectVersion;
   }
 
-  public ProjectModel projectWorkflowIds(List<String> projectWorkflowIds) {
+  public ProjectModel uuid(@Nullable String uuid) {
+    this.uuid = uuid;
+    return this;
+  }
+
+  /**
+   * The uuid of a project.
+   * @return uuid
+   */
+  
+  @Schema(name = "uuid", description = "The uuid of a project.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+  @JsonProperty("uuid")
+  public @Nullable String getUuid() {
+    return uuid;
+  }
+
+  @JsonProperty("uuid")
+  public void setUuid(@Nullable String uuid) {
+    this.uuid = uuid;
+  }
+
+  public ProjectModel category(@Nullable CategoryModel category) {
+    this.category = category;
+    return this;
+  }
+
+  /**
+   * Get category
+   * @return category
+   */
+  @Valid 
+  @Schema(name = "category", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+  @JsonProperty("category")
+  public @Nullable CategoryModel getCategory() {
+    return category;
+  }
+
+  @JsonProperty("category")
+  public void setCategory(@Nullable CategoryModel category) {
+    this.category = category;
+  }
+
+  public ProjectModel projectWorkflowIds(List<Long> projectWorkflowIds) {
     this.projectWorkflowIds = projectWorkflowIds;
     return this;
   }
 
-  public ProjectModel addProjectWorkflowIdsItem(String projectWorkflowIdsItem) {
+  public ProjectModel addProjectWorkflowIdsItem(Long projectWorkflowIdsItem) {
     if (this.projectWorkflowIds == null) {
       this.projectWorkflowIds = new ArrayList<>();
     }
@@ -296,36 +351,17 @@ public class ProjectModel {
   /**
    * The project workflow ids belonging to this project.
    * @return projectWorkflowIds
-  */
+   */
   
   @Schema(name = "projectWorkflowIds", description = "The project workflow ids belonging to this project.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("projectWorkflowIds")
-  public List<String> getProjectWorkflowIds() {
+  public List<Long> getProjectWorkflowIds() {
     return projectWorkflowIds;
   }
 
-  public void setProjectWorkflowIds(List<String> projectWorkflowIds) {
+  @JsonProperty("projectWorkflowIds")
+  public void setProjectWorkflowIds(List<Long> projectWorkflowIds) {
     this.projectWorkflowIds = projectWorkflowIds;
-  }
-
-  public ProjectModel status(ProjectStatusModel status) {
-    this.status = status;
-    return this;
-  }
-
-  /**
-   * Get status
-   * @return status
-  */
-  @Valid 
-  @Schema(name = "status", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
-  @JsonProperty("status")
-  public ProjectStatusModel getStatus() {
-    return status;
-  }
-
-  public void setStatus(ProjectStatusModel status) {
-    this.status = status;
   }
 
   public ProjectModel tags(List<@Valid TagModel> tags) {
@@ -344,7 +380,7 @@ public class ProjectModel {
   /**
    * Get tags
    * @return tags
-  */
+   */
   @Valid 
   @Schema(name = "tags", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("tags")
@@ -352,6 +388,7 @@ public class ProjectModel {
     return tags;
   }
 
+  @JsonProperty("tags")
   public void setTags(List<@Valid TagModel> tags) {
     this.tags = tags;
   }
@@ -364,7 +401,7 @@ public class ProjectModel {
   /**
    * The workspace id.
    * @return workspaceId
-  */
+   */
   @NotNull 
   @Schema(name = "workspaceId", description = "The workspace id.", requiredMode = Schema.RequiredMode.REQUIRED)
   @JsonProperty("workspaceId")
@@ -372,11 +409,12 @@ public class ProjectModel {
     return workspaceId;
   }
 
+  @JsonProperty("workspaceId")
   public void setWorkspaceId(Long workspaceId) {
     this.workspaceId = workspaceId;
   }
 
-  public ProjectModel version(Integer version) {
+  public ProjectModel version(@Nullable Integer version) {
     this.version = version;
     return this;
   }
@@ -384,15 +422,16 @@ public class ProjectModel {
   /**
    * Get version
    * @return version
-  */
+   */
   
   @Schema(name = "__version", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("__version")
-  public Integer getVersion() {
+  public @Nullable Integer getVersion() {
     return version;
   }
 
-  public void setVersion(Integer version) {
+  @JsonProperty("__version")
+  public void setVersion(@Nullable Integer version) {
     this.version = version;
   }
 
@@ -405,18 +444,19 @@ public class ProjectModel {
       return false;
     }
     ProjectModel project = (ProjectModel) o;
-    return Objects.equals(this.category, project.category) &&
-        Objects.equals(this.createdBy, project.createdBy) &&
+    return Objects.equals(this.createdBy, project.createdBy) &&
         Objects.equals(this.createdDate, project.createdDate) &&
         Objects.equals(this.description, project.description) &&
         Objects.equals(this.id, project.id) &&
         Objects.equals(this.lastModifiedBy, project.lastModifiedBy) &&
         Objects.equals(this.lastModifiedDate, project.lastModifiedDate) &&
         Objects.equals(this.name, project.name) &&
-        Objects.equals(this.publishedDate, project.publishedDate) &&
-        Objects.equals(this.projectVersion, project.projectVersion) &&
+        Objects.equals(this.lastPublishedDate, project.lastPublishedDate) &&
+        Objects.equals(this.lastStatus, project.lastStatus) &&
+        Objects.equals(this.lastProjectVersion, project.lastProjectVersion) &&
+        Objects.equals(this.uuid, project.uuid) &&
+        Objects.equals(this.category, project.category) &&
         Objects.equals(this.projectWorkflowIds, project.projectWorkflowIds) &&
-        Objects.equals(this.status, project.status) &&
         Objects.equals(this.tags, project.tags) &&
         Objects.equals(this.workspaceId, project.workspaceId) &&
         Objects.equals(this.version, project.version);
@@ -424,14 +464,13 @@ public class ProjectModel {
 
   @Override
   public int hashCode() {
-    return Objects.hash(category, createdBy, createdDate, description, id, lastModifiedBy, lastModifiedDate, name, publishedDate, projectVersion, projectWorkflowIds, status, tags, workspaceId, version);
+    return Objects.hash(createdBy, createdDate, description, id, lastModifiedBy, lastModifiedDate, name, lastPublishedDate, lastStatus, lastProjectVersion, uuid, category, projectWorkflowIds, tags, workspaceId, version);
   }
 
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
     sb.append("class ProjectModel {\n");
-    sb.append("    category: ").append(toIndentedString(category)).append("\n");
     sb.append("    createdBy: ").append(toIndentedString(createdBy)).append("\n");
     sb.append("    createdDate: ").append(toIndentedString(createdDate)).append("\n");
     sb.append("    description: ").append(toIndentedString(description)).append("\n");
@@ -439,10 +478,12 @@ public class ProjectModel {
     sb.append("    lastModifiedBy: ").append(toIndentedString(lastModifiedBy)).append("\n");
     sb.append("    lastModifiedDate: ").append(toIndentedString(lastModifiedDate)).append("\n");
     sb.append("    name: ").append(toIndentedString(name)).append("\n");
-    sb.append("    publishedDate: ").append(toIndentedString(publishedDate)).append("\n");
-    sb.append("    projectVersion: ").append(toIndentedString(projectVersion)).append("\n");
+    sb.append("    lastPublishedDate: ").append(toIndentedString(lastPublishedDate)).append("\n");
+    sb.append("    lastStatus: ").append(toIndentedString(lastStatus)).append("\n");
+    sb.append("    lastProjectVersion: ").append(toIndentedString(lastProjectVersion)).append("\n");
+    sb.append("    uuid: ").append(toIndentedString(uuid)).append("\n");
+    sb.append("    category: ").append(toIndentedString(category)).append("\n");
     sb.append("    projectWorkflowIds: ").append(toIndentedString(projectWorkflowIds)).append("\n");
-    sb.append("    status: ").append(toIndentedString(status)).append("\n");
     sb.append("    tags: ").append(toIndentedString(tags)).append("\n");
     sb.append("    workspaceId: ").append(toIndentedString(workspaceId)).append("\n");
     sb.append("    version: ").append(toIndentedString(version)).append("\n");
@@ -454,11 +495,8 @@ public class ProjectModel {
    * Convert the given object to string with each line indented by 4 spaces
    * (except the first line).
    */
-  private String toIndentedString(Object o) {
-    if (o == null) {
-      return "null";
-    }
-    return o.toString().replace("\n", "\n    ");
+  private String toIndentedString(@Nullable Object o) {
+    return o == null ? "null" : o.toString().replace("\n", "\n    ");
   }
 }
 

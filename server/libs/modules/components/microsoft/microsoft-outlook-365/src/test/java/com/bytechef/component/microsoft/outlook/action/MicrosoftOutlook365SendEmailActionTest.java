@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,88 +16,132 @@
 
 package com.bytechef.component.microsoft.outlook.action;
 
+import static com.bytechef.component.microsoft.outlook.constant.MicrosoftOutlook365Constants.ADDRESS;
+import static com.bytechef.component.microsoft.outlook.constant.MicrosoftOutlook365Constants.ATTACHMENTS;
 import static com.bytechef.component.microsoft.outlook.constant.MicrosoftOutlook365Constants.BCC_RECIPIENTS;
 import static com.bytechef.component.microsoft.outlook.constant.MicrosoftOutlook365Constants.BODY;
 import static com.bytechef.component.microsoft.outlook.constant.MicrosoftOutlook365Constants.CC_RECIPIENTS;
+import static com.bytechef.component.microsoft.outlook.constant.MicrosoftOutlook365Constants.CONTENT;
+import static com.bytechef.component.microsoft.outlook.constant.MicrosoftOutlook365Constants.CONTENT_BYTES;
+import static com.bytechef.component.microsoft.outlook.constant.MicrosoftOutlook365Constants.CONTENT_TYPE;
+import static com.bytechef.component.microsoft.outlook.constant.MicrosoftOutlook365Constants.EMAIL_ADDRESS;
 import static com.bytechef.component.microsoft.outlook.constant.MicrosoftOutlook365Constants.FROM;
+import static com.bytechef.component.microsoft.outlook.constant.MicrosoftOutlook365Constants.NAME;
 import static com.bytechef.component.microsoft.outlook.constant.MicrosoftOutlook365Constants.REPLY_TO;
 import static com.bytechef.component.microsoft.outlook.constant.MicrosoftOutlook365Constants.SUBJECT;
 import static com.bytechef.component.microsoft.outlook.constant.MicrosoftOutlook365Constants.TO_RECIPIENTS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentCaptor.forClass;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 
+import com.bytechef.commons.util.EncodingUtils;
 import com.bytechef.component.definition.Context;
-import java.util.HashMap;
+import com.bytechef.component.definition.Context.Http;
+import com.bytechef.component.definition.Context.Http.Body;
+import com.bytechef.component.definition.Context.Http.Executor;
+import com.bytechef.component.definition.FileEntry;
+import com.bytechef.component.definition.Parameters;
+import com.bytechef.component.microsoft.outlook.util.MicrosoftOutlook365Utils;
+import com.bytechef.component.test.definition.MockParametersFactory;
+import com.bytechef.component.test.definition.extension.MockContextSetupExtension;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.MockedStatic;
 
 /**
- * @author Monika Domiter
+ * @author Monika Kušter
  */
-class MicrosoftOutlook365SendEmailActionTest extends AbstractMicrosoftOutlook365ActionTest {
+@ExtendWith(MockContextSetupExtension.class)
+class MicrosoftOutlook365SendEmailActionTest {
 
-    private final ArgumentCaptor<Context.Http.Body> bodyArgumentCaptor =
-        ArgumentCaptor.forClass(Context.Http.Body.class);
+    private final ArgumentCaptor<Body> bodyArgumentCaptor = forClass(Body.class);
+    private final ArgumentCaptor<Context> contextArgumentCaptor = forClass(Context.class);
+    @SuppressWarnings("rawtypes")
+    private final ArgumentCaptor<List> listArgumentCaptor = forClass(List.class);
+    private final FileEntry mockedFileEntry = mock(FileEntry.class);
+    private final Parameters mockedParameters = MockParametersFactory.create(
+        Map.of(
+            FROM, "test@mail.com", SUBJECT, "testSubject", BODY, Map.of(CONTENT, "test", CONTENT_TYPE, "text"),
+            TO_RECIPIENTS, List.of("address1"), CC_RECIPIENTS, List.of("address2"),
+            BCC_RECIPIENTS, List.of("address3"), REPLY_TO, List.of("address4"), ATTACHMENTS, List.of(mockedFileEntry)));
+    private final ArgumentCaptor<String> stringArgumentCaptor = forClass(String.class);
 
+    @SuppressWarnings("unchecked")
     @Test
-    void testPerform() {
-        Map<String, String> responeseMap = Map.of("key", "value");
-        Map<String, Object> propertyStubsMap = createPropertyStubsMap();
+    void testPerform(
+        Context mockedContext, Executor mockedExecutor, Http mockedHttp,
+        ArgumentCaptor<Context.ContextFunction<Http, Executor>> httpFunctionArgumentCaptor) {
 
-        when(mockedParameters.get(FROM))
-            .thenReturn(propertyStubsMap.get(FROM));
-        when(mockedParameters.getRequiredString(SUBJECT))
-            .thenReturn((String) propertyStubsMap.get(SUBJECT));
-        when(mockedParameters.get(BODY))
-            .thenReturn(propertyStubsMap.get(BODY));
-        when(mockedParameters.getArray(TO_RECIPIENTS))
-            .thenReturn((Object[]) propertyStubsMap.get(TO_RECIPIENTS));
-        when(mockedParameters.getArray(CC_RECIPIENTS))
-            .thenReturn((Object[]) propertyStubsMap.get(CC_RECIPIENTS));
-        when(mockedParameters.getArray(BCC_RECIPIENTS))
-            .thenReturn((Object[]) propertyStubsMap.get(BCC_RECIPIENTS));
-        when(mockedParameters.getArray(REPLY_TO))
-            .thenReturn((Object[]) propertyStubsMap.get(REPLY_TO));
+        try (MockedStatic<MicrosoftOutlook365Utils> microsoftOutlook365UtilsMockedStatic =
+            mockStatic(MicrosoftOutlook365Utils.class)) {
 
-        when(mockedExecutor.body(bodyArgumentCaptor.capture()))
-            .thenReturn(mockedExecutor);
-        when(mockedExecutor.configuration(any()))
-            .thenReturn(mockedExecutor);
-        when(mockedExecutor.execute())
-            .thenReturn(mockedResponse);
-        when(mockedResponse.getBody(any(Context.TypeReference.class)))
-            .thenReturn(responeseMap);
+            microsoftOutlook365UtilsMockedStatic.when(
+                () -> MicrosoftOutlook365Utils.createRecipientList(listArgumentCaptor.capture()))
+                .thenReturn(
+                    List.of(Map.of(EMAIL_ADDRESS, Map.of(ADDRESS, "address1"))),
+                    List.of(Map.of(EMAIL_ADDRESS, Map.of(ADDRESS, "address2"))),
+                    List.of(Map.of(EMAIL_ADDRESS, Map.of(ADDRESS, "address3"))),
+                    List.of(Map.of(EMAIL_ADDRESS, Map.of(ADDRESS, "address4"))));
 
-        Object result = MicrosoftOutlook365SendEmailAction.perform(mockedParameters, mockedParameters, mockedContext);
+            byte[] fileContent = new byte[] {
+                1, 2, 3
+            };
 
-        assertNull(result);
+            String encodedToString = EncodingUtils.base64EncodeToString(fileContent);
 
-        Context.Http.Body body = bodyArgumentCaptor.getValue();
+            microsoftOutlook365UtilsMockedStatic.when(
+                () -> MicrosoftOutlook365Utils.getAttachments(
+                    contextArgumentCaptor.capture(), listArgumentCaptor.capture()))
+                .thenReturn(List.of(
+                    Map.of(
+                        "@odata.type", "#microsoft.graph.fileAttachment",
+                        NAME, "file.txt",
+                        CONTENT_TYPE, "text/plain",
+                        CONTENT_BYTES, encodedToString)));
 
-        assertEquals(Map.of("message", propertyStubsMap), body.getContent());
-    }
+            when(mockedHttp.post(stringArgumentCaptor.capture()))
+                .thenReturn(mockedExecutor);
+            when(mockedExecutor.body(bodyArgumentCaptor.capture()))
+                .thenReturn(mockedExecutor);
 
-    private static Map<String, Object> createPropertyStubsMap() {
-        Map<String, String> content = Map.of("content", "test", "contentType", "text");
-        Map<String, Map<String, String>> recipient = Map.of(
-            "emailAddress", Map.of("address", "address", "name", "name"));
-        Object[] array = List.of(recipient)
-            .toArray();
+            Object result = MicrosoftOutlook365SendEmailAction.perform(mockedParameters, null, mockedContext);
 
-        Map<String, Object> propertyStubsMap = new HashMap<>();
+            assertNull(result);
+            assertNotNull(httpFunctionArgumentCaptor.getValue());
+            assertEquals("/me/sendMail", stringArgumentCaptor.getValue());
+            assertEquals(mockedContext, contextArgumentCaptor.getValue());
+            assertEquals(
+                List.of(List.of("address1"), List.of("address2"), List.of("address3"), List.of("address4"),
+                    List.of(mockedFileEntry)),
+                listArgumentCaptor.getAllValues());
 
-        propertyStubsMap.put(FROM, "testFrom");
-        propertyStubsMap.put(SUBJECT, "testSubject");
-        propertyStubsMap.put(BODY, content);
-        propertyStubsMap.put(TO_RECIPIENTS, array);
-        propertyStubsMap.put(CC_RECIPIENTS, array);
-        propertyStubsMap.put(BCC_RECIPIENTS, array);
-        propertyStubsMap.put(REPLY_TO, array);
+            Body body = bodyArgumentCaptor.getValue();
 
-        return propertyStubsMap;
+            Map<String, Map<String, Object>> expectedBody = Map.of(
+                "message",
+                Map.of(
+                    FROM, Map.of(EMAIL_ADDRESS, Map.of(ADDRESS, "test@mail.com")),
+                    SUBJECT, "testSubject",
+                    BODY, Map.of(CONTENT, "test", CONTENT_TYPE, "text"),
+                    TO_RECIPIENTS, List.of(Map.of(EMAIL_ADDRESS, Map.of(ADDRESS, "address1"))),
+                    CC_RECIPIENTS, List.of(Map.of(EMAIL_ADDRESS, Map.of(ADDRESS, "address2"))),
+                    BCC_RECIPIENTS, List.of(Map.of(EMAIL_ADDRESS, Map.of(ADDRESS, "address3"))),
+                    REPLY_TO, List.of(Map.of(EMAIL_ADDRESS, Map.of(ADDRESS, "address4"))),
+                    ATTACHMENTS, List.of(
+                        Map.of(
+                            "@odata.type", "#microsoft.graph.fileAttachment",
+                            NAME, "file.txt",
+                            CONTENT_TYPE, "text/plain",
+                            CONTENT_BYTES, encodedToString))));
+
+            assertEquals(expectedBody, body.getContent());
+        }
     }
 }

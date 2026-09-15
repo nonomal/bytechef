@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * Modifications copyright (C) 2023 ByteChef Inc.
+ * Modifications copyright (C) 2025 ByteChef
  */
 
 package com.bytechef.task.dispatcher.subflow.event.listener;
@@ -29,11 +29,19 @@ import com.bytechef.atlas.execution.domain.TaskExecution;
 import com.bytechef.atlas.execution.service.JobService;
 import com.bytechef.atlas.execution.service.TaskExecutionService;
 import com.bytechef.atlas.file.storage.TaskFileStorage;
+import com.bytechef.commons.util.ConvertUtils;
+import com.bytechef.commons.util.MapUtils;
+import com.bytechef.component.definition.ActionDefinition.CallableResponse;
 import com.bytechef.error.ExecutionError;
+import com.bytechef.evaluator.Evaluator;
+import com.bytechef.platform.component.constant.MetadataConstants;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.List;
 import java.util.Map;
-import org.apache.commons.lang3.Validate;
+import java.util.Objects;
+import java.util.Optional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 
 /**
@@ -47,6 +55,9 @@ import org.springframework.context.ApplicationEventPublisher;
  */
 public class SubflowJobStatusEventListener implements ApplicationEventListener {
 
+    private static final Logger log = LoggerFactory.getLogger(SubflowJobStatusEventListener.class);
+
+    private final Evaluator evaluator;
     private final ApplicationEventPublisher eventPublisher;
     private final JobService jobService;
     private final TaskExecutionService taskExecutionService;
@@ -54,8 +65,9 @@ public class SubflowJobStatusEventListener implements ApplicationEventListener {
 
     @SuppressFBWarnings("EI2")
     public SubflowJobStatusEventListener(
-        ApplicationEventPublisher eventPublisher, JobService jobService,
+        Evaluator evaluator, ApplicationEventPublisher eventPublisher, JobService jobService,
         TaskExecutionService taskExecutionService, TaskFileStorage taskFileStorage) {
+        this.evaluator = evaluator;
 
         this.eventPublisher = eventPublisher;
         this.jobService = jobService;
@@ -81,14 +93,17 @@ public class SubflowJobStatusEventListener implements ApplicationEventListener {
                         job.getParentTaskExecutionId());
 
                     eventPublisher.publishEvent(
-                        new StopJobEvent(Validate.notNull(subflowTaskExecution.getJobId(), "jobId")));
+                        new StopJobEvent(Objects.requireNonNull(subflowTaskExecution.getJobId())));
 
                 }
                 case FAILED -> {
                     TaskExecution erroredTaskExecution = taskExecutionService.getTaskExecution(
                         job.getParentTaskExecutionId());
 
-                    erroredTaskExecution.setError(new ExecutionError("An error occurred with subflow", List.of()));
+                    erroredTaskExecution.setError(
+                        new ExecutionError(
+                            "Subflow job %d (workflow '%s') failed".formatted(job.getId(), job.getWorkflowId()),
+                            List.of()));
 
                     eventPublisher.publishEvent(new TaskExecutionErrorEvent(erroredTaskExecution));
                 }
@@ -96,21 +111,52 @@ public class SubflowJobStatusEventListener implements ApplicationEventListener {
                     TaskExecution completionTaskExecution = taskExecutionService.getTaskExecution(
                         job.getParentTaskExecutionId());
 
-                    Object output = job.getOutputs();
+                    Object output = getCallableResponseOutput(job)
+                        .orElse(taskFileStorage.readJobOutputs(job.getOutputs()));
 
                     if (completionTaskExecution.getOutput() == null) {
                         completionTaskExecution.setOutput(
                             taskFileStorage.storeTaskExecutionOutput(
-                                Validate.notNull(completionTaskExecution.getId(), "id"), output));
+                                Objects.requireNonNull(completionTaskExecution.getJobId()),
+                                Objects.requireNonNull(completionTaskExecution.getId()), output));
                     } else {
-                        // TODO check, it seems wrong
-                        completionTaskExecution.evaluate(Map.of("execution", Map.of("output", output)));
+                        @SuppressWarnings("unchecked")
+                        Map<String, Object> context = MapUtils.concat(
+                            (Map<String, Object>) taskFileStorage.readTaskExecutionOutput(
+                                completionTaskExecution.getOutput()),
+                            (Map<String, Object>) output);
+
+                        completionTaskExecution.evaluate(context, evaluator);
                     }
 
                     eventPublisher.publishEvent(new TaskExecutionCompleteEvent(completionTaskExecution));
                 }
                 default -> throw new IllegalArgumentException("Unknown status=%s".formatted(status));
             }
+        }
+    }
+
+    private Optional<Object> getCallableResponseOutput(Job job) {
+        try {
+            return taskExecutionService.fetchLastJobTaskExecution(Objects.requireNonNull(job.getId()))
+                .filter(
+                    lastTaskExecution -> {
+                        Map<String, ?> metadata = lastTaskExecution.getMetadata();
+
+                        return metadata.containsKey(MetadataConstants.CALLABLE_RESPONSE);
+                    })
+                .map(lastTaskExecution -> {
+                    CallableResponse callableResponse = ConvertUtils.convertValue(
+                        taskFileStorage.readTaskExecutionOutput(lastTaskExecution.getOutput()),
+                        CallableResponse.class);
+
+                    return callableResponse.output();
+                });
+        } catch (Exception exception) {
+            log.warn(
+                "Failed to extract callable response output from job {}: {}", job.getId(), exception.getMessage());
+
+            return Optional.empty();
         }
     }
 }

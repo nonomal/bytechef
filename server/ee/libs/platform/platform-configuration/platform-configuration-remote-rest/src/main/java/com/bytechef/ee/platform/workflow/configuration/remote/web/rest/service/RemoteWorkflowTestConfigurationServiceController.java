@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the ByteChef Enterprise license (the "Enterprise License");
  * you may not use this file except in compliance with the Enterprise License.
@@ -8,6 +8,7 @@
 package com.bytechef.ee.platform.workflow.configuration.remote.web.rest.service;
 
 import com.bytechef.platform.configuration.service.WorkflowTestConfigurationService;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.swagger.v3.oas.annotations.Hidden;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -27,6 +28,7 @@ public class RemoteWorkflowTestConfigurationServiceController {
 
     private final WorkflowTestConfigurationService workflowTestConfigurationService;
 
+    @SuppressFBWarnings("EI")
     public RemoteWorkflowTestConfigurationServiceController(
         WorkflowTestConfigurationService workflowTestConfigurationService) {
 

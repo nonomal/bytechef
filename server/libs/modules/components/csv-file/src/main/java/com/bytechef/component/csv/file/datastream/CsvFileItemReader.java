@@ -1,0 +1,172 @@
+/*
+ * Copyright 2025 ByteChef
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.bytechef.component.csv.file.datastream;
+
+import static com.bytechef.component.csv.file.constant.CsvFileConstants.FILE_ENTRY;
+import static com.bytechef.component.csv.file.constant.CsvFileConstants.READ_PROPERTIES;
+
+import com.bytechef.component.csv.file.util.CsvFileReadUtils;
+import com.bytechef.component.csv.file.util.ReadConfiguration;
+import com.bytechef.component.definition.ClusterElementContext;
+import com.bytechef.component.definition.ComponentDsl;
+import com.bytechef.component.definition.ComponentDsl.ModifiableClusterElementDefinition;
+import com.bytechef.component.definition.Context;
+import com.bytechef.component.definition.Parameters;
+import com.bytechef.component.definition.datastream.ExecutionContext;
+import com.bytechef.component.definition.datastream.FieldDefinition;
+import com.bytechef.component.definition.datastream.ItemReader;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import org.apache.commons.csv.CSVRecord;
+
+/**
+ * @author Ivica Cardic
+ */
+public class CsvFileItemReader implements ItemReader {
+
+    public static final ModifiableClusterElementDefinition<CsvFileItemReader> CLUSTER_ELEMENT_DEFINITION = ComponentDsl
+        .<CsvFileItemReader>clusterElement("reader")
+        .title("Read CSV file row")
+        .description("Reads a single row from a CSV file.")
+        .type(SOURCE)
+        .object(CsvFileItemReader.class)
+        .properties(READ_PROPERTIES);
+
+    private BufferedReader bufferedReader;
+    private ReadConfiguration configuration;
+    private Context context;
+    private char enclosingCharacter;
+    private Iterator<CSVRecord> iterator;
+
+    @Override
+    public void close() {
+        if (bufferedReader != null) {
+            try {
+                bufferedReader.close();
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }
+    }
+
+    @Override
+    public void open(
+        Parameters inputParameters, Parameters connectionParameters, Context context,
+        ExecutionContext executionContext) {
+
+        this.configuration = CsvFileReadUtils.getReadConfiguration(inputParameters);
+        this.context = context;
+
+        this.enclosingCharacter = CsvFileReadUtils.getEnclosingCharacter(configuration);
+
+        this.bufferedReader = new BufferedReader(
+            new InputStreamReader(
+                context.file(file -> file.getInputStream(inputParameters.getRequiredFileEntry(FILE_ENTRY))),
+                StandardCharsets.UTF_8));
+
+        try {
+            iterator = CsvFileReadUtils.getIterator(bufferedReader, configuration);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public Map<String, Object> read() throws Exception {
+        CSVRecord record = iterator.next();
+
+        if (configuration.headerRow()) {
+            if (iterator.hasNext()) {
+                Map<String, String> row = record.toMap();
+
+                return CsvFileReadUtils.getHeaderRow(configuration, row, enclosingCharacter, context);
+            }
+        } else {
+            if (iterator.hasNext()) {
+                List<?> row = record.toList();
+
+                return CsvFileReadUtils.getColumnRow(configuration, row, enclosingCharacter, context);
+            }
+        }
+
+        return null;
+    }
+
+    @Override
+    public List<FieldDefinition> getFields(
+        Parameters inputParameters, Parameters connectionParameters, ClusterElementContext context) {
+
+        ReadConfiguration configuration = CsvFileReadUtils.getReadConfiguration(inputParameters);
+
+        if (!configuration.headerRow()) {
+            return List.of();
+        }
+
+        try (BufferedReader reader = new BufferedReader(
+            new InputStreamReader(
+                context.file(file -> file.getInputStream(inputParameters.getRequiredFileEntry(FILE_ENTRY))),
+                StandardCharsets.UTF_8))) {
+
+            String headerLine = reader.readLine();
+
+            if (headerLine == null) {
+                return List.of();
+            }
+
+            String delimiter = configuration.delimiter();
+            char quoteChar = CsvFileReadUtils.getEnclosingCharacter(configuration);
+
+            String[] headers = parseHeaders(headerLine, delimiter, quoteChar);
+
+            return Arrays.stream(headers)
+                .map(header -> new FieldDefinition(header, header, String.class))
+                .toList();
+
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to read CSV headers", e);
+        }
+    }
+
+    private String[] parseHeaders(String headerLine, String delimiter, char quoteChar) {
+        List<String> regexReservedCharacters = Arrays.asList(
+            ".", "+", "*", "?", "^", "$", "(", ")", "[", "]", "{", "}", "|", "\\");
+
+        String regexPrefix = "";
+
+        if (regexReservedCharacters.contains(delimiter)) {
+            regexPrefix = "\\";
+        }
+
+        String[] headers = headerLine.split(regexPrefix + delimiter, -1);
+
+        for (int i = 0; i < headers.length; i++) {
+            headers[i] = CsvFileReadUtils.strip(headers[i], quoteChar);
+
+            if (headers[i].isEmpty()) {
+                headers[i] = "column_" + (i + 1);
+            }
+        }
+
+        return headers;
+    }
+}

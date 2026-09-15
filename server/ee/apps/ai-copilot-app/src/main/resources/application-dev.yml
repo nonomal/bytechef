@@ -1,0 +1,13 @@
+spring:
+  devtools:
+    restart:
+      enabled: true
+
+bytechef:
+  ai:
+    copilot:
+      vectorstore:
+        pgvector:
+          url: jdbc:postgresql://localhost:5433/bytechef_vectorstore
+          username: postgres
+          password: postgres

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 
 package com.bytechef.component.salesflare;
 
-import static com.bytechef.component.definition.ComponentDSL.component;
+import static com.bytechef.component.definition.ComponentDsl.component;
 
 import com.bytechef.component.OpenApiComponentHandler;
 import com.bytechef.component.definition.ComponentDefinition;
@@ -35,12 +35,12 @@ public abstract class AbstractSalesflareComponentHandler implements OpenApiCompo
         component("salesflare")
             .title("Salesflare")
             .description(
-                "Salesflare is a CRM software designed to help small businesses and startups manage their customer relationships efficiently."))
-                    .actions(modifyActions(SalesflareCreateAccountAction.ACTION_DEFINITION,
-                        SalesflareCreateContactsAction.ACTION_DEFINITION,
-                        SalesflareCreateTasksAction.ACTION_DEFINITION))
-                    .connection(modifyConnection(SalesflareConnection.CONNECTION_DEFINITION))
-                    .triggers(getTriggers());
+                "Salesflare is a CRM software designed to help small businesses and startups manage their customer relationships efficiently.")
+            .version(1))
+                .actions(modifyActions(SalesflareCreateAccountAction.ACTION_DEFINITION,
+                    SalesflareCreateContactsAction.ACTION_DEFINITION, SalesflareCreateTasksAction.ACTION_DEFINITION))
+                .connection(modifyConnection(SalesflareConnection.CONNECTION_DEFINITION))
+                .triggers(getTriggers());
 
     @Override
     public ComponentDefinition getDefinition() {

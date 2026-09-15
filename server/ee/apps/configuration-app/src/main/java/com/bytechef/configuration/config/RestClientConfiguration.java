@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,14 +21,12 @@ import org.springframework.cloud.loadbalancer.annotation.LoadBalancerClient;
 import org.springframework.cloud.loadbalancer.annotation.LoadBalancerClients;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.retry.annotation.EnableRetry;
 import org.springframework.web.client.RestClient;
 
 /**
  * @author Ivica Cardic
  */
 @Configuration
-@EnableRetry
 @LoadBalancerClients({
     @LoadBalancerClient("configuration-app"), @LoadBalancerClient("coordinator-app"),
     @LoadBalancerClient("scheduler-app")

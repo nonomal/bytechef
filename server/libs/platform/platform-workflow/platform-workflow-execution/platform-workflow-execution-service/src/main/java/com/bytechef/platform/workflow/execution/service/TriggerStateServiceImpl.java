@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 
 package com.bytechef.platform.workflow.execution.service;
 
-import com.bytechef.platform.workflow.execution.WorkflowExecutionId;
+import com.bytechef.platform.workflow.WorkflowExecutionId;
 import com.bytechef.platform.workflow.execution.domain.TriggerState;
 import com.bytechef.platform.workflow.execution.repository.TriggerStateRepository;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
@@ -27,7 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * @author Ivica Cardic
  */
-@Service("triggerStorageService")
+@Service
 @Transactional
 public class TriggerStateServiceImpl implements TriggerStateService {
 
@@ -58,10 +58,10 @@ public class TriggerStateServiceImpl implements TriggerStateService {
         triggerStateRepository
             .findByWorkflowExecutionId(workflowExecutionId.toString())
             .ifPresentOrElse(
-                triggerLifecycle -> {
-                    triggerLifecycle.setValue(value);
+                triggerState -> {
+                    triggerState.setValue(value);
 
-                    triggerStateRepository.save(triggerLifecycle);
+                    triggerStateRepository.save(triggerState);
                 },
                 () -> triggerStateRepository.save(new TriggerState(workflowExecutionId, value)));
     }

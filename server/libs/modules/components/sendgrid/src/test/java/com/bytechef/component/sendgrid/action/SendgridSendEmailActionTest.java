@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,66 +23,84 @@ import static com.bytechef.component.sendgrid.constant.SendgridConstants.SUBJECT
 import static com.bytechef.component.sendgrid.constant.SendgridConstants.TEXT;
 import static com.bytechef.component.sendgrid.constant.SendgridConstants.TO;
 import static com.bytechef.component.sendgrid.constant.SendgridConstants.TYPE;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentCaptor.forClass;
+import static org.mockito.Mockito.mockStatic;
 
-import com.bytechef.component.definition.ActionContext;
 import com.bytechef.component.definition.Context;
-import com.bytechef.component.definition.Context.Http;
 import com.bytechef.component.definition.FileEntry;
 import com.bytechef.component.definition.Parameters;
+import com.bytechef.component.sendgrid.util.SendgridUtils;
+import com.bytechef.component.test.definition.MockParametersFactory;
+import com.bytechef.component.test.definition.extension.MockContextSetupExtension;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.MockedStatic;
 
 /**
  * @author Luka Ljubić
  */
+@ExtendWith(MockContextSetupExtension.class)
 class SendgridSendEmailActionTest {
 
-    private final ArgumentCaptor<Http.Body> bodyArgumentCaptor = ArgumentCaptor.forClass(Http.Body.class);
-    private final ActionContext mockedContext = mock(ActionContext.class);
-    private final Http.Executor mockedExecutor = mock(Http.Executor.class);
-    private final Parameters mockedParameters = mock(Parameters.class);
-    private final Http.Response mockedResponse = mock(Http.Response.class);
-    private final Map<String, Object> responeseMap = Map.of("key", "value");
+    private final Parameters mockedParameters = MockParametersFactory.create(
+        Map.of(
+            FROM, "emailFrom@example.com",
+            TO, List.of("to@example.com"),
+            CC, List.of("cc@example.com"),
+            SUBJECT, "testSubject",
+            TEXT, "testText",
+            TYPE, "text/plain",
+            ATTACHMENTS, new ArrayList<>()));
+    @SuppressWarnings("unchecked")
+    private final ArgumentCaptor<List<FileEntry>> fileArgumentCaptor = forClass(List.class);
+    private final ArgumentCaptor<Context> contextArgumentCaptor = forClass(Context.class);
+    @SuppressWarnings("unchecked")
+    private final ArgumentCaptor<Map<String, Object>> mapArgumentCaptor = forClass(Map.class);
 
     @Test
-    void testPerform() {
+    void testPerform(Context mockedContext) {
 
-        when(mockedContext.http(any()))
-            .thenReturn(mockedExecutor);
-        when(mockedExecutor.body(bodyArgumentCaptor.capture()))
-            .thenReturn(mockedExecutor);
-        when(mockedExecutor.configuration(any()))
-            .thenReturn(mockedExecutor);
-        when(mockedExecutor.execute())
-            .thenReturn(mockedResponse);
-        when(mockedResponse.getBody(any(Context.TypeReference.class)))
-            .thenReturn(responeseMap);
+        List<Map<String, String>> expectedTo = List.of(Map.of("email", "to@example.com"));
+        List<Map<String, String>> expectedCc = List.of(Map.of("email", "cc@example.com"));
 
+        try (MockedStatic<SendgridUtils> sendgridUtilsMockedStatic = mockStatic(SendgridUtils.class)) {
 
-        List<FileEntry> fileList = new ArrayList<>();
-        List<String> toList = new ArrayList<>();
-        List<String> ccList = new ArrayList<>();
+            sendgridUtilsMockedStatic
+                .when(() -> SendgridUtils.getAllAttachments(
+                    fileArgumentCaptor.capture(), contextArgumentCaptor.capture()))
+                .thenReturn(List.of());
 
-        when(mockedParameters.getList(ATTACHMENTS, FileEntry.class)).thenReturn(fileList);
-        when(mockedParameters.getRequiredList(TO, String.class)).thenReturn(toList);
-        when(mockedParameters.getList(CC, String.class, List.of())).thenReturn(ccList);
-        when(mockedParameters.getRequiredString(FROM)).thenReturn("emailFrom@example.com");
-        when(mockedParameters.getRequiredString(SUBJECT)).thenReturn("testSubject");
-        when(mockedParameters.getRequiredString(TYPE)).thenReturn("text/plain");
-        when(mockedParameters.getRequiredString(TEXT)).thenReturn("testText");
+            sendgridUtilsMockedStatic
+                .when(() -> SendgridUtils.convertToEmailList(List.of("to@example.com")))
+                .thenReturn(expectedTo);
 
-        Object result = SendgridSendEmailAction.perform(mockedParameters, mockedParameters, mockedContext);
+            sendgridUtilsMockedStatic
+                .when(() -> SendgridUtils.convertToEmailList(List.of("cc@example.com")))
+                .thenReturn(expectedCc);
 
-        assertNull(result);
+            sendgridUtilsMockedStatic
+                .when(() -> SendgridUtils.sendEmail(
+                    contextArgumentCaptor.capture(), mapArgumentCaptor.capture()))
+                .thenReturn(null);
 
-        verify(mockedContext).http(any());
+            Object result = SendgridSendEmailAction.perform(mockedParameters, null, mockedContext);
+
+            assertNull(result);
+
+            assertEquals(mockedContext, contextArgumentCaptor.getAllValues()
+                .getFirst());
+
+            Map<String, Object> body = mapArgumentCaptor.getValue();
+            assertEquals(List.of(Map.of(TO, expectedTo, CC, expectedCc)), body.get("personalizations"));
+            assertEquals(Map.of("email", "emailFrom@example.com"), body.get(FROM));
+            assertEquals("testSubject", body.get(SUBJECT));
+            assertEquals(List.of(Map.of(TYPE, "text/plain", "value", "testText")), body.get("content"));
+        }
     }
 }

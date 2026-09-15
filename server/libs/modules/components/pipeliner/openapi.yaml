@@ -1,7 +1,7 @@
 ---
 openapi: "3.0.2"
 info:
-  title: "Pipeliner API"
+  title: "Pipeliner"
   description: "Pipeliner CRM is a comprehensive sales management tool that helps streamline sales processes through visual pipline management,
   contact organization, sales forecasting, and reporting."
   version: "v0"
@@ -12,11 +12,11 @@ paths:
     post:
       tags:
         - "Account"
-      summary: "Create account"
-      description: "Creates new account"
+      summary: "Create Account"
+      description: "Creates new account."
       operationId: "createAccount"
       requestBody:
-        description: "data of new Account"
+        description: "data of new account"
         required: true
         content:
           application/json:
@@ -27,7 +27,9 @@ paths:
                 owner_id:
                   type: "string"
                   format: "uuid"
-                  description: "User in Pipeliner Application that will become the owner of the newly created Account."
+                  description: "Id of the user in Pipeliner Application that will become the owner of the newly created account."
+                  title: "Owner ID"
+                  x-dynamic-options: true
                 name:
                   type: "string"
                   description: "Account name"
@@ -51,17 +53,20 @@ paths:
                       id:
                         type: "string"
                         format: "uuid"
+                        description: "ID of the account."
                       owner_id:
                         type: "string"
                         format: "uuid"
+                        description: "ID of the user in Pipeliner Application that is the owner of the account."
                       name:
                         type: "string"
+                        description: "Account name."
   /entities/Contacts:
     post:
       tags:
         - "Contact"
-      summary: "Create contact"
-      description: "Creates new Contact"
+      summary: "Create Contact"
+      description: "Creates new contact."
       operationId: "createContact"
       requestBody:
         description: "data of new Contact"
@@ -75,13 +80,17 @@ paths:
                 owner_id:
                   type: "string"
                   format: "uuid"
-                  description: "User in Pipeliner Application that will become the owner of the newly created Contact."
+                  description: "ID of the user in Pipeliner Application that will become the owner of the newly created Contact."
+                  title: "Owner ID"
+                  x-dynamic-options: true
                 first_name:
                   type: "string"
                   description: "The firstname of the contact."
+                  title: "First Name"
                 last_name:
                   type: "string"
                   description: "The lastname of the contact."
+                  title: "Last Name"
               required:
                 - "owner_id"
                 - "last_name"
@@ -102,18 +111,22 @@ paths:
                       id:
                         type: "string"
                         format: "uuid"
+                        description: "ID of the contact."
                       owner_id:
                         type: "string"
                         format: "uuid"
+                        description: "ID of the user in Pipeliner Application that is the owner of the contact."
                       first_name:
                         type: "string"
+                        description: "First name of the contact."
                       last_name:
                         type: "string"
+                        description: "Last name of the contact."
   /entities/Tasks:
     post:
       tags:
         - "Tasks"
-      summary: "Create task"
+      summary: "Create Task"
       description: "Creates new Task"
       operationId: "createTask"
       requestBody:
@@ -131,14 +144,20 @@ paths:
                 activity_type_id:
                   type: "string"
                   format: "uuid"
-                  description: "Type of task"
+                  description: "Id of the activity type of task."
+                  title: "Activity Type ID"
+                  x-dynamic-options: true
                 unit_id:
                   type: "string"
                   format: "uuid"
                   description: "Sales Unit ID"
+                  title: "Unit ID"
+                  x-dynamic-options: true
                 owner_id:
                   type: "string"
                   format: "uuid"
+                  title: "Owner ID"
+                  x-dynamic-options: true
               required:
                 - "subject"
                 - "activity_type_id"
@@ -146,14 +165,13 @@ paths:
                 - "owner_id"
       responses:
         201:
-          description: "Creation confirmation. Returns created Task"
+          description: "Creation confirmation. Returns created task"
           content:
             application/json:
               schema:
                 type: "object"
                 properties:
                   success:
-                    description: "True when response succeeded, false on error."
                     type: "boolean"
                   data:
                     type: "object"
@@ -161,17 +179,22 @@ paths:
                       id:
                         type: "string"
                         format: "uuid"
+                        description: "ID of the task."
                       subject:
                         type: "string"
+                        description: "Name of the entity and its default text representation."
                       activity_type_id:
                         type: "string"
                         format: "uuid"
+                        description: "Id of the activity type of task."
                       unit_id:
                         type: "string"
                         format: "uuid"
+                        description: "Sales Unit ID."
                       owner_id:
                         type: "string"
                         format: "uuid"
+                        description: "ID of the user in Pipeliner Application that is the owner of the task."
 components:
   securitySchemes:
     basicAuth:

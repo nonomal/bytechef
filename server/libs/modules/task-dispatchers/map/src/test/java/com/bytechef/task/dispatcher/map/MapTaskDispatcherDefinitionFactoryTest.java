@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,9 @@
 
 package com.bytechef.task.dispatcher.map;
 
+import com.bytechef.platform.workflow.task.dispatcher.map.MapDataSource;
 import com.bytechef.test.jsonasssert.JsonFileAssert;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -26,6 +28,10 @@ public class MapTaskDispatcherDefinitionFactoryTest {
 
     @Test
     public void testGetTaskDispatcherDefinition() {
-        JsonFileAssert.assertEquals("definition/map_v1.json", new MapTaskDispatcherDefinitionFactory().getDefinition());
+        MapDataSource stubDataSource = (workflowId, lastTaskName, lastTaskType, environmentId) -> null;
+
+        JsonFileAssert.assertEquals(
+            "definition/map_v1.json",
+            new MapTaskDispatcherDefinitionFactory(Optional.of(stubDataSource)).getDefinition());
     }
 }

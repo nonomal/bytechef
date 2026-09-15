@@ -1,0 +1,14 @@
+{
+  "$schema": "../../../../../../.source/json-schema/docs.meta.json",
+  "title": "Installation",
+  "description": "Install ByteChef on your own infrastructure",
+  "pages": [
+    "local-docker",
+    "kubernetes",
+    "aws-ec2",
+    "aws-ecs",
+    "azure",
+    "google-cloud",
+    "digitalocean"
+  ]
+}

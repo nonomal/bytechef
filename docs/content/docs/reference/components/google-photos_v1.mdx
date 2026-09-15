@@ -1,0 +1,332 @@
+---
+title: "Google Photos"
+description: "Google Photos is a photo sharing and storage service."
+---
+
+
+Categories: File Storage
+
+
+Type: googlePhotos/v1
+
+<hr />
+
+
+
+
+## Connections
+
+Version: 1
+
+
+### OAuth2 Authorization Code
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| clientId | Client Id | STRING |  | true |
+| clientSecret | Client Secret | STRING |  | true |
+
+
+
+## Connection Setup
+
+### Create OAuth 2.0 Application
+
+Creation of OAuth 2.0 application is documented [here](/reference/components/google-application-setup_v1#create-oauth-20-application).
+
+### Enable Google Photos API
+
+1. In the [Google Cloud Console](https://console.cloud.google.com/), select your project.
+2. Go to the **APIs & Services**.
+3. Click on **ENABLE APIS AND SERVICES**.
+4. Search for "google photos library api" in the search bar.
+5. Click on **Google Photos Library API**.
+6. Click **Enable**.
+
+<div style={{ position: 'relative', height:0, width: '100%', overflow: 'hidden', zindex: 49, boxSizing: 'border-box', paddingBottom: 'calc(50.05219207% + 32px)'}}>
+    <iframe src="https://www.guidejar.com/embed/st6rRToaukvGyoicvSY8?type=1&controls=on" width="100%" height="100%" style={{height:'100%', position:'absolute', inset:0}} allowFullScreen frameBorder="0"></iframe>
+</div>
+
+
+
+<hr />
+
+
+## Actions
+
+
+### Create Album
+Name: createAlbum
+
+`Creates an album in a user's Google Photos library.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| title | Title | STRING | Name of the album. | true |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Create Album",
+  "name" : "createAlbum",
+  "parameters" : {
+    "title" : ""
+  },
+  "type" : "googlePhotos/v1/createAlbum"
+}
+```
+
+#### Output
+
+
+
+Type: OBJECT
+
+
+#### Properties
+
+|     Name     |     Type     |     Description     |
+|:------------:|:------------:|:-------------------:|
+| id | STRING | Identifier for the album. |
+| title | STRING | Name of the album. |
+| productUrl | STRING | Google Photos URL for the album. |
+| isWriteable | BOOLEAN <details> <summary> Options </summary> <span>true</span>, <span>false</span> </details> | True if you can create media items in this album. |
+| shareInfo | OBJECT <details> <summary> Properties </summary> &#123;&#123;BOOLEAN\(isCollaborative), BOOLEAN\(isCommentable)&#125;\(sharedAlbumOptions), STRING\(shareableUrl), STRING\(shareToken), BOOLEAN\(isJoined), BOOLEAN\(isOwned), BOOLEAN\(isJoinable)&#125; </details> |  |
+| mediaItemsCount | STRING | The number of media items in the album. |
+| coverPhotoBaseUrl | STRING | A URL to the cover photo's bytes. |
+| coverPhotoMediaItemId | STRING | Identifier for the media item associated with the cover photo. |
+
+
+
+
+#### Output Example
+```json
+{
+  "id" : "",
+  "title" : "",
+  "productUrl" : "",
+  "isWriteable" : false,
+  "shareInfo" : {
+    "sharedAlbumOptions" : {
+      "isCollaborative" : false,
+      "isCommentable" : false
+    },
+    "shareableUrl" : "",
+    "shareToken" : "",
+    "isJoined" : false,
+    "isOwned" : false,
+    "isJoinable" : false
+  },
+  "mediaItemsCount" : "",
+  "coverPhotoBaseUrl" : "",
+  "coverPhotoMediaItemId" : ""
+}
+```
+
+
+
+
+### Get Album
+Name: getAlbum
+
+`Returns the app created album based on the specified albumId. The albumId must be the ID of an album created by your app.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| albumId | Album ID | STRING | Identifier of the album to be requested. Only albums created by your app will be listed. | true |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Get Album",
+  "name" : "getAlbum",
+  "parameters" : {
+    "albumId" : ""
+  },
+  "type" : "googlePhotos/v1/getAlbum"
+}
+```
+
+#### Output
+
+
+
+Type: OBJECT
+
+
+#### Properties
+
+|     Name     |     Type     |     Description     |
+|:------------:|:------------:|:-------------------:|
+| id | STRING | Identifier for the album. |
+| title | STRING | Name of the album. |
+| productUrl | STRING | Google Photos URL for the album. |
+| isWriteable | BOOLEAN <details> <summary> Options </summary> <span>true</span>, <span>false</span> </details> | True if you can create media items in this album. |
+| shareInfo | OBJECT <details> <summary> Properties </summary> &#123;&#123;BOOLEAN\(isCollaborative), BOOLEAN\(isCommentable)&#125;\(sharedAlbumOptions), STRING\(shareableUrl), STRING\(shareToken), BOOLEAN\(isJoined), BOOLEAN\(isOwned), BOOLEAN\(isJoinable)&#125; </details> |  |
+| mediaItemsCount | STRING | The number of media items in the album. |
+| coverPhotoBaseUrl | STRING | A URL to the cover photo's bytes. |
+| coverPhotoMediaItemId | STRING | Identifier for the media item associated with the cover photo. |
+
+
+
+
+#### Output Example
+```json
+{
+  "id" : "",
+  "title" : "",
+  "productUrl" : "",
+  "isWriteable" : false,
+  "shareInfo" : {
+    "sharedAlbumOptions" : {
+      "isCollaborative" : false,
+      "isCommentable" : false
+    },
+    "shareableUrl" : "",
+    "shareToken" : "",
+    "isJoined" : false,
+    "isOwned" : false,
+    "isJoinable" : false
+  },
+  "mediaItemsCount" : "",
+  "coverPhotoBaseUrl" : "",
+  "coverPhotoMediaItemId" : ""
+}
+```
+
+#### Find Album ID
+
+To find the Album ID, click [here](/reference/components/google-photos_v1#how-to-find-album-id)
+
+
+
+### Upload Media
+Name: uploadMedia
+
+`Upload media to an album in a user's Google Photos library.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| albumId | Album ID | STRING | Identifier of the album to be requested. Only albums created by your app will be listed. | true |
+| media | Media | ARRAY <details> <summary> Items </summary> [&#123;FILE_ENTRY\(fileEntry), STRING\(fileName)&#125;] </details> | Media files to upload to album. Photos and videos are supported. | true |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Upload Media",
+  "name" : "uploadMedia",
+  "parameters" : {
+    "albumId" : "",
+    "media" : [ {
+      "fileEntry" : {
+        "extension" : "",
+        "mimeType" : "",
+        "name" : "",
+        "url" : ""
+      },
+      "fileName" : ""
+    } ]
+  },
+  "type" : "googlePhotos/v1/uploadMedia"
+}
+```
+
+#### Output
+
+
+
+Type: OBJECT
+
+
+#### Properties
+
+|     Name     |     Type     |     Description     |
+|:------------:|:------------:|:-------------------:|
+| newMediaItemResults | ARRAY <details> <summary> Items </summary> [&#123;STRING\(uploadToken), &#123;INTEGER\(code), STRING\(message), [&#123;&#125;]\(details)&#125;\(status), &#123;STRING\(id), STRING\(description), STRING\(productUrl), STRING\(baseUrl), STRING\(mimeType), &#123;STRING\(creationTime), STRING\(width), STRING\(height), &#123;STRING\(cameraMake), STRING\(cameraModel), NUMBER\(focalLength), NUMBER\(apertureFNumber), INTEGER\(isoEquivalent), STRING\(exposureTime)&#125;\(photo), &#123;STRING\(cameraMake), STRING\(cameraModel), NUMBER\(fps), STRING\(status)&#125;\(video)&#125;\(mediaMetadata), &#123;STRING\(profilePictureBaseUrl), STRING\(displayName)&#125;\(contributorInfo), STRING\(filename)&#125;\(mediaItem)&#125;] </details> |  |
+
+
+
+
+#### Output Example
+```json
+{
+  "newMediaItemResults" : [ {
+    "uploadToken" : "",
+    "status" : {
+      "code" : 1,
+      "message" : "",
+      "details" : [ { } ]
+    },
+    "mediaItem" : {
+      "id" : "",
+      "description" : "",
+      "productUrl" : "",
+      "baseUrl" : "",
+      "mimeType" : "",
+      "mediaMetadata" : {
+        "creationTime" : "",
+        "width" : "",
+        "height" : "",
+        "photo" : {
+          "cameraMake" : "",
+          "cameraModel" : "",
+          "focalLength" : 0.0,
+          "apertureFNumber" : 0.0,
+          "isoEquivalent" : 1,
+          "exposureTime" : ""
+        },
+        "video" : {
+          "cameraMake" : "",
+          "cameraModel" : "",
+          "fps" : 0.0,
+          "status" : ""
+        }
+      },
+      "contributorInfo" : {
+        "profilePictureBaseUrl" : "",
+        "displayName" : ""
+      },
+      "filename" : ""
+    }
+  } ]
+}
+```
+
+#### Find Album ID
+
+To find the Album ID, click [here](/reference/components/google-photos_v1#how-to-find-album-id)
+
+
+
+
+
+## What to do if your action is not listed here?
+
+If this component doesn't have the action you need, you can use **Custom Action** to create your own. Custom Actions empower you to define HTTP requests tailored to your specific requirements, allowing for greater flexibility in integrating with external services or APIs.
+
+To create a Custom Action, simply specify the desired HTTP method, path, and any necessary parameters. This way, you can extend the functionality of your component beyond the predefined actions, ensuring that you can meet all your integration needs effectively.
+
+<hr />
+
+# Additional Instructions
+
+### How to find Album ID
+
+Your application can only access **Album IDs for albums that were created by your app**.
+
+To retrieve these Album IDs, use the **Google Photos Library API** `albums.list` method.
+Its endpoint is `GET https://photoslibrary.googleapis.com/v1/albums`.
+
+## Troubleshooting
+
+### Access Blocked: Verification Process Not Completed
+
+Documentation for how to add a test user can be found [here](/reference/components/google-application-setup_v1#access-blocked-verification-process-not-completed)

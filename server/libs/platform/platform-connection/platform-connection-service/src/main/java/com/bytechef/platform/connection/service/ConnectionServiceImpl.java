@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,21 +17,24 @@
 package com.bytechef.platform.connection.service;
 
 import com.bytechef.commons.util.CollectionUtils;
+import com.bytechef.commons.util.FormatUtils;
 import com.bytechef.commons.util.OptionalUtils;
+import com.bytechef.component.definition.Authorization.AuthorizationType;
 import com.bytechef.platform.connection.domain.Connection;
 import com.bytechef.platform.connection.domain.Connection.CredentialStatus;
-import com.bytechef.platform.connection.domain.ConnectionEnvironment;
 import com.bytechef.platform.connection.repository.ConnectionRepository;
-import com.bytechef.platform.constant.AppType;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import com.bytechef.platform.constant.PlatformType;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.Validate;
+import org.jspecify.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.Assert;
 
 /**
  * @author Ivica Cardic
@@ -40,21 +43,50 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 public class ConnectionServiceImpl implements ConnectionService {
 
+    private static final Logger log = LoggerFactory.getLogger(ConnectionServiceImpl.class);
+
     private final ConnectionRepository connectionRepository;
 
-    @SuppressFBWarnings("EI2")
     public ConnectionServiceImpl(ConnectionRepository connectionRepository) {
         this.connectionRepository = connectionRepository;
     }
 
     @Override
     public Connection create(Connection connection) {
-        Validate.notNull(connection, "'connection' must not be null");
-        Validate.notBlank(connection.getComponentName(), "'componentName' must not be empty");
-        Validate.notBlank(connection.getName(), "'name' must not be empty");
-        Validate.isTrue(connection.getId() == null, "'id' must be null");
+        Assert.notNull(connection, "'connection' must not be null");
+        Assert.hasText(connection.getComponentName(), "'componentName' must not be empty");
+        Assert.hasText(connection.getName(), "'name' must not be empty");
+        Assert.isTrue(connection.getId() == null, "'id' must be null");
 
         return connectionRepository.save(connection);
+    }
+
+    @Override
+    public Connection create(
+        @Nullable AuthorizationType authorizationType, String componentName, int connectionVersion,
+        int environmentId, String name, Map<String, Object> parameters, PlatformType platformType) {
+
+        Assert.hasText(componentName, "'componentName' must not be empty");
+        Assert.hasText(name, "'name' must not be empty");
+        Assert.notNull(environmentId, "'environment' must not be null");
+        Assert.notNull(parameters, "'parameters' must not be null");
+        Assert.notNull(platformType, "'platformType' must not be null");
+
+        Connection connection = new Connection();
+
+        connection.setAuthorizationType(authorizationType);
+        connection.setComponentName(componentName);
+        connection.setConnectionVersion(connectionVersion);
+        connection.setEnvironmentId(environmentId);
+        connection.setName(name);
+        connection.setParameters(parameters);
+        connection.setType(platformType);
+
+        if (log.isTraceEnabled()) {
+            log.trace("Saved..: {}", FormatUtils.toString(parameters));
+        }
+
+        return create(connection);
     }
 
     @Override
@@ -70,14 +102,14 @@ public class ConnectionServiceImpl implements ConnectionService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<Connection> getConnections(AppType type) {
+    public List<Connection> getConnections(PlatformType type) {
         return CollectionUtils.filter(
-            connectionRepository.findAll(Sort.by("name")), connection -> connection.getType() == type);
+            connectionRepository.findAll(Sort.by("name", "id")), connection -> connection.getType() == type);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<Connection> getConnections(String componentName, int version, AppType type) {
+    public List<Connection> getConnections(String componentName, int version, PlatformType type) {
         return connectionRepository.findAllByComponentNameAndConnectionVersionAndTypeOrderByName(
             componentName, version, type.ordinal());
     }
@@ -85,8 +117,7 @@ public class ConnectionServiceImpl implements ConnectionService {
     @Override
     @Transactional(readOnly = true)
     public List<Connection> getConnections(
-        String componentName, Integer connectionVersion, ConnectionEnvironment connectionEnvironment, Long tagId,
-        AppType type) {
+        String componentName, Integer connectionVersion, Long tagId, Long environmentId, PlatformType type) {
 
         List<Connection> connections;
 
@@ -112,13 +143,18 @@ public class ConnectionServiceImpl implements ConnectionService {
             }
         }
 
-        if (connectionEnvironment != null) {
+        if (environmentId != null) {
             connections = connections.stream()
-                .filter(connection -> connection.getEnvironment() == connectionEnvironment)
+                .filter(connection -> connection.getEnvironmentId() == environmentId)
                 .toList();
         }
 
         return CollectionUtils.toList(connections);
+    }
+
+    @Override
+    public List<Connection> getConnections(List<Long> connectionIds) {
+        return connectionRepository.findAllByIdIn(connectionIds);
     }
 
     @Override
@@ -131,42 +167,62 @@ public class ConnectionServiceImpl implements ConnectionService {
     }
 
     @Override
-    public Connection update(Connection connection) {
-        Validate.notBlank(connection.getName(), "'name' must not be empty");
+    public Connection update(long id, String name, List<Long> tagIds, int version) {
+        Connection curConnection = getConnection(id);
 
-        Connection curConnection = OptionalUtils.get(
-            connectionRepository.findById(Validate.notNull(connection.getId(), "id")));
+        if (name != null) {
+            curConnection.setName(name);
+        }
 
-        curConnection.setName(connection.getName());
-        curConnection.setTagIds(connection.getTagIds());
-        curConnection.setVersion(connection.getVersion());
+        if (tagIds != null) {
+            curConnection.setTagIds(tagIds);
+        }
+
+        curConnection.setVersion(version);
 
         return connectionRepository.save(curConnection);
     }
 
     @Override
     public Connection updateConnectionCredentialStatus(long connectionId, CredentialStatus status) {
-        Validate.notNull(status, "'status' must not be null");
+        Assert.notNull(status, "'status' must not be null");
 
         Connection connection = getConnection(connectionId);
 
         connection.setCredentialStatus(status);
 
-        return connectionRepository.save(connection);
+        Connection updatedConnection = connectionRepository.save(connection);
+
+        updatedConnection.setCredentialsStatusUpdated();
+
+        return updatedConnection;
     }
 
     @Override
     public Connection updateConnectionParameters(long connectionId, Map<String, ?> parameters) {
-        Validate.notNull(parameters, "'parameters' must not be null");
+        Assert.notNull(parameters, "'parameters' must not be null");
 
         Connection connection = getConnection(connectionId);
 
+        if (log.isTraceEnabled()) {
+            log.trace("New....: {}", FormatUtils.toString(parameters));
+        }
+
         Map<String, Object> curParameters = new HashMap<>(connection.getParameters());
+
+        if (log.isTraceEnabled()) {
+            log.trace("Current: {}", FormatUtils.toString(curParameters));
+        }
 
         curParameters.putAll(parameters);
 
         connection.setParameters(curParameters);
 
+        if (log.isTraceEnabled()) {
+            log.trace("Saved..: {}", FormatUtils.toString(curParameters));
+        }
+
         return connectionRepository.save(connection);
     }
+
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,11 +18,12 @@ package com.bytechef.component.keap;
 
 import com.bytechef.component.OpenApiComponentHandler;
 import com.bytechef.component.definition.ActionDefinition;
+import com.bytechef.component.definition.ActionDefinition.OptionsFunction;
 import com.bytechef.component.definition.ComponentCategory;
-import com.bytechef.component.definition.ComponentDSL.ModifiableComponentDefinition;
-import com.bytechef.component.definition.ComponentDSL.ModifiableIntegerProperty;
-import com.bytechef.component.definition.ComponentDSL.ModifiableObjectProperty;
-import com.bytechef.component.definition.ComponentDSL.ModifiableProperty;
+import com.bytechef.component.definition.ComponentDsl.ModifiableComponentDefinition;
+import com.bytechef.component.definition.ComponentDsl.ModifiableIntegerProperty;
+import com.bytechef.component.definition.ComponentDsl.ModifiableObjectProperty;
+import com.bytechef.component.definition.ComponentDsl.ModifiableProperty;
 import com.bytechef.component.keap.util.KeapUtils;
 import com.bytechef.definition.BaseProperty;
 import com.google.auto.service.AutoService;
@@ -46,16 +47,13 @@ public class KeapComponentHandler extends AbstractKeapComponentHandler {
     public ModifiableProperty<?> modifyProperty(
         ActionDefinition actionDefinition, ModifiableProperty<?> modifiableProperty) {
 
-        if (Objects.equals(actionDefinition.getName(), "createContact")) {
+        if (Objects.equals(actionDefinition.getName(), "createContact") &&
+            Objects.equals(modifiableProperty.getName(), "company")) {
             for (BaseProperty baseProperty : ((ModifiableObjectProperty) modifiableProperty).getProperties()
                 .get()) {
-                if (Objects.equals(baseProperty.getName(), "company")) {
-                    for (BaseProperty baseProperty1 : ((ModifiableObjectProperty) baseProperty).getProperties()
-                        .get()) {
-                        if (Objects.equals(baseProperty1.getName(), "id")) {
-                            ((ModifiableIntegerProperty) baseProperty1).options(KeapUtils.getCompanyIdOptions());
-                        }
-                    }
+                if (Objects.equals(baseProperty.getName(), "id")) {
+                    ((ModifiableIntegerProperty) baseProperty).options(
+                        (OptionsFunction<Long>) KeapUtils::getCompanyIdOptions);
                 }
             }
         }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,8 +17,10 @@
 package com.bytechef.component.definition;
 
 import com.bytechef.component.exception.ProviderException;
+import com.bytechef.definition.BaseOutputDefinition.OutputResponse;
+import com.bytechef.definition.BaseOutputFunction;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -33,6 +35,7 @@ public interface TriggerDefinition {
      *
      */
     enum TriggerType {
+        CALLABLE,
         DYNAMIC_WEBHOOK,
         HYBRID,
         LISTENER,
@@ -73,6 +76,12 @@ public interface TriggerDefinition {
     Optional<String> getDescription();
 
     /**
+     *
+     * @return
+     */
+    Optional<DynamicWebhookRefreshFunction> getDynamicWebhookRefresh();
+
+    /**
      * TODO
      *
      * @return
@@ -83,31 +92,25 @@ public interface TriggerDefinition {
      *
      * @return
      */
-    Optional<DynamicWebhookDisableConsumer> getDynamicWebhookDisable();
-
-    /**
-     *
-     * @return
-     */
-    Optional<DynamicWebhookEnableFunction> getDynamicWebhookEnable();
-
-    /**
-     *
-     * @return
-     */
-    Optional<DynamicWebhookRefreshFunction> getDynamicWebhookRefresh();
-
-    /**
-     *
-     * @return
-     */
-    Optional<DynamicWebhookRequestFunction> getDynamicWebhookRequest();
-
-    /**
-     *
-     * @return
-     */
     Optional<Help> getHelp();
+
+    /**
+     *
+     * @return
+     */
+    Optional<WebhookDisableConsumer> getWebhookDisable();
+
+    /**
+     *
+     * @return
+     */
+    Optional<WebhookEnableFunction> getWebhookEnable();
+
+    /**
+     *
+     * @return
+     */
+    Optional<WebhookRequestFunction> getWebhookRequest();
 
     /**
      *
@@ -131,13 +134,7 @@ public interface TriggerDefinition {
      *
      * @return
      */
-    Optional<TriggerOutputFunction> getOutput();
-
-    /**
-     *
-     * @return
-     */
-    Optional<OutputResponse> getOutputResponse();
+    Optional<OutputDefinition> getOutputDefinition();
 
     /**
      *
@@ -156,12 +153,6 @@ public interface TriggerDefinition {
      * @return
      */
     Optional<List<? extends Property>> getProperties();
-
-    /**
-     *
-     * @return
-     */
-    Optional<StaticWebhookRequestFunction> getStaticWebhookRequest();
 
     /**
      *
@@ -190,23 +181,18 @@ public interface TriggerDefinition {
      *
      * @return
      */
-    Optional<TriggerWorkflowNodeDescriptionFunction> getWorkflowNodeDescriptionFunction();
-
-    /**
-     * @return
-     */
-    Optional<Boolean> getWorkflowSyncExecution();
-
-    /**
-     * @return
-     */
-    Optional<Boolean> getWorkflowSyncValidation();
+    Optional<WebhookValidateOnEnableFunction> getWebhookValidateOnEnable();
 
     /**
      *
      * @return
      */
-    boolean isDynamicOutput();
+    Optional<WorkflowNodeDescriptionFunction> getWorkflowNodeDescription();
+
+    /**
+     * @return
+     */
+    Optional<Boolean> getWorkflowSyncExecution();
 
     /**
      *
@@ -225,104 +211,17 @@ public interface TriggerDefinition {
      *
      */
     @FunctionalInterface
-    interface DynamicWebhookDisableConsumer {
-
-        /**
-         *
-         * @param inputParameters
-         * @param connectionParameters
-         * @param outputParameters
-         * @param workflowExecutionId
-         */
-        void accept(
-            Parameters inputParameters, Parameters connectionParameters, Parameters outputParameters,
-            String workflowExecutionId, TriggerContext context);
-
-    }
-
-    /**
-     *
-     */
-    @FunctionalInterface
-    interface DynamicWebhookEnableFunction {
-
-        /**
-         *
-         * @param inputParameters
-         * @param connectionParameters
-         * @param webhookUrl
-         * @param workflowExecutionId
-         * @return
-         */
-        DynamicWebhookEnableOutput apply(
-            Parameters inputParameters, Parameters connectionParameters, String webhookUrl,
-            String workflowExecutionId, TriggerContext context);
-
-    }
-
-    /**
-     *
-     * @param parameters
-     * @param webhookExpirationDate
-     */
-    @SuppressFBWarnings("EI")
-    record DynamicWebhookEnableOutput(Map<String, ?> parameters, LocalDateTime webhookExpirationDate) {
-    }
-
-    /**
-     *
-     */
-    @FunctionalInterface
     interface DynamicWebhookRefreshFunction {
 
-        DynamicWebhookEnableOutput apply(Parameters outputParameters, TriggerContext context);
-    }
-
-    /**
-     *
-     */
-    @FunctionalInterface
-    interface DynamicWebhookRequestFunction {
-
         /**
          *
-         * @param inputParameters
          * @param connectionParameters
-         * @param headers
-         * @param parameters
-         * @param body
-         * @param method
-         * @param output
+         * @param webhookEnableOutputParameters
          * @param context
          * @return
          */
-        Object apply(
-            Parameters inputParameters, Parameters connectionParameters, HttpHeaders headers,
-            HttpParameters parameters, WebhookBody body, WebhookMethod method, DynamicWebhookEnableOutput output,
-            TriggerContext context) throws Exception;
-    }
-
-    /**
-     *
-     */
-    @FunctionalInterface
-    interface DynamicWebhookTriggerOutputFunction extends TriggerOutputFunction {
-
-        /**
-         * @param inputParameters
-         * @param connectionParameters
-         * @param headers
-         * @param parameters
-         * @param body
-         * @param method
-         * @param output
-         * @param context
-         * @return
-         */
-        OutputResponse apply(
-            Parameters inputParameters, Parameters connectionParameters, HttpHeaders headers,
-            HttpParameters parameters, WebhookBody body, WebhookMethod method, DynamicWebhookEnableOutput output,
-            TriggerContext context) throws Exception;
+        WebhookEnableOutput
+            apply(Parameters connectionParameters, Parameters webhookEnableOutputParameters, TriggerContext context);
     }
 
     /**
@@ -441,16 +340,21 @@ public interface TriggerDefinition {
      *
      */
     @FunctionalInterface
-    interface ListenerTriggerOutputFunction extends TriggerOutputFunction {
+    interface OptionsFunction<T> extends OptionsDataSource.BaseOptionsFunction {
 
         /**
+         *
          * @param inputParameters
          * @param connectionParameters
-         * @param workflowExecutionId
+         * @param lookupDependsOnPaths
+         * @param searchText
+         * @param context
+         * @return
+         * @throws Exception
          */
-        OutputResponse accept(
-            Parameters inputParameters, Parameters connectionParameters, String workflowExecutionId,
-            TriggerContext context) throws Exception;
+        List<? extends Option<T>> apply(
+            Parameters inputParameters, Parameters connectionParameters, Map<String, String> lookupDependsOnPaths,
+            String searchText, TriggerContext context) throws Exception;
     }
 
     /**
@@ -467,39 +371,29 @@ public interface TriggerDefinition {
          * @return
          */
         PollOutput apply(
-            Parameters inputParameters, Parameters closureParameters, TriggerContext context)
+            Parameters inputParameters, Parameters connectionParameters, Parameters closureParameters,
+            TriggerContext context)
             throws Exception;
-
-    }
-
-    /**
-     *
-     * @param records
-     * @param closureParameters
-     * @param pollImmediately
-     */
-    @SuppressFBWarnings("EI")
-    record PollOutput(List<?> records, Map<String, ?> closureParameters, boolean pollImmediately) {
-        public List<?> getRecords() {
-            return records;
-        }
     }
 
     /**
      *
      */
     @FunctionalInterface
-    interface PollTriggerOutputFunction extends TriggerOutputFunction {
+    interface PropertiesFunction extends PropertiesDataSource.BasePropertiesFunction {
 
         /**
+         *
          * @param inputParameters
-         * @param closureParameters
+         * @param connectionParameters
+         * @param lookupDependsOnPaths
          * @param context
          * @return
+         * @throws Exception
          */
-        OutputResponse apply(Parameters inputParameters, Parameters closureParameters, TriggerContext context)
-            throws Exception;
-
+        List<? extends Property.ValueProperty<?>> apply(
+            Parameters inputParameters, Parameters connectionParameters, Map<String, String> lookupDependsOnPaths,
+            TriggerContext context) throws Exception;
     }
 
     /**
@@ -515,55 +409,37 @@ public interface TriggerDefinition {
          * @param context
          * @return
          */
-        ProviderException apply(int statusCode, Object body, Context context) throws Exception;
+        ProviderException apply(int statusCode, Object body, Map<String, List<String>> headers, TriggerContext context)
+            throws Exception;
     }
 
     /**
      *
      */
     @FunctionalInterface
-    interface StaticWebhookRequestFunction {
+    interface WorkflowNodeDescriptionFunction {
 
         /**
-         *
          * @param inputParameters
-         * @param headers
-         * @param parameters
-         * @param body
-         * @param method
          * @param context
          * @return
          */
-        Object apply(
-            Parameters inputParameters, HttpHeaders headers, HttpParameters parameters, WebhookBody body,
-            WebhookMethod method, TriggerContext context) throws Exception;
-
+        String apply(Parameters inputParameters, TriggerContext context) throws Exception;
     }
 
     /**
      *
      */
-    @FunctionalInterface
-    interface StaticWebhookTriggerOutputFunction extends TriggerOutputFunction {
+    interface OutputFunction extends BaseOutputFunction {
 
         /**
          * @param inputParameters
-         * @param headers
-         * @param parameters
-         * @param body
-         * @param method
+         * @param connectionParameters
          * @param context
          * @return
          */
-        OutputResponse apply(
-            Parameters inputParameters, HttpHeaders headers, HttpParameters parameters, WebhookBody body,
-            WebhookMethod method, TriggerContext context) throws Exception;
-    }
-
-    /**
-     *
-     */
-    interface TriggerOutputFunction {
+        OutputResponse apply(Parameters inputParameters, Parameters connectionParameters, TriggerContext context)
+            throws Exception;
     }
 
     /**
@@ -579,7 +455,7 @@ public interface TriggerDefinition {
 
         <T> T getContent(Class<T> valueType);
 
-        <T> T getContent(Context.TypeReference<T> valueTypeRef);
+        <T> T getContent(TypeReference<T> valueTypeRef);
 
         /**
          *
@@ -616,6 +492,69 @@ public interface TriggerDefinition {
      *
      */
     @FunctionalInterface
+    interface WebhookDisableConsumer {
+
+        /**
+         *
+         * @param inputParameters
+         * @param connectionParameters
+         * @param webhookEnableOutputParameters
+         * @param workflowExecutionId
+         */
+        void accept(
+            Parameters inputParameters, Parameters connectionParameters, Parameters webhookEnableOutputParameters,
+            String workflowExecutionId, TriggerContext context);
+
+    }
+
+    /**
+     *
+     */
+    @FunctionalInterface
+    interface WebhookEnableFunction {
+
+        /**
+         *
+         * @param inputParameters
+         * @param connectionParameters
+         * @param webhookUrl
+         * @param workflowExecutionId
+         * @return
+         */
+        WebhookEnableOutput apply(
+            Parameters inputParameters, Parameters connectionParameters, String webhookUrl, String workflowExecutionId,
+            TriggerContext context);
+
+    }
+
+    /**
+     *
+     */
+    @FunctionalInterface
+    interface WebhookRequestFunction {
+
+        /**
+         *
+         * @param inputParameters
+         * @param connectionParameters
+         * @param headers
+         * @param parameters
+         * @param body
+         * @param method
+         * @param webhookEnableOutputParameters
+         * @param context
+         * @return
+         */
+        Object apply(
+            Parameters inputParameters, Parameters connectionParameters, HttpHeaders headers,
+            HttpParameters parameters, WebhookBody body, WebhookMethod method, Parameters webhookEnableOutputParameters,
+            TriggerContext context) throws Exception;
+    }
+
+    /**
+     *
+     */
+    @FunctionalInterface
     interface WebhookValidateFunction {
         /**
          *
@@ -631,6 +570,46 @@ public interface TriggerDefinition {
             Parameters inputParameters, HttpHeaders headers, HttpParameters parameters, WebhookBody body,
             WebhookMethod method, TriggerContext context);
 
+    }
+
+    /**
+     *
+     */
+    @FunctionalInterface
+    interface WebhookValidateOnEnableFunction {
+        /**
+         *
+         * @param inputParameters
+         * @param headers
+         * @param parameters
+         * @param body
+         * @param method
+         * @param context
+         * @return the http status, 200 if validation is ok, 400, 401 or any other required status if validation fails
+         */
+        WebhookValidateResponse apply(
+            Parameters inputParameters, HttpHeaders headers, HttpParameters parameters, WebhookBody body,
+            WebhookMethod method, TriggerContext context);
+
+    }
+
+    /**
+     *
+     * @param records
+     * @param closureParameters
+     * @param pollImmediately
+     */
+    @SuppressFBWarnings("EI")
+    record PollOutput(List<?> records, Map<String, ?> closureParameters, boolean pollImmediately) {
+    }
+
+    /**
+     *
+     * @param parameters
+     * @param webhookExpirationDate
+     */
+    @SuppressFBWarnings("EI")
+    record WebhookEnableOutput(Map<String, ?> parameters, Instant webhookExpirationDate) {
     }
 
     @SuppressFBWarnings("EI")

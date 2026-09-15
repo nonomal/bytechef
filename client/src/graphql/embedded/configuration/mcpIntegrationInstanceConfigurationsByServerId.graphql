@@ -1,0 +1,38 @@
+query mcpIntegrationInstanceConfigurationsByServerId($mcpServerId: ID) {
+    mcpIntegrationInstanceConfigurationsByServerId(mcpServerId: $mcpServerId) {
+        id
+        integration {
+            componentName
+            id
+            name
+        }
+        integrationInstanceConfigurationId
+        integrationInstanceConfigurationName
+        integrationVersion
+        lastModifiedDate
+        mcpIntegrationInstanceConfigurationWorkflows {
+            id
+            integrationInstanceConfigurationWorkflowId
+            integrationInstanceConfigurationWorkflow {
+                id
+                connections {
+                    connectionId
+                    workflowConnectionKey
+                    workflowNodeName
+                }
+                enabled
+                inputs
+                integrationInstanceConfigurationId
+                version
+                workflowId
+            }
+            mcpIntegrationInstanceConfigurationId
+            parameters
+            workflow {
+                id
+                label
+            }
+        }
+        mcpServerId
+    }
+}

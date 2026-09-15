@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,14 +19,14 @@ package com.bytechef.platform.workflow.coordinator;
 import com.bytechef.atlas.configuration.domain.Workflow;
 import com.bytechef.atlas.configuration.service.WorkflowService;
 import com.bytechef.commons.util.CollectionUtils;
-import com.bytechef.commons.util.ExceptionUtils;
-import com.bytechef.commons.util.OptionalUtils;
 import com.bytechef.error.ExecutionError;
+import com.bytechef.evaluator.Evaluator;
+import com.bytechef.exception.ConfigurationException;
 import com.bytechef.platform.component.trigger.WebhookRequest;
 import com.bytechef.platform.configuration.domain.WorkflowTrigger;
-import com.bytechef.platform.configuration.instance.accessor.InstanceAccessor;
-import com.bytechef.platform.configuration.instance.accessor.InstanceAccessorRegistry;
 import com.bytechef.platform.file.storage.TriggerFileStorage;
+import com.bytechef.platform.scheduler.TriggerScheduler;
+import com.bytechef.platform.workflow.WorkflowExecutionId;
 import com.bytechef.platform.workflow.coordinator.event.ApplicationEvent;
 import com.bytechef.platform.workflow.coordinator.event.ErrorEvent;
 import com.bytechef.platform.workflow.coordinator.event.TriggerExecutionCompleteEvent;
@@ -38,16 +38,19 @@ import com.bytechef.platform.workflow.coordinator.event.listener.ApplicationEven
 import com.bytechef.platform.workflow.coordinator.event.listener.ErrorEventListener;
 import com.bytechef.platform.workflow.coordinator.trigger.completion.TriggerCompletionHandler;
 import com.bytechef.platform.workflow.coordinator.trigger.dispatcher.TriggerDispatcher;
-import com.bytechef.platform.workflow.execution.WorkflowExecutionId;
+import com.bytechef.platform.workflow.execution.accessor.JobPrincipalAccessor;
+import com.bytechef.platform.workflow.execution.accessor.JobPrincipalAccessorRegistry;
 import com.bytechef.platform.workflow.execution.domain.TriggerExecution;
 import com.bytechef.platform.workflow.execution.service.TriggerExecutionService;
 import com.bytechef.platform.workflow.execution.service.TriggerStateService;
+import com.bytechef.tenant.TenantContext;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import org.apache.commons.lang3.Validate;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
@@ -59,35 +62,40 @@ import org.springframework.stereotype.Component;
 @Component
 public class TriggerCoordinator {
 
-    private static final Logger logger = LoggerFactory.getLogger(TriggerCoordinator.class);
+    private static final Logger log = LoggerFactory.getLogger(TriggerCoordinator.class);
 
     private final List<ApplicationEventListener> applicationEventListeners;
     private final List<ErrorEventListener> errorEventListeners;
+    private final Evaluator evaluator;
     private final ApplicationEventPublisher eventPublisher;
-    private final InstanceAccessorRegistry instanceAccessorRegistry;
+    private final JobPrincipalAccessorRegistry jobPrincipalAccessorRegistry;
     private final TriggerCompletionHandler triggerCompletionHandler;
     private final TriggerDispatcher triggerDispatcher;
     private final TriggerExecutionService triggerExecutionService;
     private final TriggerFileStorage triggerFileStorage;
+    private final TriggerScheduler triggerScheduler;
     private final TriggerStateService triggerStateService;
     private final WorkflowService workflowService;
 
     @SuppressFBWarnings("EI")
     public TriggerCoordinator(
         List<ApplicationEventListener> applicationEventListeners, List<ErrorEventListener> errorEventListeners,
-        ApplicationEventPublisher eventPublisher, InstanceAccessorRegistry instanceAccessorRegistry,
-        TriggerCompletionHandler triggerCompletionHandler, TriggerDispatcher triggerDispatcher,
-        TriggerExecutionService triggerExecutionService, TriggerFileStorage triggerFileStorage,
+        Evaluator evaluator, ApplicationEventPublisher eventPublisher,
+        JobPrincipalAccessorRegistry jobPrincipalAccessorRegistry, TriggerCompletionHandler triggerCompletionHandler,
+        TriggerDispatcher triggerDispatcher, TriggerExecutionService triggerExecutionService,
+        TriggerFileStorage triggerFileStorage, TriggerScheduler triggerScheduler,
         TriggerStateService triggerStateService, WorkflowService workflowService) {
 
         this.applicationEventListeners = applicationEventListeners;
         this.errorEventListeners = errorEventListeners;
+        this.evaluator = evaluator;
         this.eventPublisher = eventPublisher;
-        this.instanceAccessorRegistry = instanceAccessorRegistry;
+        this.jobPrincipalAccessorRegistry = jobPrincipalAccessorRegistry;
         this.triggerCompletionHandler = triggerCompletionHandler;
         this.triggerDispatcher = triggerDispatcher;
         this.triggerExecutionService = triggerExecutionService;
         this.triggerFileStorage = triggerFileStorage;
+        this.triggerScheduler = triggerScheduler;
         this.triggerStateService = triggerStateService;
         this.workflowService = workflowService;
     }
@@ -97,8 +105,8 @@ public class TriggerCoordinator {
      * @param applicationEvent
      */
     public void onApplicationEvent(ApplicationEvent applicationEvent) {
-        if (logger.isDebugEnabled()) {
-            logger.debug("onApplicationEvent: applicationEvent={}", applicationEvent);
+        if (log.isTraceEnabled()) {
+            log.trace("onApplicationEvent: applicationEvent={}", applicationEvent);
         }
 
         for (ApplicationEventListener applicationEventListener : applicationEventListeners) {
@@ -107,8 +115,8 @@ public class TriggerCoordinator {
     }
 
     public void onErrorEvent(ErrorEvent errorEvent) {
-        if (logger.isDebugEnabled()) {
-            logger.debug("onErrorEvent: errorEvent={}", errorEvent);
+        if (log.isTraceEnabled()) {
+            log.trace("onErrorEvent: errorEvent={}", errorEvent);
         }
 
         for (ErrorEventListener errorEventListener : errorEventListeners) {
@@ -123,8 +131,8 @@ public class TriggerCoordinator {
      */
     // TODO @Transactional
     public void onTriggerExecutionCompleteEvent(TriggerExecutionCompleteEvent triggerExecutionCompleteEvent) {
-        if (logger.isDebugEnabled()) {
-            logger.debug(
+        if (log.isTraceEnabled()) {
+            log.trace(
                 "onTriggerExecutionCompleteEvent: triggerExecutionCompleteEvent={}", triggerExecutionCompleteEvent);
         }
 
@@ -133,24 +141,36 @@ public class TriggerCoordinator {
 
     // TODO @Transactional
     public void onTriggerListenerEvent(TriggerListenerEvent triggerListenerEvent) {
-        if (logger.isDebugEnabled()) {
-            logger.debug("onTriggerListenerEvent: triggerListenerEvent={}", triggerListenerEvent);
+        if (log.isTraceEnabled()) {
+            log.trace("onTriggerListenerEvent: triggerListenerEvent={}", triggerListenerEvent);
         }
 
-        TriggerExecution triggerExecution = TriggerExecution.builder()
-            .startDate(triggerListenerEvent.getExecutionDate())
-            .endDate(triggerListenerEvent.getExecutionDate())
-            .workflowExecutionId(triggerListenerEvent.getWorkflowExecutionId())
-            .workflowTrigger(getWorkflowTrigger(triggerListenerEvent.getWorkflowExecutionId()))
-            .build();
+        WorkflowExecutionId workflowExecutionId = triggerListenerEvent.getWorkflowExecutionId();
 
-        triggerExecution = triggerExecutionService.create(triggerExecution);
+        TenantContext.runWithTenantId(workflowExecutionId.getTenantId(), () -> {
+            try {
+                TriggerExecution triggerExecution = TriggerExecution.builder()
+                    .startDate(triggerListenerEvent.getExecutionDate())
+                    .endDate(triggerListenerEvent.getExecutionDate())
+                    .workflowExecutionId(workflowExecutionId)
+                    .workflowTrigger(getWorkflowTrigger(workflowExecutionId))
+                    .build();
 
-        triggerExecution.setOutput(
-            triggerFileStorage.storeTriggerExecutionOutput(
-                Validate.notNull(triggerExecution.getId(), "id"), triggerListenerEvent.getOutput()));
+                triggerExecution = triggerExecutionService.create(triggerExecution);
 
-        handleTriggerExecutionCompletion(triggerExecution);
+                triggerExecution.setOutput(
+                    triggerFileStorage.storeTriggerExecutionOutput(
+                        Validate.notNull(triggerExecution.getId(), "id"), triggerListenerEvent.getOutput()));
+
+                handleTriggerExecutionCompletion(triggerExecution);
+            } catch (IllegalArgumentException | ConfigurationException exception) {
+                log.warn(
+                    "Cancelling orphaned schedule trigger for workflowExecutionId='{}': {}",
+                    workflowExecutionId, exception.getMessage());
+
+                triggerScheduler.cancelScheduleTrigger(workflowExecutionId.toString());
+            }
+        });
     }
 
     /**
@@ -161,25 +181,35 @@ public class TriggerCoordinator {
      */
     // TODO @Transactional
     public void onTriggerPollEvent(TriggerPollEvent triggerPollEvent) {
-        if (logger.isDebugEnabled()) {
-            logger.debug("onTriggerPollEvent: triggerPollEvent={}", triggerPollEvent);
+        if (log.isTraceEnabled()) {
+            log.trace("onTriggerPollEvent: triggerPollEvent={}", triggerPollEvent);
         }
 
         WorkflowExecutionId workflowExecutionId = triggerPollEvent.getWorkflowExecutionId();
 
-        TriggerExecution triggerExecution = TriggerExecution.builder()
-            .workflowExecutionId(workflowExecutionId)
-            .workflowTrigger(getWorkflowTrigger(workflowExecutionId))
-            .build();
+        TenantContext.runWithTenantId(workflowExecutionId.getTenantId(), () -> {
+            try {
+                TriggerExecution triggerExecution = TriggerExecution.builder()
+                    .workflowExecutionId(workflowExecutionId)
+                    .workflowTrigger(getWorkflowTrigger(workflowExecutionId))
+                    .build();
 
-        dispatch(triggerExecution);
+                dispatch(triggerExecution);
 
-        if (logger.isDebugEnabled()) {
-            logger.debug(
-                "Poll trigger id={}, type='{}', name='{}', workflowExecutionId='{}' dispatched",
-                triggerExecution.getId(), triggerExecution.getType(), triggerExecution.getName(),
-                triggerExecution.getWorkflowExecutionId());
-        }
+                if (log.isDebugEnabled()) {
+                    log.debug(
+                        "Poll trigger id={}, type='{}', name='{}', workflowExecutionId='{}' dispatched",
+                        triggerExecution.getId(), triggerExecution.getType(), triggerExecution.getName(),
+                        triggerExecution.getWorkflowExecutionId());
+                }
+            } catch (IllegalArgumentException | ConfigurationException exception) {
+                log.warn(
+                    "Cancelling orphaned polling trigger for workflowExecutionId='{}': {}",
+                    workflowExecutionId, exception.getMessage());
+
+                triggerScheduler.cancelPollingTrigger(workflowExecutionId.toString());
+            }
+        });
     }
 
     /**
@@ -188,47 +218,58 @@ public class TriggerCoordinator {
      */
     // TODO @Transactional
     public void onTriggerWebhookEvent(TriggerWebhookEvent triggerWebhookEvent) {
-        if (logger.isDebugEnabled()) {
-            logger.debug("onTriggerWebhookEvent: triggerWebhookEvent={}", triggerWebhookEvent);
+        if (log.isTraceEnabled()) {
+            log.trace("onTriggerWebhookEvent: triggerWebhookEvent={}", triggerWebhookEvent);
         }
 
-        TriggerWebhookEvent.WebhookParameters webhookParameters = triggerWebhookEvent.getWebhookParameters();
+        WorkflowExecutionId workflowExecutionId = triggerWebhookEvent.getWorkflowExecutionId();
 
-        TriggerExecution triggerExecution = TriggerExecution.builder()
-            .metadata(Map.of(WebhookRequest.WEBHOOK_REQUEST, webhookParameters.webhookRequest()))
-            .workflowExecutionId(webhookParameters.workflowExecutionId())
-            .workflowTrigger(getWorkflowTrigger(webhookParameters.workflowExecutionId()))
-            .build();
+        TenantContext.runWithTenantId(workflowExecutionId.getTenantId(), () -> {
+            try {
+                TriggerExecution triggerExecution = TriggerExecution.builder()
+                    .metadata(Map.of(WebhookRequest.WEBHOOK_REQUEST, triggerWebhookEvent.getWebhookRequest()))
+                    .workflowExecutionId(workflowExecutionId)
+                    .workflowTrigger(getWorkflowTrigger(workflowExecutionId))
+                    .build();
 
-        dispatch(triggerExecution);
+                dispatch(triggerExecution);
 
-        if (logger.isDebugEnabled()) {
-            logger.debug(
-                "Webhook trigger id={}, type='{}', name='{}', workflowExecutionId='{}' dispatched",
-                triggerExecution.getId(), triggerExecution.getType(), triggerExecution.getName(),
-                triggerExecution.getWorkflowExecutionId());
-        }
+                if (log.isDebugEnabled()) {
+                    log.debug(
+                        "Webhook trigger id={}, type='{}', name='{}', workflowExecutionId='{}' dispatched",
+                        triggerExecution.getId(), triggerExecution.getType(), triggerExecution.getName(),
+                        triggerExecution.getWorkflowExecutionId());
+                }
+            } catch (IllegalArgumentException | ConfigurationException exception) {
+                log.warn(
+                    "Cancelling orphaned dynamic webhook trigger refresh for workflowExecutionId='{}': {}",
+                    workflowExecutionId, exception.getMessage());
+
+                triggerScheduler.cancelDynamicWebhookTriggerRefresh(workflowExecutionId.toString());
+            }
+        });
     }
 
     private void dispatch(TriggerExecution triggerExecution) {
         WorkflowExecutionId workflowExecutionId = triggerExecution.getWorkflowExecutionId();
 
-        InstanceAccessor instanceAccessor = instanceAccessorRegistry.getInstanceAccessor(workflowExecutionId.getType());
+        JobPrincipalAccessor jobPrincipalAccessor =
+            jobPrincipalAccessorRegistry.getJobPrincipalAccessor(workflowExecutionId.getType());
 
         triggerExecution = triggerExecutionService.create(
             triggerExecution.evaluate(
-                instanceAccessor.getInputMap(
-                    workflowExecutionId.getInstanceId(), workflowExecutionId.getWorkflowReferenceCode())));
+                jobPrincipalAccessor.getInputMap(
+                    workflowExecutionId.getJobPrincipalId(), workflowExecutionId.getWorkflowUuid()),
+                evaluator));
 
-        triggerExecution.setState(OptionalUtils.orElse(triggerStateService.fetchValue(workflowExecutionId), null));
+        triggerExecution.setState(
+            triggerStateService.fetchValue(workflowExecutionId)
+                .orElse(null));
 
         try {
             triggerDispatcher.dispatch(triggerExecution);
         } catch (Exception e) {
-            triggerExecution.setError(
-                new ExecutionError(e.getMessage(), Arrays.asList(ExceptionUtils.getStackFrames(e))));
-
-            eventPublisher.publishEvent(new TriggerExecutionErrorEvent(triggerExecution));
+            publishTriggerError(triggerExecution, e);
         }
     }
 
@@ -236,11 +277,14 @@ public class TriggerCoordinator {
         try {
             triggerCompletionHandler.handle(triggerExecution);
         } catch (Exception e) {
-            triggerExecution.setError(
-                new ExecutionError(e.getMessage(), Arrays.asList(ExceptionUtils.getStackFrames(e))));
-
-            eventPublisher.publishEvent(new TriggerExecutionErrorEvent(triggerExecution));
+            publishTriggerError(triggerExecution, e);
         }
+    }
+
+    private void publishTriggerError(TriggerExecution triggerExecution, Exception e) {
+        triggerExecution.setError(new ExecutionError(e.getMessage(), Arrays.asList(ExceptionUtils.getStackFrames(e))));
+
+        eventPublisher.publishEvent(new TriggerExecutionErrorEvent(triggerExecution));
     }
 
     private WorkflowTrigger getWorkflowTrigger(WorkflowExecutionId workflowExecutionId) {
@@ -252,9 +296,10 @@ public class TriggerCoordinator {
     }
 
     private String getWorkflowId(WorkflowExecutionId workflowExecutionId) {
-        InstanceAccessor instanceAccessor = instanceAccessorRegistry.getInstanceAccessor(workflowExecutionId.getType());
+        JobPrincipalAccessor jobPrincipalAccessor =
+            jobPrincipalAccessorRegistry.getJobPrincipalAccessor(workflowExecutionId.getType());
 
-        return instanceAccessor.getWorkflowId(
-            workflowExecutionId.getInstanceId(), workflowExecutionId.getWorkflowReferenceCode());
+        return jobPrincipalAccessor.getWorkflowId(
+            workflowExecutionId.getJobPrincipalId(), workflowExecutionId.getWorkflowUuid());
     }
 }

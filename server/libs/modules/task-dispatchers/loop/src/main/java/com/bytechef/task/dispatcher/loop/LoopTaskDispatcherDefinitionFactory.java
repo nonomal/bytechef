@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,12 +16,12 @@
 
 package com.bytechef.task.dispatcher.loop;
 
-import static com.bytechef.platform.workflow.task.dispatcher.definition.TaskDispatcherDSL.array;
-import static com.bytechef.platform.workflow.task.dispatcher.definition.TaskDispatcherDSL.bool;
-import static com.bytechef.platform.workflow.task.dispatcher.definition.TaskDispatcherDSL.integer;
-import static com.bytechef.platform.workflow.task.dispatcher.definition.TaskDispatcherDSL.object;
-import static com.bytechef.platform.workflow.task.dispatcher.definition.TaskDispatcherDSL.task;
-import static com.bytechef.platform.workflow.task.dispatcher.definition.TaskDispatcherDSL.taskDispatcher;
+import static com.bytechef.platform.workflow.task.dispatcher.definition.TaskDispatcherDsl.array;
+import static com.bytechef.platform.workflow.task.dispatcher.definition.TaskDispatcherDsl.bool;
+import static com.bytechef.platform.workflow.task.dispatcher.definition.TaskDispatcherDsl.integer;
+import static com.bytechef.platform.workflow.task.dispatcher.definition.TaskDispatcherDsl.object;
+import static com.bytechef.platform.workflow.task.dispatcher.definition.TaskDispatcherDsl.task;
+import static com.bytechef.platform.workflow.task.dispatcher.definition.TaskDispatcherDsl.taskDispatcher;
 import static com.bytechef.task.dispatcher.loop.constant.LoopTaskDispatcherConstants.INDEX;
 import static com.bytechef.task.dispatcher.loop.constant.LoopTaskDispatcherConstants.ITEM;
 import static com.bytechef.task.dispatcher.loop.constant.LoopTaskDispatcherConstants.ITEMS;
@@ -30,14 +30,16 @@ import static com.bytechef.task.dispatcher.loop.constant.LoopTaskDispatcherConst
 import static com.bytechef.task.dispatcher.loop.constant.LoopTaskDispatcherConstants.LOOP_FOREVER;
 
 import com.bytechef.commons.util.MapUtils;
-import com.bytechef.platform.registry.util.SchemaUtils;
+import com.bytechef.definition.BaseOutputDefinition.OutputResponse;
+import com.bytechef.platform.util.SchemaUtils;
 import com.bytechef.platform.workflow.task.dispatcher.TaskDispatcherDefinitionFactory;
-import com.bytechef.platform.workflow.task.dispatcher.definition.Property.ObjectProperty;
 import com.bytechef.platform.workflow.task.dispatcher.definition.PropertyFactory;
-import com.bytechef.platform.workflow.task.dispatcher.definition.TaskDispatcherDSL.ModifiableValueProperty;
 import com.bytechef.platform.workflow.task.dispatcher.definition.TaskDispatcherDefinition;
+import com.bytechef.platform.workflow.task.dispatcher.definition.TaskDispatcherDsl.ModifiableValueProperty;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import org.slf4j.Logger;
 import org.springframework.stereotype.Component;
 
 /**
@@ -46,6 +48,8 @@ import org.springframework.stereotype.Component;
 @Component
 public class LoopTaskDispatcherDefinitionFactory implements TaskDispatcherDefinitionFactory {
 
+    private static final Logger log = org.slf4j.LoggerFactory.getLogger(LoopTaskDispatcherDefinitionFactory.class);
+
     private static final TaskDispatcherDefinition TASK_DISPATCHER_DEFINITION = taskDispatcher(LOOP)
         .title("Loop")
         .description("Loops sequentially over list of items.")
@@ -53,7 +57,8 @@ public class LoopTaskDispatcherDefinitionFactory implements TaskDispatcherDefini
         .properties(
             array(ITEMS)
                 .label("List of items")
-                .description("List of items to iterate over."),
+                .description("List of items to iterate over.")
+                .displayCondition("%s == false".formatted(LOOP_FOREVER)),
             bool(LOOP_FOREVER)
                 .label("Loop Forever")
                 .description("Should loop iterate until condition set by 'Loop Break' statement is met.")
@@ -61,27 +66,42 @@ public class LoopTaskDispatcherDefinitionFactory implements TaskDispatcherDefini
         .taskProperties(
             array(ITERATEE)
                 .items(task()))
-        .variableProperties(LoopTaskDispatcherDefinitionFactory::getVariableProperties);
+        .variableProperties(LoopTaskDispatcherDefinitionFactory::variableProperties);
 
     @Override
     public TaskDispatcherDefinition getDefinition() {
         return TASK_DISPATCHER_DEFINITION;
     }
 
-    private static ObjectProperty getVariableProperties(Map<String, ?> inputParameters) {
-        ObjectProperty variableProperties;
+    protected static OutputResponse variableProperties(Map<String, ?> inputParameters) {
+        OutputResponse outputResponse;
+        List<?> list = List.of();
 
-        List<?> list = MapUtils.getRequiredList(inputParameters, ITEMS);
-
-        if (list.isEmpty()) {
-            variableProperties = object();
-        } else {
-            variableProperties = object().properties(
-                (ModifiableValueProperty<?, ?>) SchemaUtils.getOutputSchema(
-                    ITEM, list.getFirst(), new PropertyFactory(list.getFirst())),
-                integer(INDEX));
+        if (MapUtils.containsKey(inputParameters, ITEMS)) {
+            // TODO Remove once UI suppress executing outputs if previous nodes don't have defined output
+            try {
+                list = MapUtils.getList(inputParameters, ITEMS, List.of());
+            } catch (Exception e) {
+                if (log.isDebugEnabled()) {
+                    log.debug(e.getMessage());
+                }
+            }
         }
 
-        return variableProperties;
+        boolean allNull = list.isEmpty() || list.stream()
+            .allMatch(Objects::isNull);
+
+        if (allNull) {
+            outputResponse = OutputResponse.of(
+                object().properties(object(ITEM), integer(INDEX)), Map.of(ITEM, Map.of(), INDEX, 0));
+        } else {
+            ModifiableValueProperty<?, ?> itemProperty = (ModifiableValueProperty<?, ?>) SchemaUtils.getOutputSchema(
+                ITEM, list.getFirst(), PropertyFactory.PROPERTY_FACTORY);
+
+            outputResponse = OutputResponse.of(
+                object().properties(itemProperty, integer(INDEX)), Map.of(ITEM, list.getFirst(), INDEX, 0));
+        }
+
+        return outputResponse;
     }
 }

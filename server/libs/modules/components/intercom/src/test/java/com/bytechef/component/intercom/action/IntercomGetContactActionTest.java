@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
 
 package com.bytechef.component.intercom.action;
 
-import static com.bytechef.component.intercom.constant.IntercomConstants.CONTACT_NAME;
 import static com.bytechef.component.intercom.constant.IntercomConstants.ID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
@@ -25,8 +24,8 @@ import static org.mockito.Mockito.when;
 
 import com.bytechef.component.definition.ActionContext;
 import com.bytechef.component.definition.Context.Http;
-import com.bytechef.component.definition.Context.TypeReference;
 import com.bytechef.component.definition.Parameters;
+import com.bytechef.component.definition.TypeReference;
 import java.util.HashMap;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
@@ -43,8 +42,8 @@ class IntercomGetContactActionTest {
     void testPerform() {
         Map<String, Object> propertyStubsMap = createPropertyStubsMap();
 
-        when(mockedParameters.getRequiredString(CONTACT_NAME))
-            .thenReturn((String) propertyStubsMap.get(CONTACT_NAME));
+        when(mockedParameters.getRequiredString(ID))
+            .thenReturn((String) propertyStubsMap.get(ID));
 
         when(mockedContext.http(any()))
             .thenReturn(mockedExecutor);
@@ -63,7 +62,7 @@ class IntercomGetContactActionTest {
     private static Map<String, Object> createPropertyStubsMap() {
         Map<String, Object> propertyStubsMap = new HashMap<>();
 
-        propertyStubsMap.put(CONTACT_NAME, ID);
+        propertyStubsMap.put(ID, ID);
 
         return propertyStubsMap;
     }

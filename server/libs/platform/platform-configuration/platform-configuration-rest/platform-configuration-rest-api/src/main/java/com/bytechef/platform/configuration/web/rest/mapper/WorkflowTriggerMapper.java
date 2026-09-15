@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,7 +26,7 @@ import org.springframework.core.convert.converter.Converter;
 /**
  * @author Ivica Cardic
  */
-@Mapper(config = PlatformConfigurationMapperSpringConfig.class, implementationName = "Platform<CLASS_NAME>Impl")
+@Mapper(config = PlatformConfigurationMapperSpringConfig.class)
 public interface WorkflowTriggerMapper extends Converter<WorkflowTrigger, WorkflowTriggerModel> {
 
     @Mapping(target = "connections", ignore = true)

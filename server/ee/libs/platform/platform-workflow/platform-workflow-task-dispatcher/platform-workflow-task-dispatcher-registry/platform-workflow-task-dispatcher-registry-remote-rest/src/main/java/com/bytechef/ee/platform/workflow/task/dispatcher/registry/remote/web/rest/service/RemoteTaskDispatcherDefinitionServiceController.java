@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the ByteChef Enterprise license (the "Enterprise License");
  * you may not use this file except in compliance with the Enterprise License.
@@ -7,9 +7,9 @@
 
 package com.bytechef.ee.platform.workflow.task.dispatcher.registry.remote.web.rest.service;
 
-import com.bytechef.platform.workflow.task.dispatcher.registry.domain.Output;
-import com.bytechef.platform.workflow.task.dispatcher.registry.domain.TaskDispatcherDefinition;
-import com.bytechef.platform.workflow.task.dispatcher.registry.service.TaskDispatcherDefinitionService;
+import com.bytechef.platform.domain.OutputResponse;
+import com.bytechef.platform.workflow.task.dispatcher.domain.TaskDispatcherDefinition;
+import com.bytechef.platform.workflow.task.dispatcher.service.TaskDispatcherDefinitionService;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.swagger.v3.oas.annotations.Hidden;
 import jakarta.validation.Valid;
@@ -47,9 +47,9 @@ public class RemoteTaskDispatcherDefinitionServiceController {
         consumes = {
             "application/json"
         })
-    public ResponseEntity<Output> executeOutputSchema(@Valid @RequestBody OutputRequest outputRequest) {
+    public ResponseEntity<OutputResponse> executeOutputSchema(@Valid @RequestBody OutputRequest outputRequest) {
         return ResponseEntity.ok(
-            taskDispatcherDefinitionService.executeOutputSchema(
+            taskDispatcherDefinitionService.executeOutput(
                 outputRequest.name, outputRequest.version, outputRequest.taskDispatcherParameters));
     }
 

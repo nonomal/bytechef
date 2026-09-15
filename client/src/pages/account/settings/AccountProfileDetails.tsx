@@ -1,13 +1,14 @@
-import {Button} from '@/components/ui/button';
+import Button from '@/components/Button/Button';
+import {Input} from '@/components/Input/Input';
 import {Form, FormControl, FormField, FormItem, FormLabel, FormMessage} from '@/components/ui/form';
-import {Input} from '@/components/ui/input';
-import {useToast} from '@/components/ui/use-toast';
 import {useAccountStore} from '@/pages/account/settings/stores/useAccountStore';
 import {useAuthenticationStore} from '@/shared/stores/useAuthenticationStore';
 import {zodResolver} from '@hookform/resolvers/zod';
-import React, {useEffect} from 'react';
+import {useEffect} from 'react';
 import {useForm} from 'react-hook-form';
+import {toast} from 'sonner';
 import {z} from 'zod';
+import {useShallow} from 'zustand/react/shallow';
 
 export const formSchema = z.object({
     email: z.string().email().min(5, 'Email is required').max(254),
@@ -16,10 +17,19 @@ export const formSchema = z.object({
 });
 
 const AccountProfileDetails = () => {
-    const {reset, updateAccount, updateSuccess} = useAccountStore();
-    const {account, getAccount} = useAuthenticationStore();
-
-    const {toast} = useToast();
+    const {reset, updateAccount, updateSuccess} = useAccountStore(
+        useShallow((state) => ({
+            reset: state.reset,
+            updateAccount: state.updateAccount,
+            updateSuccess: state.updateSuccess,
+        }))
+    );
+    const {account, getAccount} = useAuthenticationStore(
+        useShallow((state) => ({
+            account: state.account,
+            getAccount: state.getAccount,
+        }))
+    );
 
     const form = useForm<z.infer<typeof formSchema>>({
         defaultValues: {
@@ -40,8 +50,6 @@ const AccountProfileDetails = () => {
     };
 
     useEffect(() => {
-        getAccount();
-
         return () => {
             reset();
         };
@@ -51,7 +59,7 @@ const AccountProfileDetails = () => {
 
     useEffect(() => {
         if (updateSuccess) {
-            toast({description: 'Account has been updated.'});
+            toast('Account has been updated.');
 
             getAccount();
         }
@@ -61,7 +69,7 @@ const AccountProfileDetails = () => {
 
     return (
         <div className="pb-12">
-            <h2 className="text-base font-semibold leading-7 text-gray-900">Profile</h2>
+            <h2 className="text-base leading-7 font-semibold text-gray-900">Profile</h2>
 
             {account && (
                 <Form {...form}>
@@ -115,7 +123,7 @@ const AccountProfileDetails = () => {
                         />
 
                         <div className="flex justify-end">
-                            <Button type="submit">Save</Button>
+                            <Button label="Save" type="submit" />
                         </div>
                     </form>
                 </Form>

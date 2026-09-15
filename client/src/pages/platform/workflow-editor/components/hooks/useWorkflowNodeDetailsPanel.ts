@@ -1,0 +1,1524 @@
+import {getTask} from '@/pages/platform/workflow-editor/utils/getTask';
+import {
+    CLUSTER_ELEMENT_TYPE_TOOLS,
+    CONDITION_CASE_FALSE,
+    CONDITION_CASE_TRUE,
+    ON_ERROR_MAIN_BRANCH,
+    ON_ERROR_WIRE_KEY_ERROR_BRANCH,
+    ON_ERROR_WIRE_KEY_MAIN_BRANCH,
+    TASK_DISPATCHER_DATA_KEY_MAP,
+} from '@/shared/constants';
+import {
+    useClusterElementMissingRequiredPropertiesQuery,
+    useWorkflowNodeMissingRequiredPropertiesQuery,
+} from '@/shared/middleware/graphql';
+import {
+    ActionDefinition,
+    ActionDefinitionApi,
+    ClusterElementDefinition,
+    ClusterElementDefinitionApi,
+    ComponentConnection,
+    ComponentDefinition,
+    ComponentDefinitionBasic,
+    GetComponentActionDefinitionRequest,
+    GetComponentClusterElementDefinitionRequest,
+    GetComponentTriggerDefinitionRequest,
+    TaskDispatcherDefinition,
+    TriggerDefinition,
+    TriggerDefinitionApi,
+    WorkflowNodeOutput,
+    WorkflowTask,
+} from '@/shared/middleware/platform/configuration';
+import {useDeleteWorkflowNodeTestOutputMutation} from '@/shared/mutations/platform/workflowNodeTestOutputs.mutations';
+import {ActionDefinitionKeys} from '@/shared/queries/platform/actionDefinitions.queries';
+import {
+    ClusterElementDefinitionKeys,
+    useGetClusterElementDefinitionQuery,
+} from '@/shared/queries/platform/clusterElementDefinitions.queries';
+import {
+    useGetComponentDefinitionQuery,
+    useGetComponentDefinitionVersionsQuery,
+} from '@/shared/queries/platform/componentDefinitions.queries';
+import {useGetTaskDispatcherDefinitionQuery} from '@/shared/queries/platform/taskDispatcherDefinitions.queries';
+import {
+    TriggerDefinitionKeys,
+    useGetTriggerDefinitionQuery,
+} from '@/shared/queries/platform/triggerDefinitions.queries';
+import {WorkflowNodeOptionKeys} from '@/shared/queries/platform/workflowNodeOptions.queries';
+import {WorkflowNodeOutputKeys} from '@/shared/queries/platform/workflowNodeOutputs.queries';
+import {
+    useGetClusterElementParameterDisplayConditionsQuery,
+    useGetWorkflowNodeParameterDisplayConditionsQuery,
+} from '@/shared/queries/platform/workflowNodeParameters.queries';
+import {useGetWorkflowTestConfigurationConnectionsQuery} from '@/shared/queries/platform/workflowTestConfigurations.queries';
+import {DEFINITION_STALE_TIME} from '@/shared/queries/queryConstants';
+import {useEnvironmentStore} from '@/shared/stores/useEnvironmentStore';
+import {
+    BranchCaseType,
+    ComponentPropertiesType,
+    DataPillType,
+    NodeDataType,
+    PropertyAllType,
+    TabNameType,
+    UpdateWorkflowMutationType,
+    WorkflowNodeType,
+} from '@/shared/types';
+import {useQueryClient} from '@tanstack/react-query';
+import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
+import isEqual from 'react-fast-compare';
+import {useShallow} from 'zustand/shallow';
+
+import {
+    convertNameToSnakeCase,
+    extractClusterElementComponentOperations,
+} from '../../../cluster-element-editor/utils/clusterElementsUtils';
+import useWorkflowDataStore from '../../stores/useWorkflowDataStore';
+import useWorkflowEditorStore from '../../stores/useWorkflowEditorStore';
+import useWorkflowNodeDetailsPanelStore from '../../stores/useWorkflowNodeDetailsPanelStore';
+import changeComponentVersion from '../../utils/changeComponentVersion';
+import getDataPillsFromProperties from '../../utils/getDataPillsFromProperties';
+import getOutputSchemaFromWorkflowNodeOutput from '../../utils/getOutputSchemaFromWorkflowNodeOutput';
+import getParametersWithDefaultValues from '../../utils/getParametersWithDefaultValues';
+import invalidateOperationQueries from '../../utils/invalidateOperationQueries';
+import saveClusterElementFieldChange from '../../utils/saveClusterElementFieldChange';
+import saveTaskDispatcherSubtaskFieldChange from '../../utils/saveTaskDispatcherSubtaskFieldChange';
+import saveWorkflowDefinition from '../../utils/saveWorkflowDefinition';
+import {getTaskDispatcherTask} from '../../utils/taskDispatcherConfig';
+import isActionDefinitionFresh from './isActionDefinitionFresh';
+import {resolveDisplayConditionsQueryTarget} from './resolveDisplayConditionsQueryTarget';
+import {resolveMissingRequiredPropertiesRefetch} from './resolveMissingRequiredPropertiesRefetch';
+import resolveNodeConnectionFields from './resolveNodeConnectionFields';
+
+const TABS: Array<{label: string; name: TabNameType}> = [
+    {
+        label: 'Description',
+        name: 'description',
+    },
+    {
+        label: 'Connection',
+        name: 'connection',
+    },
+    {
+        label: 'Properties',
+        name: 'properties',
+    },
+    {
+        label: 'Output',
+        name: 'output',
+    },
+];
+
+interface UseWorkflowNodeDetailsPanelProps {
+    previousComponentDefinitions: Array<ComponentDefinitionBasic>;
+    updateWorkflowMutation: UpdateWorkflowMutationType;
+    workflowNodeOutputs: WorkflowNodeOutput[];
+}
+
+export default function useWorkflowNodeDetailsPanel({
+    previousComponentDefinitions,
+    updateWorkflowMutation,
+    workflowNodeOutputs,
+}: UseWorkflowNodeDetailsPanelProps) {
+    const [currentNodeName, setCurrentNodeName] = useState<string | undefined>();
+    const [currentOperationName, setCurrentOperationName] = useState('');
+    const [currentOperationProperties, setCurrentOperationProperties] = useState<Array<PropertyAllType>>([]);
+    const [currentActionDefinition, setCurrentActionDefinition] = useState<
+        ActionDefinition | ClusterElementDefinition | TriggerDefinition | undefined
+    >();
+    const [currentActionFetched, setCurrentActionFetched] = useState(false);
+    const [currentClusterElementName, setCurrentClusterElementName] = useState<string | undefined>();
+    const [clusterElementComponentOperations, setClusterElementComponentOperations] = useState<Array<WorkflowNodeType>>(
+        []
+    );
+    const [errorsAccordionOpen, setErrorsAccordionOpen] = useState(false);
+    const [errorsRefreshingAfterOperationChange, setErrorsRefreshingAfterOperationChange] = useState(false);
+
+    const errorsLoadingArmedRef = useRef(false);
+    const lastErrorsDataUpdatedAtRef = useRef(0);
+
+    const currentEnvironmentId = useEnvironmentStore((state) => state.currentEnvironmentId);
+
+    const {
+        activeTab,
+        currentNode,
+        operationChangeInProgress,
+        pendingSaveNodeNames,
+        setActiveTab,
+        setCurrentNode,
+        setOperationChangeInProgress,
+        workflowNodeDetailsPanelOpen,
+    } = useWorkflowNodeDetailsPanelStore(
+        useShallow((state) => ({
+            activeTab: state.activeTab,
+            currentNode: state.currentNode,
+            operationChangeInProgress: state.operationChangeInProgress,
+            pendingSaveNodeNames: state.pendingSaveNodeNames,
+            setActiveTab: state.setActiveTab,
+            setCurrentNode: state.setCurrentNode,
+            setOperationChangeInProgress: state.setOperationChangeInProgress,
+            workflowNodeDetailsPanelOpen: state.workflowNodeDetailsPanelOpen,
+        }))
+    );
+
+    const {nodes, setDataPills, setSampleOutputs, workflow, workflowNodes} = useWorkflowDataStore(
+        useShallow((state) => ({
+            nodes: state.nodes,
+            setDataPills: state.setDataPills,
+            setSampleOutputs: state.setSampleOutputs,
+            workflow: state.workflow,
+            workflowNodes: state.workflowNodes,
+        }))
+    );
+
+    const {clusterElementsCanvasOpen, rootClusterElementNodeData} = useWorkflowEditorStore(
+        useShallow((state) => ({
+            clusterElementsCanvasOpen: state.clusterElementsCanvasOpen,
+            rootClusterElementNodeData: state.rootClusterElementNodeData,
+        }))
+    );
+
+    const queryClient = useQueryClient();
+
+    const isClusterElement = !!currentNode?.clusterElementType;
+
+    const {data: currentComponentDefinition} = useGetComponentDefinitionQuery(
+        {
+            componentName: currentNode?.componentName || '',
+            componentVersion: currentNode?.version || 1,
+        },
+        !!currentNode && !currentNode.taskDispatcher
+    );
+
+    const {data: componentDefinitionVersions} = useGetComponentDefinitionVersionsQuery(
+        {componentName: currentNode?.componentName || ''},
+        !!currentNode?.componentName && !currentNode.taskDispatcher
+    );
+
+    const {data: workflowTestConfigurationConnections} = useGetWorkflowTestConfigurationConnectionsQuery(
+        {
+            environmentId: currentEnvironmentId,
+            workflowId: workflow.id as string,
+            workflowNodeName: currentNode?.clusterElementType
+                ? (rootClusterElementNodeData?.workflowNodeName as string)
+                : (currentNode?.workflowNodeName as string),
+        },
+        !!workflow.id &&
+            !!currentNode &&
+            (!!currentComponentDefinition?.connection ||
+                (!!currentNode.clusterRoot && !currentNode.isNestedClusterRoot))
+    );
+
+    const {data: currentClusterElementDefinition} = useGetClusterElementDefinitionQuery(
+        {
+            clusterElementName: currentNode?.clusterElementName as string,
+            clusterElementType: currentNode?.clusterElementType
+                ? convertNameToSnakeCase(currentNode.clusterElementType)
+                : undefined,
+            componentName: currentNode?.componentName as string,
+            componentVersion: currentNode?.version as number,
+        },
+        !!currentNode?.clusterElementType
+    );
+
+    const deleteWorkflowNodeTestOutputMutation = useDeleteWorkflowNodeTestOutputMutation({
+        onSuccess: () => {
+            queryClient.invalidateQueries({
+                queryKey: [...WorkflowNodeOutputKeys.workflowNodeOutputs, workflow.id],
+            });
+        },
+    });
+
+    const previousDataPillsRef = useRef<Array<DataPillType>>([]);
+
+    const matchingOperation = useMemo(
+        () =>
+            [
+                ...(currentComponentDefinition?.actions || []),
+                ...(currentComponentDefinition?.triggers || []),
+                ...(currentComponentDefinition?.clusterElements || []),
+            ].find((operationDefinition) => operationDefinition?.name === currentOperationName),
+        [currentComponentDefinition, currentOperationName]
+    );
+
+    const getTriggerName = useCallback((): string => {
+        const currentComponentTriggerNames = currentComponentDefinition?.triggers?.map((trigger) => trigger.name);
+
+        return currentComponentTriggerNames?.includes(currentOperationName)
+            ? currentOperationName
+            : (currentComponentDefinition?.triggers?.[0]?.name as string);
+    }, [currentComponentDefinition, currentOperationName]);
+
+    const {data: currentTriggerDefinition, isFetched: currentTriggerFetched} = useGetTriggerDefinitionQuery(
+        {
+            componentName: currentComponentDefinition?.name as string,
+            componentVersion: currentComponentDefinition?.version as number,
+            triggerName: getTriggerName(),
+        },
+        !!currentNode?.componentName && !!currentNode?.trigger && !!currentComponentDefinition
+    );
+
+    const fetchClusterElementDefinition = useCallback(
+        async (operationName?: string, componentVersion?: number) => {
+            const clusterElementDefinitionRequest: GetComponentClusterElementDefinitionRequest = {
+                clusterElementName: operationName ?? currentOperationName ?? currentNode?.operationName,
+                clusterElementType: currentNode?.clusterElementType
+                    ? convertNameToSnakeCase(currentNode.clusterElementType)
+                    : undefined,
+                componentName: currentComponentDefinition?.name as string,
+                componentVersion: componentVersion ?? (currentComponentDefinition?.version as number),
+            };
+
+            const clusterElementDefinition = await queryClient.fetchQuery({
+                queryFn: () =>
+                    new ClusterElementDefinitionApi().getComponentClusterElementDefinition(
+                        clusterElementDefinitionRequest
+                    ),
+                queryKey: ClusterElementDefinitionKeys.clusterElementDefinition(clusterElementDefinitionRequest),
+                staleTime: DEFINITION_STALE_TIME,
+            });
+
+            if (clusterElementDefinition) {
+                setCurrentActionDefinition(clusterElementDefinition);
+
+                setCurrentActionFetched(true);
+            }
+
+            return clusterElementDefinition;
+        },
+        [
+            currentComponentDefinition?.name,
+            currentComponentDefinition?.version,
+            currentNode?.clusterElementType,
+            currentNode?.operationName,
+            currentOperationName,
+            queryClient,
+        ]
+    );
+
+    const fetchActionDefinition = useCallback(
+        async (operationName?: string, componentVersion?: number) => {
+            const actionDefinitionRequest: GetComponentActionDefinitionRequest = {
+                actionName: operationName ?? currentOperationName ?? currentNode?.operationName,
+                componentName: currentComponentDefinition?.name as string,
+                componentVersion: componentVersion ?? (currentComponentDefinition?.version as number),
+            };
+
+            const actionDefinition = await queryClient.fetchQuery({
+                queryFn: () => new ActionDefinitionApi().getComponentActionDefinition(actionDefinitionRequest),
+                queryKey: ActionDefinitionKeys.actionDefinition(actionDefinitionRequest),
+                staleTime: DEFINITION_STALE_TIME,
+            });
+
+            if (actionDefinition) {
+                setCurrentActionDefinition(actionDefinition);
+
+                setCurrentActionFetched(true);
+            }
+
+            return actionDefinition;
+        },
+        [
+            currentComponentDefinition?.name,
+            currentComponentDefinition?.version,
+            currentNode?.operationName,
+            currentOperationName,
+            queryClient,
+        ]
+    );
+
+    const fetchTriggerDefinition = useCallback(
+        async (operationName?: string, componentVersion?: number) => {
+            const triggerDefinitionRequest: GetComponentTriggerDefinitionRequest = {
+                componentName: currentComponentDefinition?.name as string,
+                componentVersion: componentVersion ?? (currentComponentDefinition?.version as number),
+                triggerName: operationName ?? currentOperationName ?? currentNode?.operationName,
+            };
+
+            const triggerDefinition = await queryClient.fetchQuery({
+                queryFn: () => new TriggerDefinitionApi().getComponentTriggerDefinition(triggerDefinitionRequest),
+                queryKey: TriggerDefinitionKeys.triggerDefinition(triggerDefinitionRequest),
+                staleTime: DEFINITION_STALE_TIME,
+            });
+
+            if (triggerDefinition) {
+                setCurrentActionDefinition(triggerDefinition);
+
+                setCurrentActionFetched(true);
+            }
+
+            return triggerDefinition;
+        },
+        [
+            currentComponentDefinition?.name,
+            currentComponentDefinition?.version,
+            currentNode?.operationName,
+            currentOperationName,
+            queryClient,
+        ]
+    );
+
+    const {data: currentTaskDispatcherDefinition} = useGetTaskDispatcherDefinitionQuery(
+        {
+            taskDispatcherName: currentNode?.componentName || '',
+            taskDispatcherVersion: currentNode?.version || 1,
+        },
+        !!currentNode && !!currentNode.taskDispatcher
+    );
+
+    const awaitingFirstSave = !!currentNodeName && pendingSaveNodeNames.has(currentNodeName);
+
+    const displayConditionsQueryTarget = resolveDisplayConditionsQueryTarget({
+        activeTab,
+        awaitingFirstSave,
+        currentClusterElementName,
+        currentNodeClusterElementType: currentNode?.clusterElementType,
+        currentNodeName,
+    });
+
+    const displayConditionsQuery = useGetWorkflowNodeParameterDisplayConditionsQuery(
+        {
+            environmentId: currentEnvironmentId,
+            id: workflow.id!,
+            workflowNodeName: currentNodeName!,
+        },
+        displayConditionsQueryTarget === 'regular'
+    );
+
+    const clusterElementDisplayConditionsQuery = useGetClusterElementParameterDisplayConditionsQuery(
+        {
+            clusterElementType: currentNode?.clusterElementType || '',
+            clusterElementWorkflowNodeName: currentNode?.workflowNodeName || '',
+            environmentId: currentEnvironmentId,
+            id: workflow.id!,
+            workflowNodeName: rootClusterElementNodeData?.workflowNodeName as string,
+        },
+        !!currentNode && displayConditionsQueryTarget === 'cluster'
+    );
+
+    const {data: workflowNodeParameterDisplayConditions} = displayConditionsQuery;
+    const {data: clusterElementParameterDisplayConditions} = clusterElementDisplayConditionsQuery;
+
+    const activeDisplayConditionsQuery = currentNode?.clusterElementType
+        ? clusterElementDisplayConditionsQuery
+        : displayConditionsQuery;
+
+    const {
+        data: workflowNodeMissingRequiredPropertiesData,
+        dataUpdatedAt: workflowNodeMissingRequiredPropertiesUpdatedAt,
+        refetch: refetchWorkflowNodeMissingRequiredProperties,
+    } = useWorkflowNodeMissingRequiredPropertiesQuery(
+        {
+            workflowId: workflow.id!,
+            workflowNodeName: currentNodeName!,
+        },
+        {
+            enabled:
+                !!workflow.id &&
+                !!currentNodeName &&
+                currentNodeName !== 'manual' &&
+                currentNodeName !== currentClusterElementName &&
+                !awaitingFirstSave &&
+                !currentNode?.clusterElementType,
+        }
+    );
+
+    const {
+        data: clusterElementMissingRequiredPropertiesData,
+        dataUpdatedAt: clusterElementMissingRequiredPropertiesUpdatedAt,
+        refetch: refetchClusterElementMissingRequiredProperties,
+    } = useClusterElementMissingRequiredPropertiesQuery(
+        {
+            clusterElementType: currentNode?.clusterElementType || '',
+            clusterElementWorkflowNodeName: currentNode?.workflowNodeName || '',
+            workflowId: workflow.id!,
+            workflowNodeName: rootClusterElementNodeData?.workflowNodeName as string,
+        },
+        {
+            enabled:
+                !!workflow.id &&
+                !!currentNode &&
+                !!currentNodeName &&
+                currentNodeName !== 'manual' &&
+                currentNodeName === currentClusterElementName &&
+                !awaitingFirstSave &&
+                !!currentNode.clusterElementType,
+        }
+    );
+
+    const errors = currentNode?.clusterElementType
+        ? (clusterElementMissingRequiredPropertiesData?.clusterElementMissingRequiredProperties ?? [])
+        : (workflowNodeMissingRequiredPropertiesData?.workflowNodeMissingRequiredProperties ?? []);
+
+    const errorsDataUpdatedAt = currentNode?.clusterElementType
+        ? clusterElementMissingRequiredPropertiesUpdatedAt
+        : workflowNodeMissingRequiredPropertiesUpdatedAt;
+
+    const errorsLoading = operationChangeInProgress || errorsRefreshingAfterOperationChange;
+
+    const currentOperationDefinition = useMemo(() => {
+        if (currentNode?.trigger) {
+            return currentTriggerDefinition;
+        }
+
+        if (currentNode?.taskDispatcher) {
+            return currentTaskDispatcherDefinition;
+        }
+
+        if (clusterElementsCanvasOpen && currentNode?.clusterElementType) {
+            return currentClusterElementDefinition;
+        }
+
+        return currentActionDefinition;
+    }, [
+        clusterElementsCanvasOpen,
+        currentNode,
+        currentTriggerDefinition,
+        currentTaskDispatcherDefinition,
+        currentActionDefinition,
+        currentClusterElementDefinition,
+    ]);
+
+    const currentNodeIndex = useMemo(
+        () => currentNode && nodes?.findIndex((node) => node.data.name === currentNode?.workflowNodeName),
+        [currentNode, nodes]
+    );
+
+    const outputDefined =
+        currentActionDefinition?.outputDefined ||
+        currentTriggerDefinition?.outputDefined ||
+        currentClusterElementDefinition?.outputDefined ||
+        (currentOperationDefinition as TaskDispatcherDefinition)?.outputDefined ||
+        (currentOperationDefinition as TaskDispatcherDefinition)?.variablePropertiesDefined;
+    const outputFunctionDefined =
+        currentActionDefinition?.outputFunctionDefined ||
+        currentTriggerDefinition?.outputFunctionDefined ||
+        currentClusterElementDefinition?.outputFunctionDefined;
+
+    const showOutputTab = useMemo(() => {
+        if (currentNode?.clusterElementType && currentNode.clusterElementType !== CLUSTER_ELEMENT_TYPE_TOOLS) {
+            return false;
+        }
+
+        if (
+            currentNode?.clusterElementType === CLUSTER_ELEMENT_TYPE_TOOLS &&
+            !rootClusterElementNodeData?.workflowNodeName
+        ) {
+            return false;
+        }
+
+        if (currentOperationDefinition && 'variablePropertiesDefined' in currentOperationDefinition) {
+            const taskDispatcher = currentOperationDefinition as TaskDispatcherDefinition;
+
+            if (!taskDispatcher.outputDefined && !taskDispatcher.variablePropertiesDefined) {
+                return false;
+            }
+        }
+
+        if (currentOperationDefinition) {
+            if (!currentOperationDefinition.outputDefined) {
+                return false;
+            }
+        }
+
+        return true;
+    }, [currentNode?.clusterElementType, currentOperationDefinition, rootClusterElementNodeData?.workflowNodeName]);
+
+    const currentWorkflowTrigger = useMemo(
+        () => workflow.triggers?.find((trigger) => trigger.name === currentNode?.workflowNodeName),
+        [workflow.triggers, currentNode]
+    );
+
+    const currentWorkflowTask = useMemo(
+        () =>
+            currentNode?.workflowNodeName
+                ? getTask({
+                      tasks: workflow.tasks || [],
+                      workflowNodeName: currentNode.workflowNodeName,
+                  })
+                : undefined,
+        [workflow.tasks, currentNode]
+    );
+
+    const currentClusterElementsConnections = useMemo(() => {
+        if (!rootClusterElementNodeData?.workflowNodeName) {
+            return undefined;
+        }
+
+        const mainClusterRootTask = getTask({
+            tasks: workflow.tasks || [],
+            workflowNodeName: rootClusterElementNodeData.workflowNodeName,
+        });
+
+        if (!mainClusterRootTask) {
+            return undefined;
+        }
+
+        if (mainClusterRootTask.connections && currentNode?.clusterElementType) {
+            return mainClusterRootTask.connections.filter(
+                (connection) => connection.key === currentNode?.workflowNodeName
+            );
+        }
+
+        if (currentNode?.clusterRoot && !currentNode?.isNestedClusterRoot) {
+            const connections: ComponentConnection[] = [];
+
+            if (mainClusterRootTask.type && mainClusterRootTask.name) {
+                const typeParts = mainClusterRootTask.type.split('/');
+                const componentName = typeParts[0];
+                const componentVersion = parseInt(typeParts[1]?.replace('v', '') || '1');
+
+                if (currentComponentDefinition?.connection) {
+                    const mainConnection = {
+                        componentName,
+                        componentVersion,
+                        key: componentName,
+                        required: currentComponentDefinition.connectionRequired || false,
+                        workflowNodeName: mainClusterRootTask.name,
+                    };
+
+                    connections.push(mainConnection);
+                }
+            }
+
+            if (mainClusterRootTask.clusterElements) {
+                const clusterElements = mainClusterRootTask.clusterElements;
+
+                const getConnectionsRecursively = (clusterElement: unknown): void => {
+                    if (!clusterElement || typeof clusterElement !== 'object') {
+                        return;
+                    }
+
+                    if (Array.isArray(clusterElement)) {
+                        clusterElement.forEach((subClusterElement) => getConnectionsRecursively(subClusterElement));
+
+                        return;
+                    }
+
+                    const clusterElementObj = clusterElement as {
+                        clusterElements?: unknown;
+                        name?: string;
+                        type?: string;
+                    };
+
+                    if (clusterElementObj.type && clusterElementObj.name) {
+                        const typeParts = clusterElementObj.type.split('/');
+                        const componentName = typeParts[0];
+                        const componentVersion = parseInt(typeParts[1]?.replace('v', '') || '1');
+
+                        const connection: ComponentConnection = {
+                            componentName,
+                            componentVersion,
+                            key: clusterElementObj.name,
+                            required: false,
+                            workflowNodeName: clusterElementObj.name,
+                        };
+
+                        if (connection) {
+                            connections.push(connection);
+                        }
+                    }
+
+                    if (clusterElementObj.clusterElements) {
+                        const nestedClusterElements = clusterElementObj.clusterElements as Record<string, unknown>;
+                        Object.values(nestedClusterElements).forEach((nestedClusterElement) => {
+                            getConnectionsRecursively(nestedClusterElement);
+                        });
+                    }
+                };
+
+                Object.values(clusterElements).forEach((clusterElement) => {
+                    getConnectionsRecursively(clusterElement);
+                });
+            }
+
+            return connections.length > 0 ? connections : undefined;
+        }
+
+        return undefined;
+    }, [
+        currentNode?.clusterElementType,
+        currentNode?.clusterRoot,
+        currentNode?.isNestedClusterRoot,
+        currentNode?.workflowNodeName,
+        rootClusterElementNodeData?.workflowNodeName,
+        workflow.tasks,
+        currentComponentDefinition?.connection,
+        currentComponentDefinition?.connectionRequired,
+    ]);
+
+    const currentWorkflowNodeConnections: ComponentConnection[] = useMemo(() => {
+        if (currentNode?.clusterRoot && !currentNode?.isNestedClusterRoot) {
+            return (
+                currentWorkflowTask?.connections ||
+                currentWorkflowTrigger?.connections ||
+                currentClusterElementsConnections ||
+                []
+            );
+        }
+
+        const connections =
+            currentWorkflowTask?.connections ||
+            currentWorkflowTrigger?.connections ||
+            currentClusterElementsConnections ||
+            currentNode?.connections ||
+            [];
+
+        if (
+            connections.length === 0 &&
+            currentComponentDefinition?.connection &&
+            currentComponentDefinition?.name &&
+            currentComponentDefinition?.version &&
+            currentNode?.workflowNodeName
+        ) {
+            return [
+                {
+                    componentName: currentComponentDefinition.name,
+                    componentVersion: currentComponentDefinition.version,
+                    key: currentComponentDefinition.name,
+                    required: currentComponentDefinition.connectionRequired || false,
+                    workflowNodeName: currentNode.workflowNodeName,
+                },
+            ];
+        }
+
+        return connections;
+    }, [
+        currentClusterElementsConnections,
+        currentComponentDefinition?.connection,
+        currentComponentDefinition?.connectionRequired,
+        currentComponentDefinition?.name,
+        currentComponentDefinition?.version,
+        currentNode?.clusterRoot,
+        currentNode?.connections,
+        currentNode?.isNestedClusterRoot,
+        currentNode?.workflowNodeName,
+        currentWorkflowTask?.connections,
+        currentWorkflowTrigger?.connections,
+    ]);
+
+    const nodeTabs = useMemo(
+        () =>
+            TABS.filter(({name}) => {
+                if (name === 'connection') {
+                    return currentWorkflowNodeConnections.length > 0;
+                }
+
+                if (name === 'output') {
+                    return showOutputTab;
+                }
+
+                if (name === 'properties') {
+                    return currentNode?.taskDispatcher
+                        ? currentTaskDispatcherDefinition?.properties?.length
+                        : currentOperationProperties?.length;
+                }
+
+                return true;
+            }),
+        [
+            currentNode,
+            currentOperationProperties,
+            currentTaskDispatcherDefinition,
+            currentWorkflowNodeConnections,
+            showOutputTab,
+        ]
+    );
+
+    const currentWorkflowNode = useMemo(
+        () => currentComponentDefinition || currentTaskDispatcherDefinition || currentClusterElementDefinition,
+        [currentClusterElementDefinition, currentComponentDefinition, currentTaskDispatcherDefinition]
+    );
+
+    const currentOperationFetched = useMemo(
+        () => currentActionFetched || currentTriggerFetched,
+        [currentActionFetched, currentTriggerFetched]
+    );
+
+    const operationDataMissing = useMemo(
+        () => currentNode?.operationName && (!matchingOperation?.name || !currentOperationFetched),
+        [currentNode, matchingOperation, currentOperationFetched]
+    );
+
+    const tabDataExists = useMemo(
+        () =>
+            (!currentNode?.trigger && !currentNode?.taskDispatcher && currentActionFetched) ||
+            currentNode?.taskDispatcher ||
+            (currentNode?.trigger &&
+                currentTriggerFetched &&
+                nodeTabs.length > 1 &&
+                currentNode.componentName !== 'manual'),
+        [currentNode, currentActionFetched, currentTriggerFetched, nodeTabs]
+    );
+
+    const nodeDefinition = useMemo(
+        () =>
+            currentComponentDefinition ||
+            currentTaskDispatcherDefinition ||
+            currentTriggerDefinition ||
+            currentClusterElementDefinition,
+        [
+            currentClusterElementDefinition,
+            currentComponentDefinition,
+            currentTaskDispatcherDefinition,
+            currentTriggerDefinition,
+        ]
+    );
+
+    const currentWorkflowNodeOperations = useMemo(() => {
+        if (clusterElementsCanvasOpen && isClusterElement) {
+            return (currentWorkflowNode as ComponentDefinition)?.clusterElements;
+        }
+
+        return (
+            (currentWorkflowNode as ComponentDefinition)?.actions ??
+            (currentWorkflowNode as ComponentDefinition)?.triggers
+        );
+    }, [clusterElementsCanvasOpen, currentWorkflowNode, isClusterElement]);
+
+    const filteredClusterElementOperations = useMemo(() => {
+        if (currentComponentDefinition?.clusterElement && currentNode?.clusterElementType) {
+            return currentComponentDefinition?.clusterElements?.filter(
+                (clusterElement) =>
+                    clusterElement.type === convertNameToSnakeCase(currentNode.clusterElementType as string)
+            );
+        }
+
+        return currentComponentDefinition?.clusterElements;
+    }, [
+        currentComponentDefinition?.clusterElement,
+        currentComponentDefinition?.clusterElements,
+        currentNode?.clusterElementType,
+    ]);
+
+    const filterNodeNamesForCondition = useCallback(
+        (nodeNames: string[], conditionData: {conditionId: string; conditionCase: string}) => {
+            const parentConditionTask = getTaskDispatcherTask({
+                taskDispatcherId: conditionData.conditionId,
+                tasks: workflow.tasks || [],
+            });
+
+            if (!parentConditionTask) {
+                return null;
+            }
+
+            const oppositeConditionCase =
+                conditionData.conditionCase === CONDITION_CASE_TRUE ? CONDITION_CASE_FALSE : CONDITION_CASE_TRUE;
+
+            const oppositeConditionCaseTasks = parentConditionTask.parameters?.[oppositeConditionCase];
+
+            const oppositeConditionCaseNodeNames = Array.isArray(oppositeConditionCaseTasks)
+                ? oppositeConditionCaseTasks.map((task: WorkflowTask) => task.name)
+                : [];
+
+            return nodeNames.filter((nodeName) => !oppositeConditionCaseNodeNames.includes(nodeName));
+        },
+        [workflow.tasks]
+    );
+
+    const filterNodeNamesForOnError = useCallback(
+        (nodeNames: string[], onErrorData: {onErrorCase: string; onErrorId: string}) => {
+            const parentOnErrorTask = getTaskDispatcherTask({
+                taskDispatcherId: onErrorData.onErrorId,
+                tasks: workflow.tasks || [],
+            });
+
+            if (!parentOnErrorTask) {
+                return null;
+            }
+
+            const oppositeWireKey =
+                onErrorData.onErrorCase === ON_ERROR_MAIN_BRANCH
+                    ? ON_ERROR_WIRE_KEY_ERROR_BRANCH
+                    : ON_ERROR_WIRE_KEY_MAIN_BRANCH;
+
+            const oppositeBranchTasks = parentOnErrorTask.parameters?.[oppositeWireKey];
+
+            const oppositeBranchNodeNames = Array.isArray(oppositeBranchTasks)
+                ? oppositeBranchTasks.map((task: WorkflowTask) => task.name)
+                : [];
+
+            return nodeNames.filter((nodeName) => !oppositeBranchNodeNames.includes(nodeName));
+        },
+        [workflow.tasks]
+    );
+
+    const filterNodeNamesForBranch = useCallback(
+        (nodeNames: string[], branchData: {branchId: string; caseKey: string | number}) => {
+            const parentBranchTask = getTaskDispatcherTask({
+                taskDispatcherId: branchData.branchId,
+                tasks: workflow.tasks || [],
+            });
+
+            if (!parentBranchTask?.parameters) {
+                return null;
+            }
+
+            const branchCases: BranchCaseType[] = [
+                {
+                    key: 'default',
+                    tasks: Array.isArray(parentBranchTask.parameters.default)
+                        ? parentBranchTask.parameters.default
+                        : [],
+                },
+                ...(Array.isArray(parentBranchTask.parameters.cases) ? parentBranchTask.parameters.cases : []),
+            ];
+
+            const otherCaseKeys =
+                branchData.caseKey === 'default'
+                    ? branchCases.map((caseItem) => caseItem.key)
+                    : ['default', ...branchCases.filter((c) => c.key !== branchData.caseKey).map((c) => c.key)];
+
+            const otherCasesNodeNames = branchCases
+                .filter((caseItem) => otherCaseKeys.includes(caseItem.key))
+                .flatMap((caseItem) =>
+                    (Array.isArray(caseItem.tasks) ? caseItem.tasks : []).map((task: WorkflowTask) => task.name)
+                );
+
+            return nodeNames.filter((nodeName) => !otherCasesNodeNames.includes(nodeName));
+        },
+        [workflow.tasks]
+    );
+
+    const calculatedDataPills = useMemo(() => {
+        if (!previousComponentDefinitions || !workflowNodeOutputs) {
+            return [];
+        }
+
+        let filteredNodeNames = workflowNodeOutputs.map((output) => output.workflowNodeName);
+
+        if (currentNode?.conditionData) {
+            const filtered = filterNodeNamesForCondition(filteredNodeNames, currentNode.conditionData);
+            if (filtered === null) return [];
+            filteredNodeNames = filtered;
+        } else if (currentNode?.branchData) {
+            const filtered = filterNodeNamesForBranch(filteredNodeNames, currentNode.branchData);
+            if (filtered === null) return [];
+            filteredNodeNames = filtered;
+        } else if (currentNode?.onErrorData) {
+            const filtered = filterNodeNamesForOnError(filteredNodeNames, currentNode.onErrorData);
+            if (filtered === null) return [];
+            filteredNodeNames = filtered;
+        }
+
+        const componentProperties: Array<ComponentPropertiesType> = previousComponentDefinitions.map(
+            (componentDefinition, index) => {
+                const outputSchemaDefinition = getOutputSchemaFromWorkflowNodeOutput(workflowNodeOutputs[index]);
+
+                const properties = outputSchemaDefinition?.properties?.length
+                    ? outputSchemaDefinition.properties
+                    : outputSchemaDefinition?.items;
+
+                return {
+                    componentDefinition,
+                    properties,
+                    workflowNodeName: workflowNodeOutputs[index]?.workflowNodeName,
+                };
+            }
+        );
+
+        const dataPills = getDataPillsFromProperties(componentProperties, filteredNodeNames);
+
+        const workflowInputDataPills: Array<DataPillType> =
+            workflow.inputs?.map((input) => ({
+                id: input.name,
+                nodeName: input.name,
+                value: input.name,
+            })) || [];
+
+        return [...dataPills.flat(Infinity), ...workflowInputDataPills];
+    }, [
+        currentNode?.branchData,
+        currentNode?.conditionData,
+        currentNode?.onErrorData,
+        filterNodeNamesForBranch,
+        filterNodeNamesForCondition,
+        filterNodeNamesForOnError,
+        previousComponentDefinitions,
+        workflow.inputs,
+        workflowNodeOutputs,
+    ]);
+
+    const calculatedSampleOutputs = useMemo(() => {
+        if (!workflowNodeOutputs) {
+            return {};
+        }
+
+        const sampleOutputs: Record<string, unknown> = {};
+
+        for (const workflowNodeOutput of workflowNodeOutputs) {
+            const sampleOutput =
+                workflowNodeOutput.outputResponse?.sampleOutput ??
+                workflowNodeOutput.variableOutputResponse?.sampleOutput;
+
+            if (workflowNodeOutput.workflowNodeName && sampleOutput !== undefined) {
+                sampleOutputs[workflowNodeOutput.workflowNodeName] = sampleOutput;
+            }
+        }
+
+        return sampleOutputs;
+    }, [workflowNodeOutputs]);
+
+    const handleOperationSelectChange = useCallback(
+        async (newOperationName: string) => {
+            if (currentOperationName === newOperationName) {
+                return;
+            }
+
+            setCurrentOperationName(newOperationName);
+
+            setOperationChangeInProgress(true);
+
+            let newOperationDefinition: ActionDefinition | TriggerDefinition | ClusterElementDefinition | undefined;
+
+            if (!currentComponentDefinition || !currentNode) {
+                return;
+            }
+
+            if (currentNode?.trigger && !isClusterElement) {
+                newOperationDefinition = await fetchTriggerDefinition(newOperationName);
+            } else if (clusterElementsCanvasOpen && !!isClusterElement) {
+                newOperationDefinition = await fetchClusterElementDefinition(newOperationName);
+            } else {
+                newOperationDefinition = await fetchActionDefinition(newOperationName);
+            }
+
+            if (!newOperationDefinition) {
+                console.error(`newOperationDefinition not found for: ${newOperationName}`);
+
+                return;
+            }
+
+            await deleteWorkflowNodeTestOutputMutation.mutateAsync({
+                environmentId: currentEnvironmentId,
+                id: workflow.id!,
+                workflowNodeName: currentNode!.name,
+            });
+
+            invalidateOperationQueries(queryClient);
+
+            const {componentName, description, label, workflowNodeName} = currentNode;
+
+            const nodeData: NodeDataType = {
+                componentName,
+                description,
+                label,
+                name: workflowNodeName || currentNode?.workflowNodeName || '',
+                operationName: newOperationName,
+                parameters: getParametersWithDefaultValues({
+                    properties: newOperationDefinition.properties as Array<PropertyAllType>,
+                }),
+                trigger: currentNode?.trigger,
+                type: `${componentName}/v${currentComponentDefinition.version}/${newOperationName}`,
+                workflowNodeName,
+            };
+
+            const isTaskDispatcherSubtask = Object.values(TASK_DISPATCHER_DATA_KEY_MAP).some(
+                (dataKey) => dataKey && currentNode?.[dataKey as keyof typeof currentNode]
+            );
+
+            if (isTaskDispatcherSubtask) {
+                saveTaskDispatcherSubtaskFieldChange({
+                    currentComponentDefinition,
+                    currentNodeIndex: currentNodeIndex ?? 0,
+                    currentOperationProperties: newOperationDefinition.properties as Array<PropertyAllType>,
+                    fieldUpdate: {
+                        field: 'operation',
+                        value: newOperationName,
+                    },
+                    updateWorkflowMutation,
+                });
+
+                return;
+            }
+
+            if (currentNode?.clusterElementType && currentNode?.clusterElementType !== undefined) {
+                saveClusterElementFieldChange({
+                    currentComponentDefinition,
+                    currentOperationProperties: newOperationDefinition.properties as Array<PropertyAllType>,
+                    fieldUpdate: {
+                        field: 'operation',
+                        value: newOperationName,
+                    },
+                    updateWorkflowMutation,
+                });
+
+                return;
+            }
+
+            saveWorkflowDefinition({
+                nodeData,
+                onSuccess: () => {
+                    setCurrentNode({
+                        ...currentNode,
+                        componentName,
+                        displayConditions: {},
+                        metadata: {},
+                        name: workflowNodeName || currentNode?.workflowNodeName || '',
+                        operationName: newOperationName,
+                        parameters: getParametersWithDefaultValues({
+                            properties: newOperationDefinition.properties as Array<PropertyAllType>,
+                        }),
+                        type: `${componentName}/v${currentComponentDefinition.version}/${newOperationName}`,
+                        workflowNodeName,
+                    });
+
+                    setOperationChangeInProgress(false);
+                },
+                updateWorkflowMutation,
+            });
+        },
+        [
+            currentEnvironmentId,
+            currentOperationName,
+            currentComponentDefinition,
+            currentNode,
+            clusterElementsCanvasOpen,
+            isClusterElement,
+            deleteWorkflowNodeTestOutputMutation,
+            workflow.id,
+            queryClient,
+            updateWorkflowMutation,
+            fetchTriggerDefinition,
+            fetchClusterElementDefinition,
+            fetchActionDefinition,
+            currentNodeIndex,
+            setCurrentNode,
+            setOperationChangeInProgress,
+        ]
+    );
+
+    const handleVersionSelectChange = useCallback(
+        async (newComponentVersionValue: string) => {
+            if (!currentComponentDefinition) {
+                return;
+            }
+
+            await changeComponentVersion({
+                currentComponentDefinition,
+                currentNodeIndex,
+                currentOperationName,
+                deleteWorkflowNodeTestOutputMutation,
+                environmentId: currentEnvironmentId,
+                fetchActionDefinition,
+                fetchClusterElementDefinition,
+                fetchTriggerDefinition,
+                newComponentVersion: Number(newComponentVersionValue),
+                queryClient,
+                setCurrentOperationName,
+                updateWorkflowMutation,
+                workflowId: workflow.id!,
+            });
+        },
+        [
+            currentComponentDefinition,
+            currentEnvironmentId,
+            currentNodeIndex,
+            currentOperationName,
+            deleteWorkflowNodeTestOutputMutation,
+            fetchActionDefinition,
+            fetchClusterElementDefinition,
+            fetchTriggerDefinition,
+            queryClient,
+            updateWorkflowMutation,
+            workflow.id,
+        ]
+    );
+
+    const handlePanelClose = useCallback(() => {
+        useWorkflowNodeDetailsPanelStore.getState().reset();
+    }, []);
+
+    const getNodeVersion = useCallback((node: typeof currentWorkflowNode): string => {
+        if (!node) {
+            return '1';
+        }
+
+        if ('version' in node) {
+            return node.version.toString();
+        }
+
+        if ('componentVersion' in node) {
+            return node.componentVersion.toString();
+        }
+
+        return '1';
+    }, []);
+
+    // Set current node name
+    useEffect(() => {
+        if (currentOperationDefinition?.properties) {
+            setCurrentOperationProperties(currentOperationDefinition?.properties);
+        }
+
+        if (currentNode?.name) {
+            setCurrentNodeName(currentNode.name);
+
+            if (isClusterElement) {
+                setCurrentClusterElementName(currentNode.name);
+            } else {
+                setCurrentClusterElementName(undefined);
+            }
+        } else {
+            setCurrentNodeName(undefined);
+        }
+    }, [currentNode?.name, currentOperationDefinition?.properties, isClusterElement]);
+
+    // Refetch missing required properties once a save is confirmed (workflow.version bumps only on success,
+    // not the optimistic update). resolveMissingRequiredPropertiesRefetch replicates the queries' `enabled`
+    // guards since refetch() bypasses them — see its doc.
+    useEffect(() => {
+        const refetchTarget = resolveMissingRequiredPropertiesRefetch(
+            currentNodeName,
+            currentClusterElementName,
+            currentNode?.clusterElementType,
+            awaitingFirstSave
+        );
+
+        if (refetchTarget === 'cluster') {
+            refetchClusterElementMissingRequiredProperties();
+        } else if (refetchTarget === 'regular') {
+            refetchWorkflowNodeMissingRequiredProperties();
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [
+        workflow.version,
+        currentNodeName,
+        currentClusterElementName,
+        currentNode?.clusterElementType,
+        awaitingFirstSave,
+    ]);
+
+    // Arm the errors loading cue when an operation switch starts.
+    useEffect(() => {
+        if (operationChangeInProgress) {
+            errorsLoadingArmedRef.current = true;
+
+            setErrorsRefreshingAfterOperationChange(true);
+        }
+    }, [operationChangeInProgress]);
+
+    // Clear the error loading cue when the operation switch's refetch finishes
+    useEffect(() => {
+        if (errorsLoadingArmedRef.current && errorsDataUpdatedAt !== lastErrorsDataUpdatedAtRef.current) {
+            errorsLoadingArmedRef.current = false;
+
+            setErrorsRefreshingAfterOperationChange(false);
+        }
+
+        lastErrorsDataUpdatedAtRef.current = errorsDataUpdatedAt;
+    }, [errorsDataUpdatedAt]);
+
+    // Set currentOperationProperties depending if the current node is a trigger or an action
+    useEffect(() => {
+        if (currentOperationDefinition?.properties) {
+            setCurrentOperationProperties(currentOperationDefinition?.properties);
+        }
+    }, [currentOperationDefinition?.properties]);
+
+    // Set data pills only when the calculated data pills change
+    useEffect(() => {
+        const currentDataPillsString = JSON.stringify(calculatedDataPills);
+        const previousDataPillsString = JSON.stringify(previousDataPillsRef.current);
+
+        if (currentDataPillsString !== previousDataPillsString) {
+            previousDataPillsRef.current = calculatedDataPills;
+            setDataPills(calculatedDataPills);
+        }
+    }, [calculatedDataPills, setDataPills]);
+
+    // Set sample outputs only when the calculated sample outputs change
+    useEffect(() => {
+        setSampleOutputs(calculatedSampleOutputs);
+    }, [calculatedSampleOutputs, setSampleOutputs]);
+
+    // Tab switching logic
+    useEffect(() => {
+        if (activeTab === 'connection' && currentWorkflowNodeConnections.length === 0) {
+            setActiveTab('description');
+
+            return;
+        }
+
+        if (currentComponentDefinition?.name === 'manual') {
+            setActiveTab('description');
+
+            return;
+        }
+
+        if (
+            activeTab === 'properties' &&
+            ((!currentNode?.trigger && currentActionFetched) || (currentNode?.trigger && currentTriggerFetched)) &&
+            !currentOperationProperties
+        ) {
+            setActiveTab('description');
+
+            return;
+        }
+
+        if (activeTab === 'output' && !showOutputTab) {
+            setActiveTab('description');
+
+            return;
+        }
+
+        if (
+            activeTab === 'properties' &&
+            !operationDataMissing &&
+            currentOperationDefinition &&
+            !currentOperationDefinition.properties?.length
+        ) {
+            setActiveTab('description');
+
+            return;
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [
+        activeTab,
+        currentActionDefinition?.outputDefined,
+        currentOperationDefinition,
+        currentActionFetched,
+        currentOperationProperties?.length,
+        currentComponentDefinition?.name,
+        currentWorkflowNodeConnections.length,
+    ]);
+
+    // If the current component requires a connection, set the active tab to 'connection'
+    useEffect(() => {
+        if (currentComponentDefinition?.connectionRequired && !workflowTestConfigurationConnections?.length) {
+            setActiveTab('connection');
+        }
+
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [currentComponentDefinition]);
+
+    // Update currentNode with connection data, operationName and type
+    useEffect(() => {
+        if (!currentNode) {
+            return;
+        }
+
+        let updatedNode = {...currentNode};
+
+        if (currentNode.operationName && currentOperationName) {
+            updatedNode = {
+                ...updatedNode,
+                operationName: currentOperationName,
+                triggerType: currentTriggerDefinition?.type,
+                type: `${currentNode?.componentName}/v${currentComponentDefinition?.version}/${currentOperationName}`,
+            };
+        }
+
+        const resolvedConnectionFields = resolveNodeConnectionFields(currentNode, currentWorkflowNodeConnections, {
+            rootClusterElementWorkflowNodeName: rootClusterElementNodeData?.workflowNodeName,
+            workflowTestConfigurationConnections,
+        });
+
+        if (resolvedConnectionFields) {
+            updatedNode = {
+                ...updatedNode,
+                ...resolvedConnectionFields,
+            };
+        }
+
+        if (!isEqual(updatedNode, currentNode)) {
+            setCurrentNode(updatedNode);
+        }
+
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [
+        currentNode,
+        currentOperationName,
+        currentComponentDefinition?.version,
+        currentWorkflowNodeConnections,
+        workflowTestConfigurationConnections,
+        currentTriggerDefinition,
+    ]);
+
+    useEffect(() => {
+        const isClusterElementOrRoot =
+            !!currentNode?.clusterElementType ||
+            currentNode?.workflowNodeName === rootClusterElementNodeData?.workflowNodeName;
+
+        if (!isClusterElementOrRoot || !workflowTestConfigurationConnections) {
+            return;
+        }
+
+        queryClient.invalidateQueries({
+            queryKey: [...WorkflowNodeOptionKeys.clusterElementNodeOptions],
+        });
+
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [workflowTestConfigurationConnections]);
+
+    // Find cluster element component operations
+    useEffect(() => {
+        if (!clusterElementsCanvasOpen || !workflow.definition) {
+            return;
+        }
+
+        const workflowDefinitionTasks = JSON.parse(workflow.definition).tasks;
+
+        const mainClusterRootTask = rootClusterElementNodeData?.workflowNodeName
+            ? getTask({
+                  tasks: workflowDefinitionTasks,
+                  workflowNodeName: rootClusterElementNodeData.workflowNodeName,
+              })
+            : undefined;
+
+        if (!mainClusterRootTask) {
+            return;
+        }
+
+        const currentRootClusterTaskClusterElements = mainClusterRootTask?.clusterElements;
+
+        if (currentRootClusterTaskClusterElements) {
+            const clusterElementsWorkflowNodeTypes = extractClusterElementComponentOperations(
+                currentRootClusterTaskClusterElements
+            );
+
+            if (clusterElementsWorkflowNodeTypes.length > 0) {
+                setClusterElementComponentOperations(clusterElementsWorkflowNodeTypes);
+            }
+        }
+    }, [clusterElementsCanvasOpen, rootClusterElementNodeData, workflow]);
+
+    // Set currentOperationName depending on the currentWorkflowNode.operationName
+    useEffect(() => {
+        let currentWorkflowNode;
+
+        if (workflowNodes?.length && !clusterElementsCanvasOpen && !isClusterElement) {
+            currentWorkflowNode = workflowNodes.find(
+                (workflowNode) => workflowNode.workflowNodeName === currentNode?.workflowNodeName
+            );
+        } else if (clusterElementsCanvasOpen) {
+            if (currentNode?.clusterRoot && !currentNode.isNestedClusterRoot) {
+                currentWorkflowNode = workflowNodes?.find(
+                    (workflowNodeType) => workflowNodeType.workflowNodeName === currentNode?.workflowNodeName
+                );
+            } else if (clusterElementComponentOperations) {
+                currentWorkflowNode = clusterElementComponentOperations.find(
+                    (workflowNodeType) => workflowNodeType.workflowNodeName === currentNode?.workflowNodeName
+                );
+            }
+        }
+
+        // Prefer the server-synced operationName once available; otherwise fall back to the
+        // optimistically-set currentNode.operationName so a newly added node can resolve its
+        // operation before the workflow mutation settles.
+        const newOperationName = currentWorkflowNode?.operationName ?? currentNode?.operationName ?? '';
+
+        if (newOperationName !== currentOperationName) {
+            setCurrentOperationName(newOperationName);
+        }
+
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [
+        clusterElementComponentOperations,
+        currentNode?.workflowNodeName,
+        currentNode?.operationName,
+        currentOperationName,
+        workflowNodes,
+    ]);
+
+    // Update display conditions when currentNode changes
+    useEffect(() => {
+        if (
+            currentNode &&
+            (workflowNodeParameterDisplayConditions?.displayConditions ||
+                clusterElementParameterDisplayConditions?.displayConditions)
+        ) {
+            setCurrentNode({
+                ...currentNode,
+                displayConditions:
+                    workflowNodeParameterDisplayConditions?.displayConditions ||
+                    clusterElementParameterDisplayConditions?.displayConditions,
+            });
+        }
+
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [
+        clusterElementParameterDisplayConditions?.displayConditions,
+        currentNode?.name,
+        workflowNodeParameterDisplayConditions?.displayConditions,
+    ]);
+
+    // Fetch current action definition when operation changes
+    useEffect(() => {
+        if (isActionDefinitionFresh(currentActionDefinition, currentComponentDefinition, currentOperationName)) {
+            return;
+        }
+
+        if (!currentOperationName || !currentComponentDefinition) {
+            setCurrentActionDefinition(undefined);
+
+            return;
+        }
+
+        if (
+            clusterElementsCanvasOpen &&
+            currentComponentDefinition?.clusterElement &&
+            currentNode?.parentClusterRootId
+        ) {
+            if (matchingOperation) {
+                fetchClusterElementDefinition();
+            } else {
+                setCurrentActionDefinition(undefined);
+            }
+        } else {
+            const matchingAction = currentComponentDefinition?.actions?.find(
+                (action) => action.name === currentOperationName
+            );
+
+            if (!!currentComponentDefinition?.actions && !currentNode?.trigger && !!matchingAction) {
+                fetchActionDefinition();
+            } else {
+                setCurrentActionDefinition(undefined);
+            }
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [
+        currentComponentDefinition,
+        currentNodeName,
+        currentOperationName,
+        matchingOperation,
+        queryClient,
+        clusterElementsCanvasOpen,
+    ]);
+
+    return {
+        activeDisplayConditionsQuery,
+        activeTab,
+        awaitingFirstSave,
+        componentDefinitionVersions,
+        currentActionDefinition,
+        currentComponentDefinition,
+        currentNode,
+        currentOperationName,
+        currentOperationProperties,
+        currentTaskDispatcherDefinition,
+        currentTriggerDefinition,
+        currentWorkflowNode,
+        currentWorkflowNodeConnections,
+        currentWorkflowNodeOperations,
+        errors,
+        errorsAccordionOpen,
+        errorsLoading,
+        filteredClusterElementOperations,
+        getNodeVersion,
+        handleOperationSelectChange,
+        handlePanelClose,
+        handleVersionSelectChange,
+        nodeDefinition,
+        nodeTabs,
+        operationDataMissing,
+        outputDefined,
+        outputFunctionDefined,
+        rootClusterElementNodeData,
+        setActiveTab,
+        setErrorsAccordionOpen,
+        tabDataExists,
+        workflow,
+        workflowNodeDetailsPanelOpen,
+        workflowTestConfigurationConnections,
+    };
+}

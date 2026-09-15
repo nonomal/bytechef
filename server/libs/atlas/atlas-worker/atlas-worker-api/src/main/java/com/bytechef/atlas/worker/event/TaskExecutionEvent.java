@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,7 +22,7 @@ import com.bytechef.message.Prioritizable;
 import com.bytechef.message.Retryable;
 import com.bytechef.message.event.MessageEvent;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import org.apache.commons.lang3.Validate;
+import org.springframework.util.Assert;
 
 /**
  * @author Ivica CardFic
@@ -36,14 +36,13 @@ public class TaskExecutionEvent extends AbstractEvent
     private TaskExecutionEvent() {
     }
 
-    @SuppressFBWarnings("EI")
     public TaskExecutionEvent(TaskExecution taskExecution) {
         this(TaskWorkerMessageRoute.TASK_EXECUTION_EVENTS, taskExecution);
     }
 
     @SuppressFBWarnings("EI")
     public TaskExecutionEvent(TaskWorkerMessageRoute route, TaskExecution taskExecution) {
-        Validate.notNull(taskExecution, "'taskExecution' must not be null");
+        Assert.notNull(taskExecution, "'taskExecution' must not be null");
 
         this.route = route;
         this.taskExecution = taskExecution;

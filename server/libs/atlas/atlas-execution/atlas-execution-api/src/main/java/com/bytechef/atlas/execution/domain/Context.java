@@ -13,21 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * Modifications copyright (C) 2023 ByteChef Inc.
+ * Modifications copyright (C) 2025 ByteChef
  */
 
 package com.bytechef.atlas.execution.domain;
 
 import com.bytechef.file.storage.domain.FileEntry;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Objects;
-import org.apache.commons.lang3.Validate;
 import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.domain.Persistable;
 import org.springframework.data.relational.core.mapping.Column;
 import org.springframework.data.relational.core.mapping.Table;
+import org.springframework.util.Assert;
 
 /**
  * @author Arik Cohen
@@ -48,7 +48,7 @@ public final class Context implements Persistable<Long> {
 
     @Column("created_date")
     @CreatedDate
-    private LocalDateTime createdDate;
+    private Instant createdDate;
 
     @Id
     private Long id;
@@ -66,7 +66,7 @@ public final class Context implements Persistable<Long> {
     }
 
     public Context(FileEntry value) {
-        Validate.notNull(value, "'value' must not be null");
+        Assert.notNull(value, "'value' must not be null");
 
         this.value = value;
     }
@@ -84,8 +84,8 @@ public final class Context implements Persistable<Long> {
     }
 
     public Context(long stackId, Integer subStackId, Classname classname, FileEntry value) {
-        Validate.notNull(classname, "'classname' must not be null");
-        Validate.notNull(value, "'value' must not be null");
+        Assert.notNull(classname, "'classname' must not be null");
+        Assert.notNull(value, "'value' must not be null");
 
         this.stackId = stackId;
         this.subStackId = subStackId;
@@ -125,7 +125,7 @@ public final class Context implements Persistable<Long> {
         return createdBy;
     }
 
-    public LocalDateTime getCreatedDate() {
+    public Instant getCreatedDate() {
         return createdDate;
     }
 

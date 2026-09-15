@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,10 +16,6 @@
 
 package com.bytechef.test.jsonasssert;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.File;
 import java.io.IOException;
@@ -29,24 +25,26 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Objects;
 import org.apache.commons.lang3.Validate;
 import org.json.JSONException;
 import org.skyscreamer.jsonassert.JSONAssert;
+import tools.jackson.databind.MapperFeature;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.SerializationFeature;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * @author Ivica Cardic
  */
+@SuppressFBWarnings("PATH_TRAVERSAL_IN")
 public class JsonFileAssert {
 
-    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper() {
-        {
-            disable(SerializationFeature.FAIL_ON_EMPTY_BEANS);
-            disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
-
-            registerModule(new JavaTimeModule());
-            registerModule(new Jdk8Module());
-        }
-    };
+    private static final ObjectMapper OBJECT_MAPPER = JsonMapper.builder()
+        .configure(MapperFeature.SORT_PROPERTIES_ALPHABETICALLY, true)
+        .configure(SerializationFeature.INDENT_OUTPUT, true)
+//        .changeDefaultVisibility(vc -> vc.with(JsonAutoDetect.Visibility.PUBLIC_ONLY))
+        .build();
 
     public static void assertEquals(String filename, Object object) {
         try {
@@ -60,14 +58,13 @@ public class JsonFileAssert {
         }
     }
 
-    @SuppressFBWarnings("NP")
     private static void checkFileExists(String filename, String value) throws IOException {
         File file = new File("src/test/resources/" + filename).getAbsoluteFile();
 
         if (!file.exists()) {
             Path path = file.toPath();
 
-            Files.createDirectories(path.getParent());
+            Files.createDirectories(Objects.requireNonNull(path.getParent()));
             Files.writeString(path, value);
         }
     }

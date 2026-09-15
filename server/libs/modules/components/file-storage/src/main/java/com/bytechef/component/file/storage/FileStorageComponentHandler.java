@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,15 +16,16 @@
 
 package com.bytechef.component.file.storage;
 
-import static com.bytechef.component.definition.ComponentDSL.component;
+import static com.bytechef.component.definition.ComponentDsl.component;
+import static com.bytechef.component.definition.ComponentDsl.tool;
 
 import com.bytechef.component.ComponentHandler;
 import com.bytechef.component.definition.ComponentCategory;
 import com.bytechef.component.definition.ComponentDefinition;
 import com.bytechef.component.file.storage.action.FileStorageDownloadAction;
-import com.bytechef.component.file.storage.action.FileStorageReadAction;
+import com.bytechef.component.file.storage.action.FileStorageReadBytesAction;
+import com.bytechef.component.file.storage.action.FileStorageReadStringAction;
 import com.bytechef.component.file.storage.action.FileStorageWriteAction;
-import com.bytechef.component.file.storage.constant.FileStorageConstants;
 import com.google.auto.service.AutoService;
 
 /**
@@ -33,15 +34,20 @@ import com.google.auto.service.AutoService;
 @AutoService(ComponentHandler.class)
 public class FileStorageComponentHandler implements ComponentHandler {
 
-    private static final ComponentDefinition COMPONENT_DEFINITION = component(FileStorageConstants.FILE_STORAGE)
+    private static final ComponentDefinition COMPONENT_DEFINITION = component("fileStorage")
         .title("File Storage")
         .description("Reads and writes data from a file stored inside the file storage.")
         .icon("path:assets/file-storage.svg")
         .categories(ComponentCategory.FILE_STORAGE, ComponentCategory.HELPERS)
         .actions(
-            FileStorageReadAction.ACTION_DEFINITION,
+            FileStorageReadStringAction.ACTION_DEFINITION,
+            FileStorageReadBytesAction.ACTION_DEFINITION,
             FileStorageWriteAction.ACTION_DEFINITION,
-            FileStorageDownloadAction.ACTION_DEFINITION);
+            FileStorageDownloadAction.ACTION_DEFINITION)
+        .clusterElements(
+            tool(FileStorageReadStringAction.ACTION_DEFINITION),
+            tool(FileStorageReadBytesAction.ACTION_DEFINITION),
+            tool(FileStorageWriteAction.ACTION_DEFINITION));
 
     @Override
     public ComponentDefinition getDefinition() {

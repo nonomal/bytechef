@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 
 package com.bytechef.platform.workflow.test.web.rest.mapper;
 
-import com.bytechef.platform.workflow.test.dto.WorkflowTestExecution;
+import com.bytechef.platform.workflow.test.dto.WorkflowTestExecutionDTO;
 import com.bytechef.platform.workflow.test.web.rest.mapper.config.PlatformWorkflowTestMapperSpringConfig;
 import com.bytechef.platform.workflow.test.web.rest.model.WorkflowTestExecutionModel;
 import org.mapstruct.Mapper;
@@ -26,8 +26,8 @@ import org.springframework.core.convert.converter.Converter;
  * @author Ivica Cardic
  */
 @Mapper(config = PlatformWorkflowTestMapperSpringConfig.class)
-public interface WorkflowTestExecutionMapper extends Converter<WorkflowTestExecution, WorkflowTestExecutionModel> {
+public interface WorkflowTestExecutionMapper extends Converter<WorkflowTestExecutionDTO, WorkflowTestExecutionModel> {
 
     @Override
-    WorkflowTestExecutionModel convert(WorkflowTestExecution workflowTestExecution);
+    WorkflowTestExecutionModel convert(WorkflowTestExecutionDTO workflowTestExecution);
 }

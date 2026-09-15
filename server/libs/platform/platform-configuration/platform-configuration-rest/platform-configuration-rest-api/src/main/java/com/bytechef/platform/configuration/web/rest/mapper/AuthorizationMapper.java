@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,22 +16,18 @@
 
 package com.bytechef.platform.configuration.web.rest.mapper;
 
-import com.bytechef.platform.component.registry.domain.Authorization;
+import com.bytechef.platform.component.domain.Authorization;
 import com.bytechef.platform.configuration.web.rest.mapper.config.PlatformConfigurationMapperSpringConfig;
 import com.bytechef.platform.configuration.web.rest.model.AuthorizationModel;
 import org.mapstruct.Mapper;
 import org.springframework.core.convert.converter.Converter;
-import org.springframework.lang.NonNull;
 
 /**
  * @author Ivica Cardic
  */
-public class AuthorizationMapper {
+@Mapper(config = PlatformConfigurationMapperSpringConfig.class)
+public interface AuthorizationMapper extends Converter<Authorization, AuthorizationModel> {
 
-    @Mapper(config = PlatformConfigurationMapperSpringConfig.class)
-    public interface AuthorizationToAuthorizationModelMapper extends Converter<Authorization, AuthorizationModel> {
-
-        @Override
-        AuthorizationModel convert(@NonNull Authorization authorization);
-    }
+    @Override
+    AuthorizationModel convert(Authorization authorization);
 }

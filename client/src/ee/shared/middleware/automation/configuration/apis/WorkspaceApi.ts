@@ -12,25 +12,18 @@
  * Do not edit the class manually.
  */
 
-
 import * as runtime from '../runtime';
-import type {
-  WorkspaceModel,
-} from '../models/index';
 import {
-    WorkspaceModelFromJSON,
-    WorkspaceModelToJSON,
-} from '../models/index';
+    type Workspace,
+    WorkspaceFromJSON,
+    WorkspaceToJSON,
+} from '../models/Workspace';
 
 export interface CreateWorkspaceRequest {
-    workspaceModel: Omit<WorkspaceModel, 'createdBy'|'createdDate'|'lastModifiedBy'|'lastModifiedDate'>;
+    workspace: Omit<Workspace, 'createdBy'|'createdDate'|'lastModifiedBy'|'lastModifiedDate'>;
 }
 
 export interface DeleteWorkspaceRequest {
-    id: number;
-}
-
-export interface GetUserWorkspacesRequest {
     id: number;
 }
 
@@ -40,7 +33,7 @@ export interface GetWorkspaceRequest {
 
 export interface UpdateWorkspaceRequest {
     id: number;
-    workspaceModel: Omit<WorkspaceModel, 'createdBy'|'createdDate'|'lastModifiedBy'|'lastModifiedDate'>;
+    workspace: Omit<Workspace, 'createdBy'|'createdDate'|'lastModifiedBy'|'lastModifiedDate'>;
 }
 
 /**
@@ -49,14 +42,13 @@ export interface UpdateWorkspaceRequest {
 export class WorkspaceApi extends runtime.BaseAPI {
 
     /**
-     * Create a workspace event.
-     * Create a new workspace
+     * Creates request options for createWorkspace without sending the request
      */
-    async createWorkspaceRaw(requestParameters: CreateWorkspaceRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<WorkspaceModel>> {
-        if (requestParameters['workspaceModel'] == null) {
+    async createWorkspaceRequestOpts(requestParameters: CreateWorkspaceRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['workspace'] == null) {
             throw new runtime.RequiredError(
-                'workspaceModel',
-                'Required parameter "workspaceModel" was null or undefined when calling createWorkspace().'
+                'workspace',
+                'Required parameter "workspace" was null or undefined when calling createWorkspace().'
             );
         }
 
@@ -66,31 +58,42 @@ export class WorkspaceApi extends runtime.BaseAPI {
 
         headerParameters['Content-Type'] = 'application/json';
 
-        const response = await this.request({
-            path: `/workspaces`,
+
+        let urlPath = `/workspaces`;
+
+        return {
+            path: urlPath,
             method: 'POST',
             headers: headerParameters,
             query: queryParameters,
-            body: WorkspaceModelToJSON(requestParameters['workspaceModel']),
-        }, initOverrides);
-
-        return new runtime.JSONApiResponse(response, (jsonValue) => WorkspaceModelFromJSON(jsonValue));
+            body: WorkspaceToJSON(requestParameters['workspace']),
+        };
     }
 
     /**
      * Create a workspace event.
      * Create a new workspace
      */
-    async createWorkspace(requestParameters: CreateWorkspaceRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<WorkspaceModel> {
+    async createWorkspaceRaw(requestParameters: CreateWorkspaceRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Workspace>> {
+        const requestOptions = await this.createWorkspaceRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => WorkspaceFromJSON(jsonValue));
+    }
+
+    /**
+     * Create a workspace event.
+     * Create a new workspace
+     */
+    async createWorkspace(requestParameters: CreateWorkspaceRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Workspace> {
         const response = await this.createWorkspaceRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
     /**
-     * Delete a workspace.
-     * Delete a workspace
+     * Creates request options for deleteWorkspace without sending the request
      */
-    async deleteWorkspaceRaw(requestParameters: DeleteWorkspaceRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+    async deleteWorkspaceRequestOpts(requestParameters: DeleteWorkspaceRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['id'] == null) {
             throw new runtime.RequiredError(
                 'id',
@@ -102,12 +105,25 @@ export class WorkspaceApi extends runtime.BaseAPI {
 
         const headerParameters: runtime.HTTPHeaders = {};
 
-        const response = await this.request({
-            path: `/workspaces/{id}`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))),
+
+        let urlPath = `/workspaces/{id}`;
+        urlPath = urlPath.replace('{id}', encodeURIComponent(String(requestParameters['id'])));
+
+        return {
+            path: urlPath,
             method: 'DELETE',
             headers: headerParameters,
             query: queryParameters,
-        }, initOverrides);
+        };
+    }
+
+    /**
+     * Delete a workspace.
+     * Delete a workspace
+     */
+    async deleteWorkspaceRaw(requestParameters: DeleteWorkspaceRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        const requestOptions = await this.deleteWorkspaceRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
 
         return new runtime.VoidApiResponse(response);
     }
@@ -121,45 +137,9 @@ export class WorkspaceApi extends runtime.BaseAPI {
     }
 
     /**
-     * Get all user workspaces.
-     * Get all user workspaces
+     * Creates request options for getWorkspace without sending the request
      */
-    async getUserWorkspacesRaw(requestParameters: GetUserWorkspacesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<WorkspaceModel>>> {
-        if (requestParameters['id'] == null) {
-            throw new runtime.RequiredError(
-                'id',
-                'Required parameter "id" was null or undefined when calling getUserWorkspaces().'
-            );
-        }
-
-        const queryParameters: any = {};
-
-        const headerParameters: runtime.HTTPHeaders = {};
-
-        const response = await this.request({
-            path: `/users/{id}/workspaces`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))),
-            method: 'GET',
-            headers: headerParameters,
-            query: queryParameters,
-        }, initOverrides);
-
-        return new runtime.JSONApiResponse(response, (jsonValue) => jsonValue.map(WorkspaceModelFromJSON));
-    }
-
-    /**
-     * Get all user workspaces.
-     * Get all user workspaces
-     */
-    async getUserWorkspaces(requestParameters: GetUserWorkspacesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<WorkspaceModel>> {
-        const response = await this.getUserWorkspacesRaw(requestParameters, initOverrides);
-        return await response.value();
-    }
-
-    /**
-     * Get a workspace by id.
-     * Get a workspace by id
-     */
-    async getWorkspaceRaw(requestParameters: GetWorkspaceRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<WorkspaceModel>> {
+    async getWorkspaceRequestOpts(requestParameters: GetWorkspaceRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['id'] == null) {
             throw new runtime.RequiredError(
                 'id',
@@ -171,58 +151,81 @@ export class WorkspaceApi extends runtime.BaseAPI {
 
         const headerParameters: runtime.HTTPHeaders = {};
 
-        const response = await this.request({
-            path: `/workspaces/{id}`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))),
+
+        let urlPath = `/workspaces/{id}`;
+        urlPath = urlPath.replace('{id}', encodeURIComponent(String(requestParameters['id'])));
+
+        return {
+            path: urlPath,
             method: 'GET',
             headers: headerParameters,
             query: queryParameters,
-        }, initOverrides);
-
-        return new runtime.JSONApiResponse(response, (jsonValue) => WorkspaceModelFromJSON(jsonValue));
+        };
     }
 
     /**
      * Get a workspace by id.
      * Get a workspace by id
      */
-    async getWorkspace(requestParameters: GetWorkspaceRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<WorkspaceModel> {
+    async getWorkspaceRaw(requestParameters: GetWorkspaceRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Workspace>> {
+        const requestOptions = await this.getWorkspaceRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => WorkspaceFromJSON(jsonValue));
+    }
+
+    /**
+     * Get a workspace by id.
+     * Get a workspace by id
+     */
+    async getWorkspace(requestParameters: GetWorkspaceRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Workspace> {
         const response = await this.getWorkspaceRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
     /**
-     * Get workspaces.
-     * Get workspaces
+     * Creates request options for getWorkspaces without sending the request
      */
-    async getWorkspacesRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<WorkspaceModel>>> {
+    async getWorkspacesRequestOpts(): Promise<runtime.RequestOpts> {
         const queryParameters: any = {};
 
         const headerParameters: runtime.HTTPHeaders = {};
 
-        const response = await this.request({
-            path: `/workspaces`,
+
+        let urlPath = `/workspaces`;
+
+        return {
+            path: urlPath,
             method: 'GET',
             headers: headerParameters,
             query: queryParameters,
-        }, initOverrides);
-
-        return new runtime.JSONApiResponse(response, (jsonValue) => jsonValue.map(WorkspaceModelFromJSON));
+        };
     }
 
     /**
      * Get workspaces.
      * Get workspaces
      */
-    async getWorkspaces(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<WorkspaceModel>> {
+    async getWorkspacesRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<Workspace>>> {
+        const requestOptions = await this.getWorkspacesRequestOpts();
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => jsonValue.map(WorkspaceFromJSON));
+    }
+
+    /**
+     * Get workspaces.
+     * Get workspaces
+     */
+    async getWorkspaces(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<Workspace>> {
         const response = await this.getWorkspacesRaw(initOverrides);
         return await response.value();
     }
 
     /**
-     * Update an existing workspace.
-     * Update an existing workspace
+     * Creates request options for updateWorkspace without sending the request
      */
-    async updateWorkspaceRaw(requestParameters: UpdateWorkspaceRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<WorkspaceModel>> {
+    async updateWorkspaceRequestOpts(requestParameters: UpdateWorkspaceRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['id'] == null) {
             throw new runtime.RequiredError(
                 'id',
@@ -230,10 +233,10 @@ export class WorkspaceApi extends runtime.BaseAPI {
             );
         }
 
-        if (requestParameters['workspaceModel'] == null) {
+        if (requestParameters['workspace'] == null) {
             throw new runtime.RequiredError(
-                'workspaceModel',
-                'Required parameter "workspaceModel" was null or undefined when calling updateWorkspace().'
+                'workspace',
+                'Required parameter "workspace" was null or undefined when calling updateWorkspace().'
             );
         }
 
@@ -243,22 +246,35 @@ export class WorkspaceApi extends runtime.BaseAPI {
 
         headerParameters['Content-Type'] = 'application/json';
 
-        const response = await this.request({
-            path: `/workspaces/{id}`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))),
+
+        let urlPath = `/workspaces/{id}`;
+        urlPath = urlPath.replace('{id}', encodeURIComponent(String(requestParameters['id'])));
+
+        return {
+            path: urlPath,
             method: 'PUT',
             headers: headerParameters,
             query: queryParameters,
-            body: WorkspaceModelToJSON(requestParameters['workspaceModel']),
-        }, initOverrides);
-
-        return new runtime.JSONApiResponse(response, (jsonValue) => WorkspaceModelFromJSON(jsonValue));
+            body: WorkspaceToJSON(requestParameters['workspace']),
+        };
     }
 
     /**
      * Update an existing workspace.
      * Update an existing workspace
      */
-    async updateWorkspace(requestParameters: UpdateWorkspaceRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<WorkspaceModel> {
+    async updateWorkspaceRaw(requestParameters: UpdateWorkspaceRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Workspace>> {
+        const requestOptions = await this.updateWorkspaceRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => WorkspaceFromJSON(jsonValue));
+    }
+
+    /**
+     * Update an existing workspace.
+     * Update an existing workspace
+     */
+    async updateWorkspace(requestParameters: UpdateWorkspaceRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Workspace> {
         const response = await this.updateWorkspaceRaw(requestParameters, initOverrides);
         return await response.value();
     }

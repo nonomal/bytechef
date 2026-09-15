@@ -1,57 +1,105 @@
-import {ComponentDefinitionModel} from '@/shared/middleware/platform/configuration';
-
 /* eslint-disable sort-keys */
-import {ComponentType, NodeType} from '@/shared/types';
+import {NodeDataType} from '@/shared/types';
+import {Editor} from '@tiptap/react';
 import {create} from 'zustand';
 import {devtools} from 'zustand/middleware';
 
-interface WorkflowNodeDetailsPanelStateI {
-    currentComponent: ComponentType | undefined;
-    setCurrentComponent: (currentComponent: ComponentType | undefined) => void;
+interface WorkflowNodeDetailsPanelStoreI {
+    activeTab: string;
+    setActiveTab: (activeTab: string) => void;
 
-    currentComponentDefinition: ComponentDefinitionModel | undefined;
-    setCurrentComponentDefinition: (currentComponentDefinition: ComponentDefinitionModel | undefined) => void;
+    aiAgentNodeDetailsPanelOpen: boolean;
+    setAiAgentNodeDetailsPanelOpen: (aiAgentNodeDetailsPanelOpen: boolean) => void;
 
-    currentNode: NodeType | undefined;
-    setCurrentNode: (currentNode: NodeType | undefined) => void;
+    connectionDialogAllowed: boolean;
+    setConnectionDialogAllowed: (connectionDialogAllowed: boolean) => void;
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    focusedInput: any;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    setFocusedInput: (focusedInput: any) => void;
+    currentNode: NodeDataType | undefined;
+    setCurrentNode: (
+        currentNode:
+            | NodeDataType
+            | undefined
+            | ((previousCurrentNode: NodeDataType | undefined) => NodeDataType | undefined)
+    ) => void;
+
+    focusedInput: Editor | null;
+    setFocusedInput: (focusedInput: Editor | null) => void;
+
+    operationChangeInProgress: boolean;
+    setOperationChangeInProgress: (operationChangeInProgress: boolean) => void;
+
+    pendingSaveNodeNames: ReadonlySet<string>;
+    addPendingSaveNodeName: (nodeName: string) => void;
+    clearPendingSaveNodeNames: () => void;
+    removePendingSaveNodeName: (nodeName: string) => void;
 
     reset: () => void;
 
     workflowNodeDetailsPanelOpen: boolean;
+    panelOpenedFromIssuesSidebar: boolean;
+    setPanelOpenedFromIssuesSidebar: (panelOpenedFromIssuesSidebar: boolean) => void;
     setWorkflowNodeDetailsPanelOpen: (workflowNodeDetailsPanelOpen: boolean) => void;
 }
 
-const useWorkflowNodeDetailsPanelStore = create<WorkflowNodeDetailsPanelStateI>()(
+const useWorkflowNodeDetailsPanelStore = create<WorkflowNodeDetailsPanelStoreI>()(
     devtools(
         (set) => ({
-            currentComponent: undefined,
-            setCurrentComponent: (currentComponent) => set((state) => ({...state, currentComponent})),
+            activeTab: 'description',
+            setActiveTab: (activeTab) => set((state) => ({...state, activeTab})),
 
-            currentComponentDefinition: undefined,
-            setCurrentComponentDefinition: (currentComponentDefinition) =>
-                set((state) => ({...state, currentComponentDefinition})),
+            aiAgentNodeDetailsPanelOpen: false,
+            setAiAgentNodeDetailsPanelOpen: (aiAgentNodeDetailsPanelOpen) =>
+                set((state) => ({...state, aiAgentNodeDetailsPanelOpen})),
+
+            connectionDialogAllowed: true,
+            setConnectionDialogAllowed: (connectionDialogAllowed) =>
+                set((state) => ({...state, connectionDialogAllowed})),
 
             currentNode: undefined,
-            setCurrentNode: (currentNode) => set((state) => ({...state, currentNode})),
+            setCurrentNode: (currentNode) =>
+                set((state) => ({
+                    ...state,
+                    currentNode: typeof currentNode === 'function' ? currentNode(state.currentNode) : currentNode,
+                })),
 
             focusedInput: null,
             setFocusedInput: (focusedInput) => set((state) => ({...state, focusedInput})),
 
+            operationChangeInProgress: false,
+            setOperationChangeInProgress: (operationChangeInProgress) =>
+                set((state) => ({...state, operationChangeInProgress})),
+
+            pendingSaveNodeNames: new Set<string>(),
+            addPendingSaveNodeName: (nodeName) =>
+                set((state) => ({...state, pendingSaveNodeNames: new Set([...state.pendingSaveNodeNames, nodeName])})),
+            clearPendingSaveNodeNames: () => set((state) => ({...state, pendingSaveNodeNames: new Set<string>()})),
+            removePendingSaveNodeName: (nodeName) =>
+                set((state) => {
+                    if (!state.pendingSaveNodeNames.has(nodeName)) {
+                        return state;
+                    }
+
+                    const pendingSaveNodeNames = new Set(state.pendingSaveNodeNames);
+
+                    pendingSaveNodeNames.delete(nodeName);
+
+                    return {...state, pendingSaveNodeNames};
+                }),
+
             reset: () =>
                 set(() => ({
-                    currentComponent: undefined,
-                    currentComponentDefinition: undefined,
+                    aiAgentNodeDetailsPanelOpen: false,
                     currentNode: undefined,
                     focusedInput: null,
+                    operationChangeInProgress: false,
                     workflowNodeDetailsPanelOpen: false,
                 })),
 
             workflowNodeDetailsPanelOpen: false,
+            panelOpenedFromIssuesSidebar: false,
+            setPanelOpenedFromIssuesSidebar: (panelOpenedFromIssuesSidebar) =>
+                set((state) => ({...state, panelOpenedFromIssuesSidebar})),
+
             setWorkflowNodeDetailsPanelOpen: (workflowNodeDetailsPanelOpen) =>
                 set((state) => ({
                     ...state,

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,7 +22,7 @@ package com.bytechef.task.dispatcher.loop.constant;
 public class LoopTaskDispatcherConstants {
 
     public static final String LOOP = "loop";
-    public static final String LOOP_BREAK = "loop-break";
+    public static final String LOOP_BREAK = "loopBreak";
     public static final String ITEMS = "items";
     public static final String INDEX = "index";
     public static final String LOOP_FOREVER = "loopForever";

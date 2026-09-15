@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,38 +16,57 @@
 
 package com.bytechef.component.google.calendar;
 
-import static com.bytechef.component.definition.ComponentDSL.component;
+import static com.bytechef.component.definition.ComponentDsl.component;
+import static com.bytechef.component.definition.ComponentDsl.tool;
 import static com.bytechef.component.google.calendar.connection.GoogleCalendarConnection.CONNECTION_DEFINITION;
-import static com.bytechef.component.google.calendar.constant.GoogleCalendarConstants.GOOGLE_CALENDAR;
 
 import com.bytechef.component.ComponentHandler;
 import com.bytechef.component.definition.ComponentCategory;
 import com.bytechef.component.definition.ComponentDefinition;
+import com.bytechef.component.google.calendar.action.GoogleCalendarAddAttendeesToEventAction;
 import com.bytechef.component.google.calendar.action.GoogleCalendarCreateEventAction;
 import com.bytechef.component.google.calendar.action.GoogleCalendarCreateQuickEventAction;
-import com.bytechef.component.google.calendar.action.GoogleCalendarFindEventsAction;
+import com.bytechef.component.google.calendar.action.GoogleCalendarDeleteEventAction;
+import com.bytechef.component.google.calendar.action.GoogleCalendarGetEventsAction;
+import com.bytechef.component.google.calendar.action.GoogleCalendarGetFreeTimeSlotsAction;
+import com.bytechef.component.google.calendar.action.GoogleCalendarUpdateEventAction;
 import com.bytechef.component.google.calendar.trigger.GoogleCalendarEventTrigger;
 import com.google.auto.service.AutoService;
 
 /**
- * @author Monika Domiter
+ * @author Monika Kušter
  */
 @AutoService(ComponentHandler.class)
 public class GoogleCalendarComponentHandler implements ComponentHandler {
 
-    private static final ComponentDefinition COMPONENT_DEFINITION = component(GOOGLE_CALENDAR)
+    private static final ComponentDefinition COMPONENT_DEFINITION = component("googleCalendar")
         .title("Google Calendar")
         .description(
             "Google Calendar is a web-based application that allows users to schedule and organize events, " +
                 "appointments, and reminders, synchronizing across multiple devices.")
+        .customAction(true)
+        .customActionHelp("", "https://developers.google.com/workspace/calendar/api/v3/reference")
         .icon("path:assets/google-calendar.svg")
         .categories(ComponentCategory.CALENDARS_AND_SCHEDULING)
         .connection(CONNECTION_DEFINITION)
         .actions(
+            GoogleCalendarAddAttendeesToEventAction.ACTION_DEFINITION,
             GoogleCalendarCreateEventAction.ACTION_DEFINITION,
             GoogleCalendarCreateQuickEventAction.ACTION_DEFINITION,
-            GoogleCalendarFindEventsAction.ACTION_DEFINITION)
-        .triggers(GoogleCalendarEventTrigger.TRIGGER_DEFINITION);
+            GoogleCalendarDeleteEventAction.ACTION_DEFINITION,
+            GoogleCalendarGetEventsAction.ACTION_DEFINITION,
+            GoogleCalendarGetFreeTimeSlotsAction.ACTION_DEFINITION,
+            GoogleCalendarUpdateEventAction.ACTION_DEFINITION)
+        .clusterElements(
+            tool(GoogleCalendarAddAttendeesToEventAction.ACTION_DEFINITION),
+            tool(GoogleCalendarCreateEventAction.ACTION_DEFINITION),
+            tool(GoogleCalendarCreateQuickEventAction.ACTION_DEFINITION),
+            tool(GoogleCalendarDeleteEventAction.ACTION_DEFINITION),
+            tool(GoogleCalendarGetEventsAction.ACTION_DEFINITION),
+            tool(GoogleCalendarGetFreeTimeSlotsAction.ACTION_DEFINITION),
+            tool(GoogleCalendarUpdateEventAction.ACTION_DEFINITION))
+        .triggers(GoogleCalendarEventTrigger.TRIGGER_DEFINITION)
+        .version(1);
 
     @Override
     public ComponentDefinition getDefinition() {

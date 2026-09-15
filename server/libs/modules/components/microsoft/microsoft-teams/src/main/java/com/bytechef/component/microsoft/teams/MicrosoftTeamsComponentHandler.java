@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,16 +16,19 @@
 
 package com.bytechef.component.microsoft.teams;
 
-import static com.bytechef.component.definition.ComponentDSL.component;
-import static com.bytechef.component.microsoft.teams.constant.MicrosoftTeamsConstants.MICROSOFT_TEAMS;
+import static com.bytechef.component.definition.ComponentDsl.component;
+import static com.bytechef.component.definition.ComponentDsl.tool;
 
 import com.bytechef.component.ComponentHandler;
 import com.bytechef.component.definition.ComponentCategory;
 import com.bytechef.component.definition.ComponentDefinition;
 import com.bytechef.component.microsoft.teams.action.MicrosoftTeamsCreateChannelAction;
+import com.bytechef.component.microsoft.teams.action.MicrosoftTeamsReplyToChannelMessageAction;
 import com.bytechef.component.microsoft.teams.action.MicrosoftTeamsSendChannelMessageAction;
-import com.bytechef.component.microsoft.teams.action.MicrosoftTeamsSendChatMessageAction;
+import com.bytechef.component.microsoft.teams.action.MicrosoftTeamsSendDirectMessageAction;
 import com.bytechef.component.microsoft.teams.connection.MicrosoftTeamsConnection;
+import com.bytechef.component.microsoft.teams.trigger.MicrosoftTeamsNewChannelMessageTrigger;
+import com.bytechef.component.microsoft.teams.trigger.MicrosoftTeamsNewDirectMessageTrigger;
 import com.google.auto.service.AutoService;
 
 /**
@@ -34,18 +37,32 @@ import com.google.auto.service.AutoService;
 @AutoService(ComponentHandler.class)
 public class MicrosoftTeamsComponentHandler implements ComponentHandler {
 
-    private static final ComponentDefinition COMPONENT_DEFINITION = component(MICROSOFT_TEAMS)
+    private static final ComponentDefinition COMPONENT_DEFINITION = component("microsoftTeams")
         .title("Microsoft Teams")
         .description(
             "Microsoft Teams is a collaboration platform that combines workplace chat, video meetings, file storage, " +
                 "and application integration.")
+        .customAction(true)
+        .customActionHelp(
+            "",
+            "https://learn.microsoft.com/en-us/graph/api/resources/teams-api-overview?view=graph-rest-1.0")
         .icon("path:assets/microsoft-teams.svg")
         .categories(ComponentCategory.COMMUNICATION)
         .connection(MicrosoftTeamsConnection.CONNECTION_DEFINITION)
         .actions(
             MicrosoftTeamsCreateChannelAction.ACTION_DEFINITION,
             MicrosoftTeamsSendChannelMessageAction.ACTION_DEFINITION,
-            MicrosoftTeamsSendChatMessageAction.ACTION_DEFINITION);
+            MicrosoftTeamsSendDirectMessageAction.ACTION_DEFINITION,
+            MicrosoftTeamsReplyToChannelMessageAction.ACTION_DEFINITION)
+        .clusterElements(
+            tool(MicrosoftTeamsCreateChannelAction.ACTION_DEFINITION),
+            tool(MicrosoftTeamsSendChannelMessageAction.ACTION_DEFINITION),
+            tool(MicrosoftTeamsSendDirectMessageAction.ACTION_DEFINITION),
+            tool(MicrosoftTeamsReplyToChannelMessageAction.ACTION_DEFINITION))
+        .triggers(
+            MicrosoftTeamsNewChannelMessageTrigger.TRIGGER_DEFINITION,
+            MicrosoftTeamsNewDirectMessageTrigger.TRIGGER_DEFINITION)
+        .version(1);
 
     @Override
     public ComponentDefinition getDefinition() {

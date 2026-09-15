@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,14 +17,17 @@
 package com.bytechef.component.pipeliner.action;
 
 import static com.bytechef.component.OpenApiComponentHandler.PropertyType;
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.bool;
-import static com.bytechef.component.definition.ComponentDSL.object;
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.bool;
+import static com.bytechef.component.definition.ComponentDsl.object;
+import static com.bytechef.component.definition.ComponentDsl.outputSchema;
+import static com.bytechef.component.definition.ComponentDsl.string;
 import static com.bytechef.component.definition.Context.Http.BodyContentType;
 import static com.bytechef.component.definition.Context.Http.ResponseType;
 
-import com.bytechef.component.definition.ComponentDSL;
+import com.bytechef.component.definition.ActionDefinition;
+import com.bytechef.component.definition.ComponentDsl;
+import com.bytechef.component.pipeliner.util.PipelinerUtils;
 import java.util.Map;
 
 /**
@@ -33,8 +36,8 @@ import java.util.Map;
  * @generated
  */
 public class PipelinerCreateTaskAction {
-    public static final ComponentDSL.ModifiableActionDefinition ACTION_DEFINITION = action("createTask")
-        .title("Create task")
+    public static final ComponentDsl.ModifiableActionDefinition ACTION_DEFINITION = action("createTask")
+        .title("Create Task")
         .description("Creates new Task")
         .metadata(
             Map.of(
@@ -42,32 +45,48 @@ public class PipelinerCreateTaskAction {
                 "path", "/entities/Tasks", "bodyContentType", BodyContentType.JSON, "mimeType", "application/json"
 
             ))
-        .properties(object("__item").properties(string("subject").label("Subject")
+        .properties(string("subject").metadata(
+            Map.of(
+                "type", PropertyType.BODY))
+            .label("Subject")
             .description("Name of the entity and its default text representation.")
             .required(true),
-            string("activity_type_id").label("Activity Type Id")
-                .description("Type of task")
-                .required(true),
-            string("unit_id").label("Unit Id")
-                .description("Sales Unit ID")
-                .required(true),
-            string("owner_id").label("Owner Id")
-                .required(true))
-            .label("Task")
-            .required(true)
-            .metadata(
+            string("activity_type_id").metadata(
                 Map.of(
-                    "type", PropertyType.BODY)))
-        .outputSchema(object().properties(bool("success").description("True when response succeeded, false on error.")
-            .required(false),
-            object("data")
-                .properties(string("id").required(false), string("subject").required(false),
-                    string("activity_type_id").required(false), string("unit_id").required(false),
-                    string("owner_id").required(false))
+                    "type", PropertyType.BODY))
+                .label("Activity Type ID")
+                .description("Id of the activity type of task.")
+                .required(true)
+                .options((ActionDefinition.OptionsFunction<String>) PipelinerUtils::getActivityTypeIdOptions),
+            string("unit_id").metadata(
+                Map.of(
+                    "type", PropertyType.BODY))
+                .label("Unit ID")
+                .description("Sales Unit ID")
+                .required(true)
+                .options((ActionDefinition.OptionsFunction<String>) PipelinerUtils::getUnitIdOptions),
+            string("owner_id").metadata(
+                Map.of(
+                    "type", PropertyType.BODY))
+                .label("Owner ID")
+                .required(true)
+                .options((ActionDefinition.OptionsFunction<String>) PipelinerUtils::getOwnerIdOptions))
+        .output(outputSchema(object()
+            .properties(bool("success").required(false), object("data").properties(
+                string("id").description("ID of the task.")
+                    .required(false),
+                string("subject").description("Name of the entity and its default text representation.")
+                    .required(false),
+                string("activity_type_id").description("Id of the activity type of task.")
+                    .required(false),
+                string("unit_id").description("Sales Unit ID.")
+                    .required(false),
+                string("owner_id").description("ID of the user in Pipeliner Application that is the owner of the task.")
+                    .required(false))
                 .required(false))
             .metadata(
                 Map.of(
-                    "responseType", ResponseType.JSON)));
+                    "responseType", ResponseType.JSON))));
 
     private PipelinerCreateTaskAction() {
     }

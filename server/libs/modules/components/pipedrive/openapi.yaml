@@ -1,16 +1,21 @@
 ---
 openapi: "3.0.1"
 info:
-  title: "Pipedrive API"
+  title: "Pipedrive"
   version: "1.0.0"
 servers:
   - url: "https://api.pipedrive.com/v1"
 paths:
   /deals:
     get:
-      summary: "Get deals"
+      summary: "Get Deals"
       description: "Returns all deals."
       operationId: "getDeals"
+      x-ai-agent-tool: true
+      security:
+        - "oauth2":
+            - "deals:read"
+            - "users:read"
       tags:
         - "Deals"
       parameters:
@@ -19,19 +24,22 @@ paths:
           description: "Deals matching the given user will be returned. However, `filter_id` and `owned_by_you` takes precedence over `user_id` when supplied."
           schema:
             type: "integer"
-            title: "User"
+            title: "User ID"
+            x-dynamic-options: true
         - in: "query"
           name: "filter_id"
-          description: "Filter to use."
+          description: "ID of the filter to use."
           schema:
             type: "integer"
-            title: "Filter"
+            title: "Filter ID"
+            x-dynamic-options: true
         - in: "query"
           name: "stage_id"
           description: "Deals within the given stage will be returned."
           schema:
             type: "integer"
-            title: "Stage"
+            title: "Stage ID"
+            x-dynamic-options: true
         - in: "query"
           name: "status"
           schema:
@@ -58,51 +66,54 @@ paths:
               schema:
                 type: "object"
                 properties:
-                  body:
-                    type: "object"
-                    properties:
-                      data:
-                        type: "array"
-                        items:
+                  data:
+                    type: "array"
+                    items:
+                      type: "object"
+                      properties:
+                        id:
+                          type: "integer"
+                        user_id:
                           type: "object"
                           properties:
                             id:
                               type: "integer"
-                            user_id:
-                              type: "object"
-                              properties:
-                                id:
-                                  type: "integer"
-                                name:
-                                  type: "string"
-                                email:
-                                  type: "string"
-                            person_id:
-                              type: "object"
-                              properties:
-                                name:
-                                  type: "string"
-                            org_id:
-                              type: "object"
-                              properties:
-                                name:
-                                  type: "string"
-                                owner_id:
-                                  type: "string"
-                            stage_id:
-                              type: "integer"
-                            title:
+                            name:
                               type: "string"
-                            value:
-                              type: "integer"
-                            currency:
+                            email:
                               type: "string"
-                            status:
+                        person_id:
+                          type: "object"
+                          properties:
+                            name:
                               type: "string"
+                        org_id:
+                          type: "object"
+                          properties:
+                            name:
+                              type: "string"
+                            owner_id:
+                              type: "string"
+                        stage_id:
+                          type: "integer"
+                        title:
+                          type: "string"
+                        value:
+                          type: "integer"
+                        currency:
+                          type: "string"
+                        status:
+                          type: "string"
     post:
-      summary: "Add deal"
+      summary: "Add Deal"
       description: "Adds a new deal."
       operationId: "addDeal"
+      x-ai-agent-tool: true
+      security:
+        - "oauth2":
+            - "users:read"
+            - "contacts:read"
+            - "deals:full"
       tags:
         - "Deals"
       requestBody:
@@ -126,24 +137,29 @@ paths:
                   description: "The currency of the deal. If omitted, currency will be set to the default currency of the authorized user."
                 user_id:
                   type: "integer"
-                  title: "User"
-                  description: "User which will be the owner of the  created deal. If not provided, the user making the request will be used."
+                  title: "User ID"
+                  description: "ID of the user which will be the owner of the created deal. If not provided, the user making the request will be used."
+                  x-dynamic-options: true
                 person_id:
                   type: "integer"
-                  title: "Person"
-                  description: "Person which this deal will be linked to. This property is required unless `org_id` is specified."
+                  title: "Person ID"
+                  description: "ID of the person which this deal will be linked to. This property is required unless `org_id` is specified."
+                  x-dynamic-options: true
                 org_id:
                   type: "integer"
-                  title: "Organization"
-                  description: "Organization which this deal will be linked to. This property is required unless `person_id` is specified."
+                  title: "Organization ID"
+                  description: "ID of the organization which this deal will be linked to. This property is required unless `person_id` is specified."
+                  x-dynamic-options: true
                 pipeline_id:
                   type: "integer"
-                  title: "Pipeline"
-                  description: "Pipeline this deal will be added to. By default, the deal will be added to the first stage of the specified pipeline. Please note that `pipeline_id` and `stage_id`\
+                  title: "Pipeline ID"
+                  description: "Id of the pipeline this deal will be added to. By default, the deal will be added to the first stage of the specified pipeline. Please note that `pipeline_id` and `stage_id`\
                   \ should not be used together as `pipeline_id` will be ignored."
+                  x-dynamic-options: true
                 stage_id:
                   type: "integer"
-                  title: "Stage"
+                  title: "Stage ID"
+                  x-dynamic-options: true
                   description: "Stage this deal will be added to.\
                   \ Please note that a pipeline will be assigned automatically\
                   \ based on the `stage_id`. If omitted, the deal will be placed\
@@ -176,52 +192,54 @@ paths:
               schema:
                 type: "object"
                 properties:
-                  body:
+                  data:
                     type: "object"
                     properties:
-                      data:
+                      id:
+                        type: "integer"
+                      user_id:
                         type: "object"
                         properties:
                           id:
                             type: "integer"
-                          user_id:
-                            type: "object"
-                            properties:
-                              id:
-                                type: "integer"
-                              name:
-                                type: "string"
-                              email:
-                                type: "string"
-                          person_id:
-                            type: "object"
-                            properties:
-                              name:
-                                type: "string"
-                          org_id:
-                            type: "object"
-                            properties:
-                              name:
-                                type: "string"
-                              owner_id:
-                                type: "string"
-                          stage_id:
-                            type: "integer"
-                          title:
+                          name:
                             type: "string"
-                          value:
-                            type: "integer"
-                          currency:
+                          email:
                             type: "string"
-                          status:
+                      person_id:
+                        type: "object"
+                        properties:
+                          name:
                             type: "string"
+                      org_id:
+                        type: "object"
+                        properties:
+                          name:
+                            type: "string"
+                          owner_id:
+                            type: "string"
+                      stage_id:
+                        type: "integer"
+                      title:
+                        type: "string"
+                      value:
+                        type: "integer"
+                      currency:
+                        type: "string"
+                      status:
+                        type: "string"
   /deals/search:
     get:
-      summary: "Search deals"
+      summary: "Search Deals"
       description: "Searches all deals by title, notes and/or custom fields."
       operationId: "searchDeals"
+      x-ai-agent-tool: true
       tags:
         - "Deals"
+      security:
+        - "oauth2":
+            - "contacts:read"
+            - "deals:read"
       parameters:
         - in: "query"
           name: "term"
@@ -247,13 +265,15 @@ paths:
           name: "person_id"
           schema:
             type: "integer"
-            title: "Person"
+            title: "Person ID"
+            x-dynamic-options: true
           description: "Will filter deals by the provided person."
         - in: "query"
           name: "organization_id"
           schema:
             type: "integer"
-            title: "Organization"
+            title: "Organization ID"
+            x-dynamic-options: true
           description: "Will filter deals by the provided organization."
         - in: "query"
           name: "status"
@@ -279,67 +299,69 @@ paths:
               schema:
                 type: "object"
                 properties:
-                  body:
+                  data:
                     type: "object"
                     properties:
-                      data:
-                        type: "object"
-                        properties:
-                          items:
-                            type: "array"
-                            items:
+                      items:
+                        type: "array"
+                        items:
+                          type: "object"
+                          properties:
+                            id:
+                              type: "string"
+                            type:
+                              type: "string"
+                            user_id:
                               type: "object"
                               properties:
                                 id:
-                                  type: "string"
-                                type:
-                                  type: "string"
-                                user_id:
-                                  type: "object"
-                                  properties:
-                                    id:
-                                      type: "integer"
-                                    name:
-                                      type: "string"
-                                    email:
-                                      type: "string"
-                                person_id:
-                                  type: "object"
-                                  properties:
-                                    name:
-                                      type: "string"
-                                org_id:
-                                  type: "object"
-                                  properties:
-                                    name:
-                                      type: "string"
-                                    owner_id:
-                                      type: "string"
-                                stage_id:
                                   type: "integer"
-                                title:
+                                name:
                                   type: "string"
-                                value:
-                                  type: "integer"
-                                currency:
+                                email:
                                   type: "string"
-                                status:
+                            person_id:
+                              type: "object"
+                              properties:
+                                name:
                                   type: "string"
-  /deals/{id}:
+                            org_id:
+                              type: "object"
+                              properties:
+                                name:
+                                  type: "string"
+                                owner_id:
+                                  type: "string"
+                            stage_id:
+                              type: "integer"
+                            title:
+                              type: "string"
+                            value:
+                              type: "integer"
+                            currency:
+                              type: "string"
+                            status:
+                              type: "string"
+  /deals/{deal_id}:
     delete:
-      summary: "Delete deal"
+      summary: "Delete Deal"
       description: "Marks a deal as deleted. After 30 days, the deal will be permanently deleted."
       operationId: "deleteDeal"
+      x-ai-agent-tool: true
+      security:
+        - "oauth2":
+            - "deals:full"
       tags:
         - "Deals"
       parameters:
         - in: "path"
-          name: "id"
-          description: "Deal to delete"
+          name: "deal_id"
+          description: "ID of the deal to delete."
           required: true
           schema:
             type: "integer"
-            title: "Deal"
+            title: "Deal ID"
+            x-dynamic-options: true
       responses:
         200:
           description: "Delete deal"
@@ -348,27 +370,30 @@ paths:
               schema:
                 type: "object"
                 properties:
-                  body:
+                  data:
                     type: "object"
                     properties:
-                      data:
-                        type: "object"
-                        properties:
-                          id:
-                            type: "integer"
+                      id:
+                        type: "integer"
     get:
-      summary: "Get details of a deal"
+      summary: "Get Details of Deal"
       description: "Returns the details of a specific deal."
       operationId: "getDealDetails"
+      x-ai-agent-tool: true
       tags:
         - "Deals"
+      security:
+        - "oauth2":
+            - "deals:read"
       parameters:
         - in: "path"
-          name: "id"
+          name: "deal_id"
           required: true
           schema:
             type: "integer"
-            title: "Deal"
+            title: "Deal ID"
+            description: "ID of the deal to get details."
+            x-dynamic-options: true
       responses:
         200:
           description: "Successful"
@@ -377,52 +402,56 @@ paths:
               schema:
                 type: "object"
                 properties:
-                  body:
+                  data:
                     type: "object"
                     properties:
-                      data:
+                      id:
+                        type: "integer"
+                      user_id:
                         type: "object"
                         properties:
                           id:
                             type: "integer"
-                          user_id:
-                            type: "object"
-                            properties:
-                              id:
-                                type: "integer"
-                              name:
-                                type: "string"
-                              email:
-                                type: "string"
-                          person_id:
-                            type: "object"
-                            properties:
-                              name:
-                                type: "string"
-                          org_id:
-                            type: "object"
-                            properties:
-                              name:
-                                type: "string"
-                              owner_id:
-                                type: "string"
-                          stage_id:
-                            type: "integer"
-                          title:
+                          name:
                             type: "string"
-                          value:
-                            type: "integer"
-                          currency:
+                          email:
                             type: "string"
-                          status:
+                      person_id:
+                        type: "object"
+                        properties:
+                          name:
                             type: "string"
+                      org_id:
+                        type: "object"
+                        properties:
+                          name:
+                            type: "string"
+                          owner_id:
+                            type: "string"
+                      stage_id:
+                        type: "integer"
+                      title:
+                        type: "string"
+                      value:
+                        type: "integer"
+                      currency:
+                        type: "string"
+                      status:
+                        type: "string"
   /leads:
     get:
       tags:
         - "Leads"
-      summary: "Get leads"
+      summary: "Get Leads"
       description: "Returns multiple leads. Leads are sorted by the time they were created, from oldest to newest."
       operationId: "getLeads"
+      x-ai-agent-tool: true
+      security:
+        - "oauth2":
+            - "leads:read"
+            - "users:read"
+            - "contacts:read"
+            - "deals:read"
       parameters:
         - in: "query"
           name: "archived_status"
@@ -439,14 +468,16 @@ paths:
           description: "Leads matching the given user will be returned. However, `filter_id` takes precedence over `owner_id` when supplied."
           schema:
             type: "integer"
-            title: "Owner"
+            title: "Owner iD"
+            x-dynamic-options: true
         - in: "query"
           name: "person_id"
           description: "If supplied, only leads matching the given person will be returned.\
           \ However, `filter_id` takes precedence over `person_id` when supplied."
           schema:
             type: "integer"
-            title: "Person"
+            title: "Person ID"
+            x-dynamic-options: true
         - in: "query"
           name: "organization_id"
           description: "If supplied, only leads matching the given organization will\
@@ -454,13 +485,15 @@ paths:
           \ when supplied."
           schema:
             type: "integer"
-            title: "Organization"
+            title: "Organization ID"
+            x-dynamic-options: true
         - in: "query"
           name: "filter_id"
           description: "Filter to use"
           schema:
             type: "integer"
-            title: "Filter"
+            title: "Filter ID"
+            x-dynamic-options: true
         - in: "query"
           name: "sort"
           description: "The field names and sorting mode separated by a comma. Only first-level field keys are supported (no nested keys)."
@@ -485,38 +518,41 @@ paths:
               schema:
                 type: "object"
                 properties:
-                  body:
-                    type: "object"
-                    properties:
-                      data:
-                        type: "array"
-                        items:
+                  data:
+                    type: "array"
+                    items:
+                      type: "object"
+                      properties:
+                        id:
+                          type: "string"
+                        title:
+                          type: "string"
+                        owner_id:
+                          type: "integer"
+                        value:
                           type: "object"
                           properties:
-                            id:
-                              type: "string"
-                            title:
-                              type: "string"
-                            owner_id:
+                            amount:
                               type: "integer"
-                            value:
-                              type: "object"
-                              properties:
-                                amount:
-                                  type: "integer"
-                                currency:
-                                  type: "string"
-                            expected_close_date:
+                            currency:
                               type: "string"
-                              format: "date"
-                            person_id:
-                              type: "integer"
+                        expected_close_date:
+                          type: "string"
+                          format: "date"
+                        person_id:
+                          type: "integer"
     post:
       tags:
         - "Leads"
-      summary: "Add lead"
+      summary: "Add Lead"
       description: "Creates a lead. A lead always has to be linked to a person or an organization or both."
       operationId: "addLead"
+      x-ai-agent-tool: true
+      security:
+        - "oauth2":
+            - "leads:full"
+            - "users:read"
+            - "contacts:read"
       requestBody:
         content:
           application/json:
@@ -531,23 +567,27 @@ paths:
                   description: "The name of the lead."
                 owner_id:
                   type: "integer"
-                  title: "Owner"
+                  title: "Owner ID"
                   description: "User which will be the owner of the created lead."
+                  x-dynamic-options: true
                 label_ids:
                   type: "array"
-                  title: "Lead labels"
-                  description: "Lead labels which will be associated with the lead."
+                  title: "Lead Labels IDs"
+                  description: "ID of the labels which will be associated with the lead."
+                  x-dynamic-options: true
                   items:
                     type: "string"
                     format: "uuid"
                 person_id:
                   type: "integer"
-                  title: "Person"
+                  title: "Person ID"
                   description: "Person which this lead will be linked to."
+                  x-dynamic-options: true
                 organization_id:
                   type: "integer"
-                  title: "Organization"
+                  title: "Organization ID"
                   description: "Organization which this lead will be linked to."
+                  x-dynamic-options: true
                 value:
                   type: "object"
                   description: "The potential value of the lead"
@@ -559,6 +599,7 @@ paths:
                       type: "number"
                     currency:
                       type: "string"
+                      x-dynamic-options: true
                 expected_close_date:
                   type: "string"
                   format: "date"
@@ -571,45 +612,48 @@ paths:
               schema:
                 type: "object"
                 properties:
-                  body:
+                  data:
                     type: "object"
                     properties:
-                      data:
+                      id:
+                        type: "string"
+                      title:
+                        type: "string"
+                      owner_id:
+                        type: "integer"
+                      value:
                         type: "object"
                         properties:
-                          id:
-                            type: "string"
-                          title:
-                            type: "string"
-                          owner_id:
+                          amount:
                             type: "integer"
-                          value:
-                            type: "object"
-                            properties:
-                              amount:
-                                type: "integer"
-                              currency:
-                                type: "string"
-                          expected_close_date:
+                          currency:
                             type: "string"
-                            format: "date"
-                          person_id:
-                            type: "integer"
-  /leads/{id}:
+                      expected_close_date:
+                        type: "string"
+                        format: "date"
+                      person_id:
+                        type: "integer"
+  /leads/{lead_id}:
     get:
       tags:
         - "Leads"
-      summary: "Get lead details"
+      summary: "Get Lead Details"
       description: "Returns details of a specific lead. "
       operationId: "getLeadDetails"
+      x-ai-agent-tool: true
+      security:
+        - "oauth2":
+            - "leads:read"
       parameters:
         - in: "path"
-          name: "id"
+          name: "lead_id"
           required: true
           schema:
-            title: "Lead"
+            title: "Lead ID"
             type: "string"
             format: "uuid"
+            description: "ID of the lead to get details."
+            x-dynamic-options: true
       responses:
         200:
           description: "Successful response containing payload in the `data` field"
@@ -618,45 +662,47 @@ paths:
               schema:
                 type: "object"
                 properties:
-                  body:
+                  data:
                     type: "object"
                     properties:
-                      data:
+                      id:
+                        type: "string"
+                      title:
+                        type: "string"
+                      owner_id:
+                        type: "integer"
+                      value:
                         type: "object"
                         properties:
-                          id:
-                            type: "string"
-                          title:
-                            type: "string"
-                          owner_id:
+                          amount:
                             type: "integer"
-                          value:
-                            type: "object"
-                            properties:
-                              amount:
-                                type: "integer"
-                              currency:
-                                type: "string"
-                          expected_close_date:
+                          currency:
                             type: "string"
-                            format: "date"
-                          person_id:
-                            type: "integer"
+                      expected_close_date:
+                        type: "string"
+                        format: "date"
+                      person_id:
+                        type: "integer"
     delete:
       tags:
         - "Leads"
-      summary: "Delete lead"
+      summary: "Delete Lead"
       description: "Deletes a specific lead."
       operationId: "deleteLead"
+      x-ai-agent-tool: true
+      security:
+        - "oauth2":
+            - "leads:full"
       parameters:
         - in: "path"
-          name: "id"
-          description: "The ID of the lead"
+          name: "lead_id"
+          description: "ID of the lead to delete."
           required: true
           schema:
             type: "string"
             format: "uuid"
-            title: "Lead"
+            title: "Lead ID"
+            x-dynamic-options: true
       responses:
         200:
           description: "Successful response with id value only. Used in DELETE calls."
@@ -665,21 +711,23 @@ paths:
               schema:
                 type: "object"
                 properties:
-                  body:
+                  data:
                     type: "object"
                     properties:
-                      data:
-                        type: "object"
-                        properties:
-                          id:
-                            type: "string"
+                      id:
+                        type: "string"
   /leads/search:
     get:
-      summary: "Search leads"
+      summary: "Search Leads"
       description: "Searches all leads by title, notes and/or custom fields."
       operationId: "searchLeads"
+      x-ai-agent-tool: true
       tags:
         - "Leads"
+      security:
+        - "oauth2":
+            - "leads:read"
+            - "contacts:read"
       parameters:
         - in: "query"
           name: "term"
@@ -707,13 +755,15 @@ paths:
           name: "person_id"
           schema:
             type: "integer"
-            title: "Person"
+            title: "Person ID"
+            x-dynamic-options: true
           description: "Will filter leads by the provided person ID."
         - in: "query"
           name: "organization_id"
           schema:
             type: "integer"
-            title: "Organization"
+            title: "Organization ID"
+            x-dynamic-options: true
           description: "Will filter leads by the provided organization ID."
         - in: "query"
           name: "include_fields"
@@ -730,59 +780,64 @@ paths:
               schema:
                 type: "object"
                 properties:
-                  body:
+                  data:
                     type: "object"
                     properties:
-                      data:
-                        type: "object"
-                        properties:
-                          items:
-                            type: "array"
-                            items:
+                      items:
+                        type: "array"
+                        items:
+                          type: "object"
+                          properties:
+                            id:
+                              type: "string"
+                            title:
+                              type: "string"
+                            owner_id:
+                              type: "integer"
+                            value:
                               type: "object"
                               properties:
-                                id:
-                                  type: "string"
-                                title:
-                                  type: "string"
-                                owner_id:
+                                amount:
                                   type: "integer"
-                                value:
-                                  type: "object"
-                                  properties:
-                                    amount:
-                                      type: "integer"
-                                    currency:
-                                      type: "string"
-                                expected_close_date:
+                                currency:
                                   type: "string"
-                                  format: "date"
-                                person_id:
-                                  type: "integer"
+                            expected_close_date:
+                              type: "string"
+                              format: "date"
+                            person_id:
+                              type: "integer"
   /organizations:
     get:
-      summary: "Get all organizations"
+      summary: "Get All Organizations"
       description: "Returns all organizations."
       operationId: "getOrganizations"
+      x-ai-agent-tool: true
       tags:
         - "Organizations"
+      security:
+        - "oauth2":
+            - "contacts:read"
+            - "users:read"
+            - "deals:read"
       parameters:
         - in: "query"
           name: "user_id"
           schema:
-            title: "Owner"
+            title: "User ID"
             type: "integer"
+            x-dynamic-options: true
           description: "Organizations owned by the given user will be returned. However, `filter_id` takes precedence over `user_id` when both are supplied."
         - in: "query"
           name: "filter_id"
           schema:
-            title: "Filter"
+            title: "Filter ID"
             type: "integer"
+            x-dynamic-options: true
           description: "Filter to use"
         - in: "query"
           name: "first_char"
           schema:
-            title: "First characters"
+            title: "First Characters"
             type: "string"
           description: "Organizations whose name starts with the specified letter will be returned (case insensitive)"
         - in: "query"
@@ -798,33 +853,35 @@ paths:
               schema:
                 type: "object"
                 properties:
-                  body:
-                    type: "object"
-                    properties:
-                      data:
-                        type: "array"
-                        items:
+                  data:
+                    type: "array"
+                    items:
+                      type: "object"
+                      properties:
+                        id:
+                          type: "integer"
+                        company_id:
+                          type: "integer"
+                        owner_id:
                           type: "object"
                           properties:
                             id:
                               type: "integer"
-                            company_id:
-                              type: "integer"
-                            owner_id:
-                              type: "object"
-                              properties:
-                                id:
-                                  type: "integer"
-                                name:
-                                  type: "string"
-                                email:
-                                  type: "string"
                             name:
                               type: "string"
+                            email:
+                              type: "string"
+                        name:
+                          type: "string"
     post:
-      summary: "Add an organization"
+      summary: "Add Organization"
       description: "Adds a new organization."
       operationId: "addOrganization"
+      x-ai-agent-tool: true
+      security:
+        - "oauth2":
+            - "contacts:full"
+            - "users:read"
       tags:
         - "Organizations"
       requestBody:
@@ -841,7 +898,9 @@ paths:
                   description: "The name of the organization."
                 owner_id:
                   type: "integer"
-                  description: "User who will be marked as the owner of this organization."
+                  description: "ID of the user who will be marked as the owner of this organization."
+                  title: "Owner ID"
+                  x-dynamic-options: true
       responses:
         201:
           description: "Success"
@@ -850,36 +909,37 @@ paths:
               schema:
                 type: "object"
                 properties:
-                  body:
+                  data:
                     type: "object"
                     properties:
-                      data:
+                      id:
+                        type: "integer"
+                      company_id:
+                        type: "integer"
+                      owner_id:
                         type: "object"
                         properties:
                           id:
                             type: "integer"
-                          company_id:
-                            type: "integer"
-                          owner_id:
-                            type: "object"
-                            properties:
-                              id:
-                                type: "integer"
-                              name:
-                                type: "string"
-                              email:
-                                type: "string"
                           name:
                             type: "string"
+                          email:
+                            type: "string"
+                      name:
+                        type: "string"
   /organizations/search:
     get:
-      summary: "Search organizations"
+      summary: "Search Organizations"
       description: "Searches all organizations by name, address, notes and/or custom\
         \ fields. This endpoint is a wrapper of <a href=\"https://developers.pipedrive.com/docs/api/v1/ItemSearch#searchItem\"\
         >/v1/itemSearch</a> with a narrower OAuth scope."
       operationId: "searchOrganization"
+      x-ai-agent-tool: true
       tags:
         - "Organizations"
+      security:
+        - "oauth2":
+            - "contacts:read"
       parameters:
         - in: "query"
           name: "term"
@@ -912,47 +972,49 @@ paths:
               schema:
                 type: "object"
                 properties:
-                  body:
+                  data:
                     type: "object"
                     properties:
-                      data:
-                        type: "object"
-                        properties:
-                          items:
-                            type: "array"
-                            items:
+                      items:
+                        type: "array"
+                        items:
+                          type: "object"
+                          properties:
+                            id:
+                              type: "integer"
+                            company_id:
+                              type: "integer"
+                            owner_id:
                               type: "object"
                               properties:
                                 id:
                                   type: "integer"
-                                company_id:
-                                  type: "integer"
-                                owner_id:
-                                  type: "object"
-                                  properties:
-                                    id:
-                                      type: "integer"
-                                    name:
-                                      type: "string"
-                                    email:
-                                      type: "string"
                                 name:
                                   type: "string"
-  /organizations/{id}:
+                                email:
+                                  type: "string"
+                            name:
+                              type: "string"
+  /organizations/{organization_id}:
     delete:
-      summary: "Delete an organization"
+      summary: "Delete Organization"
       description: "Marks an organization as deleted. After 30 days, the organization will be permanently deleted."
       operationId: "deleteOrganization"
+      x-ai-agent-tool: true
+      security:
+        - "oauth2":
+            - "contacts:full"
       tags:
         - "Organizations"
       parameters:
         - in: "path"
-          name: "id"
-          description: "Organization to delete"
+          name: "organization_id"
+          description: "ID of the organization to delete."
           required: true
           schema:
-            title: "Organization"
+            title: "Organization ID"
             type: "integer"
+            x-dynamic-options: true
       responses:
         200:
           description: "Success"
@@ -961,28 +1023,30 @@ paths:
               schema:
                 type: "object"
                 properties:
-                  body:
+                  data:
                     type: "object"
                     properties:
-                      data:
-                        type: "object"
-                        properties:
-                          id:
-                            type: "integer"
+                      id:
+                        type: "integer"
     get:
-      summary: "Get details of an organization"
+      summary: "Get Details of Organization"
       description: "Returns the details of an organization."
       operationId: "getOrganizationDetails"
+      x-ai-agent-tool: true
       tags:
         - "Organizations"
+      security:
+        - "oauth2":
+            - "contacts:read"
       parameters:
         - in: "path"
-          name: "id"
-          description: "Organization to get details."
+          name: "organization_id"
+          description: "ID of the organization to get details."
           required: true
           schema:
             type: "integer"
-            title: "Organizaton"
+            title: "Organizaton ID"
+            x-dynamic-options: true
       responses:
         200:
           description: "Success"
@@ -991,51 +1055,56 @@ paths:
               schema:
                 type: "object"
                 properties:
-                  body:
+                  data:
                     type: "object"
                     properties:
-                      data:
+                      id:
+                        type: "integer"
+                      company_id:
+                        type: "integer"
+                      owner_id:
                         type: "object"
                         properties:
                           id:
                             type: "integer"
-                          company_id:
-                            type: "integer"
-                          owner_id:
-                            type: "object"
-                            properties:
-                              id:
-                                type: "integer"
-                              name:
-                                type: "string"
-                              email:
-                                type: "string"
                           name:
                             type: "string"
+                          email:
+                            type: "string"
+                      name:
+                        type: "string"
   /persons:
     get:
-      summary: "Get persons"
+      summary: "Get Persons"
       description: "Returns all persons."
       operationId: "getPersons"
+      x-ai-agent-tool: true
+      security:
+        - "oauth2":
+            - "contacts:read"
+            - "deals:read"
+            - "users:read"
       tags:
         - "Persons"
       parameters:
         - in: "query"
           name: "user_id"
           schema:
-            title: "Owner"
+            title: "User ID"
             type: "integer"
+            x-dynamic-options: true
           description: "Persons owned by the given user will be returned. However, `filter_id` takes precedence over `user_id` when both are supplied."
         - in: "query"
           name: "filter_id"
           schema:
-            title: "Filter"
+            title: "Filter ID"
             type: "integer"
+            x-dynamic-options: true
           description: "Filter to use."
         - in: "query"
           name: "first_char"
           schema:
-            title: "First characters"
+            title: "First Characters"
             type: "string"
           description: "Persons whose name starts with the specified letter will be returned (case insensitive)"
         - in: "query"
@@ -1052,10 +1121,247 @@ paths:
               schema:
                 type: "object"
                 properties:
-                  body:
+                  data:
+                    type: "array"
+                    items:
+                      type: "object"
+                      properties:
+                        id:
+                          type: "integer"
+                        company_id:
+                          type: "integer"
+                        owner_id:
+                          type: "object"
+                          properties:
+                            id:
+                              type: "integer"
+                            name:
+                              type: "string"
+                            email:
+                              type: "string"
+                        org_id:
+                          type: "object"
+                          properties:
+                            name:
+                              type: "string"
+                            owner_id:
+                              type: "integer"
+                            cc_email:
+                              type: "string"
+                        name:
+                          type: "string"
+                        phone:
+                          type: "array"
+                          items:
+                            type: "object"
+                            properties:
+                              value:
+                                type: "string"
+                              primary:
+                                type: "boolean"
+                              label:
+                                type: "string"
+                        email:
+                          type: "array"
+                          items:
+                            type: "object"
+                            properties:
+                              value:
+                                type: "string"
+                              primary:
+                                type: "boolean"
+                              label:
+                                type: "string"
+    post:
+      summary: "Add Person"
+      description: "Adds a new person."
+      operationId: "addPerson"
+      x-ai-agent-tool: true
+      security:
+        - "oauth2":
+            - "contacts:full"
+            - "users:read"
+      tags:
+        - "Persons"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              title: "Person"
+              type: "object"
+              required:
+                - "name"
+              properties:
+                name:
+                  type: "string"
+                  description: "Person full name"
+                owner_id:
+                  type: "integer"
+                  title: "Owner ID"
+                  description: "ID of the user who will be marked as the owner of this person."
+                  x-dynamic-options: true
+                org_id:
+                  type: "integer"
+                  title: "Organization ID"
+                  description: "ID of the organization this person will belong to."
+                  x-dynamic-options: true
+                email:
+                  type: "array"
+                  description: "An email addresses related to the person."
+                  items:
+                    type: "object"
+                    required:
+                      - "value"
+                    properties:
+                      value:
+                        type: "string"
+                        title: "Email Address"
+                      primary:
+                        type: "boolean"
+                        description: "If email is primary for the person or not."
+                      label:
+                        type: "string"
+                        title: "Type"
+                        description: "Type of the email"
+                        enum:
+                          - "work"
+                          - "home"
+                          - "other"
+                phone:
+                  type: "array"
+                  description: "A phone numbers related to the person."
+                  items:
+                    type: "object"
+                    required:
+                      - "value"
+                    properties:
+                      value:
+                        type: "string"
+                        title: "Phone Number"
+                        description: "The phone number"
+                      primary:
+                        type: "boolean"
+                        description: "If phone number is primary for the person or not."
+                      label:
+                        type: "string"
+                        title: "Type"
+                        description: "Type of the phone number."
+                        enum:
+                          - "work"
+                          - "home"
+                          - "mobile"
+                          - "other"
+      responses:
+        201:
+          description: "Success"
+          content:
+            application/json:
+              schema:
+                type: "object"
+                properties:
+                  data:
                     type: "object"
                     properties:
-                      data:
+                      id:
+                        type: "integer"
+                      company_id:
+                        type: "integer"
+                      owner_id:
+                        type: "object"
+                        properties:
+                          id:
+                            type: "integer"
+                          name:
+                            type: "string"
+                          email:
+                            type: "string"
+                      org_id:
+                        type: "object"
+                        properties:
+                          name:
+                            type: "string"
+                          owner_id:
+                            type: "integer"
+                          cc_email:
+                            type: "string"
+                      name:
+                        type: "string"
+                      phone:
+                        type: "array"
+                        items:
+                          type: "object"
+                          properties:
+                            value:
+                              type: "string"
+                            primary:
+                              type: "boolean"
+                            label:
+                              type: "string"
+                      email:
+                        type: "array"
+                        items:
+                          type: "object"
+                          properties:
+                            value:
+                              type: "string"
+                            primary:
+                              type: "boolean"
+                            label:
+                              type: "string"
+  /persons/search:
+    get:
+      summary: "Search Persons"
+      description: "Searches all persons by name, email, phone, notes and/or custom fields."
+      operationId: "searchPersons"
+      x-ai-agent-tool: true
+      tags:
+        - "Persons"
+      security:
+        - "oauth2":
+            - "contacts:read"
+      parameters:
+        - in: "query"
+          name: "term"
+          required: true
+          schema:
+            type: "string"
+          description: "The search term to look for. Minimum 2 characters (or 1 if using `exact_match`). Please note that the search term has to be URL encoded."
+        - in: "query"
+          name: "fields"
+          schema:
+            type: "string"
+            enum:
+              - "custom_fields"
+              - "email"
+              - "notes"
+              - "phone"
+              - "name"
+          description: "A comma-separated string array. The fields to perform the search\
+          \ from. Defaults to all of them."
+        - in: "query"
+          name: "exact_match"
+          schema:
+            type: "boolean"
+          description: "When enabled, only full exact matches against the given term are returned. It is <b>not</b> case sensitive."
+        - in: "query"
+          name: "organization_id"
+          schema:
+            type: "integer"
+            title: "Organization ID"
+            x-dynamic-options: true
+          description: "Will filter persons by the provided organization."
+      responses:
+        200:
+          description: "Success"
+          content:
+            application/json:
+              schema:
+                type: "object"
+                properties:
+                  data:
+                    type: "object"
+                    properties:
+                      items:
                         type: "array"
                         items:
                           type: "object"
@@ -1106,255 +1412,26 @@ paths:
                                     type: "boolean"
                                   label:
                                     type: "string"
-    post:
-      summary: "Add person"
-      description: "Adds a new person."
-      operationId: "addPerson"
-      tags:
-        - "Persons"
-      requestBody:
-        content:
-          application/json:
-            schema:
-              title: "Person"
-              type: "object"
-              required:
-                - "name"
-              properties:
-                name:
-                  type: "string"
-                  description: "Person full name"
-                owner_id:
-                  type: "integer"
-                  title: "Owner"
-                  description: "User who will be marked as the owner of this person."
-                org_id:
-                  type: "integer"
-                  title: "Organization"
-                  description: "Organization this person will belong to."
-                email:
-                  type: "array"
-                  description: "An email addresses related to the person."
-                  items:
-                    type: "object"
-                    required:
-                      - "value"
-                    properties:
-                      value:
-                        type: "string"
-                        title: "Email address"
-                      primary:
-                        type: "boolean"
-                        description: "If email is primary for the person or not."
-                      label:
-                        type: "string"
-                        title: "Type"
-                        description: "Type of the email"
-                        enum:
-                          - "work"
-                          - "home"
-                          - "other"
-                phone:
-                  type: "array"
-                  description: "A phone numbers related to the person."
-                  items:
-                    type: "object"
-                    required:
-                      - "value"
-                    properties:
-                      value:
-                        type: "string"
-                        title: "Phone number"
-                        description: "The phone number"
-                      primary:
-                        type: "boolean"
-                        description: "If phone number is primary for the person or not."
-                      label:
-                        type: "string"
-                        title: "Type"
-                        description: "Type of the phone number."
-                        enum:
-                          - "work"
-                          - "home"
-                          - "mobile"
-                          - "other"
-      responses:
-        201:
-          description: "Success"
-          content:
-            application/json:
-              schema:
-                type: "object"
-                properties:
-                  body:
-                    type: "object"
-                    properties:
-                      data:
-                        type: "object"
-                        properties:
-                          id:
-                            type: "integer"
-                          company_id:
-                            type: "integer"
-                          owner_id:
-                            type: "object"
-                            properties:
-                              id:
-                                type: "integer"
-                              name:
-                                type: "string"
-                              email:
-                                type: "string"
-                          org_id:
-                            type: "object"
-                            properties:
-                              name:
-                                type: "string"
-                              owner_id:
-                                type: "integer"
-                              cc_email:
-                                type: "string"
-                          name:
-                            type: "string"
-                          phone:
-                            type: "array"
-                            items:
-                              type: "object"
-                              properties:
-                                value:
-                                  type: "string"
-                                primary:
-                                  type: "boolean"
-                                label:
-                                  type: "string"
-                          email:
-                            type: "array"
-                            items:
-                              type: "object"
-                              properties:
-                                value:
-                                  type: "string"
-                                primary:
-                                  type: "boolean"
-                                label:
-                                  type: "string"
-  /persons/search:
-    get:
-      summary: "Search persons"
-      description: "Searches all persons by name, email, phone, notes and/or custom fields."
-      operationId: "searchPersons"
-      tags:
-        - "Persons"
-      parameters:
-        - in: "query"
-          name: "term"
-          required: true
-          schema:
-            type: "string"
-          description: "The search term to look for. Minimum 2 characters (or 1 if using `exact_match`). Please note that the search term has to be URL encoded."
-        - in: "query"
-          name: "fields"
-          schema:
-            type: "string"
-            enum:
-              - "custom_fields"
-              - "email"
-              - "notes"
-              - "phone"
-              - "name"
-          description: "A comma-separated string array. The fields to perform the search\
-          \ from. Defaults to all of them."
-        - in: "query"
-          name: "exact_match"
-          schema:
-            type: "boolean"
-          description: "When enabled, only full exact matches against the given term are returned. It is <b>not</b> case sensitive."
-        - in: "query"
-          name: "organization_id"
-          schema:
-            type: "integer"
-            title: "Organization"
-          description: "Will filter persons by the provided organization."
-      responses:
-        200:
-          description: "Success"
-          content:
-            application/json:
-              schema:
-                type: "object"
-                properties:
-                  body:
-                    type: "object"
-                    properties:
-                      data:
-                        type: "object"
-                        properties:
-                          items:
-                            type: "array"
-                            items:
-                              type: "object"
-                              properties:
-                                id:
-                                  type: "integer"
-                                company_id:
-                                  type: "integer"
-                                owner_id:
-                                  type: "object"
-                                  properties:
-                                    id:
-                                      type: "integer"
-                                    name:
-                                      type: "string"
-                                    email:
-                                      type: "string"
-                                org_id:
-                                  type: "object"
-                                  properties:
-                                    name:
-                                      type: "string"
-                                    owner_id:
-                                      type: "integer"
-                                    cc_email:
-                                      type: "string"
-                                name:
-                                  type: "string"
-                                phone:
-                                  type: "array"
-                                  items:
-                                    type: "object"
-                                    properties:
-                                      value:
-                                        type: "string"
-                                      primary:
-                                        type: "boolean"
-                                      label:
-                                        type: "string"
-                                email:
-                                  type: "array"
-                                  items:
-                                    type: "object"
-                                    properties:
-                                      value:
-                                        type: "string"
-                                      primary:
-                                        type: "boolean"
-                                      label:
-                                        type: "string"
-  /persons/{id}:
+  /persons/{person_id}:
     delete:
-      summary: "Delete person"
+      summary: "Delete Person"
       description: "Marks a person as deleted. After 30 days, the person will be permanently deleted."
       operationId: "deletePerson"
+      x-ai-agent-tool: true
       tags:
         - "Persons"
+      security:
+        - "oauth2":
+            - "contacts:full"
       parameters:
         - in: "path"
-          name: "id"
-          description: "Person to delete"
+          name: "person_id"
+          description: "ID of the person to delete."
           required: true
           schema:
-            title: "Person"
+            title: "Person ID"
             type: "integer"
+            x-dynamic-options: true
       responses:
         "200":
           description: "Success"
@@ -1363,28 +1440,30 @@ paths:
               schema:
                 type: "object"
                 properties:
-                  body:
+                  data:
                     type: "object"
                     properties:
-                      data:
-                        type: "object"
-                        properties:
-                          id:
-                            type: "integer"
+                      id:
+                        type: "integer"
     get:
-      summary: "Get details of a person"
+      summary: "Get Details of Person"
       description: "Returns the details of a person. This also returns some additional fields which are not present when asking for all persons."
       operationId: "getPersonDetails"
+      x-ai-agent-tool: true
       tags:
         - "Persons"
+      security:
+        - "oauth2":
+            - "contacts:read"
       parameters:
         - in: "path"
-          name: "id"
-          description: "Person to get details"
+          name: "person_id"
+          description: "ID of the person to get details."
           required: true
           schema:
-            title: "Person"
+            title: "Person ID"
             type: "integer"
+            x-dynamic-options: true
       responses:
         200:
           description: "Success"
@@ -1393,58 +1472,55 @@ paths:
               schema:
                 type: "object"
                 properties:
-                  body:
+                  data:
                     type: "object"
                     properties:
-                      data:
+                      id:
+                        type: "integer"
+                      company_id:
+                        type: "integer"
+                      owner_id:
                         type: "object"
                         properties:
                           id:
                             type: "integer"
-                          company_id:
-                            type: "integer"
-                          owner_id:
-                            type: "object"
-                            properties:
-                              id:
-                                type: "integer"
-                              name:
-                                type: "string"
-                              email:
-                                type: "string"
-                          org_id:
-                            type: "object"
-                            properties:
-                              name:
-                                type: "string"
-                              owner_id:
-                                type: "integer"
-                              cc_email:
-                                type: "string"
                           name:
                             type: "string"
-                          phone:
-                            type: "array"
-                            items:
-                              type: "object"
-                              properties:
-                                value:
-                                  type: "string"
-                                primary:
-                                  type: "boolean"
-                                label:
-                                  type: "string"
                           email:
-                            type: "array"
-                            items:
-                              type: "object"
-                              properties:
-                                value:
-                                  type: "string"
-                                primary:
-                                  type: "boolean"
-                                label:
-                                  type: "string"
+                            type: "string"
+                      org_id:
+                        type: "object"
+                        properties:
+                          name:
+                            type: "string"
+                          owner_id:
+                            type: "integer"
+                          cc_email:
+                            type: "string"
+                      name:
+                        type: "string"
+                      phone:
+                        type: "array"
+                        items:
+                          type: "object"
+                          properties:
+                            value:
+                              type: "string"
+                            primary:
+                              type: "boolean"
+                            label:
+                              type: "string"
+                      email:
+                        type: "array"
+                        items:
+                          type: "object"
+                          properties:
+                            value:
+                              type: "string"
+                            primary:
+                              type: "boolean"
+                            label:
+                              type: "string"
 components:
   securitySchemes:
     oauth2:
@@ -1455,35 +1531,31 @@ components:
           tokenUrl: "https://oauth.pipedrive.com/oauth/token"
           refreshUrl: "https://oauth.pipedrive.com/oauth/token"
           scopes:
-            deals:read: "Read most data about deals and related entities."
-            deals:full: "Create, read, update and delete deals, its participants and\
-              \ followers."
-            goals:read: "Read data on all goals."
-            goals:full: "Create, read, update and delete goals."
-            leads:read: "Read leads and leads labels."
-            leads:full: "Create, read, update and delete leads and leads labels"
-            activities:read: "Read activities, its fields and types; all files and\
-              \ filters."
-            activities:full: "Create, read, update and delete activities and all files\
-              \ and filters."
-            contacts:read: "Read data about persons and organizations, their related\
-              \ fields and followers."
-            contacts:full: "Create, read, update and delete persons and organizations\
-              \ and their followers."
-            admin: "Allows to do many things that an administrator can do in a Pipedrive\
-              \ company account."
-            recents:read: "Read all recent changes occured in an account."
-            search:read: "Search across the account for deals, persons, organizations,\
-              \ files and products and see details about the returned results."
-            mail:read: "Read mail threads and messages."
-            mail:full: "Read, update and delete mail threads. Also grants read access\
-              \ to mail messages."
-            products:read: "Read products, its fields, files, followers and products\
-              \ connected to a deal."
-            products:full: "Create, read, update and delete products and its fields;\
-              \ add products to deals"
-            users:read: "Read data about users (people with access to a Pipedrive\
-              \ account), their permissions, roles and followers, as well as about\
-              \ legacy teams."
-            base: "Read settings of the authorized user and currencies in an account."
-            phone-integration: "Create, read and delete call logs and its audio recordings."
+            admin: ""
+            activities:full: ""
+            activities:read: ""
+            base: ""
+            contact-fields:full: ""
+            contacts:full: ""
+            contacts:read: ""
+            deal-fields:full: ""
+            deals:full: ""
+            deals:read: ""
+            goals:full: ""
+            goals:read: ""
+            leads:full: ""
+            leads:read: ""
+            mail:full: ""
+            mail:read: ""
+            messengers-integration: ""
+            phone-integration: ""
+            products:full: ""
+            products:read: ""
+            projects:full: ""
+            projects:read: ""
+            recents:read: ""
+            search:read: ""
+            users:read: ""
+            video-calls: ""
+            webhooks:full: ""
+            webhooks:read: ""

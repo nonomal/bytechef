@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,27 +16,27 @@
 
 package com.bytechef.component.ods.file.action;
 
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.array;
-import static com.bytechef.component.definition.ComponentDSL.bool;
-import static com.bytechef.component.definition.ComponentDSL.date;
-import static com.bytechef.component.definition.ComponentDSL.dateTime;
-import static com.bytechef.component.definition.ComponentDSL.fileEntry;
-import static com.bytechef.component.definition.ComponentDSL.integer;
-import static com.bytechef.component.definition.ComponentDSL.nullable;
-import static com.bytechef.component.definition.ComponentDSL.number;
-import static com.bytechef.component.definition.ComponentDSL.object;
-import static com.bytechef.component.definition.ComponentDSL.string;
-import static com.bytechef.component.definition.ComponentDSL.time;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.array;
+import static com.bytechef.component.definition.ComponentDsl.bool;
+import static com.bytechef.component.definition.ComponentDsl.date;
+import static com.bytechef.component.definition.ComponentDsl.dateTime;
+import static com.bytechef.component.definition.ComponentDsl.fileEntry;
+import static com.bytechef.component.definition.ComponentDsl.integer;
+import static com.bytechef.component.definition.ComponentDsl.nullable;
+import static com.bytechef.component.definition.ComponentDsl.number;
+import static com.bytechef.component.definition.ComponentDsl.object;
+import static com.bytechef.component.definition.ComponentDsl.outputSchema;
+import static com.bytechef.component.definition.ComponentDsl.string;
+import static com.bytechef.component.definition.ComponentDsl.time;
 import static com.bytechef.component.ods.file.constant.OdsFileConstants.FILENAME;
 import static com.bytechef.component.ods.file.constant.OdsFileConstants.ROWS;
 import static com.bytechef.component.ods.file.constant.OdsFileConstants.SHEET_NAME;
 
 import com.bytechef.component.definition.ActionContext;
-import com.bytechef.component.definition.ComponentDSL.ModifiableActionDefinition;
+import com.bytechef.component.definition.ComponentDsl.ModifiableActionDefinition;
 import com.bytechef.component.definition.FileEntry;
 import com.bytechef.component.definition.Parameters;
-import com.bytechef.component.ods.file.constant.OdsFileConstants;
 import com.github.miachm.sods.Range;
 import com.github.miachm.sods.Sheet;
 import com.github.miachm.sods.SpreadSheet;
@@ -54,8 +54,8 @@ import org.apache.commons.lang3.Validate;
  */
 public class OdsFileWriteAction {
 
-    public static final ModifiableActionDefinition ACTION_DEFINITION = action(OdsFileConstants.WRITE)
-        .title("Write to file")
+    public static final ModifiableActionDefinition ACTION_DEFINITION = action("write")
+        .title("Write to File")
         .description("Writes the data to a ODS file.")
         .properties(
             string(SHEET_NAME)
@@ -65,10 +65,14 @@ public class OdsFileWriteAction {
                 .advancedOption(true),
             array(ROWS)
                 .label("Rows")
-                .description("The array of objects to write to the file.")
+                .description("The array of rows to write to the file.")
                 .required(true)
-                .items(object().additionalProperties(
-                    bool(), date(), dateTime(), integer(), nullable(), number(), string(), time())),
+                .placeholder("Add Row")
+                .items(
+                    object()
+                        .placeholder("Add Column")
+                        .additionalProperties(
+                            bool(), date(), dateTime(), integer(), nullable(), number(), string(), time())),
             string(FILENAME)
                 .label("Filename")
                 .description(
@@ -76,7 +80,7 @@ public class OdsFileWriteAction {
                 .required(true)
                 .defaultValue("file.ods")
                 .advancedOption(true))
-        .outputSchema(fileEntry())
+        .output(outputSchema(fileEntry()))
         .perform(OdsFileWriteAction::perform);
 
     private static Object[] getHeaderValues(Set<String> names) {

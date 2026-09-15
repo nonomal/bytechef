@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,9 +16,9 @@
 
 package com.bytechef.component.google.sheets.connection;
 
-import com.bytechef.component.definition.ComponentDSL.ModifiableConnectionDefinition;
+import com.bytechef.component.definition.ComponentDsl.ModifiableConnectionDefinition;
 import com.bytechef.google.commons.GoogleConnection;
-import java.util.List;
+import java.util.Map;
 
 /**
  * @author Monika Domiter
@@ -29,6 +29,13 @@ public class GoogleSheetsConnection {
     }
 
     public static final ModifiableConnectionDefinition CONNECTION_DEFINITION = GoogleConnection.createConnection(
-        (connection, context) -> List.of(
-            "https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive.readonly"));
+        null,
+        1,
+        "https://docs.bytechef.io/reference/components/google-sheets_v1#connection-setup",
+        (connection, context) -> Map.of(
+            "https://www.googleapis.com/auth/drive", true,
+            "https://www.googleapis.com/auth/drive.file", false,
+            "https://www.googleapis.com/auth/drive.readonly", true,
+            "https://www.googleapis.com/auth/spreadsheets", true,
+            "https://www.googleapis.com/auth/spreadsheets.readonly", false));
 }

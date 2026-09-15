@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,8 @@
 
 package com.bytechef.platform.configuration.web.rest;
 
-import com.bytechef.platform.component.registry.service.ActionDefinitionService;
+import com.bytechef.atlas.coordinator.annotation.ConditionalOnCoordinator;
+import com.bytechef.platform.component.service.ActionDefinitionService;
 import com.bytechef.platform.configuration.web.rest.model.ActionDefinitionBasicModel;
 import com.bytechef.platform.configuration.web.rest.model.ActionDefinitionModel;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
@@ -31,6 +32,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @RestController
 @RequestMapping("${openapi.openAPIDefinition.base-path.platform:}/internal")
+@ConditionalOnCoordinator
 public class ActionDefinitionApiController implements ActionDefinitionApi {
 
     private final ActionDefinitionService actionDefinitionService;

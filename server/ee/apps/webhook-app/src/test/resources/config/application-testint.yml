@@ -2,10 +2,15 @@ server:
   port: 9999
 
 bytechef:
-  file-storage:
-    provider: base64
+  edition: EE
   message-broker:
-    provider: jms
+    provider: memory
+  file-storage:
+    provider: jdbc
+  oauth2:
+    redirect-uri:
+  worker:
+    enabled: false
   workflow:
     output-storage:
-      provider: base64
+      provider: jdbc

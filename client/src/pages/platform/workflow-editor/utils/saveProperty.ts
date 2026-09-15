@@ -1,21 +1,33 @@
 import {
-    UpdateWorkflowNodeParameter200ResponseModel,
-    UpdateWorkflowNodeParameterRequest,
+    DeleteClusterElementParameter200Response,
+    UpdateClusterElementParameterOperationRequest,
+    UpdateWorkflowNodeParameterOperationRequest,
 } from '@/shared/middleware/platform/configuration';
-import {ComponentType} from '@/shared/types';
+import {environmentStore} from '@/shared/stores/useEnvironmentStore';
 import {UseMutationResult} from '@tanstack/react-query';
 
+import useWorkflowDataStore from '../stores/useWorkflowDataStore';
+import useWorkflowEditorStore from '../stores/useWorkflowEditorStore';
+import useWorkflowNodeDetailsPanelStore from '../stores/useWorkflowNodeDetailsPanelStore';
+import {decodePath} from './encodingUtils';
+import {enqueueWorkflowMutation} from './workflowMutationQueue';
+
 interface SavePropertyProps {
-    currentComponent: ComponentType;
+    fromAi?: boolean;
     includeInMetadata?: boolean;
     path: string;
-    setCurrentComponent: (currentComponent: ComponentType | undefined) => void;
     successCallback?: () => void;
     type: string;
-    updateWorkflowNodeParameterMutation: UseMutationResult<
-        UpdateWorkflowNodeParameter200ResponseModel,
+    updateClusterElementParameterMutation?: UseMutationResult<
+        DeleteClusterElementParameter200Response & {workflowNodeName?: string},
         Error,
-        UpdateWorkflowNodeParameterRequest,
+        UpdateClusterElementParameterOperationRequest,
+        unknown
+    >;
+    updateWorkflowNodeParameterMutation: UseMutationResult<
+        DeleteClusterElementParameter200Response & {workflowNodeName?: string},
+        Error,
+        UpdateWorkflowNodeParameterOperationRequest,
         unknown
     >;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -24,40 +36,113 @@ interface SavePropertyProps {
 }
 
 export default function saveProperty({
-    currentComponent,
+    fromAi = false,
     includeInMetadata = false,
     path,
-    setCurrentComponent,
     successCallback,
     type,
+    updateClusterElementParameterMutation,
     updateWorkflowNodeParameterMutation,
     value,
     workflowId,
 }: SavePropertyProps) {
-    const {workflowNodeName} = currentComponent;
+    const {currentNode} = useWorkflowNodeDetailsPanelStore.getState();
+    const {rootClusterElementNodeData} = useWorkflowEditorStore.getState();
 
-    updateWorkflowNodeParameterMutation.mutate(
-        {
-            id: workflowId,
-            updateWorkflowNodeParameterRequestModel: {
-                includeInMetadata,
-                path,
-                type,
-                value,
-                workflowNodeName,
-            },
-        },
-        {
-            onSuccess: (response) => {
-                successCallback && successCallback();
+    if (!currentNode) {
+        console.error('No current node found in the store');
 
-                setCurrentComponent({
-                    ...currentComponent,
-                    displayConditions: response.displayConditions,
-                    metadata: response.metadata,
-                    parameters: response.parameters,
-                });
-            },
+        return;
+    }
+
+    const decodedPath = decodePath(path);
+
+    function handleSuccess(
+        response: DeleteClusterElementParameter200Response & {workflowNodeName?: string},
+        updatedWorkflowNodeName: string
+    ) {
+        if (successCallback) {
+            successCallback();
         }
+
+        if (currentNode) {
+            useWorkflowNodeDetailsPanelStore.getState().setCurrentNode({
+                ...currentNode,
+                displayConditions: response.displayConditions,
+                metadata: response.metadata,
+                parameters: response.parameters,
+            });
+        }
+
+        if (response.parameters && updatedWorkflowNodeName) {
+            useWorkflowDataStore
+                .getState()
+                .updateWorkflowNodeParameters(
+                    updatedWorkflowNodeName,
+                    response.parameters,
+                    response.version,
+                    response.metadata as Record<string, unknown> | undefined
+                );
+        }
+    }
+
+    if (currentNode && currentNode.clusterElementType) {
+        if (!updateClusterElementParameterMutation) {
+            return;
+        }
+
+        const clusterElementType = currentNode.clusterElementType as string;
+        const clusterElementWorkflowNodeName = currentNode.workflowNodeName;
+
+        enqueueWorkflowMutation(() =>
+            updateClusterElementParameterMutation.mutateAsync(
+                {
+                    clusterElementType,
+                    clusterElementWorkflowNodeName,
+                    environmentId: environmentStore.getState().currentEnvironmentId,
+                    id: workflowId,
+                    updateClusterElementParameterRequest: {
+                        fromAiInMetadata: fromAi,
+                        includeInMetadata,
+                        path: decodedPath,
+                        type,
+                        value,
+                    },
+                    workflowNodeName: rootClusterElementNodeData?.workflowNodeName ?? '',
+                },
+                {
+                    onError: (error) => {
+                        console.error('Failed to save cluster element parameter:', error);
+                    },
+                    onSuccess: (response) => handleSuccess(response, clusterElementWorkflowNodeName),
+                }
+            )
+        );
+
+        return;
+    }
+
+    const nodeWorkflowNodeName = rootClusterElementNodeData?.workflowNodeName || currentNode?.workflowNodeName || '';
+
+    enqueueWorkflowMutation(() =>
+        updateWorkflowNodeParameterMutation.mutateAsync(
+            {
+                environmentId: environmentStore.getState().currentEnvironmentId,
+                id: workflowId,
+                updateWorkflowNodeParameterRequest: {
+                    includeInMetadata,
+                    path: decodedPath,
+                    type,
+                    value,
+                },
+                workflowNodeName: nodeWorkflowNodeName,
+            },
+            {
+                onError: (error) => {
+                    console.error('Failed to save workflow node parameter:', error);
+                },
+                onSuccess: (response) => handleSuccess(response, nodeWorkflowNodeName),
+            }
+        )
     );
 }

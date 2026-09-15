@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,8 +28,9 @@ public class WorkflowReservedWordContributorImpl implements WorkflowReservedWord
     @Override
     public List<String> getReservedWords() {
         return List.of(
-            WorkflowExtConstants.AUTHORIZATION_REQUIRED, WorkflowExtConstants.COMPONENT_NAME,
-            WorkflowExtConstants.COMPONENT_VERSION, WorkflowExtConstants.CONNECTIONS, WorkflowExtConstants.DESTINATION,
-            WorkflowExtConstants.SOURCE, WorkflowExtConstants.TRIGGERS);
+            WorkflowExtConstants.AUTHORIZATION_REQUIRED, "category", WorkflowExtConstants.CLUSTER_ELEMENTS,
+            WorkflowExtConstants.COMPONENT_NAME, WorkflowExtConstants.COMPONENT_VERSION,
+            WorkflowExtConstants.CONNECTIONS, WorkflowExtConstants.GROUP_NAME, WorkflowExtConstants.INTERNAL_ONLY,
+            WorkflowExtConstants.OBJECT_NAME, "tags", WorkflowExtConstants.TRIGGERS);
     }
 }

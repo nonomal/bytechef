@@ -1,0 +1,24 @@
+import Badge from '@/components/Badge/Badge';
+import React from 'react';
+
+type StyleType = NonNullable<React.ComponentProps<typeof Badge>['styleType']>;
+
+const STYLE_MAP: Record<string, StyleType> = {
+    COMPLETED: 'success-outline',
+    FAILED: 'destructive-outline',
+};
+
+const WorkflowExecutionBadge = ({status}: {status: string}) => {
+    return (
+        <div className="flex items-center">
+            <Badge
+                className="uppercase"
+                label={status ?? ''}
+                styleType={STYLE_MAP[status] ?? 'secondary-filled'}
+                weight="semibold"
+            />
+        </div>
+    );
+};
+
+export default WorkflowExecutionBadge;

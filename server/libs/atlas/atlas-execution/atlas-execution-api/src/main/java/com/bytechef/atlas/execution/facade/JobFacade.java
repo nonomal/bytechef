@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,18 +16,25 @@
 
 package com.bytechef.atlas.execution.facade;
 
-import com.bytechef.atlas.execution.dto.JobParameters;
+import com.bytechef.atlas.execution.dto.JobParametersDTO;
+import java.util.Map;
+import org.jspecify.annotations.Nullable;
 
 /**
  * @author Ivica Cardic
  */
 public interface JobFacade {
 
-    long createJob(JobParameters jobParameters);
+    long createJob(JobParametersDTO jobParametersDTO);
 
     void deleteJob(long id);
 
-    void restartJob(long id);
+    @Deprecated
+    void resumeApproval(long jobId, String uuid, boolean approved);
+
+    void resumeJob(long id);
+
+    void resumeJob(long id, long taskExecutionId, @Nullable Map<String, ?> data);
 
     void stopJob(long id);
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,8 +16,15 @@
 
 package com.bytechef.automation.configuration.domain;
 
+import java.time.Instant;
 import java.util.Objects;
+import java.util.UUID;
+import org.springframework.data.annotation.CreatedBy;
+import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.LastModifiedBy;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.annotation.Version;
 import org.springframework.data.relational.core.mapping.Column;
 import org.springframework.data.relational.core.mapping.Table;
 
@@ -39,8 +46,30 @@ public final class ProjectWorkflow {
     @Column("workflow_id")
     private String workflowId;
 
-    @Column("workflow_reference_code")
-    private String workflowReferenceCode;
+    @Column("uuid")
+    private UUID uuid;
+
+    @CreatedBy
+    @Column("created_by")
+    private String createdBy;
+
+    @Column("created_date")
+    @CreatedDate
+    private Instant createdDate;
+
+    @Column("last_modified_by")
+    @LastModifiedBy
+    private String lastModifiedBy;
+
+    @Column("last_modified_date")
+    @LastModifiedDate
+    private Instant lastModifiedDate;
+
+    @Version
+    private int version;
+
+    @Column("permission_expression")
+    private String permissionExpression;
 
     public ProjectWorkflow() {
     }
@@ -49,11 +78,17 @@ public final class ProjectWorkflow {
         this.id = id;
     }
 
-    public ProjectWorkflow(long projectId, int projectVersion, String workflowId, String workflowReferenceCode) {
+    public ProjectWorkflow(long projectId, int projectVersion, String workflowId) {
         this.projectId = projectId;
         this.projectVersion = projectVersion;
         this.workflowId = workflowId;
-        this.workflowReferenceCode = workflowReferenceCode;
+    }
+
+    public ProjectWorkflow(long projectId, int projectVersion, String workflowId, UUID uuid) {
+        this.projectId = projectId;
+        this.projectVersion = projectVersion;
+        this.workflowId = workflowId;
+        this.uuid = uuid;
     }
 
     @Override
@@ -92,8 +127,36 @@ public final class ProjectWorkflow {
         return workflowId;
     }
 
-    public String getWorkflowReferenceCode() {
-        return workflowReferenceCode;
+    public UUID getUuid() {
+        return uuid;
+    }
+
+    public String getUuidAsString() {
+        return uuid == null ? null : uuid.toString();
+    }
+
+    public String getCreatedBy() {
+        return createdBy;
+    }
+
+    public Instant getCreatedDate() {
+        return createdDate;
+    }
+
+    public String getLastModifiedBy() {
+        return lastModifiedBy;
+    }
+
+    public Instant getLastModifiedDate() {
+        return lastModifiedDate;
+    }
+
+    public int getVersion() {
+        return version;
+    }
+
+    public String getPermissionExpression() {
+        return permissionExpression;
     }
 
     public void setProjectVersion(int projectVersion) {
@@ -104,8 +167,20 @@ public final class ProjectWorkflow {
         this.workflowId = workflowId;
     }
 
-    public void setWorkflowReferenceCode(String workflowReferenceCode) {
-        this.workflowReferenceCode = workflowReferenceCode;
+    public void setUuid(String uuid) {
+        this.uuid = UUID.fromString(uuid);
+    }
+
+    public void setUuid(UUID uuid) {
+        this.uuid = uuid;
+    }
+
+    public void setVersion(int version) {
+        this.version = version;
+    }
+
+    public void setPermissionExpression(String permissionExpression) {
+        this.permissionExpression = permissionExpression;
     }
 
     @Override
@@ -115,7 +190,12 @@ public final class ProjectWorkflow {
             ", projectId=" + projectId +
             ", projectVersion=" + projectVersion +
             ", workflowId='" + workflowId + '\'' +
-            ", workflowReferenceCode='" + workflowReferenceCode + '\'' +
+            ", uuid='" + uuid + '\'' +
+            ", createdBy='" + createdBy + '\'' +
+            ", createdDate=" + createdDate +
+            ", lastModifiedBy='" + lastModifiedBy + '\'' +
+            ", lastModifiedDate=" + lastModifiedDate +
+            ", version=" + version +
             '}';
     }
 }

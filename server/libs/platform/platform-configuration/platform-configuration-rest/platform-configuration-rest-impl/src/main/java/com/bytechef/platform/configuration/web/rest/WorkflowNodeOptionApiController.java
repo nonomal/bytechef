@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 
 package com.bytechef.platform.configuration.web.rest;
 
+import com.bytechef.atlas.coordinator.annotation.ConditionalOnCoordinator;
 import com.bytechef.commons.util.CollectionUtils;
 import com.bytechef.platform.configuration.facade.WorkflowNodeOptionFacade;
 import com.bytechef.platform.configuration.web.rest.model.OptionModel;
@@ -30,6 +31,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @RestController
 @RequestMapping("${openapi.openAPIDefinition.base-path.platform:}/internal")
+@ConditionalOnCoordinator
 public class WorkflowNodeOptionApiController implements WorkflowNodeOptionApi {
 
     private final ConversionService conversionService;
@@ -43,16 +45,29 @@ public class WorkflowNodeOptionApiController implements WorkflowNodeOptionApi {
     }
 
     @Override
+    public ResponseEntity<List<OptionModel>> getClusterElementNodeOptions(
+        String workflowId, String workflowNodeName, String clusterElementTypeName, String clusterElementName,
+        String propertyName, Long environmentId, List<String> lookupDependsOnPaths, String searchText) {
+
+        return ResponseEntity.ok(
+            CollectionUtils.map(
+                workflowNodeOptionFacade.getClusterElementNodeOptions(
+                    workflowId, workflowNodeName, clusterElementTypeName.toUpperCase(), clusterElementName,
+                    propertyName, lookupDependsOnPaths == null ? List.of() : lookupDependsOnPaths, searchText,
+                    environmentId),
+                option -> conversionService.convert(option, OptionModel.class)));
+    }
+
+    @Override
     public ResponseEntity<List<OptionModel>> getWorkflowNodeOptions(
-        String workflowId, String workflowNodeName, String propertyName, List<String> lookupDependsOnPaths,
-        String searchText) {
+        String workflowId, String workflowNodeName, String propertyName, Long environmentId,
+        List<String> lookupDependsOnPaths, String searchText) {
 
         return ResponseEntity.ok(
             CollectionUtils.map(
                 workflowNodeOptionFacade.getWorkflowNodeOptions(
                     workflowId, workflowNodeName, propertyName,
-                    lookupDependsOnPaths == null ? List.of() : lookupDependsOnPaths, searchText),
+                    lookupDependsOnPaths == null ? List.of() : lookupDependsOnPaths, searchText, environmentId),
                 option -> conversionService.convert(option, OptionModel.class)));
     }
-
 }

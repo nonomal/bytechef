@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,8 @@
 
 package com.bytechef.automation.configuration.web.rest;
 
-import com.bytechef.automation.configuration.facade.ProjectFacade;
+import com.bytechef.atlas.coordinator.annotation.ConditionalOnCoordinator;
+import com.bytechef.automation.configuration.facade.ProjectCategoryFacade;
 import com.bytechef.automation.configuration.web.rest.model.CategoryModel;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.List;
@@ -30,21 +31,22 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @RestController("com.bytechef.automation.configuration.web.rest.CategoryApiController")
 @RequestMapping("${openapi.openAPIDefinition.base-path.automation:}/internal")
+@ConditionalOnCoordinator
 public class CategoryApiController implements CategoryApi {
 
     private final ConversionService conversionService;
-    private final ProjectFacade projectFacade;
+    private final ProjectCategoryFacade projectCategoryFacade;
 
     @SuppressFBWarnings("EI")
-    public CategoryApiController(ConversionService conversionService, ProjectFacade projectFacade) {
+    public CategoryApiController(ConversionService conversionService, ProjectCategoryFacade projectCategoryFacade) {
         this.conversionService = conversionService;
-        this.projectFacade = projectFacade;
+        this.projectCategoryFacade = projectCategoryFacade;
     }
 
     @Override
-    public ResponseEntity<List<CategoryModel>> getProjectCategories() {
+    public ResponseEntity<List<CategoryModel>> getProjectCategories(Long id) {
         return ResponseEntity.ok(
-            projectFacade.getProjectCategories()
+            projectCategoryFacade.getProjectCategories(id)
                 .stream()
                 .map(category -> conversionService.convert(category, CategoryModel.class))
                 .toList());

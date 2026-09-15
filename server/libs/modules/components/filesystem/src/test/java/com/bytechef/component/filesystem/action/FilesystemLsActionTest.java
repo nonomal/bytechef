@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -52,7 +52,7 @@ class FilesystemLsActionTest {
         Assertions.assertEquals(
             Set.of("C.txt", "B.txt", "A.txt"),
             files.stream()
-                .map(FilesystemLsAction.FileInfo::getFilename)
+                .map(FilesystemLsAction.FileInfo::filename)
                 .collect(Collectors.toSet()));
     }
 
@@ -72,7 +72,7 @@ class FilesystemLsActionTest {
         Assertions.assertEquals(
             Set.of("sub1/C.txt", "B.txt", "A.txt"),
             files.stream()
-                .map(FilesystemLsAction.FileInfo::getRelativePath)
+                .map(FilesystemLsAction.FileInfo::relativePath)
                 .collect(Collectors.toSet()));
     }
 
@@ -92,7 +92,7 @@ class FilesystemLsActionTest {
         Assertions.assertEquals(
             Set.of("B.txt", "A.txt"),
             files.stream()
-                .map(FilesystemLsAction.FileInfo::getFilename)
+                .map(FilesystemLsAction.FileInfo::filename)
                 .collect(Collectors.toSet()));
     }
 

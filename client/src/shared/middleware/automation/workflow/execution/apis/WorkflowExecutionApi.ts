@@ -12,33 +12,45 @@
  * Do not edit the class manually.
  */
 
-
 import * as runtime from '../runtime';
-import type {
-  EnvironmentModel,
-  PageModel,
-  WorkflowExecutionModel,
-} from '../models/index';
 import {
-    EnvironmentModelFromJSON,
-    EnvironmentModelToJSON,
-    PageModelFromJSON,
-    PageModelToJSON,
-    WorkflowExecutionModelFromJSON,
-    WorkflowExecutionModelToJSON,
-} from '../models/index';
+    type Page,
+    PageFromJSON,
+    PageToJSON,
+} from '../models/Page';
+import {
+    type TaskExecution,
+    TaskExecutionFromJSON,
+    TaskExecutionToJSON,
+} from '../models/TaskExecution';
+import {
+    type WorkflowExecution,
+    WorkflowExecutionFromJSON,
+    WorkflowExecutionToJSON,
+} from '../models/WorkflowExecution';
+
+export interface GetTriggerExecutionWorkflowExecutionRequest {
+    triggerExecutionId: number;
+}
 
 export interface GetWorkflowExecutionRequest {
     id: number;
 }
 
+export interface GetWorkflowExecutionTaskExecutionRequest {
+    id: number;
+    taskExecutionId: number;
+}
+
 export interface GetWorkflowExecutionsPageRequest {
-    environment?: EnvironmentModel;
+    id: number;
+    embedded?: boolean;
+    environmentId?: number;
     jobStatus?: GetWorkflowExecutionsPageJobStatusEnum;
     jobStartDate?: Date;
     jobEndDate?: Date;
     projectId?: number;
-    projectInstanceId?: number;
+    projectDeploymentId?: number;
     workflowId?: string;
     pageNumber?: number;
 }
@@ -49,10 +61,56 @@ export interface GetWorkflowExecutionsPageRequest {
 export class WorkflowExecutionApi extends runtime.BaseAPI {
 
     /**
-     * Get workflow executions by id.
-     * Get workflow executions by id
+     * Creates request options for getTriggerExecutionWorkflowExecution without sending the request
      */
-    async getWorkflowExecutionRaw(requestParameters: GetWorkflowExecutionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<WorkflowExecutionModel>> {
+    async getTriggerExecutionWorkflowExecutionRequestOpts(requestParameters: GetTriggerExecutionWorkflowExecutionRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['triggerExecutionId'] == null) {
+            throw new runtime.RequiredError(
+                'triggerExecutionId',
+                'Required parameter "triggerExecutionId" was null or undefined when calling getTriggerExecutionWorkflowExecution().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+
+        let urlPath = `/workflow-executions/trigger-executions/{triggerExecutionId}`;
+        urlPath = urlPath.replace('{triggerExecutionId}', encodeURIComponent(String(requestParameters['triggerExecutionId'])));
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Get the execution view of a trigger execution that produced no job, such as a failed webhook or poll.
+     * Get a trigger execution\'s workflow execution
+     */
+    async getTriggerExecutionWorkflowExecutionRaw(requestParameters: GetTriggerExecutionWorkflowExecutionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<WorkflowExecution>> {
+        const requestOptions = await this.getTriggerExecutionWorkflowExecutionRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => WorkflowExecutionFromJSON(jsonValue));
+    }
+
+    /**
+     * Get the execution view of a trigger execution that produced no job, such as a failed webhook or poll.
+     * Get a trigger execution\'s workflow execution
+     */
+    async getTriggerExecutionWorkflowExecution(requestParameters: GetTriggerExecutionWorkflowExecutionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<WorkflowExecution> {
+        const response = await this.getTriggerExecutionWorkflowExecutionRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for getWorkflowExecution without sending the request
+     */
+    async getWorkflowExecutionRequestOpts(requestParameters: GetWorkflowExecutionRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['id'] == null) {
             throw new runtime.RequiredError(
                 'id',
@@ -64,34 +122,112 @@ export class WorkflowExecutionApi extends runtime.BaseAPI {
 
         const headerParameters: runtime.HTTPHeaders = {};
 
-        const response = await this.request({
-            path: `/workflow-executions/{id}`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))),
+
+        let urlPath = `/workflow-executions/{id}`;
+        urlPath = urlPath.replace('{id}', encodeURIComponent(String(requestParameters['id'])));
+
+        return {
+            path: urlPath,
             method: 'GET',
             headers: headerParameters,
             query: queryParameters,
-        }, initOverrides);
-
-        return new runtime.JSONApiResponse(response, (jsonValue) => WorkflowExecutionModelFromJSON(jsonValue));
+        };
     }
 
     /**
      * Get workflow executions by id.
      * Get workflow executions by id
      */
-    async getWorkflowExecution(requestParameters: GetWorkflowExecutionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<WorkflowExecutionModel> {
+    async getWorkflowExecutionRaw(requestParameters: GetWorkflowExecutionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<WorkflowExecution>> {
+        const requestOptions = await this.getWorkflowExecutionRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => WorkflowExecutionFromJSON(jsonValue));
+    }
+
+    /**
+     * Get workflow executions by id.
+     * Get workflow executions by id
+     */
+    async getWorkflowExecution(requestParameters: GetWorkflowExecutionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<WorkflowExecution> {
         const response = await this.getWorkflowExecutionRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
     /**
-     * Get project workflow executions.
-     * Get project workflow executions
+     * Creates request options for getWorkflowExecutionTaskExecution without sending the request
      */
-    async getWorkflowExecutionsPageRaw(requestParameters: GetWorkflowExecutionsPageRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<PageModel>> {
+    async getWorkflowExecutionTaskExecutionRequestOpts(requestParameters: GetWorkflowExecutionTaskExecutionRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['id'] == null) {
+            throw new runtime.RequiredError(
+                'id',
+                'Required parameter "id" was null or undefined when calling getWorkflowExecutionTaskExecution().'
+            );
+        }
+
+        if (requestParameters['taskExecutionId'] == null) {
+            throw new runtime.RequiredError(
+                'taskExecutionId',
+                'Required parameter "taskExecutionId" was null or undefined when calling getWorkflowExecutionTaskExecution().'
+            );
+        }
+
         const queryParameters: any = {};
 
-        if (requestParameters['environment'] != null) {
-            queryParameters['environment'] = requestParameters['environment'];
+        const headerParameters: runtime.HTTPHeaders = {};
+
+
+        let urlPath = `/workflow-executions/{id}/task-executions/{taskExecutionId}`;
+        urlPath = urlPath.replace('{id}', encodeURIComponent(String(requestParameters['id'])));
+        urlPath = urlPath.replace('{taskExecutionId}', encodeURIComponent(String(requestParameters['taskExecutionId'])));
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Get a single task execution\'s input and output by id.
+     * Get a task execution by id
+     */
+    async getWorkflowExecutionTaskExecutionRaw(requestParameters: GetWorkflowExecutionTaskExecutionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<TaskExecution>> {
+        const requestOptions = await this.getWorkflowExecutionTaskExecutionRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => TaskExecutionFromJSON(jsonValue));
+    }
+
+    /**
+     * Get a single task execution\'s input and output by id.
+     * Get a task execution by id
+     */
+    async getWorkflowExecutionTaskExecution(requestParameters: GetWorkflowExecutionTaskExecutionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<TaskExecution> {
+        const response = await this.getWorkflowExecutionTaskExecutionRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for getWorkflowExecutionsPage without sending the request
+     */
+    async getWorkflowExecutionsPageRequestOpts(requestParameters: GetWorkflowExecutionsPageRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['id'] == null) {
+            throw new runtime.RequiredError(
+                'id',
+                'Required parameter "id" was null or undefined when calling getWorkflowExecutionsPage().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        if (requestParameters['embedded'] != null) {
+            queryParameters['embedded'] = requestParameters['embedded'];
+        }
+
+        if (requestParameters['environmentId'] != null) {
+            queryParameters['environmentId'] = requestParameters['environmentId'];
         }
 
         if (requestParameters['jobStatus'] != null) {
@@ -110,8 +246,8 @@ export class WorkflowExecutionApi extends runtime.BaseAPI {
             queryParameters['projectId'] = requestParameters['projectId'];
         }
 
-        if (requestParameters['projectInstanceId'] != null) {
-            queryParameters['projectInstanceId'] = requestParameters['projectInstanceId'];
+        if (requestParameters['projectDeploymentId'] != null) {
+            queryParameters['projectDeploymentId'] = requestParameters['projectDeploymentId'];
         }
 
         if (requestParameters['workflowId'] != null) {
@@ -124,21 +260,34 @@ export class WorkflowExecutionApi extends runtime.BaseAPI {
 
         const headerParameters: runtime.HTTPHeaders = {};
 
-        const response = await this.request({
-            path: `/workflow-executions`,
+
+        let urlPath = `/workspaces/{id}/workflow-executions`;
+        urlPath = urlPath.replace('{id}', encodeURIComponent(String(requestParameters['id'])));
+
+        return {
+            path: urlPath,
             method: 'GET',
             headers: headerParameters,
             query: queryParameters,
-        }, initOverrides);
-
-        return new runtime.JSONApiResponse(response, (jsonValue) => PageModelFromJSON(jsonValue));
+        };
     }
 
     /**
      * Get project workflow executions.
      * Get project workflow executions
      */
-    async getWorkflowExecutionsPage(requestParameters: GetWorkflowExecutionsPageRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<PageModel> {
+    async getWorkflowExecutionsPageRaw(requestParameters: GetWorkflowExecutionsPageRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Page>> {
+        const requestOptions = await this.getWorkflowExecutionsPageRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => PageFromJSON(jsonValue));
+    }
+
+    /**
+     * Get project workflow executions.
+     * Get project workflow executions
+     */
+    async getWorkflowExecutionsPage(requestParameters: GetWorkflowExecutionsPageRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Page> {
         const response = await this.getWorkflowExecutionsPageRaw(requestParameters, initOverrides);
         return await response.value();
     }

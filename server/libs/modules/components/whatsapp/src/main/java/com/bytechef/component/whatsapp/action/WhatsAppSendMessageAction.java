@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,12 +16,12 @@
 
 package com.bytechef.component.whatsapp.action;
 
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.object;
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.object;
+import static com.bytechef.component.definition.ComponentDsl.outputSchema;
+import static com.bytechef.component.definition.ComponentDsl.string;
 import static com.bytechef.component.definition.Context.Http.ResponseType;
 import static com.bytechef.component.definition.Context.Http.responseType;
-import static com.bytechef.component.whatsapp.constant.WhatsAppConstants.BASE_URL;
 import static com.bytechef.component.whatsapp.constant.WhatsAppConstants.BODY;
 import static com.bytechef.component.whatsapp.constant.WhatsAppConstants.CONTACTS;
 import static com.bytechef.component.whatsapp.constant.WhatsAppConstants.ID;
@@ -31,15 +31,14 @@ import static com.bytechef.component.whatsapp.constant.WhatsAppConstants.MESSAGI
 import static com.bytechef.component.whatsapp.constant.WhatsAppConstants.PHONE_NUMBER_ID;
 import static com.bytechef.component.whatsapp.constant.WhatsAppConstants.RECEIVE_USER;
 import static com.bytechef.component.whatsapp.constant.WhatsAppConstants.RECIPIENT_TYPE;
-import static com.bytechef.component.whatsapp.constant.WhatsAppConstants.SEND_MESSAGE;
 import static com.bytechef.component.whatsapp.constant.WhatsAppConstants.TEXT;
 import static com.bytechef.component.whatsapp.constant.WhatsAppConstants.TYPE;
 
 import com.bytechef.component.definition.ActionContext;
-import com.bytechef.component.definition.ComponentDSL.ModifiableActionDefinition;
+import com.bytechef.component.definition.ComponentDsl.ModifiableActionDefinition;
 import com.bytechef.component.definition.Context.Http.Body;
-import com.bytechef.component.definition.Context.TypeReference;
 import com.bytechef.component.definition.Parameters;
+import com.bytechef.component.definition.TypeReference;
 import java.util.Map;
 
 /**
@@ -47,7 +46,7 @@ import java.util.Map;
  */
 public class WhatsAppSendMessageAction {
 
-    public static final ModifiableActionDefinition ACTION_DEFINITION = action(SEND_MESSAGE)
+    public static final ModifiableActionDefinition ACTION_DEFINITION = action("sendMessage")
         .title("Send Message")
         .description("Send a message via WhatsApp")
         .properties(
@@ -57,20 +56,21 @@ public class WhatsAppSendMessageAction {
                 .maxLength(4096)
                 .required(true),
             string(RECEIVE_USER)
-                .label("Send message to")
+                .label("Send Message To")
                 .description("Phone number to send the message. It must start with \"+\" sign")
                 .required(true))
-        .outputSchema(
-            object()
-                .properties(
-                    string(MESSAGING_PRODUCT),
-                    object(CONTACTS)
-                        .properties(
-                            string(INPUT),
-                            string("wa_id")),
-                    object(MESSAGES)
-                        .properties(
-                            string(ID))))
+        .output(
+            outputSchema(
+                object()
+                    .properties(
+                        string(MESSAGING_PRODUCT),
+                        object(CONTACTS)
+                            .properties(
+                                string(INPUT),
+                                string("wa_id")),
+                        object(MESSAGES)
+                            .properties(
+                                string(ID)))))
         .perform(WhatsAppSendMessageAction::perform);
 
     private WhatsAppSendMessageAction() {
@@ -80,7 +80,7 @@ public class WhatsAppSendMessageAction {
         Parameters inputParameters, Parameters connectionParameters, ActionContext actionContext) {
 
         return actionContext
-            .http(http -> http.post(BASE_URL + "/" + connectionParameters.getString(PHONE_NUMBER_ID) + "/messages"))
+            .http(http -> http.post("/" + connectionParameters.getString(PHONE_NUMBER_ID) + "/messages"))
             .body(
                 Body.of(
                     MESSAGING_PRODUCT, "whatsapp",

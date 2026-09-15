@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,12 +18,15 @@ package com.bytechef.component.email.constant;
 
 /**
  * @author Ivica Cardic
+ * @author Igor Beslic
  */
 public class EmailConstants {
 
     public static final String EMAIL = "email";
     public static final String HOST = "host";
     public static final String PORT = "port";
-    public static final String SEND = "send";
+    public static final String PROTOCOL = "protocol";
+    public static final String CRYPTOGRAPHIC_PROTOCOL = "cryptoProtocol";
     public static final String TLS = "tls";
+    public static final String SSL = "ssl";
 }

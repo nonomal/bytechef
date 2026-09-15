@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,19 +18,27 @@ package com.bytechef.platform.configuration.facade;
 
 import com.bytechef.atlas.configuration.domain.Workflow;
 import com.bytechef.platform.configuration.domain.WorkflowTestConfiguration;
-import java.util.Map;
 
 /**
  * @author Ivica Cardic
  */
 public interface WorkflowTestConfigurationFacade {
 
+    void deleteWorkflowTestConfigurationConnection(
+        String workflowId, String workflowNodeName, String workflowConnectionKey, long connectionId,
+        long environmentId);
+
     void removeUnusedWorkflowTestConfigurationConnections(Workflow workflow);
+
+    void saveClusterElementTestConfigurationConnection(
+        String workflowId, String workflowNodeName, String clusterElementType,
+        String clusterElementWorkflowNodeName, String workflowConnectionKey, long connectionId, long environmentId);
 
     WorkflowTestConfiguration saveWorkflowTestConfiguration(WorkflowTestConfiguration workflowTestConfiguration);
 
     void saveWorkflowTestConfigurationConnection(
-        String workflowId, String workflowNodeName, String workflowConnectionKey, long connectionId);
+        String workflowId, String workflowNodeName, String workflowConnectionKey, long connectionId,
+        long environmentId);
 
-    void saveWorkflowTestConfigurationInputs(String workflowId, Map<String, String> inputs);
+    void saveWorkflowTestConfigurationInputs(String workflowId, String key, Object value, long environmentId);
 }

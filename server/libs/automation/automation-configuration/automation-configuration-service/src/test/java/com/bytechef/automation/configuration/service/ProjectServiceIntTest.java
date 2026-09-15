@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,9 @@ package com.bytechef.automation.configuration.service;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.bytechef.automation.configuration.config.ProjectIntTestConfiguration;
+import com.bytechef.automation.configuration.config.ProjectIntTestConfigurationSharedMocks;
 import com.bytechef.automation.configuration.domain.Project;
+import com.bytechef.automation.configuration.domain.ProjectVersion.Status;
 import com.bytechef.automation.configuration.domain.Workspace;
 import com.bytechef.automation.configuration.repository.ProjectRepository;
 import com.bytechef.automation.configuration.repository.WorkspaceRepository;
@@ -42,6 +44,7 @@ import org.springframework.context.annotation.Import;
  */
 @SpringBootTest(classes = ProjectIntTestConfiguration.class)
 @Import(PostgreSQLContainerConfiguration.class)
+@ProjectIntTestConfigurationSharedMocks
 public class ProjectServiceIntTest {
 
     private Category category;
@@ -126,9 +129,9 @@ public class ProjectServiceIntTest {
 
         project = projectRepository.save(project);
 
-        assertThat(projectService.getProjects(null, category.getId(), List.of(), null, null)).hasSize(1);
+        assertThat(projectService.getProjects(null, category.getId(), null, null, null, null)).hasSize(1);
 
-        assertThat(projectService.getProjects(null, Long.MAX_VALUE, List.of(), null, null)).hasSize(0);
+        assertThat(projectService.getProjects(null, Long.MAX_VALUE, null, null, null, null)).hasSize(0);
 
         Tag tag = new Tag("tag1");
 
@@ -138,9 +141,69 @@ public class ProjectServiceIntTest {
 
         projectRepository.save(project);
 
-        assertThat(projectService.getProjects(null, null, List.of(), tag.getId(), null)).hasSize(1);
-        assertThat(projectService.getProjects(null, null, List.of(), Long.MAX_VALUE, null)).hasSize(0);
-        assertThat(projectService.getProjects(null, Long.MAX_VALUE, List.of(), Long.MAX_VALUE, null)).hasSize(0);
+        assertThat(projectService.getProjects(null, null, false, tag.getId(), null, null)).hasSize(1);
+        assertThat(projectService.getProjects(null, null, null, Long.MAX_VALUE, null, null)).hasSize(0);
+        assertThat(projectService.getProjects(null, Long.MAX_VALUE, null, Long.MAX_VALUE, null, null)).hasSize(0);
+    }
+
+    @Test
+    public void testGetProjectsExcludesEmbeddedMarkerProjects() {
+        projectRepository.save(
+            Project.builder()
+                .name("Regular Project")
+                .workspaceId(workspace.getId())
+                .build());
+
+        projectRepository.save(
+            Project.builder()
+                .name("__EMBEDDED_AUTOMATION__Catalog")
+                .workspaceId(workspace.getId())
+                .build());
+
+        List<Project> projects = projectService.getProjects(null, null, null, null, null, workspace.getId());
+
+        assertThat(projects)
+            .extracting(Project::getName)
+            .contains("Regular Project")
+            .doesNotContain("__EMBEDDED_AUTOMATION__Catalog");
+    }
+
+    @Test
+    public void testFetchProjectByNameAndWorkspaceId() {
+        Workspace secondWorkspace = workspaceRepository.save(new Workspace("test2"));
+
+        Project projectInWorkspace1 = projectService.create(
+            Project.builder()
+                .name("__EMBEDDED_TEMPLATES__")
+                .workspaceId(workspace.getId())
+                .build());
+
+        Project projectInWorkspace2 = projectService.create(
+            Project.builder()
+                .name("__EMBEDDED_TEMPLATES__")
+                .workspaceId(secondWorkspace.getId())
+                .build());
+
+        // workspace isolation: each workspace returns its own project
+        assertThat(projectService.fetchProject("__EMBEDDED_TEMPLATES__", workspace.getId()))
+            .isPresent()
+            .map(Project::getId)
+            .hasValue(projectInWorkspace1.getId());
+
+        assertThat(projectService.fetchProject("__EMBEDDED_TEMPLATES__", secondWorkspace.getId()))
+            .isPresent()
+            .map(Project::getId)
+            .hasValue(projectInWorkspace2.getId());
+
+        // case-insensitive lookup
+        assertThat(projectService.fetchProject("__embedded_templates__", workspace.getId()))
+            .isPresent()
+            .map(Project::getId)
+            .hasValue(projectInWorkspace1.getId());
+
+        // non-existent name returns empty
+        assertThat(projectService.fetchProject("__NOPE__", workspace.getId()))
+            .isEmpty();
     }
 
     @Test
@@ -169,6 +232,17 @@ public class ProjectServiceIntTest {
             .hasFieldOrPropertyWithValue("description", "description2")
             .hasFieldOrPropertyWithValue("name", "name2")
             .hasFieldOrPropertyWithValue("tagIds", List.of(tag.getId()));
+    }
+
+    @Test
+    public void testGetProjectsFilteredByStatusWithoutApiCollections() {
+        Project project = projectRepository.save(getProject());
+
+        List<Project> projects = projectService.getProjects(null, null, null, null, Status.DRAFT, null);
+
+        assertThat(projects)
+            .extracting(Project::getId)
+            .contains(project.getId());
     }
 
     private Project getProject() {

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,8 +24,12 @@ import java.util.function.Supplier;
 import org.apache.commons.lang3.Validate;
 
 /**
+ * This class is marked as {@code @Deprecated}, and its usage is discouraged in favor of native {@code Optional} methods
+ * and best practices.
+ *
  * @author Ivica Cardic
  */
+@Deprecated
 public final class OptionalUtils {
 
     private OptionalUtils() {
@@ -55,6 +59,12 @@ public final class OptionalUtils {
         Validate.notNull(optional, "'optional' must not be null");
 
         optional.ifPresent(action);
+    }
+
+    public static <T> boolean isEmpty(Optional<T> optional) {
+        Validate.notNull(optional, "'optional' must not be null");
+
+        return optional.isPresent();
     }
 
     public static <T> boolean isPresent(Optional<T> optional) {

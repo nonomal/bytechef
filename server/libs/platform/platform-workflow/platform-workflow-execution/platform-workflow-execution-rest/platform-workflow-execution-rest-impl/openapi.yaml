@@ -4,13 +4,36 @@ info:
   title: "The Platform Workflow Execution Internal API"
   version: "1"
 servers:
-- url: "/api/platform/internal"
+  - url: "/api/platform/internal"
 tags:
-- name: "job"
-  description: "The Platform Workflow Job API"
-- name: "trigger-execution"
-  description: "The Platform Workflow Trigger Execution Internal API"
+  - name: "job"
+    description: "The Platform Workflow Job API"
+  - name: "trigger-execution"
+    description: "The Platform Workflow Trigger Execution Internal API"
+  - name: "approval-form"
+    description: "The Platform Approval Form Internal API"
 paths:
+  /approval-form/{id}:
+    get:
+      description: "Get an approval form."
+      summary: "Get an approval form"
+      tags:
+        - "approval-form"
+      operationId: "getApprovalForm"
+      parameters:
+        - name: "id"
+          description: "The id of an approval form."
+          required: true
+          in: "path"
+          schema:
+            type: "string"
+      responses:
+        "200":
+          description: "Successful operation."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApprovalForm"
   /jobs:
     get:
       description: "Get a page of jobs."
@@ -34,32 +57,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Page"
-    post:
-      description: "Create a request for running a new job."
-      summary: "Create a request for running a new job"
-      tags:
-      - "job"
-      operationId: "createJob"
-      requestBody:
-        description: "Parameters required to run a job, for example '{\"workflowId\"\
-          :\"samples/hello\",\"inputs\":{\"yourName\":\"Joe Jones\"}}'"
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/JobParameters"
-        required: true
-      responses:
-        "200":
-          description: "The id of a created job."
-          content:
-            application/json:
-              schema:
-                type: "object"
-                properties:
-                  jobId:
-                    description: "The id of an executed job."
-                    type: "integer"
-                    format: "int64"
   /jobs/latest:
     get:
       description: "Get the latest job."
@@ -112,7 +109,7 @@ paths:
           type: "integer"
           format: "int64"
       responses:
-        "200":
+        "204":
           description: "Successful operation."
   /jobs/{id}/stop:
     put:
@@ -130,9 +127,8 @@ paths:
           type: "integer"
           format: "int64"
       responses:
-        "200":
+        "204":
           description: "Successful operation."
-
   /trigger-executions:
     get:
       description: "Get a page of trigger execution."
@@ -194,6 +190,54 @@ paths:
                 $ref: "#/components/schemas/TriggerExecution"
 components:
   schemas:
+    ApprovalForm:
+      type: "object"
+      properties:
+        environmentId:
+          type: "integer"
+          format: "int64"
+        formDescription:
+          type: "string"
+        formTitle:
+          type: "string"
+        inputs:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/ApprovalFormInput"
+    FieldOption:
+      type: "object"
+      properties:
+        label:
+          type: "string"
+        value:
+          type: "string"
+    ApprovalFormInput:
+      type: "object"
+      properties:
+        defaultValue:
+          type: "string"
+        fieldDescription:
+          type: "string"
+        fieldLabel:
+          type: "string"
+        fieldName:
+          type: "string"
+        fieldOptions:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/FieldOption"
+        fieldType:
+          type: "integer"
+        maxSelection:
+          type: "integer"
+        minSelection:
+          type: "integer"
+        multipleChoice:
+          type: "boolean"
+        placeholder:
+          type: "string"
+        required:
+          type: "boolean"
     ExecutionError:
       description: "Contains information about an error that happened during execution."
       type: "object"
@@ -258,6 +302,11 @@ components:
           description: "The last modified date."
           type: "string"
           format: "date-time"
+          readOnly: true
+        metadata:
+          description: "Key-value map of metadata."
+          type: "object"
+          additionalProperties: true
           readOnly: true
         outputs:
           description: "The key-value map of the outputs returned."
@@ -342,6 +391,11 @@ components:
           type: "string"
           format: "date-time"
           readOnly: true
+        metadata:
+          description: "Key-value map of metadata."
+          type: "object"
+          additionalProperties: true
+          readOnly: true
         priority:
           description: "The priority value."
           type: "integer"
@@ -365,43 +419,6 @@ components:
         workflowId:
           type: "string"
           readOnly: true
-    JobParameters:
-      description: "Defines parameters used to execute a job."
-      type: "object"
-      required:
-        - "workflowId"
-      properties:
-        connections:
-          type: "array"
-          items:
-            $ref: "#/components/schemas/JobConnection"
-        inputs:
-          description: "The inputs expected by the workflow"
-          type: "object"
-          additionalProperties: true
-        label:
-          description: "The job's human-readable name"
-          type: "string"
-        parentTaskExecutionId:
-          description: "The id of the parent task that created this job. Used for\
-            \ sub-flows."
-          type: "string"
-        priority:
-          description: "The priority value used during execution of individual tasks."
-          type: "integer"
-        triggerOutputs:
-          type: "array"
-          items:
-            $ref: "#/components/schemas/TriggerOutput"
-        workflowId:
-          description: "Id of the workflow to execute."
-          type: "string"
-        webhooks:
-          description: "The list of webhooks to register to receive notifications\
-            \ for certain events."
-          type: "array"
-          items:
-            $ref: "#/components/schemas/Webhook"
     JobConnection:
       description: "The connection used in a particular task."
       type: "object"
@@ -418,30 +435,7 @@ components:
           description: "The task name to which a connection belongs."
           type: "string"
     Page:
-      description: "A sublist of a list of objects. It allows gain information about\
-        \ the position of it in the containing entire list."
-      type: "object"
-      properties:
-        number:
-          description: "The current page."
-          type: "integer"
-        size:
-          description: "The size of the page."
-          type: "integer"
-        numberOfElements:
-          description: "The number of elements."
-          type: "integer"
-        totalPages:
-          description: "The total number of pages."
-          type: "integer"
-        totalElements:
-          description: "The total number of elements."
-          type: "integer"
-        content:
-          description: "The list of elements."
-          type: "array"
-          items:
-            type: "object"
+      $ref: "../../../../../platform/platform-rest/openapi/components/schemas/objects/page.yaml"
     TaskExecution:
       description: "Adds execution semantics to a task."
       type: "object"
@@ -451,8 +445,6 @@ components:
         - "startDate"
         - "status"
       properties:
-        component:
-          $ref: "../../../../../platform/platform-configuration/platform-configuration-rest/platform-configuration-rest-impl/openapi.yaml#/components/schemas/ComponentDefinitionBasic"
         createdBy:
           description: "The created by."
           type: "string"
@@ -475,6 +467,10 @@ components:
             \ node."
           type: "integer"
           format: "int64"
+          readOnly: true
+        icon:
+          description: "The icon of the task."
+          type: "string"
           readOnly: true
         id:
           description: "The id of a task execution."
@@ -559,6 +555,10 @@ components:
           type: "integer"
           format: "int32"
           readOnly: true
+        title:
+          description: "The title of the task."
+          type: "string"
+          readOnly: true
         retryDelayMillis:
           description: "The calculated retry delay. i.e. delay * retryAttempts * retryDelayFactor."
           type: "integer"
@@ -570,6 +570,19 @@ components:
           description: "The type of the task."
           type: "string"
           readOnly: true
+        children:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/TaskExecution"
+        iterations:
+          type: "array"
+          items:
+            type: "array"
+            items:
+              $ref: "#/components/schemas/TaskExecution"
+        childJob:
+          description: "The job associated with the task execution."
+          $ref: "#/components/schemas/Job"
     TriggerExecution:
       description: "Adds execution semantics to a trigger."
       type: "object"
@@ -581,8 +594,6 @@ components:
       properties:
         batch:
           type: "boolean"
-        component:
-          $ref: "../../../../../platform/platform-configuration/platform-configuration-rest/platform-configuration-rest-impl/openapi.yaml#/components/schemas/ComponentDefinitionBasic"
         createdBy:
           description: "The created by."
           type: "string"
@@ -605,6 +616,10 @@ components:
             \ node."
           type: "integer"
           format: "int64"
+          readOnly: true
+        icon:
+          description: "The icon of the trigger."
+          type: "string"
           readOnly: true
         id:
           description: "The id of a task execution."
@@ -678,20 +693,14 @@ components:
           readOnly: true
         workflowTrigger:
           $ref: "../../../../../platform/platform-configuration/platform-configuration-rest/platform-configuration-rest-impl/openapi.yaml#/components/schemas/WorkflowTrigger"
+        title:
+          description: "The title of the trigger."
+          type: "string"
+          readOnly: true
         type:
           description: "The type of the task."
           type: "string"
           readOnly: true
-    TriggerOutput:
-      description: "The trigger output."
-      type: "object"
-      properties:
-        value:
-          description: "The trigger output value"
-          type: "object"
-        triggerName:
-          description: "The task name to which a connection belongs."
-          type: "string"
     Webhook:
       description: "Used to register to receive notifications for certain events."
       type: "object"

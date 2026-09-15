@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,13 +16,13 @@
 
 package com.bytechef.component.petstore.property;
 
-import static com.bytechef.component.definition.ComponentDSL.bool;
-import static com.bytechef.component.definition.ComponentDSL.dateTime;
-import static com.bytechef.component.definition.ComponentDSL.integer;
-import static com.bytechef.component.definition.ComponentDSL.option;
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.definition.ComponentDsl.bool;
+import static com.bytechef.component.definition.ComponentDsl.dateTime;
+import static com.bytechef.component.definition.ComponentDsl.integer;
+import static com.bytechef.component.definition.ComponentDsl.option;
+import static com.bytechef.component.definition.ComponentDsl.string;
 
-import com.bytechef.component.definition.ComponentDSL;
+import com.bytechef.component.definition.ComponentDsl;
 import java.util.List;
 
 /**
@@ -31,7 +31,7 @@ import java.util.List;
  * @generated
  */
 public class PetstoreOrderProperties {
-    public static final List<ComponentDSL.ModifiableValueProperty<?, ?>> PROPERTIES = List.of(integer("id").label("Id")
+    public static final List<ComponentDsl.ModifiableValueProperty<?, ?>> PROPERTIES = List.of(integer("id").label("Id")
         .required(false)
         .exampleValue(10),
         integer("petId").label("Pet Id")
@@ -49,4 +49,7 @@ public class PetstoreOrderProperties {
             .exampleValue("approved"),
         bool("complete").label("Complete")
             .required(false));
+
+    private PetstoreOrderProperties() {
+    }
 }

@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * Modifications copyright (C) 2023 ByteChef Inc.
+ * Modifications copyright (C) 2025 ByteChef
  */
 
 package com.bytechef.message.broker.amqp.config;
@@ -39,10 +39,11 @@ import org.springframework.amqp.rabbit.config.SimpleRabbitListenerEndpoint;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitAdmin;
 import org.springframework.amqp.rabbit.listener.RabbitListenerEndpointRegistrar;
+import org.springframework.amqp.rabbit.listener.RabbitListenerEndpointRegistry;
 import org.springframework.amqp.rabbit.listener.adapter.MessageListenerAdapter;
 import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.amqp.RabbitProperties;
+import org.springframework.boot.amqp.autoconfigure.RabbitProperties;
 import org.springframework.context.annotation.Configuration;
 
 /**
@@ -54,7 +55,7 @@ import org.springframework.context.annotation.Configuration;
 public class AmqpMessageBrokerListenerRegistrarConfiguration
     implements RabbitListenerConfigurer, MessageBrokerListenerRegistrar<RabbitListenerEndpointRegistrar> {
 
-    private static final Logger logger = LoggerFactory.getLogger(AmqpMessageBrokerListenerRegistrarConfiguration.class);
+    private static final Logger log = LoggerFactory.getLogger(AmqpMessageBrokerListenerRegistrarConfiguration.class);
 
     private final ConnectionFactory connectionFactory;
     private final MessageConverter jacksonAmqpMessageConverter;
@@ -63,12 +64,14 @@ public class AmqpMessageBrokerListenerRegistrarConfiguration
     private final Exchange controlExchange;
     private final RabbitAdmin rabbitAdmin;
     private final RabbitProperties rabbitProperties;
+    private final RabbitListenerEndpointRegistry rabbitListenerEndpointRegistry;
 
     @SuppressFBWarnings("EI")
     public AmqpMessageBrokerListenerRegistrarConfiguration(
         ConnectionFactory connectionFactory, MessageConverter jacksonAmqpMessageConverter, @Autowired(
             required = false) List<MessageBrokerConfigurer<RabbitListenerEndpointRegistrar>> messageBrokerConfigurers,
-        RabbitAdmin rabbitAdmin, RabbitProperties rabbitProperties) {
+        RabbitAdmin rabbitAdmin, RabbitProperties rabbitProperties,
+        @Autowired(required = false) RabbitListenerEndpointRegistry rabbitListenerEndpointRegistry) {
 
         this.connectionFactory = connectionFactory;
         this.controlExchange = createControlExchange();
@@ -77,6 +80,7 @@ public class AmqpMessageBrokerListenerRegistrarConfiguration
         this.messageExchange = createMessageExchange();
         this.rabbitAdmin = rabbitAdmin;
         this.rabbitProperties = rabbitProperties;
+        this.rabbitListenerEndpointRegistry = rabbitListenerEndpointRegistry;
     }
 
     @Override
@@ -94,7 +98,9 @@ public class AmqpMessageBrokerListenerRegistrarConfiguration
 
         Class<?> delegateClass = delegate.getClass();
 
-        logger.info("Registering AMQP Listener: {} -> {}:{}", messageRoute, delegateClass.getName(), methodName);
+        if (log.isTraceEnabled()) {
+            log.trace("Registering AMQP Listener: {} -> {}:{}", messageRoute, delegateClass.getName(), methodName);
+        }
 
         Exchange exchange;
         Queue queue;
@@ -166,5 +172,27 @@ public class AmqpMessageBrokerListenerRegistrarConfiguration
             .getPrefetch());
 
         return simpleRabbitListenerContainerFactory;
+    }
+
+    @Override
+    public void stopListenerEndpoints() {
+        try {
+            if (rabbitListenerEndpointRegistry != null) {
+                rabbitListenerEndpointRegistry.stop();
+            }
+        } catch (Exception e) {
+            log.warn("Failed to stop Rabbit listener containers: {}", e.getMessage());
+        }
+    }
+
+    @Override
+    public void startListenerEndpoints() {
+        try {
+            if (rabbitListenerEndpointRegistry != null) {
+                rabbitListenerEndpointRegistry.start();
+            }
+        } catch (Exception e) {
+            log.warn("Failed to start Rabbit listener containers: {}", e.getMessage());
+        }
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,25 +16,24 @@
 
 package com.bytechef.component.json.file.action;
 
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.bool;
-import static com.bytechef.component.definition.ComponentDSL.fileEntry;
-import static com.bytechef.component.definition.ComponentDSL.integer;
-import static com.bytechef.component.definition.ComponentDSL.option;
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.bool;
+import static com.bytechef.component.definition.ComponentDsl.fileEntry;
+import static com.bytechef.component.definition.ComponentDsl.integer;
+import static com.bytechef.component.definition.ComponentDsl.option;
+import static com.bytechef.component.definition.ComponentDsl.string;
 import static com.bytechef.component.json.file.constant.JsonFileConstants.FILE_ENTRY;
 import static com.bytechef.component.json.file.constant.JsonFileConstants.FILE_TYPE;
 import static com.bytechef.component.json.file.constant.JsonFileConstants.IS_ARRAY;
 import static com.bytechef.component.json.file.constant.JsonFileConstants.PAGE_NUMBER;
 import static com.bytechef.component.json.file.constant.JsonFileConstants.PAGE_SIZE;
 import static com.bytechef.component.json.file.constant.JsonFileConstants.PATH;
-import static com.bytechef.component.json.file.constant.JsonFileConstants.READ;
 
-import com.bytechef.component.definition.ActionContext;
-import com.bytechef.component.definition.ComponentDSL.ModifiableActionDefinition;
+import com.bytechef.component.definition.ComponentDsl.ModifiableActionDefinition;
+import com.bytechef.component.definition.Context;
 import com.bytechef.component.definition.FileEntry;
 import com.bytechef.component.definition.Parameters;
-import com.bytechef.component.json.file.constant.JsonFileConstants;
+import com.bytechef.component.json.file.constant.FileType;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -50,20 +49,20 @@ import java.util.stream.Stream;
  */
 public class JsonFileReadAction {
 
-    public static final ModifiableActionDefinition ACTION_DEFINITION = action(READ)
-        .title("Read from file")
+    public static final ModifiableActionDefinition ACTION_DEFINITION = action("read")
+        .title("Read from File")
         .description("Reads data from a JSON file.")
         .properties(
             string(FILE_TYPE)
                 .label("File Type")
                 .description("The file type to choose.")
                 .options(
-                    option("JSON", JsonFileConstants.FileType.JSON.name()),
-                    option("JSON Line", JsonFileConstants.FileType.JSONL.name()))
-                .defaultValue(JsonFileConstants.FileType.JSON.name())
+                    option("JSON", FileType.JSON.name()),
+                    option("JSON Line", FileType.JSONL.name()))
+                .defaultValue(FileType.JSON.name())
                 .required(true),
             fileEntry(FILE_ENTRY)
-                .label("File")
+                .label("File Entry")
                 .description(
                     "The object property which contains a reference to the JSON file to read from.")
                 .required(true),
@@ -90,27 +89,27 @@ public class JsonFileReadAction {
         .output()
         .perform(JsonFileReadAction::perform);
 
-    protected static JsonFileConstants.FileType getFileType(Parameters inputParameters) {
-        String fileType = inputParameters.getString(FILE_TYPE, JsonFileConstants.FileType.JSON.name());
+    protected static FileType getFileType(Parameters inputParameters) {
+        String fileType = inputParameters.getString(FILE_TYPE, FileType.JSON.name());
 
-        return JsonFileConstants.FileType.valueOf(fileType.toUpperCase());
+        return FileType.valueOf(fileType.toUpperCase());
     }
 
     @SuppressWarnings("unchecked")
     protected static Object perform(
-        Parameters inputParameters, Parameters connectionParameters, ActionContext context) throws IOException {
+        Parameters inputParameters, Parameters connectionParameters, Context context) throws IOException {
 
-        JsonFileConstants.FileType fileType = getFileType(inputParameters);
+        FileType fileType = getFileType(inputParameters);
         FileEntry fileEntry = inputParameters.getRequiredFileEntry(FILE_ENTRY);
         boolean isArray = inputParameters.getBoolean(IS_ARRAY, true);
         Object result;
 
         if (isArray) {
             String path = inputParameters.getString(PATH);
-            InputStream inputStream = context.file(file -> file.getStream(fileEntry));
+            InputStream inputStream = context.file(file -> file.getInputStream(fileEntry));
             List<Map<String, ?>> items;
 
-            if (fileType == JsonFileConstants.FileType.JSON) {
+            if (fileType == FileType.JSON) {
                 if (path == null) {
                     try (Stream<Map<String, ?>> stream = context.json(json -> json.stream(inputStream))) {
                         items = stream.toList();

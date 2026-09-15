@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,8 +18,8 @@ package com.bytechef.liquibase.config;
 
 import javax.sql.DataSource;
 import liquibase.integration.spring.SpringLiquibase;
-import org.springframework.boot.autoconfigure.liquibase.LiquibaseProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.boot.liquibase.autoconfigure.LiquibaseProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -32,11 +32,16 @@ public class LiquibaseConfiguration {
         SpringLiquibase liquibase = new SpringLiquibase();
 
         liquibase.setChangeLog("classpath:config/liquibase/master.xml");
-        liquibase.setContexts(liquibaseProperties.getContexts());
+
+        if (liquibaseProperties.getContexts() != null) {
+            liquibase.setContexts(String.join(",", liquibaseProperties.getContexts()));
+        }
+
         liquibase.setDataSource(dataSource);
         liquibase.setDefaultSchema(liquibaseProperties.getDefaultSchema());
         liquibase.setDropFirst(liquibaseProperties.isDropFirst());
         liquibase.setShouldRun(liquibaseProperties.isEnabled());
+        liquibase.setChangeLogParameters(liquibaseProperties.getParameters());
 
         return liquibase;
     }

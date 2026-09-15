@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,72 +16,82 @@
 
 package com.bytechef.component.teamwork.util;
 
-import static com.bytechef.component.definition.ComponentDSL.option;
-import static com.bytechef.component.teamwork.constant.TeamworkConstants.SITE_NAME;
+import static com.bytechef.component.definition.ComponentDsl.option;
+import static com.bytechef.component.teamwork.constant.TeamworkConstants.PAGE_NUMBER;
+import static com.bytechef.component.teamwork.constant.TeamworkConstants.PAGE_SIZE;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.mockito.ArgumentCaptor.forClass;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import com.bytechef.component.definition.ActionContext;
+import com.bytechef.component.definition.Context;
+import com.bytechef.component.definition.Context.ContextFunction;
 import com.bytechef.component.definition.Context.Http;
-import com.bytechef.component.definition.Context.TypeReference;
-import com.bytechef.component.definition.Option;
-import com.bytechef.component.definition.Parameters;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
+import com.bytechef.component.definition.Context.Http.Configuration;
+import com.bytechef.component.definition.Context.Http.Configuration.ConfigurationBuilder;
+import com.bytechef.component.definition.Context.Http.Executor;
+import com.bytechef.component.definition.Context.Http.Response;
+import com.bytechef.component.definition.Context.Http.ResponseType;
+import com.bytechef.component.definition.TypeReference;
+import com.bytechef.component.test.definition.extension.MockContextSetupExtension;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 
 /**
  * @author Monika Domiter
  */
+@ExtendWith(MockContextSetupExtension.class)
 class TeamworkUtilsTest {
 
-    private final ActionContext mockedContext = mock(ActionContext.class);
-    private final Http.Executor mockedExecutor = mock(Http.Executor.class);
-    private final Parameters mockedParameters = mock(Parameters.class);
-    private final Http.Response mockedResponse = mock(Http.Response.class);
+    private final ArgumentCaptor<String> stringArgumentCaptor = forClass(String.class);
+    private final ArgumentCaptor<Object[]> objectsArgumentCaptor = forClass(Object[].class);
 
     @Test
-    void testGetBaseUrl() {
-        when(mockedParameters.getRequiredString(SITE_NAME))
-            .thenReturn("site");
+    void testGetTasklistIdOptions(
+        Context mockedContext, Response mockedResponse, Executor mockedExecutor, Http mockedHttp,
+        ArgumentCaptor<ContextFunction<Http, Executor>> httpFunctionArgumentCaptor,
+        ArgumentCaptor<ConfigurationBuilder> configurationBuilderArgumentCaptor) {
 
-        String expectedUrl = "https://site.teamwork.com/projects/api/v3";
-
-        assertEquals(expectedUrl, TeamworkUtils.getBaseUrl(mockedParameters));
-    }
-
-    @Test
-    void testGetTaskListIdOptions() {
-        Map<String, Object> map = new LinkedHashMap<>();
-        List<Map<String, String>> taskLists = new ArrayList<>();
-        Map<String, String> taskListMap = new LinkedHashMap<>();
-
-        taskListMap.put("name", "name");
-        taskListMap.put("id", "id");
-
-        taskLists.add(taskListMap);
-
-        map.put("tasklists", taskLists);
-
-        when(mockedContext.http(any()))
+        when(mockedHttp.get(stringArgumentCaptor.capture()))
             .thenReturn(mockedExecutor);
-        when(mockedExecutor.configuration(any()))
+        when(mockedExecutor.queryParameters(objectsArgumentCaptor.capture()))
             .thenReturn(mockedExecutor);
-        when(mockedExecutor.execute())
-            .thenReturn(mockedResponse);
         when(mockedResponse.getBody(any(TypeReference.class)))
-            .thenReturn(map);
-
-        List<Option<String>> expectedOptions = new ArrayList<>();
-
-        expectedOptions.add(option("name", "id"));
+            .thenReturn(Map.of("tasklists", List.of(Map.of("name", "abc", "id", 123)), "meta",
+                Map.of("page", Map.of("hasMore", true))))
+            .thenReturn(Map.of("tasklists", List.of(Map.of("name", "def", "id", 345)), "meta",
+                Map.of("page", Map.of("hasMore", false))));
 
         assertEquals(
-            expectedOptions,
-            TeamworkUtils.getTaskListIdOptions(mockedParameters, mockedParameters, Map.of(), "", mockedContext));
+            List.of(option("abc", 123), option("def", 345)),
+            TeamworkUtils.getTasklistIdOptions(null, null, null, null, mockedContext));
+
+        assertEquals("/tasklists", stringArgumentCaptor.getValue());
+        assertNotNull(httpFunctionArgumentCaptor.getValue());
+
+        ConfigurationBuilder configurationBuilder = configurationBuilderArgumentCaptor.getValue();
+        Configuration configuration = configurationBuilder.build();
+
+        assertEquals(ResponseType.JSON, configuration.getResponseType());
+
+        List<Object[]> objectsArgumentCaptorAllValues = objectsArgumentCaptor.getAllValues();
+
+        assertEquals(2, objectsArgumentCaptorAllValues.size());
+
+        Object[] queryParameters1 = {
+            PAGE_SIZE, 50, PAGE_NUMBER, 1
+        };
+
+        Object[] queryParameters2 = {
+            PAGE_SIZE, 50, PAGE_NUMBER, 2
+        };
+
+        assertArrayEquals(queryParameters1, objectsArgumentCaptorAllValues.getFirst());
+        assertArrayEquals(queryParameters2, objectsArgumentCaptorAllValues.getLast());
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,8 +17,8 @@
 package com.bytechef.platform.workflow.coordinator.event;
 
 import com.bytechef.platform.component.trigger.WebhookRequest;
+import com.bytechef.platform.workflow.WorkflowExecutionId;
 import com.bytechef.platform.workflow.coordinator.message.route.TriggerCoordinatorMessageRoute;
-import com.bytechef.platform.workflow.execution.WorkflowExecutionId;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 /**
@@ -40,6 +40,14 @@ public class TriggerWebhookEvent extends AbstractEvent {
 
     public WebhookParameters getWebhookParameters() {
         return webhookParameters;
+    }
+
+    public WebhookRequest getWebhookRequest() {
+        return webhookParameters.webhookRequest;
+    }
+
+    public WorkflowExecutionId getWorkflowExecutionId() {
+        return webhookParameters.workflowExecutionId;
     }
 
     @Override

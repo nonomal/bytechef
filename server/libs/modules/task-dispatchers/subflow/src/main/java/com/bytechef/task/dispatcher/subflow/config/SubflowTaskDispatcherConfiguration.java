@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,11 +16,14 @@
 
 package com.bytechef.task.dispatcher.subflow.config;
 
+import com.bytechef.atlas.coordinator.annotation.ConditionalOnCoordinator;
 import com.bytechef.atlas.coordinator.task.dispatcher.TaskDispatcherResolverFactory;
-import com.bytechef.atlas.execution.facade.JobFacade;
 import com.bytechef.atlas.execution.service.JobService;
 import com.bytechef.atlas.execution.service.TaskExecutionService;
 import com.bytechef.atlas.file.storage.TaskFileStorage;
+import com.bytechef.evaluator.Evaluator;
+import com.bytechef.platform.workflow.task.dispatcher.subflow.ChildJobPrincipalFactory;
+import com.bytechef.platform.workflow.task.dispatcher.subflow.SubflowResolver;
 import com.bytechef.task.dispatcher.subflow.SubflowTaskDispatcher;
 import com.bytechef.task.dispatcher.subflow.event.listener.SubflowJobStatusEventListener;
 import org.springframework.context.ApplicationEventPublisher;
@@ -31,23 +34,29 @@ import org.springframework.context.annotation.Configuration;
  * @author Ivica Cardic
  */
 @Configuration
+@ConditionalOnCoordinator
 public class SubflowTaskDispatcherConfiguration {
 
     @Bean("subflowTaskDispatcherResolverFactory_v1")
-    TaskDispatcherResolverFactory subflowTaskDispatcherResolverFactory(JobFacade jobFacade) {
-        return (taskDispatcher) -> new SubflowTaskDispatcher(jobFacade);
+    TaskDispatcherResolverFactory subflowTaskDispatcherResolverFactory(
+        ChildJobPrincipalFactory childJobPrincipalFactory, JobService jobService,
+        SubflowResolver subflowResolver) {
+
+        return (taskDispatcher) -> new SubflowTaskDispatcher(
+            childJobPrincipalFactory, jobService, subflowResolver);
     }
 
     @Configuration
+    @ConditionalOnCoordinator
     public static class SubflowJobStatusEventListenerConfiguration {
 
         @Bean
         SubflowJobStatusEventListener subflowJobStatusEventListener(
-            ApplicationEventPublisher eventPublisher, JobService jobService,
+            Evaluator evaluator, ApplicationEventPublisher eventPublisher, JobService jobService,
             TaskExecutionService taskExecutionService, TaskFileStorage taskFileStorage) {
 
             return new SubflowJobStatusEventListener(
-                eventPublisher, jobService, taskExecutionService, taskFileStorage);
+                evaluator, eventPublisher, jobService, taskExecutionService, taskFileStorage);
         }
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,106 +16,73 @@
 
 package com.bytechef.component.github.trigger;
 
-import static com.bytechef.component.definition.ComponentDSL.ModifiableTriggerDefinition;
-import static com.bytechef.component.definition.ComponentDSL.integer;
-import static com.bytechef.component.definition.ComponentDSL.number;
-import static com.bytechef.component.definition.ComponentDSL.object;
-import static com.bytechef.component.definition.ComponentDSL.string;
-import static com.bytechef.component.definition.ComponentDSL.trigger;
-import static com.bytechef.component.github.constant.GithubConstants.BODY;
-import static com.bytechef.component.github.constant.GithubConstants.ID;
-import static com.bytechef.component.github.constant.GithubConstants.NEW_ISSUE;
+import static com.bytechef.component.definition.ComponentDsl.ModifiableTriggerDefinition;
+import static com.bytechef.component.definition.ComponentDsl.outputSchema;
+import static com.bytechef.component.definition.ComponentDsl.string;
+import static com.bytechef.component.definition.ComponentDsl.trigger;
+import static com.bytechef.component.github.constant.GithubConstants.ISSUE_OUTPUT_PROPERTY;
 import static com.bytechef.component.github.constant.GithubConstants.REPOSITORY;
-import static com.bytechef.component.github.constant.GithubConstants.TITLE;
-import static com.bytechef.component.github.util.GithubUtils.getContent;
-import static com.bytechef.component.github.util.GithubUtils.subscribeWebhook;
+import static com.bytechef.component.github.util.GithubUtils.getItems;
+import static com.bytechef.component.github.util.GithubUtils.getOwnerName;
 
-import com.bytechef.component.definition.OptionsDataSource.TriggerOptionsFunction;
 import com.bytechef.component.definition.Parameters;
 import com.bytechef.component.definition.TriggerContext;
-import com.bytechef.component.definition.TriggerDefinition.DynamicWebhookEnableOutput;
-import com.bytechef.component.definition.TriggerDefinition.HttpHeaders;
-import com.bytechef.component.definition.TriggerDefinition.HttpParameters;
+import com.bytechef.component.definition.TriggerDefinition.OptionsFunction;
+import com.bytechef.component.definition.TriggerDefinition.PollOutput;
 import com.bytechef.component.definition.TriggerDefinition.TriggerType;
-import com.bytechef.component.definition.TriggerDefinition.WebhookBody;
-import com.bytechef.component.definition.TriggerDefinition.WebhookMethod;
 import com.bytechef.component.github.util.GithubUtils;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * @author Monika Kušter
  */
 public class GithubNewIssueTrigger {
 
-    public static final ModifiableTriggerDefinition TRIGGER_DEFINITION = trigger(NEW_ISSUE)
+    public static final String LAST_TIME_CHECKED = "lastTimeChecked";
+
+    public static final ModifiableTriggerDefinition TRIGGER_DEFINITION = trigger("newIssue")
         .title("New Issue")
         .description("Triggers when a new issue is created.")
-        .type(TriggerType.DYNAMIC_WEBHOOK)
+        .type(TriggerType.POLLING)
         .properties(
             string(REPOSITORY)
                 .label("Repository")
-                .options((TriggerOptionsFunction<String>) GithubUtils::getRepositoryOptions)
+                .options((OptionsFunction<String>) GithubUtils::getRepositoryOptions)
                 .required(true))
-        .outputSchema(
-            object()
-                .properties(
-                    object("issue")
-                        .properties(
-                            string("url"),
-                            string("repository_url"),
-                            number(ID),
-                            integer("number"),
-                            string(TITLE),
-                            string("state"),
-                            string(BODY)),
-                    object("sender")
-                        .properties(
-                            string("login"),
-                            integer(ID)),
-                    string("action"),
-                    string("starred_at"),
-                    object("repository")
-                        .properties(
-                            integer(ID),
-                            string("name"),
-                            string("full_name"),
-                            object("owner")
-                                .properties(
-                                    string("login"),
-                                    integer(ID)),
-                            string("visibility"),
-                            integer("forks"),
-                            integer("open_issues"),
-                            string("default_branch"))))
-        .dynamicWebhookEnable(GithubNewIssueTrigger::dynamicWebhookEnable)
-        .dynamicWebhookDisable(GithubNewIssueTrigger::dynamicWebhookDisable)
-        .dynamicWebhookRequest(GithubNewIssueTrigger::dynamicWebhookRequest);
+        .output(outputSchema(ISSUE_OUTPUT_PROPERTY))
+        .poll(GithubNewIssueTrigger::poll);
+
+    protected static PollOutput poll(
+        Parameters inputParameters, Parameters connectionParameters, Parameters closureParameters,
+        TriggerContext context) {
+
+        Instant now = Instant.now();
+
+        boolean editorEnvironment = context.isEditorEnvironment();
+        Instant start = closureParameters.get(
+            LAST_TIME_CHECKED, Instant.class,
+            editorEnvironment ? now.minus(Duration.ofHours(3)) : now);
+
+        String timestamp = DateTimeFormatter.ISO_INSTANT.format(start);
+
+        String url = "/repos/%s/%s/issues".formatted(
+            getOwnerName(context), inputParameters.getRequiredString(REPOSITORY));
+
+        List<Map<String, ?>> issues = getItems(context, url, editorEnvironment, "since", timestamp);
+
+        List<Map<String, ?>> filteredIssues = issues.stream()
+            .filter(issue -> Instant.parse((String) issue.get("created_at"))
+                .compareTo(start) >= 0)
+            .collect(Collectors.toList());
+
+        return new PollOutput(filteredIssues, Map.of(LAST_TIME_CHECKED, now), false);
+    }
 
     private GithubNewIssueTrigger() {
     }
-
-    protected static DynamicWebhookEnableOutput dynamicWebhookEnable(
-        Parameters inputParameters, Parameters connectionParameters, String webhookUrl, String workflowExecutionId,
-        TriggerContext context) {
-
-        return new DynamicWebhookEnableOutput(
-            Map.of(ID, subscribeWebhook(inputParameters.getRequiredString(REPOSITORY), "issues", webhookUrl, context)),
-            null);
-    }
-
-    protected static void dynamicWebhookDisable(
-        Parameters inputParameters, Parameters connectionParameters, Parameters outputParameters,
-        String workflowExecutionId, TriggerContext context) {
-
-        GithubUtils.unsubscribeWebhook(
-            inputParameters.getRequiredString(REPOSITORY), outputParameters.getInteger(ID), context);
-    }
-
-    protected static Map<String, Object> dynamicWebhookRequest(
-        Parameters inputParameters, Parameters connectionParameters, HttpHeaders headers, HttpParameters parameters,
-        WebhookBody body, WebhookMethod method, DynamicWebhookEnableOutput output, TriggerContext context) {
-
-        return getContent(body);
-    }
-
 }

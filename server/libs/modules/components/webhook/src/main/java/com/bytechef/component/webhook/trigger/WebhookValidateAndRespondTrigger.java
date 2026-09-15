@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,13 +16,19 @@
 
 package com.bytechef.component.webhook.trigger;
 
-import static com.bytechef.component.definition.ComponentDSL.string;
-import static com.bytechef.component.definition.ComponentDSL.trigger;
+import static com.bytechef.component.definition.ComponentDsl.placeholder;
+import static com.bytechef.component.definition.ComponentDsl.string;
+import static com.bytechef.component.definition.ComponentDsl.trigger;
+import static com.bytechef.component.webhook.constant.WebhookConstants.BODY;
 import static com.bytechef.component.webhook.constant.WebhookConstants.CSRF_TOKEN;
+import static com.bytechef.component.webhook.constant.WebhookConstants.HEADERS;
+import static com.bytechef.component.webhook.constant.WebhookConstants.METHOD;
+import static com.bytechef.component.webhook.constant.WebhookConstants.PARAMETERS;
 
-import com.bytechef.component.definition.ComponentDSL.ModifiableTriggerDefinition;
+import com.bytechef.component.definition.ComponentDsl.ModifiableTriggerDefinition;
 import com.bytechef.component.definition.TriggerDefinition;
 import com.bytechef.component.webhook.util.WebhookUtils;
+import java.util.Map;
 
 /**
  * @author Ivica Cardic
@@ -30,17 +36,19 @@ import com.bytechef.component.webhook.util.WebhookUtils;
 public class WebhookValidateAndRespondTrigger {
 
     public static final ModifiableTriggerDefinition TRIGGER_DEFINITION = trigger("validateAndRespond")
-        .title("Validate and respond")
+        .title("Validate and Respond")
         .description(
-            "Upon receiving a webhook request, it goes through a validation process. Once validated, the webhook trigger responds to the sender with an appropriate HTTP status code.")
+            "Upon receiving a webhook request, it goes through a validation process. Once validated, the webhook " +
+                "trigger responds to the sender with an appropriate HTTP status code.")
         .type(TriggerDefinition.TriggerType.STATIC_WEBHOOK)
         .properties(
             string(CSRF_TOKEN)
                 .label("CSRF Token")
                 .description(
-                    "To trigger the workflow successfully, the security token must match the X-Csrf-Token HTTP header value passed by the client.")
+                    "To trigger the workflow successfully, the security token must match the X-Csrf-Token HTTP " +
+                        "header value passed by the client.")
                 .required(true))
-        .output(WebhookUtils::getOutput)
-        .staticWebhookRequest(WebhookUtils::getWebhookResult)
-        .webhookValidate(WebhookUtils.getWebhookValidateFunction());
+        .output(placeholder(Map.of(METHOD, "POST", HEADERS, Map.of(), PARAMETERS, Map.of(), BODY, Map.of())))
+        .webhookRequest(WebhookUtils::getWebhookResult)
+        .webhookValidate(WebhookUtils::getWebhookValidate);
 }

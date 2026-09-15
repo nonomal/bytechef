@@ -1,0 +1,129 @@
+import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from '@/components/Select/Select';
+import {Checkbox} from '@/components/ui/checkbox';
+import {FormControl, FormField, FormItem, FormMessage} from '@/components/ui/form';
+import {TriggerFormInput} from '@/shared/middleware/automation/workflow/execution';
+import {UseFormReturn} from 'react-hook-form';
+
+import {FormLabelWithDescription} from './FormLabelWithDescription';
+
+interface SelectFieldRendererProps {
+    form: UseFormReturn<Record<string, unknown>>;
+    formInput: Partial<TriggerFormInput>;
+    name: string;
+}
+
+export const SelectFieldRenderer = ({form, formInput, name}: SelectFieldRendererProps) => {
+    const {
+        fieldDescription,
+        fieldLabel,
+        fieldName,
+        fieldOptions,
+        maxSelection,
+        minSelection,
+        multipleChoice,
+        placeholder,
+        required,
+    } = formInput;
+
+    const options = fieldOptions || [];
+    const label = fieldLabel || fieldName || name;
+
+    if (multipleChoice) {
+        return (
+            <FormField
+                control={form.control}
+                name={name}
+                render={({field}) => (
+                    <FormItem className="space-y-2">
+                        <FormLabelWithDescription description={fieldDescription} label={label} required={required} />
+
+                        <div className="flex flex-col gap-2">
+                            {options.map((option) => (
+                                <label className="flex items-center gap-2 text-sm" key={option.value}>
+                                    <Checkbox
+                                        checked={
+                                            Array.isArray(field.value) ? field.value.includes(option.value) : false
+                                        }
+                                        onCheckedChange={(checked) => {
+                                            const current: string[] = Array.isArray(field.value) ? field.value : [];
+
+                                            if (checked) {
+                                                if (
+                                                    maxSelection &&
+                                                    maxSelection > 0 &&
+                                                    current.length >= maxSelection
+                                                ) {
+                                                    return;
+                                                }
+
+                                                field.onChange([...current, option.value]);
+                                            } else {
+                                                field.onChange(current.filter((v) => v !== option.value));
+                                            }
+                                        }}
+                                    />
+
+                                    <span>{option.label}</span>
+                                </label>
+                            ))}
+                        </div>
+
+                        <FormMessage />
+                    </FormItem>
+                )}
+                rules={{
+                    required: required ? 'This field is required' : false,
+                    validate: (value: unknown) => {
+                        if (!Array.isArray(value)) {
+                            return true;
+                        }
+
+                        if (minSelection && minSelection > 0 && value.length < minSelection) {
+                            return `Select at least ${minSelection} option${minSelection > 1 ? 's' : ''}`;
+                        }
+
+                        if (maxSelection && maxSelection > 0 && value.length > maxSelection) {
+                            return `Select at most ${maxSelection} option${maxSelection > 1 ? 's' : ''}`;
+                        }
+
+                        return true;
+                    },
+                }}
+            />
+        );
+    }
+
+    return (
+        <FormField
+            control={form.control}
+            name={name}
+            render={({field}) => (
+                <FormItem className="space-y-2">
+                    <FormLabelWithDescription description={fieldDescription} label={label} required={required} />
+
+                    <Select
+                        onValueChange={field.onChange}
+                        value={typeof field.value === 'string' ? field.value : undefined}
+                    >
+                        <FormControl>
+                            <SelectTrigger>
+                                <SelectValue placeholder={placeholder || 'Select...'} />
+                            </SelectTrigger>
+                        </FormControl>
+
+                        <SelectContent>
+                            {options.map((opt) => (
+                                <SelectItem key={opt.value} value={opt.value as string}>
+                                    {opt.label}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+
+                    <FormMessage />
+                </FormItem>
+            )}
+            rules={{required: required ? 'This field is required' : false}}
+        />
+    );
+};

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,12 +16,13 @@
 
 package com.bytechef.component.petstore.action;
 
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.integer;
-import static com.bytechef.component.definition.ComponentDSL.object;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.integer;
+import static com.bytechef.component.definition.ComponentDsl.object;
+import static com.bytechef.component.definition.ComponentDsl.outputSchema;
 import static com.bytechef.component.definition.Context.Http.ResponseType;
 
-import com.bytechef.component.definition.ComponentDSL;
+import com.bytechef.component.definition.ComponentDsl;
 import java.util.Map;
 
 /**
@@ -30,7 +31,7 @@ import java.util.Map;
  * @generated
  */
 public class PetstoreGetInventoryAction {
-    public static final ComponentDSL.ModifiableActionDefinition ACTION_DEFINITION = action("getInventory")
+    public static final ComponentDsl.ModifiableActionDefinition ACTION_DEFINITION = action("getInventory")
         .title("Returns pet inventories by status")
         .description("Returns a map of status codes to quantities")
         .metadata(
@@ -40,10 +41,10 @@ public class PetstoreGetInventoryAction {
 
             ))
         .properties()
-        .outputSchema(object().additionalProperties(integer())
+        .output(outputSchema(object().additionalProperties(integer())
             .metadata(
                 Map.of(
-                    "responseType", ResponseType.JSON)));
+                    "responseType", ResponseType.JSON))));
 
     private PetstoreGetInventoryAction() {
     }

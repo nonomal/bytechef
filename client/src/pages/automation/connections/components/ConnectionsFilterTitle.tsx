@@ -1,0 +1,42 @@
+import Badge from '@/components/Badge/Badge';
+import {Type} from '@/pages/automation/connections/Connections';
+import {Tag} from '@/shared/middleware/automation/configuration';
+import {ComponentDefinitionBasic} from '@/shared/middleware/platform/configuration';
+import {ReactNode} from 'react';
+import {useSearchParams} from 'react-router-dom';
+
+const ConnectionsFilterTitle = ({
+    componentDefinitions,
+    filterData,
+    tags,
+}: {
+    componentDefinitions: ComponentDefinitionBasic[] | undefined;
+    filterData: {id?: number | string | null | undefined; type: Type};
+    tags: Tag[] | undefined;
+}) => {
+    const [searchParams] = useSearchParams();
+
+    let pageTitle: string | ReactNode | undefined;
+
+    if (filterData.type === Type.Component) {
+        pageTitle = componentDefinitions?.find(
+            (componentDefinition) => componentDefinition.name === filterData.id
+        )?.title;
+    } else {
+        pageTitle = tags?.find((tag) => tag.id === filterData.id)?.name;
+    }
+
+    return (
+        <div className="space-x-1">
+            <span className="text-sm font-semibold text-muted-foreground uppercase">Filter by:</span>
+
+            <Badge
+                label={`${searchParams.get('tagId') ? 'Tags' : 'Components'}: ${typeof pageTitle === 'string' ? pageTitle : 'All Components'}`}
+                styleType="primary-outline"
+                weight="semibold"
+            />
+        </div>
+    );
+};
+
+export default ConnectionsFilterTitle;

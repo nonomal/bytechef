@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,10 +16,13 @@
 
 package com.bytechef.component.asana;
 
-import static com.bytechef.component.definition.ComponentDSL.component;
+import static com.bytechef.component.definition.ComponentDsl.component;
+import static com.bytechef.component.definition.ComponentDsl.tool;
 
 import com.bytechef.component.OpenApiComponentHandler;
+import com.bytechef.component.asana.action.AsanaCreateCustomFieldAction;
 import com.bytechef.component.asana.action.AsanaCreateProjectAction;
+import com.bytechef.component.asana.action.AsanaCreateSubtaskAction;
 import com.bytechef.component.asana.action.AsanaCreateTaskAction;
 import com.bytechef.component.asana.connection.AsanaConnection;
 import com.bytechef.component.definition.ComponentDefinition;
@@ -34,11 +37,16 @@ public abstract class AbstractAsanaComponentHandler implements OpenApiComponentH
         component("asana")
             .title("Asana")
             .description(
-                "Asana is a web and mobile application designed to help teams organize, track, and manage their work tasks and projects efficiently."))
-                    .actions(modifyActions(AsanaCreateProjectAction.ACTION_DEFINITION,
-                        AsanaCreateTaskAction.ACTION_DEFINITION))
-                    .connection(modifyConnection(AsanaConnection.CONNECTION_DEFINITION))
-                    .triggers(getTriggers());
+                "Asana is a web and mobile application designed to help teams organize, track, and manage their work tasks and projects efficiently.")
+            .version(1))
+                .actions(modifyActions(AsanaCreateCustomFieldAction.ACTION_DEFINITION,
+                    AsanaCreateProjectAction.ACTION_DEFINITION, AsanaCreateSubtaskAction.ACTION_DEFINITION,
+                    AsanaCreateTaskAction.ACTION_DEFINITION))
+                .connection(modifyConnection(AsanaConnection.CONNECTION_DEFINITION))
+                .clusterElements(modifyClusterElements(tool(AsanaCreateCustomFieldAction.ACTION_DEFINITION),
+                    tool(AsanaCreateProjectAction.ACTION_DEFINITION), tool(AsanaCreateSubtaskAction.ACTION_DEFINITION),
+                    tool(AsanaCreateTaskAction.ACTION_DEFINITION)))
+                .triggers(getTriggers());
 
     @Override
     public ComponentDefinition getDefinition() {

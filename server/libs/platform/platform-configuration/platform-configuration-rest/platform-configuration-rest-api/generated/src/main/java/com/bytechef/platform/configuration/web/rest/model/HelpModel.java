@@ -5,6 +5,7 @@ import java.util.Objects;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import org.springframework.lang.Nullable;
 import org.openapitools.jackson.nullable.JsonNullable;
 import java.time.OffsetDateTime;
 import jakarta.validation.Valid;
@@ -21,12 +22,12 @@ import jakarta.annotation.Generated;
 
 @Schema(name = "Help", description = "The help text that is meant to guide your users as to how to configure this action or trigger.")
 @JsonTypeName("Help")
-@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2024-06-30T07:20:54.243996+02:00[Europe/Zagreb]", comments = "Generator version: 7.5.0")
+@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2026-07-03T17:58:15.504637+02:00[Europe/Zagreb]", comments = "Generator version: 7.22.0")
 public class HelpModel {
 
   private String body;
 
-  private String learnMoreUrl;
+  private @Nullable String learnMoreUrl;
 
   public HelpModel() {
     super();
@@ -47,7 +48,7 @@ public class HelpModel {
   /**
    * The help text
    * @return body
-  */
+   */
   @NotNull 
   @Schema(name = "body", description = "The help text", requiredMode = Schema.RequiredMode.REQUIRED)
   @JsonProperty("body")
@@ -55,11 +56,12 @@ public class HelpModel {
     return body;
   }
 
+  @JsonProperty("body")
   public void setBody(String body) {
     this.body = body;
   }
 
-  public HelpModel learnMoreUrl(String learnMoreUrl) {
+  public HelpModel learnMoreUrl(@Nullable String learnMoreUrl) {
     this.learnMoreUrl = learnMoreUrl;
     return this;
   }
@@ -67,15 +69,16 @@ public class HelpModel {
   /**
    * The url to additional documentation
    * @return learnMoreUrl
-  */
+   */
   
   @Schema(name = "learnMoreUrl", description = "The url to additional documentation", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("learnMoreUrl")
-  public String getLearnMoreUrl() {
+  public @Nullable String getLearnMoreUrl() {
     return learnMoreUrl;
   }
 
-  public void setLearnMoreUrl(String learnMoreUrl) {
+  @JsonProperty("learnMoreUrl")
+  public void setLearnMoreUrl(@Nullable String learnMoreUrl) {
     this.learnMoreUrl = learnMoreUrl;
   }
 
@@ -111,11 +114,8 @@ public class HelpModel {
    * Convert the given object to string with each line indented by 4 spaces
    * (except the first line).
    */
-  private String toIndentedString(Object o) {
-    if (o == null) {
-      return "null";
-    }
-    return o.toString().replace("\n", "\n    ");
+  private String toIndentedString(@Nullable Object o) {
+    return o == null ? "null" : o.toString().replace("\n", "\n    ");
   }
 }
 

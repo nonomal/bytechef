@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,8 +16,7 @@
 
 package com.bytechef.component.xml.helper;
 
-import static com.bytechef.component.definition.ComponentDSL.component;
-import static com.bytechef.component.xml.helper.constant.XmlHelperConstants.XML_HELPER;
+import static com.bytechef.component.definition.ComponentDsl.component;
 
 import com.bytechef.component.ComponentHandler;
 import com.bytechef.component.definition.ComponentCategory;
@@ -32,7 +31,7 @@ import com.google.auto.service.AutoService;
 @AutoService(ComponentHandler.class)
 public class XmlHelperComponentHandler implements ComponentHandler {
 
-    private static final ComponentDefinition COMPONENT_DEFINITION = component(XML_HELPER)
+    private static final ComponentDefinition COMPONENT_DEFINITION = component("xmlHelper")
         .title("XML Helper")
         .description("Converts between XML string and object/array.")
         .icon("path:assets/xml-helper.svg")

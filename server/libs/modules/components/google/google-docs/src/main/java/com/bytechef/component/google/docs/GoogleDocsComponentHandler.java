@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,16 +16,16 @@
 
 package com.bytechef.component.google.docs;
 
-import static com.bytechef.component.definition.ComponentDSL.component;
+import static com.bytechef.component.definition.ComponentDsl.component;
+import static com.bytechef.component.definition.ComponentDsl.tool;
 import static com.bytechef.component.google.docs.connection.GoogleDocsConnection.CONNECTION_DEFINITION;
-import static com.bytechef.component.google.docs.constant.GoogleDocsConstants.GOOGLE_DOCS;
 
 import com.bytechef.component.ComponentHandler;
 import com.bytechef.component.definition.ComponentCategory;
 import com.bytechef.component.definition.ComponentDefinition;
 import com.bytechef.component.google.docs.action.GoogleDocsCreateDocumentAction;
-import com.bytechef.component.google.docs.action.GoogleDocsCreateDocumentBasedOnTemplateAction;
-import com.bytechef.component.google.docs.action.GoogleDocsReadDocumentAction;
+import com.bytechef.component.google.docs.action.GoogleDocsCreateDocumentFromTemplateAction;
+import com.bytechef.component.google.docs.action.GoogleDocsGetDocumentAction;
 import com.google.auto.service.AutoService;
 
 /**
@@ -34,18 +34,25 @@ import com.google.auto.service.AutoService;
 @AutoService(ComponentHandler.class)
 public class GoogleDocsComponentHandler implements ComponentHandler {
 
-    private static final ComponentDefinition COMPONENT_DEFINITION = component(GOOGLE_DOCS)
+    private static final ComponentDefinition COMPONENT_DEFINITION = component("googleDocs")
         .title("Google Docs")
         .description(
             "Google Docs is a cloud-based collaborative word processing platform that allows multiple users to " +
                 "create, edit, and share documents in real-time.")
+        .customAction(true)
+        .customActionHelp("", "https://developers.google.com/workspace/docs/api/how-tos/overview")
         .icon("path:assets/google-docs.svg")
         .categories(ComponentCategory.FILE_STORAGE)
         .connection(CONNECTION_DEFINITION)
         .actions(
             GoogleDocsCreateDocumentAction.ACTION_DEFINITION,
-            GoogleDocsCreateDocumentBasedOnTemplateAction.ACTION_DEFINITION,
-            GoogleDocsReadDocumentAction.ACTION_DEFINITION);
+            GoogleDocsCreateDocumentFromTemplateAction.ACTION_DEFINITION,
+            GoogleDocsGetDocumentAction.ACTION_DEFINITION)
+        .clusterElements(
+            tool(GoogleDocsCreateDocumentAction.ACTION_DEFINITION),
+            tool(GoogleDocsCreateDocumentFromTemplateAction.ACTION_DEFINITION),
+            tool(GoogleDocsGetDocumentAction.ACTION_DEFINITION))
+        .version(1);
 
     @Override
     public ComponentDefinition getDefinition() {

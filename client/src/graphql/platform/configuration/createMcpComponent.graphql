@@ -1,0 +1,10 @@
+mutation createMcpComponent($input: McpComponentInput!) {
+    createMcpComponent(input: $input) {
+        id
+        componentName
+        componentVersion
+        title
+        mcpServerId
+        connectionId
+    }
+}

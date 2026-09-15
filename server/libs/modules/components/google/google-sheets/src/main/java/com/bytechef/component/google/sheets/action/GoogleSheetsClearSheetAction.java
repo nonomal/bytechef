@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,9 +16,7 @@
 
 package com.bytechef.component.google.sheets.action;
 
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.google.sheets.constant.GoogleSheetsConstants.CLEAR_SHEET;
-import static com.bytechef.component.google.sheets.constant.GoogleSheetsConstants.INCLUDE_ITEMS_FROM_ALL_DRIVES_PROPERTY;
+import static com.bytechef.component.definition.ComponentDsl.action;
 import static com.bytechef.component.google.sheets.constant.GoogleSheetsConstants.IS_THE_FIRST_ROW_HEADER;
 import static com.bytechef.component.google.sheets.constant.GoogleSheetsConstants.IS_THE_FIRST_ROW_HEADER_PROPERTY;
 import static com.bytechef.component.google.sheets.constant.GoogleSheetsConstants.SHEET_ID;
@@ -26,38 +24,41 @@ import static com.bytechef.component.google.sheets.constant.GoogleSheetsConstant
 import static com.bytechef.component.google.sheets.constant.GoogleSheetsConstants.SPREADSHEET_ID;
 import static com.bytechef.component.google.sheets.constant.GoogleSheetsConstants.SPREADSHEET_ID_PROPERTY;
 
-import com.bytechef.component.definition.ActionContext;
-import com.bytechef.component.definition.ComponentDSL.ModifiableActionDefinition;
+import com.bytechef.component.definition.ComponentDsl.ModifiableActionDefinition;
+import com.bytechef.component.definition.Context;
 import com.bytechef.component.definition.Parameters;
 import com.bytechef.google.commons.GoogleServices;
+import com.bytechef.google.commons.GoogleUtils;
 import com.google.api.services.sheets.v4.Sheets;
 import com.google.api.services.sheets.v4.model.BatchUpdateSpreadsheetRequest;
 import com.google.api.services.sheets.v4.model.GridRange;
 import com.google.api.services.sheets.v4.model.Request;
 import com.google.api.services.sheets.v4.model.UpdateCellsRequest;
+import java.io.IOException;
 import java.util.List;
 
 /**
- * @author Monika Domiter
+ * @author Monika Kušter
  */
 public class GoogleSheetsClearSheetAction {
 
-    public static final ModifiableActionDefinition ACTION_DEFINITION = action(CLEAR_SHEET)
-        .title("Clear sheet")
+    public static final ModifiableActionDefinition ACTION_DEFINITION = action("clearSheet")
+        .title("Clear Sheet")
         .description("Clear a sheet of all values while preserving formats.")
         .properties(
             SPREADSHEET_ID_PROPERTY,
-            INCLUDE_ITEMS_FROM_ALL_DRIVES_PROPERTY,
             SHEET_ID_PROPERTY,
             IS_THE_FIRST_ROW_HEADER_PROPERTY)
-        .perform(GoogleSheetsClearSheetAction::perform);
+        .processErrorResponse((statusCode, body, headers, context) -> {
+            throw new RuntimeException("Google Sheets API returned status code " + statusCode + " with body " + body);
+        })
+        .perform(GoogleSheetsClearSheetAction::perform)
+        .help("", "https://docs.bytechef.io/reference/components/google-sheets_v1#clear-sheet");
 
     private GoogleSheetsClearSheetAction() {
     }
 
-    public static Object perform(
-        Parameters inputParameters, Parameters connectionParameters, ActionContext actionContext) throws Exception {
-
+    public static Object perform(Parameters inputParameters, Parameters connectionParameters, Context context) {
         Sheets sheets = GoogleServices.getSheets(connectionParameters);
         Integer startRowIndex = inputParameters.getRequiredBoolean(IS_THE_FIRST_ROW_HEADER) ? 1 : 0;
 
@@ -71,9 +72,13 @@ public class GoogleSheetsClearSheetAction {
         BatchUpdateSpreadsheetRequest batchUpdateSpreadsheetRequest = new BatchUpdateSpreadsheetRequest()
             .setRequests(List.of(new Request().setUpdateCells(updateCellsRequest)));
 
-        sheets.spreadsheets()
-            .batchUpdate(inputParameters.getRequiredString(SPREADSHEET_ID), batchUpdateSpreadsheetRequest)
-            .execute();
+        try {
+            sheets.spreadsheets()
+                .batchUpdate(inputParameters.getRequiredString(SPREADSHEET_ID), batchUpdateSpreadsheetRequest)
+                .execute();
+        } catch (IOException e) {
+            throw GoogleUtils.translateGoogleIOException(e);
+        }
 
         return null;
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,7 +29,6 @@ import com.bytechef.platform.user.repository.UserRepository;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
@@ -38,8 +37,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.data.auditing.DateTimeProvider;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
@@ -65,7 +64,7 @@ class UserServiceIntTest {
     @Autowired
     private UserService userService;
 
-    @MockBean
+    @MockitoBean
     private DateTimeProvider dateTimeProvider;
 
     private User user;
@@ -233,7 +232,7 @@ class UserServiceIntTest {
 
         User dbUser = userRepository.save(user);
 
-        dbUser.setCreatedDate(LocalDateTime.ofInstant(now.minus(4, ChronoUnit.DAYS), ZoneOffset.UTC));
+        dbUser.setCreatedDate(now.minus(4, ChronoUnit.DAYS));
 
         userRepository.save(user);
 
@@ -263,7 +262,7 @@ class UserServiceIntTest {
 
         User dbUser = userRepository.save(user);
 
-        dbUser.setCreatedDate(LocalDateTime.ofInstant(now.minus(4, ChronoUnit.DAYS), ZoneOffset.UTC));
+        dbUser.setCreatedDate(now.minus(4, ChronoUnit.DAYS));
 
         userRepository.save(user);
 

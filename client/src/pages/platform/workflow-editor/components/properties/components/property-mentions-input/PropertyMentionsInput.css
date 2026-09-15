@@ -1,0 +1,60 @@
+@reference '../../../../../../../styles/index.css';
+
+.property-mentions-editor {
+    > div {
+        @apply w-full;
+    }
+
+    &.property-mentions-editor--no-wrap {
+        > div {
+            min-width: 100%;
+            width: max-content;
+        }
+
+        .tiptap {
+            max-width: none !important;
+            min-width: 100%;
+            white-space: pre !important;
+            width: max-content;
+            word-break: normal !important;
+            overflow-wrap: normal !important;
+        }
+    }
+
+    .tiptap .property-mention--unavailable {
+        @apply inline-flex;
+        @apply items-stretch;
+        @apply overflow-hidden;
+        @apply rounded-full;
+        @apply bg-surface-destructive-secondary;
+        @apply py-0;
+        @apply pl-0;
+        @apply pr-0.5;
+        @apply text-content-destructive;
+    }
+
+    .tiptap .property-mention--unavailable .property-mention-chip {
+        @apply rounded-none;
+    }
+
+    .tiptap {
+        /* placeholder */
+        p.is-editor-empty:first-child::before {
+            @apply content-[attr(data-placeholder)];
+            @apply text-foreground/40;
+            @apply absolute;
+            @apply h-0;
+            @apply pointer-events-none;
+        }
+    }
+}
+
+/*
+ * Size datapill mentions in formula mode to match the font size of the formula input, which chips do not
+ * inherit because they size themselves.
+ */
+@layer components {
+    .property-mentions-editor--formula-mode .tiptap .property-mention-chip {
+        @apply text-[13px]/5!;
+    }
+}

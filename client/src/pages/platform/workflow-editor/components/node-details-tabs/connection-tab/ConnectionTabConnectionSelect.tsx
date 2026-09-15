@@ -1,0 +1,412 @@
+import Button from '@/components/Button/Button';
+import RequiredMark from '@/components/RequiredMark';
+import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from '@/components/Select/Select';
+import {Label} from '@/components/ui/label';
+import {ConnectionI, useWorkflowEditor} from '@/pages/platform/workflow-editor/providers/workflowEditorProvider';
+import useWorkflowNodeDetailsPanelStore from '@/pages/platform/workflow-editor/stores/useWorkflowNodeDetailsPanelStore';
+import invalidateWorkflowValidation from '@/pages/platform/workflow-editor/utils/invalidateWorkflowValidation';
+import EnvironmentBadge from '@/shared/components/EnvironmentBadge';
+import ConnectionDialog from '@/shared/components/connection/ConnectionDialog';
+import ConnectionParameters from '@/shared/components/connection/ConnectionParameters';
+import {useSaveWorkflowTestConfigurationConnectionMutation} from '@/shared/middleware/graphql';
+import {
+    ComponentConnection,
+    ComponentDefinition,
+    WorkflowTestConfigurationConnection,
+} from '@/shared/middleware/platform/configuration';
+import {useDeleteWorkflowTestConfigurationConnectionMutation} from '@/shared/mutations/platform/workflowTestConfigurations.mutations';
+import {useGetConnectionDefinitionQuery} from '@/shared/queries/platform/connectionDefinitions.queries';
+import {WorkflowNodeDynamicPropertyKeys} from '@/shared/queries/platform/workflowNodeDynamicProperties.queries';
+import {WorkflowNodeOptionKeys} from '@/shared/queries/platform/workflowNodeOptions.queries';
+import {WorkflowTestConfigurationKeys} from '@/shared/queries/platform/workflowTestConfigurations.queries';
+import {useEnvironmentStore} from '@/shared/stores/useEnvironmentStore';
+import {useQueryClient} from '@tanstack/react-query';
+import {PlusIcon, XIcon} from 'lucide-react';
+import {useCallback, useEffect, useRef, useState} from 'react';
+import {toast} from 'sonner';
+import {useShallow} from 'zustand/react/shallow';
+
+import useWorkflowEditorStore from '../../../stores/useWorkflowEditorStore';
+
+type ConnectionTabConnectionSelectPropsType = {
+    componentConnection: ComponentConnection;
+    componentConnectionsCount: number;
+    componentDefinition: ComponentDefinition;
+    workflowId: string;
+    workflowNodeName: string;
+    workflowTestConfigurationConnection?: WorkflowTestConfigurationConnection;
+};
+
+const ConnectionTabConnectionSelect = ({
+    componentConnection,
+    componentConnectionsCount,
+    componentDefinition,
+    workflowId,
+    workflowNodeName,
+    workflowTestConfigurationConnection,
+}: ConnectionTabConnectionSelectPropsType) => {
+    const [connectionId, setConnectionId] = useState<number | undefined>();
+    const [currentConnection, setCurrentConnection] = useState<ConnectionI>();
+    const [showConnectionDialog, setShowConnectionDialog] = useState<boolean>(false);
+
+    const connectionIdRef = useRef<number | undefined>(undefined);
+
+    const currentEnvironmentId = useEnvironmentStore((state) => state.currentEnvironmentId);
+
+    const {connectionDialogAllowed, currentNode, setCurrentNode} = useWorkflowNodeDetailsPanelStore(
+        useShallow((state) => ({
+            connectionDialogAllowed: state.connectionDialogAllowed,
+            currentNode: state.currentNode,
+            setCurrentNode: state.setCurrentNode,
+        }))
+    );
+
+    const {
+        ConnectionKeys,
+        useCreateConnectionMutation,
+        useGetComponentDefinitionsQuery,
+        useGetConnectionTagsQuery,
+        useGetConnectionsQuery,
+    } = useWorkflowEditor();
+
+    const {rootClusterElementNodeData} = useWorkflowEditorStore(
+        useShallow((state) => ({
+            rootClusterElementNodeData: state.rootClusterElementNodeData,
+        }))
+    );
+
+    const {data: componentDefinitions} = useGetComponentDefinitionsQuery({});
+
+    const {componentName, componentVersion, key, required} = componentConnection;
+
+    const {data: connectionDefinition} = useGetConnectionDefinitionQuery({
+        componentName,
+        componentVersion,
+    });
+
+    const {data: componentConnections} = useGetConnectionsQuery!(
+        {
+            componentName: componentConnection?.componentName,
+            connectionVersion: connectionDefinition?.version,
+        },
+        !!componentDefinition && !!connectionDefinition
+    );
+
+    const queryClient = useQueryClient();
+
+    const saveWorkflowTestConfigurationConnectionMutation = useSaveWorkflowTestConfigurationConnectionMutation({
+        onSuccess: () => {
+            queryClient.invalidateQueries({
+                queryKey: WorkflowTestConfigurationKeys.workflowTestConfigurations,
+            });
+
+            invalidateWorkflowValidation(queryClient);
+        },
+    });
+
+    const deleteWorkflowTestConfigurationConnectionMutation = useDeleteWorkflowTestConfigurationConnectionMutation({
+        onSuccess: () => {
+            queryClient.invalidateQueries({
+                queryKey: WorkflowTestConfigurationKeys.workflowTestConfigurations,
+            });
+
+            invalidateWorkflowValidation(queryClient);
+        },
+    });
+
+    const handleValueChange = useCallback(
+        (connectionId: number, workflowConnectionKey: string) => {
+            if (!connectionId) {
+                return;
+            }
+
+            const previousConnectionId = connectionIdRef.current;
+
+            setConnectionId(connectionId);
+
+            connectionIdRef.current = connectionId;
+
+            saveWorkflowTestConfigurationConnectionMutation.mutate(
+                {
+                    connectionId,
+                    environmentId: currentEnvironmentId,
+                    workflowConnectionKey,
+                    workflowId,
+                    workflowNodeName: rootClusterElementNodeData?.workflowNodeName || workflowNodeName,
+                },
+                {
+                    onError: () => {
+                        if (connectionIdRef.current !== connectionId) {
+                            return;
+                        }
+
+                        setConnectionId(previousConnectionId);
+
+                        connectionIdRef.current = previousConnectionId;
+
+                        toast.error('Failed to save connection');
+                    },
+                    onSuccess: () => {
+                        if (connectionIdRef.current !== connectionId) {
+                            return;
+                        }
+
+                        const latestState = useWorkflowNodeDetailsPanelStore.getState();
+                        const latestNode = latestState.currentNode;
+
+                        if (latestNode) {
+                            latestState.setCurrentNode({...latestNode, connectionId});
+                        }
+
+                        queryClient.removeQueries({
+                            queryKey: [...WorkflowNodeDynamicPropertyKeys.workflowNodeDynamicProperties, workflowId],
+                        });
+
+                        queryClient.removeQueries({
+                            queryKey: [...WorkflowNodeOptionKeys.workflowNodeOptions, workflowId],
+                        });
+
+                        queryClient.removeQueries({
+                            queryKey: [...WorkflowNodeOptionKeys.clusterElementNodeOptions, workflowId],
+                        });
+
+                        queryClient.invalidateQueries({
+                            queryKey: ConnectionKeys!.connections,
+                        });
+                    },
+                }
+            );
+        },
+        [
+            ConnectionKeys,
+            currentEnvironmentId,
+            queryClient,
+            rootClusterElementNodeData?.workflowNodeName,
+            saveWorkflowTestConfigurationConnectionMutation,
+            workflowId,
+            workflowNodeName,
+        ]
+    );
+
+    const skipServerSyncRef = useRef(false);
+    const clearedConnectionIdRef = useRef<number | undefined>(undefined);
+
+    const handleClearConnectionClick = useCallback(
+        (workflowConnectionKey: string) => {
+            const previousConnectionId = connectionId ?? 0;
+
+            skipServerSyncRef.current = true;
+            clearedConnectionIdRef.current = connectionId;
+
+            deleteWorkflowTestConfigurationConnectionMutation.mutate(
+                {
+                    deleteWorkflowTestConfigurationConnectionRequest: {connectionId: previousConnectionId},
+                    environmentId: currentEnvironmentId,
+                    workflowConnectionKey,
+                    workflowId,
+                    workflowNodeName: rootClusterElementNodeData?.workflowNodeName || workflowNodeName,
+                },
+                {
+                    onSuccess: () => {
+                        queryClient.invalidateQueries({
+                            queryKey: ConnectionKeys!.connections,
+                        });
+                    },
+                }
+            );
+
+            setConnectionId(undefined);
+
+            if (currentNode) {
+                setCurrentNode({...currentNode, connectionId: undefined});
+            }
+
+            queryClient.removeQueries({
+                queryKey: [...WorkflowNodeDynamicPropertyKeys.workflowNodeDynamicProperties, workflowId],
+            });
+            queryClient.removeQueries({
+                queryKey: [...WorkflowNodeOptionKeys.workflowNodeOptions, workflowId],
+            });
+            queryClient.removeQueries({
+                queryKey: [...WorkflowNodeOptionKeys.clusterElementNodeOptions, workflowId],
+            });
+        },
+        [
+            ConnectionKeys,
+            connectionId,
+            currentEnvironmentId,
+            currentNode,
+            deleteWorkflowTestConfigurationConnectionMutation,
+            queryClient,
+            rootClusterElementNodeData?.workflowNodeName,
+            setCurrentNode,
+            workflowId,
+            workflowNodeName,
+        ]
+    );
+
+    const handleOnConnectionCreate = useCallback(
+        async (newConnectionId: number) => {
+            await queryClient.invalidateQueries({
+                queryKey: ConnectionKeys!.connections,
+            });
+
+            handleValueChange(newConnectionId, key);
+
+            setConnectionId(newConnectionId);
+        },
+        [ConnectionKeys, handleValueChange, key, queryClient]
+    );
+
+    // Sync connectionId from prop to state (one-way sync)
+    useEffect(() => {
+        const workflowConnectionId = workflowTestConfigurationConnection?.connectionId;
+
+        if (
+            skipServerSyncRef.current &&
+            workflowConnectionId !== undefined &&
+            workflowConnectionId === clearedConnectionIdRef.current
+        ) {
+            return;
+        }
+
+        if (skipServerSyncRef.current && workflowConnectionId === undefined) {
+            skipServerSyncRef.current = false;
+            clearedConnectionIdRef.current = undefined;
+        }
+
+        if (workflowConnectionId !== undefined && connectionId !== workflowConnectionId) {
+            setConnectionId(workflowConnectionId);
+        }
+        if (workflowConnectionId === undefined && connectionId !== undefined) {
+            setConnectionId(undefined);
+        }
+    }, [workflowTestConfigurationConnection, connectionId]);
+
+    // Update connectionId ref when state changes (for the sync effect above)
+    useEffect(() => {
+        connectionIdRef.current = connectionId;
+    }, [connectionId]);
+
+    useEffect(() => {
+        const newComponentConnection = componentConnections?.find((connection) => connection.id === connectionId);
+
+        setCurrentConnection(newComponentConnection);
+    }, [componentConnections, connectionId]);
+
+    return (
+        <div className="flex min-w-0 flex-col gap-6">
+            <div className="space-y-1">
+                <div className="flex items-center gap-1">
+                    {componentDefinition && (
+                        <Label className="gap-0 text-sm font-medium">
+                            {componentDefinition.title}
+
+                            {required && <RequiredMark />}
+                        </Label>
+                    )}
+
+                    {componentConnectionsCount > 1 && <Label className="text-sm text-muted-foreground">{key}</Label>}
+                </div>
+
+                <Select
+                    key={connectionId !== undefined ? `conn-${connectionId}` : 'conn-none'}
+                    onValueChange={(value) => handleValueChange(+value, key)}
+                    required={required}
+                    value={connectionId !== undefined ? connectionId.toString() : undefined}
+                >
+                    <div className="flex w-full min-w-0 space-x-2">
+                        {componentConnections && componentConnections.length > 0 && (
+                            <div className="min-w-0 flex-1 bg-content-onsurface-primary">
+                                <SelectTrigger className="min-w-0 overflow-hidden text-left [&>span]:block [&>span]:min-w-0 [&>span]:flex-1 [&>span]:overflow-hidden">
+                                    <SelectValue placeholder="Choose Connection..." />
+                                </SelectTrigger>
+                            </div>
+                        )}
+
+                        {connectionId !== undefined && (
+                            <Button
+                                icon={<XIcon />}
+                                onClick={() => handleClearConnectionClick(key)}
+                                size="icon"
+                                title="Clear connection"
+                                variant="outline"
+                            />
+                        )}
+
+                        {componentDefinition &&
+                            connectionDialogAllowed &&
+                            (componentConnections?.length ? (
+                                <Button
+                                    icon={<PlusIcon />}
+                                    onClick={() => setShowConnectionDialog(true)}
+                                    size="icon"
+                                    title="Create a new connection"
+                                    variant="outline"
+                                />
+                            ) : (
+                                <Button
+                                    className="w-full"
+                                    icon={<PlusIcon />}
+                                    label="Create Connection"
+                                    onClick={() => setShowConnectionDialog(true)}
+                                    title="Create a new connection"
+                                    variant="outline"
+                                />
+                            ))}
+
+                        {!connectionDialogAllowed && !componentConnections?.length && <p>No connections available.</p>}
+                    </div>
+
+                    <SelectContent className="w-(--radix-select-trigger-width) max-w-(--radix-select-trigger-width) min-w-0">
+                        {componentConnections &&
+                            componentConnections.map((connection) => (
+                                <SelectItem
+                                    className="[&>span:last-child]:block [&>span:last-child]:min-w-0 [&>span:last-child]:flex-1"
+                                    key={connection.id}
+                                    value={connection.id!.toString()}
+                                >
+                                    <div className="flex w-full min-w-0 items-center space-x-1">
+                                        <span className="min-w-0 truncate">{connection.name}</span>
+
+                                        <span className="min-w-0 truncate text-xs text-content-neutral-secondary">
+                                            {connection?.tags?.map((tag) => tag.name).join(', ')}
+                                        </span>
+
+                                        <span className="shrink-0">
+                                            <EnvironmentBadge environmentId={+connection.environmentId!} />
+                                        </span>
+                                    </div>
+                                </SelectItem>
+                            ))}
+                    </SelectContent>
+                </Select>
+            </div>
+
+            {currentConnection && connectionDefinition && (
+                <ConnectionParameters
+                    authorizationParameters={currentConnection.authorizationParameters}
+                    authorizationType={currentConnection.authorizationType}
+                    baseUri={currentConnection.baseUri}
+                    connectionDefinition={connectionDefinition}
+                    connectionParameters={currentConnection.connectionParameters}
+                />
+            )}
+
+            {showConnectionDialog && componentDefinitions && (
+                <ConnectionDialog
+                    componentDefinition={componentDefinition}
+                    componentDefinitions={componentDefinitions}
+                    connectionTagsQueryKey={ConnectionKeys!.connectionTags}
+                    connectionsQueryKey={ConnectionKeys!.connections}
+                    onClose={() => setShowConnectionDialog(false)}
+                    onConnectionCreate={handleOnConnectionCreate}
+                    useCreateConnectionMutation={useCreateConnectionMutation}
+                    useGetConnectionTagsQuery={useGetConnectionTagsQuery!}
+                />
+            )}
+        </div>
+    );
+};
+
+export default ConnectionTabConnectionSelect;

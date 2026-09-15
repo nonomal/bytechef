@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@ package com.bytechef.atlas.coordinator.event;
 
 import com.bytechef.atlas.coordinator.message.route.TaskCoordinatorMessageRoute;
 import com.bytechef.atlas.execution.domain.Job.Status;
-import org.apache.commons.lang3.Validate;
+import org.springframework.util.Assert;
 
 /**
  * @author Ivica Cardic
@@ -36,7 +36,7 @@ public class JobStatusApplicationEvent extends AbstractEvent implements Applicat
     public JobStatusApplicationEvent(long jobId, Status status) {
         super(TaskCoordinatorMessageRoute.APPLICATION_EVENTS);
 
-        Validate.notNull(status, "'status' must not be null");
+        Assert.notNull(status, "'status' must not be null");
 
         this.jobId = jobId;
         this.status = status;

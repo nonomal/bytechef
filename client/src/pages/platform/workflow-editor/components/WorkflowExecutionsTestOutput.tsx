@@ -1,111 +1,88 @@
+import {Accordion} from '@/components/ui/accordion';
 import {ResizableHandle, ResizablePanel, ResizablePanelGroup} from '@/components/ui/resizable';
-import WorkflowExecutionBadge from '@/pages/platform/workflow-executions/components/WorkflowExecutionBadge';
-import WorkflowExecutionContent from '@/pages/platform/workflow-executions/components/WorkflowExecutionContent';
-import WorkflowTaskExecutionItem from '@/pages/platform/workflow-executions/components/WorkflowTaskExecutionItem';
-import WorkflowTriggerExecutionItem from '@/pages/platform/workflow-executions/components/WorkflowTriggerExecutionItem';
-import {JobModel, TaskExecutionModel, TriggerExecutionModel} from '@/shared/middleware/platform/workflow/execution';
-import {WorkflowTestExecutionModel} from '@/shared/middleware/platform/workflow/test';
-import {ChevronDownIcon} from '@radix-ui/react-icons';
-import {RefreshCwIcon, RefreshCwOffIcon} from 'lucide-react';
-import {useEffect, useState} from 'react';
-import {twMerge} from 'tailwind-merge';
+import {ScrollArea} from '@/components/ui/scroll-area';
+import SubflowExecutionBreadcrumb, {
+    BreadcrumbEntryI,
+    TruncatedLabel,
+} from '@/shared/components/workflow-executions/SubflowExecutionBreadcrumb';
+import WorkflowExecutionContent from '@/shared/components/workflow-executions/WorkflowExecutionContent';
+import WorkflowExecutionsAccordionItem from '@/shared/components/workflow-executions/WorkflowExecutionsAccordionItem';
+import WorkflowExecutionsHeader from '@/shared/components/workflow-executions/WorkflowExecutionsHeader';
+import WorkflowExecutionsTabsPanel from '@/shared/components/workflow-executions/WorkflowExecutionsTabsPanel';
+import WorkflowTaskExecutionItem from '@/shared/components/workflow-executions/WorkflowTaskExecutionItem';
+import WorkflowTriggerExecutionItem from '@/shared/components/workflow-executions/WorkflowTriggerExecutionItem';
+import {WorkflowTestExecution} from '@/shared/middleware/platform/workflow/test';
+import {RefreshCwIcon, RefreshCwOffIcon, WorkflowIcon, XIcon} from 'lucide-react';
+import {useCallback, useMemo} from 'react';
 
-const WorkflowExecutionsTestOutputHeader = ({
-    job,
-    triggerExecution,
-}: {
-    job: JobModel;
-    triggerExecution?: TriggerExecutionModel;
-}) => {
-    const startTime = job?.startDate?.getTime();
-    const endTime = job?.endDate?.getTime();
+import useWorkflowExecutions from './properties/hooks/useWorkflowExecutions';
 
-    const taskExecutionsCompleted = job?.taskExecutions?.every((taskExecution) => taskExecution.status === 'COMPLETED');
-    const triggerExecutionCompleted = !triggerExecution || triggerExecution?.status === 'COMPLETED';
-
-    let duration = 0;
-
-    if (startTime && endTime) {
-        duration = Math.round(endTime - startTime);
-    }
-
-    const taskExecutionsCount = job?.taskExecutions?.length || 0;
-
-    return (
-        <div className="flex items-center gap-x-3 py-2">
-            <div className="flex items-center gap-x-2">
-                <WorkflowExecutionBadge
-                    status={taskExecutionsCompleted && triggerExecutionCompleted ? 'COMPLETED' : 'FAILED'}
-                />
-
-                <span
-                    className={twMerge(
-                        (!taskExecutionsCompleted || !triggerExecutionCompleted) && 'text-destructive',
-                        'font-semibold uppercase text-sm'
-                    )}
-                >
-                    {taskExecutionsCompleted && triggerExecutionCompleted ? 'Workflow executed' : 'Workflow failed'}
-                </span>
-            </div>
-
-            <div className="flex justify-between gap-x-2 text-xs">
-                <span>
-                    {job?.startDate &&
-                        `${job?.startDate?.toLocaleDateString()} ${job?.startDate?.toLocaleTimeString()}`}
-                </span>
-
-                <span>Duration: {duration}ms</span>
-
-                <span>{`${taskExecutionsCount} task${taskExecutionsCount > 1 ? 's' : ''} executed`}</span>
-            </div>
-        </div>
-    );
-};
+interface WorkflowExecutionsTestOutputProps {
+    onCloseClick?: () => void;
+    onEditSubflowClick?: (workflowUuid: string) => void;
+    resizablePanelSize?: number;
+    workflowIsRunning: boolean;
+    workflowTestExecution?: WorkflowTestExecution;
+}
 
 const WorkflowExecutionsTestOutput = ({
     onCloseClick,
-    resizablePanelSize = 30,
+    onEditSubflowClick,
+    resizablePanelSize = 300,
     workflowIsRunning,
     workflowTestExecution,
-}: {
-    resizablePanelSize?: number;
-    workflowIsRunning: boolean;
-    workflowTestExecution?: WorkflowTestExecutionModel;
-    onCloseClick?: () => void;
-}) => {
-    const [content, setContent] = useState<TaskExecutionModel | TriggerExecutionModel | undefined>(
-        workflowTestExecution?.triggerExecution
-            ? (workflowTestExecution.triggerExecution as TriggerExecutionModel)
-            : workflowTestExecution?.job?.taskExecutions
-              ? (workflowTestExecution.job?.taskExecutions[0] as TaskExecutionModel)
-              : undefined
-    );
+}: WorkflowExecutionsTestOutputProps) => {
+    const {
+        activeTab,
+        deepestFailedExecution,
+        dialogOpen,
+        handleBreadcrumbNavigate,
+        handleExecutionClick,
+        handleSeeExecutions,
+        isTriggerExecution,
+        job,
+        jobFailedWithNoExecutions,
+        jobFailureError,
+        rootJob,
+        selectedExecution,
+        setActiveTab,
+        setDialogOpen,
+        subflowStack,
+        taskExecutions,
+        triggerExecution,
+    } = useWorkflowExecutions({workflowTestExecution});
 
-    const job = workflowTestExecution?.job as JobModel;
-    const triggerExecution = workflowTestExecution?.triggerExecution as TriggerExecutionModel;
+    const breadcrumbItems = useMemo<BreadcrumbEntryI[]>(() => {
+        if (subflowStack.length === 0) {
+            return [];
+        }
 
-    useEffect(() => {
-        setContent(
-            workflowTestExecution?.triggerExecution
-                ? (workflowTestExecution.triggerExecution as TriggerExecutionModel)
-                : workflowTestExecution?.job?.taskExecutions
-                  ? (workflowTestExecution.job?.taskExecutions[0] as TaskExecutionModel)
-                  : undefined
-        );
-    }, [workflowTestExecution]);
+        return [
+            {label: rootJob?.label ?? 'Workflow', onNavigate: () => handleBreadcrumbNavigate(0)},
+            ...subflowStack.slice(0, -1).map((entry, i) => ({
+                label: entry.label,
+                onNavigate: () => handleBreadcrumbNavigate(i + 1),
+            })),
+            {label: subflowStack[subflowStack.length - 1].label},
+        ];
+    }, [handleBreadcrumbNavigate, rootJob?.label, subflowStack]);
+
+    const handleBreadcrumbBackClick = useCallback(() => {
+        handleBreadcrumbNavigate(subflowStack.length - 1);
+    }, [handleBreadcrumbNavigate, subflowStack.length]);
 
     return (
-        <div className="flex size-full flex-col">
-            <div className="flex items-center justify-between border-b border-b-muted px-3 py-1">
-                {workflowTestExecution ? (
-                    <WorkflowExecutionsTestOutputHeader job={job} triggerExecution={triggerExecution} />
+        <div className="flex h-full w-full flex-col rounded-lg border border-stroke-neutral-secondary bg-surface-neutral-primary">
+            <div className="flex items-center justify-between border-b border-stroke-neutral-primary">
+                {job ? (
+                    <WorkflowExecutionsHeader job={job} triggerExecution={triggerExecution} />
                 ) : (
-                    <span className="text-sm uppercase">Test Output</span>
+                    <span className="flex w-full items-center gap-x-3 px-3 py-4 text-sm uppercase">Test Output</span>
                 )}
 
                 {onCloseClick && (
-                    <button className="p-2" onClick={() => onCloseClick()}>
-                        <ChevronDownIcon className="h-5" />
+                    <button className="p-2" onClick={onCloseClick}>
+                        <XIcon className="h-4" />
                     </button>
                 )}
             </div>
@@ -118,47 +95,110 @@ const WorkflowExecutionsTestOutput = ({
                                 <RefreshCwIcon className="size-5" />
                             </span>
 
-                            <span className="text-muted-foreground">Workflow is running...</span>
+                            <span className="text-content-neutral-secondary">Workflow is running...</span>
                         </div>
                     )}
 
-                    {!workflowIsRunning && workflowTestExecution?.job ? (
-                        <ResizablePanelGroup direction="horizontal">
-                            <ResizablePanel className="overflow-y-auto py-4" defaultSize={resizablePanelSize}>
-                                <ul className="divide-y divide-gray-100">
-                                    {triggerExecution && (
-                                        <WorkflowTriggerExecutionItem
-                                            key={triggerExecution.id}
-                                            onClick={() => setContent(triggerExecution)}
-                                            selected={content?.id === triggerExecution.id}
-                                            triggerExecution={triggerExecution}
-                                        />
-                                    )}
+                    {!workflowIsRunning && (
+                        <>
+                            {workflowTestExecution?.job && jobFailedWithNoExecutions && (
+                                <div className="flex-1 p-4">
+                                    <WorkflowExecutionContent error={jobFailureError} />
+                                </div>
+                            )}
 
-                                    {job?.taskExecutions &&
-                                        job?.taskExecutions.map((taskExecution) => (
-                                            <WorkflowTaskExecutionItem
-                                                key={taskExecution.id}
-                                                onClick={() => setContent(taskExecution)}
-                                                selected={content?.id === taskExecution.id}
-                                                taskExecution={taskExecution}
+                            {workflowTestExecution?.job && !jobFailedWithNoExecutions && (
+                                <ResizablePanelGroup orientation="horizontal">
+                                    <ResizablePanel
+                                        className="flex flex-col overflow-hidden"
+                                        defaultSize={resizablePanelSize}
+                                    >
+                                        {subflowStack.length === 0 && rootJob && (
+                                            <div className="flex h-9 items-center gap-1 px-3 py-2">
+                                                <WorkflowIcon className="size-3 shrink-0 text-content-neutral-primary" />
+
+                                                <TruncatedLabel
+                                                    className="text-xs leading-4 font-medium text-content-neutral-primary"
+                                                    label={rootJob.label ?? ''}
+                                                />
+                                            </div>
+                                        )}
+
+                                        {subflowStack.length > 0 && (
+                                            <SubflowExecutionBreadcrumb
+                                                items={breadcrumbItems}
+                                                onBackClick={handleBreadcrumbBackClick}
                                             />
-                                        ))}
-                                </ul>
-                            </ResizablePanel>
+                                        )}
 
-                            <ResizableHandle />
+                                        <ScrollArea className="min-h-0 flex-1 pr-4 pl-1">
+                                            <Accordion
+                                                className="ml-2 space-y-2"
+                                                defaultValue={
+                                                    deepestFailedExecution?.path ||
+                                                    (isTriggerExecution
+                                                        ? [triggerExecution?.id || '']
+                                                        : [selectedExecution?.id || ''])
+                                                }
+                                                type="multiple"
+                                            >
+                                                {triggerExecution && (
+                                                    <WorkflowExecutionsAccordionItem
+                                                        defaultValue={deepestFailedExecution?.path}
+                                                        execution={triggerExecution}
+                                                        onExecutionClick={handleExecutionClick}
+                                                        selectedExecutionId={selectedExecution?.id || ''}
+                                                    >
+                                                        <WorkflowTriggerExecutionItem
+                                                            triggerExecution={triggerExecution}
+                                                        />
+                                                    </WorkflowExecutionsAccordionItem>
+                                                )}
 
-                            <ResizablePanel className="space-y-4 overflow-y-auto p-4">
-                                <WorkflowExecutionContent {...content} />
-                            </ResizablePanel>
-                        </ResizablePanelGroup>
-                    ) : (
-                        <div className="flex size-full items-center justify-center gap-x-1 p-3 text-muted-foreground">
-                            <RefreshCwOffIcon className="size-5" />
+                                                {taskExecutions.map((taskExecution) => (
+                                                    <WorkflowExecutionsAccordionItem
+                                                        defaultValue={deepestFailedExecution?.path}
+                                                        execution={taskExecution}
+                                                        key={taskExecution.id}
+                                                        onExecutionClick={handleExecutionClick}
+                                                        selectedExecutionId={selectedExecution?.id || ''}
+                                                    >
+                                                        <WorkflowTaskExecutionItem taskExecution={taskExecution} />
+                                                    </WorkflowExecutionsAccordionItem>
+                                                ))}
+                                            </Accordion>
+                                        </ScrollArea>
+                                    </ResizablePanel>
 
-                            <span>The workflow has not yet been executed.</span>
-                        </div>
+                                    <ResizableHandle className="bg-surface-neutral-secondary" />
+
+                                    <ResizablePanel className="flex min-h-0 flex-col space-y-4 overflow-hidden">
+                                        {job && (
+                                            <WorkflowExecutionsTabsPanel
+                                                activeTab={activeTab}
+                                                dialogOpen={dialogOpen}
+                                                isEditorEnvironment
+                                                job={job}
+                                                onEditSubflowClick={onEditSubflowClick}
+                                                onSeeExecutionsClick={handleSeeExecutions}
+                                                selectedItem={selectedExecution}
+                                                setActiveTab={setActiveTab}
+                                                setDialogOpen={setDialogOpen}
+                                                triggerExecution={triggerExecution}
+                                            />
+                                        )}
+                                    </ResizablePanel>
+                                </ResizablePanelGroup>
+                            )}
+
+                            {!workflowTestExecution?.job && (
+                                <div className="flex size-full items-center justify-center gap-x-1 p-3 text-content-neutral-secondary">
+                                    <RefreshCwOffIcon className="size-5" />
+
+                                    <span>The workflow has not yet been executed.</span>
+                                </div>
+                            )}
+                        </>
                     )}
                 </div>
             </div>

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,16 +17,19 @@
 package com.bytechef.component.pipedrive.action;
 
 import static com.bytechef.component.OpenApiComponentHandler.PropertyType;
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.array;
-import static com.bytechef.component.definition.ComponentDSL.date;
-import static com.bytechef.component.definition.ComponentDSL.integer;
-import static com.bytechef.component.definition.ComponentDSL.object;
-import static com.bytechef.component.definition.ComponentDSL.option;
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.array;
+import static com.bytechef.component.definition.ComponentDsl.date;
+import static com.bytechef.component.definition.ComponentDsl.integer;
+import static com.bytechef.component.definition.ComponentDsl.object;
+import static com.bytechef.component.definition.ComponentDsl.option;
+import static com.bytechef.component.definition.ComponentDsl.outputSchema;
+import static com.bytechef.component.definition.ComponentDsl.string;
 import static com.bytechef.component.definition.Context.Http.ResponseType;
 
-import com.bytechef.component.definition.ComponentDSL;
+import com.bytechef.component.definition.ActionDefinition;
+import com.bytechef.component.definition.ComponentDsl;
+import com.bytechef.component.pipedrive.util.PipedriveUtils;
 import java.util.Map;
 
 /**
@@ -35,8 +38,8 @@ import java.util.Map;
  * @generated
  */
 public class PipedriveGetLeadsAction {
-    public static final ComponentDSL.ModifiableActionDefinition ACTION_DEFINITION = action("getLeads")
-        .title("Get leads")
+    public static final ComponentDsl.ModifiableActionDefinition ACTION_DEFINITION = action("getLeads")
+        .title("Get Leads")
         .description("Returns multiple leads. Leads are sorted by the time they were created, from oldest to newest.")
         .metadata(
             Map.of(
@@ -52,30 +55,34 @@ public class PipedriveGetLeadsAction {
             .metadata(
                 Map.of(
                     "type", PropertyType.QUERY)),
-            integer("owner_id").label("Owner")
+            integer("owner_id").label("Owner iD")
                 .description(
                     "Leads matching the given user will be returned. However, `filter_id` takes precedence over `owner_id` when supplied.")
                 .required(false)
+                .options((ActionDefinition.OptionsFunction<Long>) PipedriveUtils::getOwnerIdOptions)
                 .metadata(
                     Map.of(
                         "type", PropertyType.QUERY)),
-            integer("person_id").label("Person")
+            integer("person_id").label("Person ID")
                 .description(
                     "If supplied, only leads matching the given person will be returned. However, `filter_id` takes precedence over `person_id` when supplied.")
                 .required(false)
+                .options((ActionDefinition.OptionsFunction<Long>) PipedriveUtils::getPersonIdOptions)
                 .metadata(
                     Map.of(
                         "type", PropertyType.QUERY)),
-            integer("organization_id").label("Organization")
+            integer("organization_id").label("Organization ID")
                 .description(
                     "If supplied, only leads matching the given organization will be returned. However, `filter_id` takes precedence over `organization_id` when supplied.")
                 .required(false)
+                .options((ActionDefinition.OptionsFunction<Long>) PipedriveUtils::getOrganizationIdOptions)
                 .metadata(
                     Map.of(
                         "type", PropertyType.QUERY)),
-            integer("filter_id").label("Filter")
+            integer("filter_id").label("Filter ID")
                 .description("Filter to use")
                 .required(false)
+                .options((ActionDefinition.OptionsFunction<Long>) PipedriveUtils::getFilterIdOptions)
                 .metadata(
                     Map.of(
                         "type", PropertyType.QUERY)),
@@ -91,24 +98,17 @@ public class PipedriveGetLeadsAction {
                 .metadata(
                     Map.of(
                         "type", PropertyType.QUERY)))
-        .outputSchema(
-            object()
-                .properties(
-                    object("body")
-                        .properties(
-                            array("data")
-                                .items(object().properties(string("id").required(false),
-                                    string("title").required(false), integer("owner_id").required(false),
-                                    object("value")
-                                        .properties(integer("amount").required(false),
-                                            string("currency").required(false))
-                                        .required(false),
-                                    date("expected_close_date").required(false), integer("person_id").required(false)))
-                                .required(false))
-                        .required(false))
-                .metadata(
-                    Map.of(
-                        "responseType", ResponseType.JSON)));
+        .output(outputSchema(object()
+            .properties(array("data")
+                .items(object().properties(string("id").required(false), string("title").required(false),
+                    integer("owner_id").required(false),
+                    object("value").properties(integer("amount").required(false), string("currency").required(false))
+                        .required(false),
+                    date("expected_close_date").required(false), integer("person_id").required(false)))
+                .required(false))
+            .metadata(
+                Map.of(
+                    "responseType", ResponseType.JSON))));
 
     private PipedriveGetLeadsAction() {
     }

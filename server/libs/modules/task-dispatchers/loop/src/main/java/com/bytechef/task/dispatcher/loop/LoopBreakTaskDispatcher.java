@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,7 +26,7 @@ import com.bytechef.atlas.coordinator.task.dispatcher.TaskDispatcherResolver;
 import com.bytechef.atlas.execution.domain.TaskExecution;
 import com.bytechef.atlas.execution.service.TaskExecutionService;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Objects;
 import org.apache.commons.lang3.Validate;
 import org.springframework.context.ApplicationEventPublisher;
@@ -51,7 +51,11 @@ public class LoopBreakTaskDispatcher implements TaskDispatcher<TaskExecution>, T
     public void dispatch(TaskExecution taskExecution) {
         TaskExecution loopTaskExecution = findLoopTaskExecution(taskExecution.getParentId());
 
-        loopTaskExecution.setEndDate(LocalDateTime.now());
+        loopTaskExecution.setEndDate(Instant.now());
+
+        taskExecution.setStatus(TaskExecution.Status.COMPLETED);
+
+        taskExecutionService.update(taskExecution);
 
         eventPublisher.publishEvent(new TaskExecutionCompleteEvent(loopTaskExecution));
     }
@@ -69,6 +73,10 @@ public class LoopBreakTaskDispatcher implements TaskDispatcher<TaskExecution>, T
             if (taskExecution.getParentId() == null) {
                 throw new IllegalStateException("Loop must be specified");
             }
+
+            taskExecution.setStatus(TaskExecution.Status.COMPLETED);
+
+            taskExecutionService.update(taskExecution);
 
             return findLoopTaskExecution(taskExecution.getParentId());
         }

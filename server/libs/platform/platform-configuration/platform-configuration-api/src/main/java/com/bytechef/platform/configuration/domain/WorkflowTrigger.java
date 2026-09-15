@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,7 +30,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import org.apache.commons.lang3.Validate;
+import org.springframework.util.Assert;
 
 /**
  * @author Ivica Cardic
@@ -48,7 +48,7 @@ public class WorkflowTrigger implements Serializable, Trigger {
     private String type;
 
     public WorkflowTrigger(Map<String, ?> source) {
-        Validate.notNull(source, "'source' must not be null");
+        Assert.notNull(source, "'source' must not be null");
 
         for (Map.Entry<String, ?> entry : source.entrySet()) {
             if (WorkflowConstants.DESCRIPTION.equals(entry.getKey())) {
@@ -70,8 +70,8 @@ public class WorkflowTrigger implements Serializable, Trigger {
             }
         }
 
-        Validate.notNull(name, "'name' must not be null");
-        Validate.notNull(type, "'type' must not be null");
+        Assert.notNull(name, "'name' must not be null");
+        Assert.notNull(type, "'type' must not be null");
     }
 
     private WorkflowTrigger() {
@@ -93,8 +93,12 @@ public class WorkflowTrigger implements Serializable, Trigger {
             workflowTrigger -> Objects.equals(workflowTrigger.getName(), workflowNodeName));
     }
 
-    public Map<String, ?> evaluateParameters(Map<String, ?> context) {
-        WorkflowTrigger workflowTrigger = new WorkflowTrigger(Evaluator.evaluate(toMap(), context));
+    public Map<String, ?> evaluateParameters(Map<String, ?> context, Evaluator evaluator) {
+        return evaluateParameters(context, evaluator, false);
+    }
+
+    public Map<String, ?> evaluateParameters(Map<String, ?> context, Evaluator evaluator, boolean lenient) {
+        WorkflowTrigger workflowTrigger = new WorkflowTrigger(evaluator.evaluate(toMap(), context, lenient));
 
         return workflowTrigger.getParameters();
     }

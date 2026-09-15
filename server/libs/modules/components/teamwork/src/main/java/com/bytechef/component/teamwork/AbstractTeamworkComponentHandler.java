@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 
 package com.bytechef.component.teamwork;
 
-import static com.bytechef.component.definition.ComponentDSL.component;
+import static com.bytechef.component.definition.ComponentDsl.component;
 
 import com.bytechef.component.OpenApiComponentHandler;
 import com.bytechef.component.definition.ComponentDefinition;
@@ -34,11 +34,12 @@ public abstract class AbstractTeamworkComponentHandler implements OpenApiCompone
         component("teamwork")
             .title("Teamwork")
             .description(
-                "Teamwork is a project management software that helps teams collaborate, organize tasks, and track progress efficiently."))
-                    .actions(modifyActions(TeamworkCreateCompanyAction.ACTION_DEFINITION,
-                        TeamworkCreateTaskAction.ACTION_DEFINITION))
-                    .connection(modifyConnection(TeamworkConnection.CONNECTION_DEFINITION))
-                    .triggers(getTriggers());
+                "Teamwork is a project management software that helps teams collaborate, organize tasks, and track progress efficiently.")
+            .version(1))
+                .actions(modifyActions(TeamworkCreateCompanyAction.ACTION_DEFINITION,
+                    TeamworkCreateTaskAction.ACTION_DEFINITION))
+                .connection(modifyConnection(TeamworkConnection.CONNECTION_DEFINITION))
+                .triggers(getTriggers());
 
     @Override
     public ComponentDefinition getDefinition() {

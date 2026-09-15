@@ -7,7 +7,11 @@ springBoot {
 
 dependencies {
     implementation("org.apache.commons:commons-lang3")
-    implementation(libs.org.openapitools.jackson.databind.nullable)
+    implementation("org.springframework.boot:spring-boot-starter-actuator")
+    implementation("org.springframework.boot:spring-boot-starter-aspectj")
+    implementation("org.springframework.boot:spring-boot-starter-data-redis")
+    implementation("org.springframework.boot:spring-boot-starter-opentelemetry")
+    implementation("org.springframework.boot:spring-boot-starter-quartz")
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.cloud:spring-cloud-starter-config")
     implementation("org.springframework.cloud:spring-cloud-starter-loadbalancer")
@@ -24,17 +28,18 @@ dependencies {
     implementation(project(":server:libs:core:message:message-event:message-event-impl"))
     implementation(project(":server:libs:platform:platform-scheduler:platform-scheduler-impl"))
 
+    implementation(project(":server:ee:libs:config:observability-config"))
     implementation(project(":server:ee:libs:core:discovery:discovery-redis"))
-    implementation(project(":server:ee:libs:platform:platform-component:platform-component-registry:platform-component-registry-remote-client"))
-    implementation(project(":server:ee:libs:platform:platform-workflow:platform-workflow-execution:platform-workflow-execution-remote-client"))
+    implementation(project(":server:ee:libs:platform:platform-component:platform-component-remote-client"))
+    implementation(project(":server:ee:libs:platform:platform-connection:platform-connection-remote-client"))
+    implementation(project(":server:ee:libs:platform:platform-scheduler:platform-scheduler-impl"))
     implementation(project(":server:ee:libs:platform:platform-scheduler:platform-scheduler-remote-rest"))
+    implementation(project(":server:ee:libs:platform:platform-workflow:platform-workflow-execution:platform-workflow-execution-remote-client"))
 
     runtimeOnly("org.postgresql:postgresql")
     runtimeOnly("com.zaxxer:HikariCP")
-    runtimeOnly("org.springframework.boot:spring-boot-starter-actuator")
-    runtimeOnly("org.springframework.boot:spring-boot-starter-aop")
-    runtimeOnly("org.springframework.boot:spring-boot-starter-data-redis")
-    runtimeOnly("org.springframework.boot:spring-boot-starter-quartz")
 
+    testImplementation("org.springframework.boot:spring-boot-starter-restclient-test")
+    testImplementation(project(":server:libs:core:message:message-broker:message-broker-memory"))
     testImplementation(project(":server:libs:test:test-int-support"))
 }

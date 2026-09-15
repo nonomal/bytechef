@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ import static com.bytechef.component.filesystem.constant.FilesystemConstants.PAT
 
 import com.bytechef.component.definition.ActionContext;
 import com.bytechef.component.definition.Parameters;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.File;
 import java.io.IOException;
 import java.util.UUID;
@@ -32,6 +33,10 @@ import org.mockito.Mockito;
  */
 class FilesystemMkdirActionTest {
 
+    /**
+     * Security Note: PATH_TRAVERSAL_IN - Test uses system temp directory with generated UUID, not user input.
+     */
+    @SuppressFBWarnings("PATH_TRAVERSAL_IN")
     @Test
     void testCreateDir1() throws IOException {
         Parameters parameters = Mockito.mock(Parameters.class);

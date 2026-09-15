@@ -1,0 +1,349 @@
+import {Tooltip, TooltipContent, TooltipTrigger} from '@/components/ui/tooltip';
+import {getRandomId} from '@/shared/util/random-utils';
+import {
+    DragEvent,
+    ForwardedRef,
+    ReactNode,
+    Suspense,
+    forwardRef,
+    lazy,
+    memo,
+    useCallback,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+} from 'react';
+
+import './PropertyMentionsInput.css';
+
+import RequiredMark from '@/components/RequiredMark';
+import {Label} from '@/components/ui/label';
+import {Skeleton} from '@/components/ui/skeleton';
+import PropertyInputTypeSwitch from '@/pages/platform/workflow-editor/components/properties/components/PropertyInputTypeSwitch';
+import ExpressionHelpNote from '@/pages/platform/workflow-editor/components/properties/components/property-mentions-input/ExpressionHelpNote';
+import PropertyMentionsInputEditor from '@/pages/platform/workflow-editor/components/properties/components/property-mentions-input/PropertyMentionsInputEditor';
+import useDataPillPanelStore from '@/pages/platform/workflow-editor/stores/useDataPillPanelStore';
+import useWorkflowDataStore from '@/pages/platform/workflow-editor/stores/useWorkflowDataStore';
+import useWorkflowNodeDetailsPanelStore from '@/pages/platform/workflow-editor/stores/useWorkflowNodeDetailsPanelStore';
+import {ERROR_MESSAGES} from '@/shared/errorMessages';
+import {ControlType} from '@/shared/middleware/platform/configuration';
+import {Editor} from '@tiptap/react';
+import {CircleQuestionMarkIcon, SquareFunctionIcon} from 'lucide-react';
+import {twMerge} from 'tailwind-merge';
+import {useShallow} from 'zustand/react/shallow';
+
+const PropertyMentionsInputEditorSheet = lazy(
+    () =>
+        import('@/pages/platform/workflow-editor/components/properties/components/property-mentions-input/PropertyMentionsInputEditorSheet')
+);
+
+interface PropertyMentionsInputProps {
+    autoFocus?: boolean;
+    className?: string;
+    controlType?: ControlType;
+    defaultValue?: string;
+    deletePropertyButton?: ReactNode;
+    description?: string;
+    disableAutoSave?: boolean;
+    error?: boolean;
+    errorMessage?: string;
+    expressionEnabled?: boolean;
+    handleFromAiClick?: (fromAi: boolean) => void;
+    handleInputTypeSwitchButtonClick?: () => void;
+    isFromAi?: boolean;
+    isFormulaMode?: boolean;
+    label?: string;
+    leadingIcon?: ReactNode;
+    onValueChange?: (value: string | number) => void;
+    path?: string;
+    placeholder?: string;
+    required?: boolean;
+    setIsFormulaMode?: (isFormulaMode: boolean) => void;
+    showInputTypeSwitchButton?: boolean;
+    toolProperty?: boolean;
+    type?: string;
+    validateBeforeSave?: (value: string | number) => boolean;
+    value?: string;
+}
+
+const PropertyMentionsInput = forwardRef<Editor, PropertyMentionsInputProps>(
+    (
+        {
+            autoFocus,
+            className,
+            controlType,
+            defaultValue,
+            deletePropertyButton,
+            description,
+            disableAutoSave,
+            error,
+            errorMessage,
+            expressionEnabled,
+            handleFromAiClick,
+            handleInputTypeSwitchButtonClick,
+            isFormulaMode,
+            isFromAi,
+            label,
+            leadingIcon,
+            onValueChange,
+            path,
+            placeholder,
+            required = false,
+            setIsFormulaMode,
+            showInputTypeSwitchButton = false,
+            toolProperty,
+            type = 'STRING',
+            validateBeforeSave,
+            value,
+        },
+        ref: ForwardedRef<Editor>
+    ) => {
+        const [isFocused, setIsFocused] = useState(false);
+        const isInitialLoadRef = useRef(true);
+        const localEditorRef = useRef<Editor | null>(null);
+
+        const {componentDefinitions, dataPills, taskDispatcherDefinitions, workflow} = useWorkflowDataStore(
+            useShallow((state) => ({
+                componentDefinitions: state.componentDefinitions,
+                dataPills: state.dataPills,
+                taskDispatcherDefinitions: state.taskDispatcherDefinitions,
+                workflow: state.workflow,
+            }))
+        );
+
+        const {focusedInput, setFocusedInput, workflowNodeDetailsPanelOpen} = useWorkflowNodeDetailsPanelStore(
+            useShallow((state) => ({
+                focusedInput: state.focusedInput,
+                setFocusedInput: state.setFocusedInput,
+                workflowNodeDetailsPanelOpen: state.workflowNodeDetailsPanelOpen,
+            }))
+        );
+
+        const setDataPillPanelOpen = useDataPillPanelStore((state) => state.setDataPillPanelOpen);
+
+        const onFocus = (editor: Editor) => {
+            setFocusedInput(editor);
+
+            if (workflowNodeDetailsPanelOpen) {
+                setDataPillPanelOpen(true);
+            }
+        };
+
+        const elementId = useMemo(() => `mentions-input-${getRandomId()}`, []);
+        const labelId = useMemo(() => `${elementId}-label`, [elementId]);
+
+        const handleEditorValueChange = useCallback(
+            (newValue?: string | number) => {
+                if (typeof newValue === 'string') {
+                    const startsWithEquals = newValue.trim().startsWith('=');
+
+                    if (startsWithEquals && setIsFormulaMode && expressionEnabled !== false) {
+                        setIsFormulaMode(true);
+
+                        const processedValue = newValue.trim().substring(1);
+
+                        localEditorRef.current?.commands?.setContent(processedValue);
+                        localEditorRef.current?.commands?.focus('end');
+
+                        if (localEditorRef.current) {
+                            setFocusedInput(localEditorRef.current);
+                        }
+
+                        return false;
+                    }
+                }
+
+                return true;
+            },
+            [expressionEnabled, setFocusedInput, setIsFormulaMode]
+        );
+
+        const getPropertyMentionsInputEditorRef = useCallback(
+            (instance: Editor | null) => {
+                localEditorRef.current = instance;
+
+                if (typeof ref === 'function') {
+                    ref(instance);
+                } else if (ref && 'current' in ref) {
+                    ref.current = instance;
+                }
+            },
+            [ref]
+        );
+
+        const handleDragOver = useCallback((event: DragEvent<HTMLDivElement>) => {
+            if (event.dataTransfer.types.includes('application/bytechef-datapill')) {
+                event.preventDefault();
+                event.dataTransfer.dropEffect = 'copy';
+            }
+        }, []);
+
+        const handleDragEnter = useCallback((event: DragEvent<HTMLDivElement>) => {
+            if (event.dataTransfer.types.includes('application/bytechef-datapill')) {
+                event.preventDefault();
+            }
+        }, []);
+
+        // Ensure localEditorRef stays in sync with parent ref
+        useEffect(() => {
+            if (ref && typeof ref !== 'function' && 'current' in ref && ref.current && !localEditorRef.current) {
+                localEditorRef.current = ref.current;
+            }
+        }, [ref]);
+
+        useEffect(() => {
+            if (!focusedInput || !localEditorRef.current) {
+                setIsFocused(false);
+
+                return;
+            }
+
+            setIsFocused(focusedInput === localEditorRef.current);
+        }, [focusedInput]);
+
+        // Check initial value for formula mode
+        useEffect(() => {
+            if (isInitialLoadRef.current && setIsFormulaMode && expressionEnabled !== false) {
+                const initialValue = value ?? defaultValue;
+
+                if (typeof initialValue === 'string' && initialValue.trim().startsWith('=')) {
+                    setIsFormulaMode(true);
+                }
+
+                isInitialLoadRef.current = false;
+            }
+        }, [value, defaultValue, expressionEnabled, setIsFormulaMode]);
+
+        return (
+            <fieldset className={twMerge('w-full', label && 'space-y-1')}>
+                {(label || description || showInputTypeSwitchButton) && (
+                    <div className={twMerge('flex w-full items-center justify-between', !label && 'justify-end')}>
+                        {label && (
+                            <div className="flex items-center">
+                                <Label
+                                    className={twMerge(description && 'mr-1', 'gap-0 leading-normal')}
+                                    htmlFor={elementId}
+                                    id={labelId}
+                                >
+                                    {label}
+
+                                    {required && <RequiredMark />}
+                                </Label>
+
+                                {description && (
+                                    <Tooltip>
+                                        <TooltipTrigger>
+                                            <CircleQuestionMarkIcon className="size-4 text-muted-foreground" />
+                                        </TooltipTrigger>
+
+                                        <TooltipContent className="max-w-tooltip-sm">{description}</TooltipContent>
+                                    </Tooltip>
+                                )}
+                            </div>
+                        )}
+
+                        <div className="flex items-center gap-1">
+                            {(controlType === 'RICH_TEXT' ||
+                                controlType === 'TEXT_AREA' ||
+                                controlType === 'FORMULA_MODE') && (
+                                <Suspense fallback={<Skeleton className="size-6" />}>
+                                    <PropertyMentionsInputEditorSheet
+                                        componentDefinitions={componentDefinitions}
+                                        controlType={controlType}
+                                        dataPills={dataPills}
+                                        onValueChange={onValueChange}
+                                        path={path}
+                                        placeholder={placeholder}
+                                        taskDispatcherDefinitions={taskDispatcherDefinitions}
+                                        title={label ?? ''}
+                                        type={type}
+                                        value={value}
+                                        workflow={workflow}
+                                    />
+                                </Suspense>
+                            )}
+
+                            {showInputTypeSwitchButton && handleInputTypeSwitchButtonClick && (
+                                <PropertyInputTypeSwitch handleClick={handleInputTypeSwitchButtonClick} mentionInput />
+                            )}
+
+                            {deletePropertyButton}
+                        </div>
+                    </div>
+                )}
+
+                <div
+                    className={twMerge(
+                        'relative flex items-center rounded-md transition-colors',
+                        error &&
+                            'border-stroke-destructive-secondary text-rose-900 ring-stroke-destructive-secondary focus-within:ring-stroke-destructive-secondary',
+                        isFocused && 'ring-2 ring-ring',
+                        label && 'mt-1',
+                        leadingIcon && 'rounded-md border border-stroke-neutral-secondary'
+                    )}
+                    onDragEnter={handleDragEnter}
+                    onDragOver={handleDragOver}
+                    title={controlType}
+                >
+                    {leadingIcon && (
+                        <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center rounded-l-md bg-surface-neutral-secondary px-3">
+                            {isFormulaMode ? <SquareFunctionIcon className="size-4" /> : leadingIcon}
+                        </span>
+                    )}
+
+                    <div
+                        className={twMerge(
+                            'property-mentions-editor flex h-full min-h-9 w-full rounded-md bg-white',
+                            // Data pill chips size themselves, so the editor's own text-xs does not
+                            // reach them. The modifier lets the stylesheet bring them down to match.
+                            isFormulaMode && 'property-mentions-editor--formula-mode',
+                            leadingIcon && 'border-0 pr-0.5 pl-10',
+                            className
+                        )}
+                    >
+                        <PropertyMentionsInputEditor
+                            autoFocus={autoFocus}
+                            className="px-2 py-2"
+                            componentDefinitions={componentDefinitions}
+                            controlType={controlType}
+                            dataPills={dataPills}
+                            disableAutoSave={disableAutoSave}
+                            elementId={elementId}
+                            expressionEnabled={expressionEnabled}
+                            handleFromAiClick={handleFromAiClick}
+                            isFormulaMode={isFormulaMode}
+                            isFromAi={isFromAi}
+                            labelId={labelId}
+                            onChange={(editorValue) => handleEditorValueChange(editorValue)}
+                            onFocus={onFocus}
+                            onValueChange={onValueChange}
+                            path={path}
+                            placeholder={placeholder}
+                            ref={getPropertyMentionsInputEditorRef}
+                            setIsFormulaMode={setIsFormulaMode}
+                            taskDispatcherDefinitions={taskDispatcherDefinitions}
+                            toolProperty={toolProperty}
+                            type={type}
+                            validateBeforeSave={validateBeforeSave}
+                            value={value ?? defaultValue}
+                            workflow={workflow}
+                        />
+                    </div>
+                </div>
+
+                {error && (
+                    <p className="mt-2 text-sm text-rose-600" role="alert">
+                        {errorMessage || ERROR_MESSAGES.PROPERTY.FIELD_REQUIRED}
+                    </p>
+                )}
+
+                {isFormulaMode && expressionEnabled !== false && !isFromAi && <ExpressionHelpNote />}
+            </fieldset>
+        );
+    }
+);
+
+PropertyMentionsInput.displayName = 'PropertyMentionsInput';
+
+export default memo(PropertyMentionsInput);

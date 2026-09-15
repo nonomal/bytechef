@@ -1,0 +1,50 @@
+enum ApprovalTaskStatus {
+    OPEN
+    IN_PROGRESS
+    COMPLETED
+}
+
+enum ApprovalTaskPriority {
+    HIGH
+    MEDIUM
+    LOW
+}
+
+type ApprovalTask {
+    id: ID!
+    name: String!
+    description: String
+    jobResumeId: String
+    status: ApprovalTaskStatus!
+    priority: ApprovalTaskPriority!
+    assigneeId: ID
+    dueDate: String
+    createdBy: String
+    createdDate: String
+    lastModifiedBy: String
+    lastModifiedDate: String
+    version: Int!
+}
+
+input ApprovalTaskInput {
+    id: ID
+    name: String!
+    description: String
+    status: ApprovalTaskStatus
+    priority: ApprovalTaskPriority
+    assigneeId: ID
+    dueDate: String
+    version: Int
+}
+
+extend type Query {
+    approvalTask(id: ID!): ApprovalTask
+    approvalTasks(environmentId: Int): [ApprovalTask]
+    approvalTasksByIds(ids: [ID!]!): [ApprovalTask]
+}
+
+extend type Mutation {
+    createApprovalTask(approvalTask: ApprovalTaskInput!): ApprovalTask
+    updateApprovalTask(approvalTask: ApprovalTaskInput!): ApprovalTask
+    deleteApprovalTask(id: ID!): Boolean
+}

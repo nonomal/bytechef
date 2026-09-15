@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,25 +17,25 @@
 package com.bytechef.component.whatsapp.trigger;
 
 import static com.bytechef.component.definition.Authorization.ACCESS_TOKEN;
-import static com.bytechef.component.definition.ComponentDSL.object;
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.definition.ComponentDsl.object;
+import static com.bytechef.component.definition.ComponentDsl.outputSchema;
+import static com.bytechef.component.definition.ComponentDsl.string;
+import static com.bytechef.component.definition.ComponentDsl.trigger;
 import static com.bytechef.component.definition.TriggerDefinition.HttpHeaders;
 import static com.bytechef.component.definition.TriggerDefinition.HttpParameters;
 import static com.bytechef.component.definition.TriggerDefinition.TriggerType;
 import static com.bytechef.component.definition.TriggerDefinition.WebhookBody;
 import static com.bytechef.component.definition.TriggerDefinition.WebhookMethod;
-import static com.bytechef.component.whatsapp.constant.WhatsAppConstants.BASE_URL;
 import static com.bytechef.component.whatsapp.constant.WhatsAppConstants.GET_MESSAGE;
-import static com.bytechef.component.whatsapp.constant.WhatsAppConstants.MESSAGE_RECEIVED;
 import static com.bytechef.component.whatsapp.constant.WhatsAppConstants.RECEIVE_USER;
 import static com.bytechef.component.whatsapp.constant.WhatsAppConstants.SENDER_NUMBER;
 
-import com.bytechef.component.definition.ComponentDSL;
-import com.bytechef.component.definition.Context;
+import com.bytechef.component.definition.ComponentDsl.ModifiableTriggerDefinition;
 import com.bytechef.component.definition.Context.Http;
 import com.bytechef.component.definition.Parameters;
 import com.bytechef.component.definition.TriggerContext;
-import com.bytechef.component.definition.TriggerDefinition.DynamicWebhookEnableOutput;
+import com.bytechef.component.definition.TriggerDefinition.WebhookEnableOutput;
+import com.bytechef.component.definition.TypeReference;
 import com.bytechef.component.whatsapp.util.WhatsAppUtils;
 import java.util.List;
 import java.util.Map;
@@ -45,17 +45,17 @@ import java.util.Map;
  */
 public class WhatsAppNewIncomingMessageTrigger {
 
-    public static final ComponentDSL.ModifiableTriggerDefinition TRIGGER_DEFINITION =
-        ComponentDSL.trigger(MESSAGE_RECEIVED)
-            .title("Message received")
-            .description("Triggers when you get a new message from certain number.")
-            .type(TriggerType.DYNAMIC_WEBHOOK)
-            .properties(
-                string(SENDER_NUMBER)
-                    .label("Sender number")
-                    .description("Type in the number from whom you want to trigger")
-                    .required(true))
-            .outputSchema(
+    public static final ModifiableTriggerDefinition TRIGGER_DEFINITION = trigger("messageReceived")
+        .title("Message Received")
+        .description("Triggers when you get a new message from certain number.")
+        .type(TriggerType.DYNAMIC_WEBHOOK)
+        .properties(
+            string(SENDER_NUMBER)
+                .label("Sender Number")
+                .description("Type in the number from whom you want to trigger")
+                .required(true))
+        .output(
+            outputSchema(
                 object()
                     .properties(
                         string("object"),
@@ -84,18 +84,18 @@ public class WhatsAppNewIncomingMessageTrigger {
                                                 string("timestamp"),
                                                 object("text")
                                                     .properties(
-                                                        string("body")))))))
-            .dynamicWebhookDisable(WhatsAppNewIncomingMessageTrigger::dynamicWebhookDisable)
-            .dynamicWebhookEnable(WhatsAppNewIncomingMessageTrigger::dynamicWebhookEnable)
-            .dynamicWebhookRequest(WhatsAppNewIncomingMessageTrigger::dynamicWebhookRequest);
+                                                        string("body"))))))))
+        .webhookDisable(WhatsAppNewIncomingMessageTrigger::webhookDisable)
+        .webhookEnable(WhatsAppNewIncomingMessageTrigger::webhookEnable)
+        .webhookRequest(WhatsAppNewIncomingMessageTrigger::webhookRequest);
 
     private WhatsAppNewIncomingMessageTrigger() {
     }
 
-    protected static Object dynamicWebhookRequest(
+    protected static Object webhookRequest(
         Parameters inputParameters, Parameters connectionParameters, HttpHeaders httpHeaders,
         HttpParameters httpParameters, WebhookBody body, WebhookMethod webhookMethod,
-        DynamicWebhookEnableOutput dynamicWebhookEnableOutput, TriggerContext context) {
+        Parameters webhookEnableOutput, TriggerContext context) {
 
         if (body == null) {
             return null;
@@ -104,12 +104,12 @@ public class WhatsAppNewIncomingMessageTrigger {
         return body.getContent();
     }
 
-    protected static DynamicWebhookEnableOutput dynamicWebhookEnable(
+    protected static WebhookEnableOutput webhookEnable(
         Parameters inputParameters, Parameters connectionParameters, String webhookUrl, String workflowExecutionId,
         TriggerContext context) {
 
         String server = WhatsAppUtils.getWhatsappServer(connectionParameters.getRequiredString(ACCESS_TOKEN), context);
-        String url = BASE_URL + "/webhooks";
+        String url = "/webhooks";
 
         Map<?, ?> response = context
             .http(http -> http.post(url.formatted(server, inputParameters.getRequiredString(RECEIVE_USER))))
@@ -121,7 +121,7 @@ public class WhatsAppNewIncomingMessageTrigger {
                         "sources", Map.of("api", true))))
             .configuration(Http.responseType(Http.ResponseType.JSON))
             .execute()
-            .getBody(new Context.TypeReference<>() {});
+            .getBody(new TypeReference<>() {});
 
         if (response.containsKey("errors")) {
             List<?> errors = (List<?>) response.get("errors");
@@ -131,14 +131,14 @@ public class WhatsAppNewIncomingMessageTrigger {
             throw new IllegalStateException((String) firstError.get("message"));
         }
 
-        return new DynamicWebhookEnableOutput(Map.of("id", response.get("id")), null);
+        return new WebhookEnableOutput(Map.of("id", response.get("id")), null);
     }
 
-    public static void dynamicWebhookDisable(
+    public static void webhookDisable(
         Parameters inputParameters, Parameters connectionParameters, Parameters outputParameters, String s,
         TriggerContext context) {
 
-        String url = BASE_URL + "/webhooks";
+        String url = "/webhooks";
 
         String server = WhatsAppUtils.getWhatsappServer(connectionParameters.getRequiredString(ACCESS_TOKEN), context);
 

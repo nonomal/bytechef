@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,42 +16,42 @@
 
 package com.bytechef.component.microsoft.share.point.util;
 
-import static com.bytechef.component.definition.ComponentDSL.bool;
-import static com.bytechef.component.definition.ComponentDSL.date;
-import static com.bytechef.component.definition.ComponentDSL.dateTime;
-import static com.bytechef.component.definition.ComponentDSL.number;
-import static com.bytechef.component.definition.ComponentDSL.option;
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.definition.ComponentDsl.bool;
+import static com.bytechef.component.definition.ComponentDsl.date;
+import static com.bytechef.component.definition.ComponentDsl.dateTime;
+import static com.bytechef.component.definition.ComponentDsl.number;
+import static com.bytechef.component.definition.ComponentDsl.option;
+import static com.bytechef.component.definition.ComponentDsl.string;
 import static com.bytechef.component.microsoft.share.point.constant.ColumnType.BOOLEAN;
 import static com.bytechef.component.microsoft.share.point.constant.ColumnType.CHOICE;
 import static com.bytechef.component.microsoft.share.point.constant.ColumnType.CURRENCY;
 import static com.bytechef.component.microsoft.share.point.constant.ColumnType.DATE_TIME;
 import static com.bytechef.component.microsoft.share.point.constant.ColumnType.NUMBER;
 import static com.bytechef.component.microsoft.share.point.constant.ColumnType.TEXT;
-import static com.bytechef.component.microsoft.share.point.constant.MicrosoftSharePointConstants.BASE_URL;
 import static com.bytechef.component.microsoft.share.point.constant.MicrosoftSharePointConstants.DESCRIPTION;
 import static com.bytechef.component.microsoft.share.point.constant.MicrosoftSharePointConstants.DISPLAY_NAME;
-import static com.bytechef.component.microsoft.share.point.constant.MicrosoftSharePointConstants.ID;
+import static com.bytechef.component.microsoft.share.point.constant.MicrosoftSharePointConstants.FOLDER;
 import static com.bytechef.component.microsoft.share.point.constant.MicrosoftSharePointConstants.LIST_ID;
-import static com.bytechef.component.microsoft.share.point.constant.MicrosoftSharePointConstants.NAME;
 import static com.bytechef.component.microsoft.share.point.constant.MicrosoftSharePointConstants.PARENT_FOLDER;
 import static com.bytechef.component.microsoft.share.point.constant.MicrosoftSharePointConstants.READ_ONLY;
 import static com.bytechef.component.microsoft.share.point.constant.MicrosoftSharePointConstants.REQUIRED;
 import static com.bytechef.component.microsoft.share.point.constant.MicrosoftSharePointConstants.SITE_ID;
-import static com.bytechef.component.microsoft.share.point.constant.MicrosoftSharePointConstants.VALUE;
+import static com.bytechef.microsoft.commons.MicrosoftConstants.ID;
+import static com.bytechef.microsoft.commons.MicrosoftConstants.NAME;
+import static com.bytechef.microsoft.commons.MicrosoftConstants.VALUE;
+import static com.bytechef.microsoft.commons.MicrosoftUtils.getOptions;
 
 import com.bytechef.component.definition.ActionContext;
-import com.bytechef.component.definition.ComponentDSL.ModifiableStringProperty;
-import com.bytechef.component.definition.ComponentDSL.ModifiableValueProperty;
+import com.bytechef.component.definition.ComponentDsl.ModifiableStringProperty;
+import com.bytechef.component.definition.ComponentDsl.ModifiableValueProperty;
+import com.bytechef.component.definition.Context;
 import com.bytechef.component.definition.Context.Http;
-import com.bytechef.component.definition.Context.TypeReference;
 import com.bytechef.component.definition.Option;
 import com.bytechef.component.definition.Parameters;
 import com.bytechef.component.definition.Property;
 import com.bytechef.component.definition.Property.ValueProperty;
+import com.bytechef.component.definition.TypeReference;
 import com.bytechef.component.microsoft.share.point.constant.ColumnType;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -69,8 +69,12 @@ public class MicrosoftSharePointUtils {
         Parameters inputParameters, Parameters connectionParameters, Map<String, String> dependencyPaths,
         ActionContext context) {
 
+        if (!inputParameters.containsKey(SITE_ID) || !inputParameters.containsKey(LIST_ID)) {
+            return List.of();
+        }
+
         Map<String, Object> body = context
-            .http(http -> http.get(BASE_URL + "/" + inputParameters.getRequiredString(SITE_ID) + "/lists/" +
+            .http(http -> http.get("/sites/" + inputParameters.getRequiredString(SITE_ID) + "/lists/" +
                 inputParameters.getRequiredString(LIST_ID) + "/columns"))
             .configuration(Http.responseType(Http.ResponseType.JSON))
             .execute()
@@ -89,6 +93,7 @@ public class MicrosoftSharePointUtils {
                 }
             }
         }
+
         return properties;
     }
 
@@ -173,6 +178,7 @@ public class MicrosoftSharePointUtils {
                     .required(required);
             }
         }
+
         return null;
     }
 
@@ -199,73 +205,97 @@ public class MicrosoftSharePointUtils {
         return (parentId == null) ? "root" : parentId;
     }
 
-    public static List<Option<String>> getFolderIdOptions(
-        Parameters inputParameters, Parameters connectionParameters, Map<String, String> dependencyPaths,
-        String searchText, ActionContext context) {
-
-        String encode = URLEncoder.encode("folder ne null", StandardCharsets.UTF_8);
-
-        Map<String, ?> body = context
-            .http(http -> http.get(BASE_URL + "/" + inputParameters.getRequiredString(SITE_ID) +
-                "/drive/items/root/children?$filter=" + encode))
+    private static Map<String, Object> fetchSiteChildren(Parameters inputParameters, Context context) {
+        return context
+            .http(http -> http.get("/sites/" + inputParameters.getRequiredString(SITE_ID) + "/drive/root/delta"))
+            .queryParameter("$select", "id,name,folder,parentReference")
             .configuration(Http.responseType(Http.ResponseType.JSON))
             .execute()
             .getBody(new TypeReference<>() {});
+    }
 
-        List<Option<String>> options = new ArrayList<>();
+    public static List<Option<String>> getFileIdOptions(
+        Parameters inputParameters, Parameters connectionParameters, Map<String, String> dependencyPaths,
+        String searchText, Context context) {
 
-        if (body.get("value") instanceof List<?> list) {
-            for (Object item : list) {
-                if (item instanceof Map<?, ?> map) {
-                    options.add(option((String) map.get(NAME), (String) map.get(ID)));
-                }
-            }
+        if (!inputParameters.containsKey(SITE_ID)) {
+            return List.of();
         }
 
-        return options;
+        Map<String, Object> response = fetchSiteChildren(inputParameters, context);
+
+        List<Object> folders = new ArrayList<>();
+
+        if (response.get(VALUE) instanceof List<?> list) {
+            list.stream()
+                .filter(o -> o instanceof Map<?, ?> map && !map.containsKey(FOLDER))
+                .forEach(folders::add);
+        }
+
+        return getOptions(context, Map.of(VALUE, folders), NAME, ID);
+    }
+
+    public static List<Option<String>> getFolderIdOptions(
+        Parameters inputParameters, Parameters connectionParameters, Map<String, String> dependencyPaths,
+        String searchText, Context context) {
+
+        if (!inputParameters.containsKey(SITE_ID)) {
+            return List.of();
+        }
+
+        Map<String, Object> response = fetchSiteChildren(inputParameters, context);
+
+        List<Object> folders = new ArrayList<>();
+
+        if (response.get(VALUE) instanceof List<?> list) {
+            list.stream()
+                .filter(o -> o instanceof Map<?, ?> map && map.containsKey(FOLDER))
+                .forEach(folders::add);
+        }
+
+        return getOptions(context, Map.of(VALUE, folders), NAME, ID);
+    }
+
+    public static List<Option<String>> getFolderAndFileIdOptions(
+        Parameters inputParameters, Parameters connectionParameters, Map<String, String> dependencyPaths,
+        String searchText, Context context) {
+
+        if (!inputParameters.containsKey(SITE_ID)) {
+            return List.of();
+        }
+
+        Map<String, Object> response = fetchSiteChildren(inputParameters, context);
+
+        return getOptions(context, response, NAME, ID);
     }
 
     public static List<Option<String>> getListIdOptions(
         Parameters inputParameters, Parameters connectionParameters, Map<String, String> dependencyPaths,
-        String searchText, ActionContext context) {
+        String searchText, Context context) {
+
+        if (!inputParameters.containsKey(SITE_ID)) {
+            return List.of();
+        }
 
         Map<String, ?> body =
-            context.http(http -> http.get(BASE_URL + "/" + inputParameters.getRequiredString(SITE_ID) + "/lists"))
+            context.http(http -> http.get("/sites/" + inputParameters.getRequiredString(SITE_ID) + "/lists"))
                 .configuration(Http.responseType(Http.ResponseType.JSON))
                 .execute()
                 .getBody(new TypeReference<>() {});
 
-        return getOptions(body, DISPLAY_NAME);
+        return getOptions(context, body, DISPLAY_NAME, ID);
     }
 
     public static List<Option<String>> getSiteOptions(
         Parameters inputParameters, Parameters connectionParameters, Map<String, String> dependencyPaths,
-        String searchText, ActionContext context) {
+        String searchText, Context context) {
 
-        Map<String, ?> body = context.http(http -> http.get(BASE_URL + "?search=*&select=displayName,id,name"))
+        Map<String, ?> body = context.http(http -> http.get("/sites"))
+            .queryParameter("search", "*")
             .configuration(Http.responseType(Http.ResponseType.JSON))
             .execute()
             .getBody(new TypeReference<>() {});
 
-        return getOptions(body, NAME);
-    }
-
-    private static List<Option<String>> getOptions(Map<String, ?> body, String label) {
-        List<Option<String>> options = new ArrayList<>();
-
-        if (body.get(VALUE) instanceof List<?> list) {
-            for (Object item : list) {
-                if (item instanceof Map<?, ?> map) {
-                    String name = (String) map.get(label);
-                    String id = (String) map.get(ID);
-
-                    if (name != null && id != null) {
-                        options.add(option(name, id));
-                    }
-                }
-            }
-        }
-
-        return options;
+        return getOptions(context, body, DISPLAY_NAME, ID);
     }
 }

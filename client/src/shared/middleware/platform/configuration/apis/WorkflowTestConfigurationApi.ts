@@ -12,49 +12,56 @@
  * Do not edit the class manually.
  */
 
-
 import * as runtime from '../runtime';
-import type {
-  SaveWorkflowTestConfigurationConnectionRequestModel,
-  SaveWorkflowTestConfigurationInputsRequestModel,
-  WorkflowTestConfigurationConnectionModel,
-  WorkflowTestConfigurationModel,
-} from '../models/index';
 import {
-    SaveWorkflowTestConfigurationConnectionRequestModelFromJSON,
-    SaveWorkflowTestConfigurationConnectionRequestModelToJSON,
-    SaveWorkflowTestConfigurationInputsRequestModelFromJSON,
-    SaveWorkflowTestConfigurationInputsRequestModelToJSON,
-    WorkflowTestConfigurationConnectionModelFromJSON,
-    WorkflowTestConfigurationConnectionModelToJSON,
-    WorkflowTestConfigurationModelFromJSON,
-    WorkflowTestConfigurationModelToJSON,
-} from '../models/index';
+    type DeleteWorkflowTestConfigurationConnectionRequest,
+    DeleteWorkflowTestConfigurationConnectionRequestFromJSON,
+    DeleteWorkflowTestConfigurationConnectionRequestToJSON,
+} from '../models/DeleteWorkflowTestConfigurationConnectionRequest';
+import {
+    type SaveWorkflowTestConfigurationInputsRequest,
+    SaveWorkflowTestConfigurationInputsRequestFromJSON,
+    SaveWorkflowTestConfigurationInputsRequestToJSON,
+} from '../models/SaveWorkflowTestConfigurationInputsRequest';
+import {
+    type WorkflowTestConfiguration,
+    WorkflowTestConfigurationFromJSON,
+    WorkflowTestConfigurationToJSON,
+} from '../models/WorkflowTestConfiguration';
+import {
+    type WorkflowTestConfigurationConnection,
+    WorkflowTestConfigurationConnectionFromJSON,
+    WorkflowTestConfigurationConnectionToJSON,
+} from '../models/WorkflowTestConfigurationConnection';
+
+export interface DeleteWorkflowTestConfigurationConnectionOperationRequest {
+    workflowId: string;
+    workflowNodeName: string;
+    workflowConnectionKey: string;
+    environmentId: number;
+    deleteWorkflowTestConfigurationConnectionRequest: DeleteWorkflowTestConfigurationConnectionRequest;
+}
 
 export interface GetWorkflowTestConfigurationRequest {
     workflowId: string;
+    environmentId: number;
 }
 
 export interface GetWorkflowTestConfigurationConnectionsRequest {
     workflowId: string;
     workflowNodeName: string;
+    environmentId: number;
 }
 
 export interface SaveWorkflowTestConfigurationRequest {
     workflowId: string;
-    workflowTestConfigurationModel: Omit<WorkflowTestConfigurationModel, 'createdBy'|'createdDate'|'lastModifiedBy'|'lastModifiedDate'|'workflowId'>;
+    workflowTestConfiguration: Omit<WorkflowTestConfiguration, 'createdBy'|'createdDate'|'lastModifiedBy'|'lastModifiedDate'|'workflowId'>;
 }
 
-export interface SaveWorkflowTestConfigurationConnectionRequest {
+export interface SaveWorkflowTestConfigurationInputsOperationRequest {
     workflowId: string;
-    workflowNodeName: string;
-    workflowConnectionKey: string;
-    saveWorkflowTestConfigurationConnectionRequestModel: SaveWorkflowTestConfigurationConnectionRequestModel;
-}
-
-export interface SaveWorkflowTestConfigurationInputsRequest {
-    workflowId: string;
-    saveWorkflowTestConfigurationInputsRequestModel: SaveWorkflowTestConfigurationInputsRequestModel;
+    environmentId: number;
+    saveWorkflowTestConfigurationInputsRequest: SaveWorkflowTestConfigurationInputsRequest;
 }
 
 /**
@@ -63,10 +70,92 @@ export interface SaveWorkflowTestConfigurationInputsRequest {
 export class WorkflowTestConfigurationApi extends runtime.BaseAPI {
 
     /**
-     * Get a workflow test configuration.
-     * Get a workflow test configuration
+     * Creates request options for deleteWorkflowTestConfigurationConnection without sending the request
      */
-    async getWorkflowTestConfigurationRaw(requestParameters: GetWorkflowTestConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<WorkflowTestConfigurationModel>> {
+    async deleteWorkflowTestConfigurationConnectionRequestOpts(requestParameters: DeleteWorkflowTestConfigurationConnectionOperationRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['workflowId'] == null) {
+            throw new runtime.RequiredError(
+                'workflowId',
+                'Required parameter "workflowId" was null or undefined when calling deleteWorkflowTestConfigurationConnection().'
+            );
+        }
+
+        if (requestParameters['workflowNodeName'] == null) {
+            throw new runtime.RequiredError(
+                'workflowNodeName',
+                'Required parameter "workflowNodeName" was null or undefined when calling deleteWorkflowTestConfigurationConnection().'
+            );
+        }
+
+        if (requestParameters['workflowConnectionKey'] == null) {
+            throw new runtime.RequiredError(
+                'workflowConnectionKey',
+                'Required parameter "workflowConnectionKey" was null or undefined when calling deleteWorkflowTestConfigurationConnection().'
+            );
+        }
+
+        if (requestParameters['environmentId'] == null) {
+            throw new runtime.RequiredError(
+                'environmentId',
+                'Required parameter "environmentId" was null or undefined when calling deleteWorkflowTestConfigurationConnection().'
+            );
+        }
+
+        if (requestParameters['deleteWorkflowTestConfigurationConnectionRequest'] == null) {
+            throw new runtime.RequiredError(
+                'deleteWorkflowTestConfigurationConnectionRequest',
+                'Required parameter "deleteWorkflowTestConfigurationConnectionRequest" was null or undefined when calling deleteWorkflowTestConfigurationConnection().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        if (requestParameters['environmentId'] != null) {
+            queryParameters['environmentId'] = requestParameters['environmentId'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+
+        let urlPath = `/workflow-test-configurations/{workflowId}/workflow-nodes/{workflowNodeName}/{workflowConnectionKey}/connections`;
+        urlPath = urlPath.replace('{workflowId}', encodeURIComponent(String(requestParameters['workflowId'])));
+        urlPath = urlPath.replace('{workflowNodeName}', encodeURIComponent(String(requestParameters['workflowNodeName'])));
+        urlPath = urlPath.replace('{workflowConnectionKey}', encodeURIComponent(String(requestParameters['workflowConnectionKey'])));
+
+        return {
+            path: urlPath,
+            method: 'DELETE',
+            headers: headerParameters,
+            query: queryParameters,
+            body: DeleteWorkflowTestConfigurationConnectionRequestToJSON(requestParameters['deleteWorkflowTestConfigurationConnectionRequest']),
+        };
+    }
+
+    /**
+     * Delete a workflow test configuration connection.
+     * Delete a workflow test configuration connection
+     */
+    async deleteWorkflowTestConfigurationConnectionRaw(requestParameters: DeleteWorkflowTestConfigurationConnectionOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        const requestOptions = await this.deleteWorkflowTestConfigurationConnectionRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.VoidApiResponse(response);
+    }
+
+    /**
+     * Delete a workflow test configuration connection.
+     * Delete a workflow test configuration connection
+     */
+    async deleteWorkflowTestConfigurationConnection(requestParameters: DeleteWorkflowTestConfigurationConnectionOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+        await this.deleteWorkflowTestConfigurationConnectionRaw(requestParameters, initOverrides);
+    }
+
+    /**
+     * Creates request options for getWorkflowTestConfiguration without sending the request
+     */
+    async getWorkflowTestConfigurationRequestOpts(requestParameters: GetWorkflowTestConfigurationRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['workflowId'] == null) {
             throw new runtime.RequiredError(
                 'workflowId',
@@ -74,34 +163,57 @@ export class WorkflowTestConfigurationApi extends runtime.BaseAPI {
             );
         }
 
+        if (requestParameters['environmentId'] == null) {
+            throw new runtime.RequiredError(
+                'environmentId',
+                'Required parameter "environmentId" was null or undefined when calling getWorkflowTestConfiguration().'
+            );
+        }
+
         const queryParameters: any = {};
+
+        if (requestParameters['environmentId'] != null) {
+            queryParameters['environmentId'] = requestParameters['environmentId'];
+        }
 
         const headerParameters: runtime.HTTPHeaders = {};
 
-        const response = await this.request({
-            path: `/workflow-test-configurations/{workflowId}`.replace(`{${"workflowId"}}`, encodeURIComponent(String(requestParameters['workflowId']))),
+
+        let urlPath = `/workflow-test-configurations/{workflowId}`;
+        urlPath = urlPath.replace('{workflowId}', encodeURIComponent(String(requestParameters['workflowId'])));
+
+        return {
+            path: urlPath,
             method: 'GET',
             headers: headerParameters,
             query: queryParameters,
-        }, initOverrides);
-
-        return new runtime.JSONApiResponse(response, (jsonValue) => WorkflowTestConfigurationModelFromJSON(jsonValue));
+        };
     }
 
     /**
      * Get a workflow test configuration.
      * Get a workflow test configuration
      */
-    async getWorkflowTestConfiguration(requestParameters: GetWorkflowTestConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<WorkflowTestConfigurationModel> {
+    async getWorkflowTestConfigurationRaw(requestParameters: GetWorkflowTestConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<WorkflowTestConfiguration>> {
+        const requestOptions = await this.getWorkflowTestConfigurationRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => WorkflowTestConfigurationFromJSON(jsonValue));
+    }
+
+    /**
+     * Get a workflow test configuration.
+     * Get a workflow test configuration
+     */
+    async getWorkflowTestConfiguration(requestParameters: GetWorkflowTestConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<WorkflowTestConfiguration> {
         const response = await this.getWorkflowTestConfigurationRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
     /**
-     * Get a workflow test configuration connections.
-     * Get a workflow test configuration connections
+     * Creates request options for getWorkflowTestConfigurationConnections without sending the request
      */
-    async getWorkflowTestConfigurationConnectionsRaw(requestParameters: GetWorkflowTestConfigurationConnectionsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<WorkflowTestConfigurationConnectionModel>>> {
+    async getWorkflowTestConfigurationConnectionsRequestOpts(requestParameters: GetWorkflowTestConfigurationConnectionsRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['workflowId'] == null) {
             throw new runtime.RequiredError(
                 'workflowId',
@@ -116,34 +228,58 @@ export class WorkflowTestConfigurationApi extends runtime.BaseAPI {
             );
         }
 
+        if (requestParameters['environmentId'] == null) {
+            throw new runtime.RequiredError(
+                'environmentId',
+                'Required parameter "environmentId" was null or undefined when calling getWorkflowTestConfigurationConnections().'
+            );
+        }
+
         const queryParameters: any = {};
+
+        if (requestParameters['environmentId'] != null) {
+            queryParameters['environmentId'] = requestParameters['environmentId'];
+        }
 
         const headerParameters: runtime.HTTPHeaders = {};
 
-        const response = await this.request({
-            path: `/workflow-test-configurations/{workflowId}/connections/{workflowNodeName}`.replace(`{${"workflowId"}}`, encodeURIComponent(String(requestParameters['workflowId']))).replace(`{${"workflowNodeName"}}`, encodeURIComponent(String(requestParameters['workflowNodeName']))),
+
+        let urlPath = `/workflow-test-configurations/{workflowId}/workflow-nodes/{workflowNodeName}/connections`;
+        urlPath = urlPath.replace('{workflowId}', encodeURIComponent(String(requestParameters['workflowId'])));
+        urlPath = urlPath.replace('{workflowNodeName}', encodeURIComponent(String(requestParameters['workflowNodeName'])));
+
+        return {
+            path: urlPath,
             method: 'GET',
             headers: headerParameters,
             query: queryParameters,
-        }, initOverrides);
-
-        return new runtime.JSONApiResponse(response, (jsonValue) => jsonValue.map(WorkflowTestConfigurationConnectionModelFromJSON));
+        };
     }
 
     /**
      * Get a workflow test configuration connections.
      * Get a workflow test configuration connections
      */
-    async getWorkflowTestConfigurationConnections(requestParameters: GetWorkflowTestConfigurationConnectionsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<WorkflowTestConfigurationConnectionModel>> {
+    async getWorkflowTestConfigurationConnectionsRaw(requestParameters: GetWorkflowTestConfigurationConnectionsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<WorkflowTestConfigurationConnection>>> {
+        const requestOptions = await this.getWorkflowTestConfigurationConnectionsRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => jsonValue.map(WorkflowTestConfigurationConnectionFromJSON));
+    }
+
+    /**
+     * Get a workflow test configuration connections.
+     * Get a workflow test configuration connections
+     */
+    async getWorkflowTestConfigurationConnections(requestParameters: GetWorkflowTestConfigurationConnectionsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<WorkflowTestConfigurationConnection>> {
         const response = await this.getWorkflowTestConfigurationConnectionsRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
     /**
-     * Create new or update an existing workflow test configuration.
-     * Create new or update an existing workflow test configuration
+     * Creates request options for saveWorkflowTestConfiguration without sending the request
      */
-    async saveWorkflowTestConfigurationRaw(requestParameters: SaveWorkflowTestConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<WorkflowTestConfigurationModel>> {
+    async saveWorkflowTestConfigurationRequestOpts(requestParameters: SaveWorkflowTestConfigurationRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['workflowId'] == null) {
             throw new runtime.RequiredError(
                 'workflowId',
@@ -151,10 +287,10 @@ export class WorkflowTestConfigurationApi extends runtime.BaseAPI {
             );
         }
 
-        if (requestParameters['workflowTestConfigurationModel'] == null) {
+        if (requestParameters['workflowTestConfiguration'] == null) {
             throw new runtime.RequiredError(
-                'workflowTestConfigurationModel',
-                'Required parameter "workflowTestConfigurationModel" was null or undefined when calling saveWorkflowTestConfiguration().'
+                'workflowTestConfiguration',
+                'Required parameter "workflowTestConfiguration" was null or undefined when calling saveWorkflowTestConfiguration().'
             );
         }
 
@@ -164,89 +300,43 @@ export class WorkflowTestConfigurationApi extends runtime.BaseAPI {
 
         headerParameters['Content-Type'] = 'application/json';
 
-        const response = await this.request({
-            path: `/workflow-test-configurations/{workflowId}`.replace(`{${"workflowId"}}`, encodeURIComponent(String(requestParameters['workflowId']))),
+
+        let urlPath = `/workflow-test-configurations/{workflowId}`;
+        urlPath = urlPath.replace('{workflowId}', encodeURIComponent(String(requestParameters['workflowId'])));
+
+        return {
+            path: urlPath,
             method: 'PUT',
             headers: headerParameters,
             query: queryParameters,
-            body: WorkflowTestConfigurationModelToJSON(requestParameters['workflowTestConfigurationModel']),
-        }, initOverrides);
-
-        return new runtime.JSONApiResponse(response, (jsonValue) => WorkflowTestConfigurationModelFromJSON(jsonValue));
+            body: WorkflowTestConfigurationToJSON(requestParameters['workflowTestConfiguration']),
+        };
     }
 
     /**
      * Create new or update an existing workflow test configuration.
      * Create new or update an existing workflow test configuration
      */
-    async saveWorkflowTestConfiguration(requestParameters: SaveWorkflowTestConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<WorkflowTestConfigurationModel> {
+    async saveWorkflowTestConfigurationRaw(requestParameters: SaveWorkflowTestConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<WorkflowTestConfiguration>> {
+        const requestOptions = await this.saveWorkflowTestConfigurationRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => WorkflowTestConfigurationFromJSON(jsonValue));
+    }
+
+    /**
+     * Create new or update an existing workflow test configuration.
+     * Create new or update an existing workflow test configuration
+     */
+    async saveWorkflowTestConfiguration(requestParameters: SaveWorkflowTestConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<WorkflowTestConfiguration> {
         const response = await this.saveWorkflowTestConfigurationRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
     /**
-     * Save a workflow test configuration connection.
-     * Save a workflow test configuration connection
+     * Creates request options for saveWorkflowTestConfigurationInputs without sending the request
      */
-    async saveWorkflowTestConfigurationConnectionRaw(requestParameters: SaveWorkflowTestConfigurationConnectionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
-        if (requestParameters['workflowId'] == null) {
-            throw new runtime.RequiredError(
-                'workflowId',
-                'Required parameter "workflowId" was null or undefined when calling saveWorkflowTestConfigurationConnection().'
-            );
-        }
-
-        if (requestParameters['workflowNodeName'] == null) {
-            throw new runtime.RequiredError(
-                'workflowNodeName',
-                'Required parameter "workflowNodeName" was null or undefined when calling saveWorkflowTestConfigurationConnection().'
-            );
-        }
-
-        if (requestParameters['workflowConnectionKey'] == null) {
-            throw new runtime.RequiredError(
-                'workflowConnectionKey',
-                'Required parameter "workflowConnectionKey" was null or undefined when calling saveWorkflowTestConfigurationConnection().'
-            );
-        }
-
-        if (requestParameters['saveWorkflowTestConfigurationConnectionRequestModel'] == null) {
-            throw new runtime.RequiredError(
-                'saveWorkflowTestConfigurationConnectionRequestModel',
-                'Required parameter "saveWorkflowTestConfigurationConnectionRequestModel" was null or undefined when calling saveWorkflowTestConfigurationConnection().'
-            );
-        }
-
-        const queryParameters: any = {};
-
-        const headerParameters: runtime.HTTPHeaders = {};
-
-        headerParameters['Content-Type'] = 'application/json';
-
-        const response = await this.request({
-            path: `/workflow-test-configurations/{workflowId}/connections/{workflowNodeName}/{workflowConnectionKey}`.replace(`{${"workflowId"}}`, encodeURIComponent(String(requestParameters['workflowId']))).replace(`{${"workflowNodeName"}}`, encodeURIComponent(String(requestParameters['workflowNodeName']))).replace(`{${"workflowConnectionKey"}}`, encodeURIComponent(String(requestParameters['workflowConnectionKey']))),
-            method: 'PUT',
-            headers: headerParameters,
-            query: queryParameters,
-            body: SaveWorkflowTestConfigurationConnectionRequestModelToJSON(requestParameters['saveWorkflowTestConfigurationConnectionRequestModel']),
-        }, initOverrides);
-
-        return new runtime.VoidApiResponse(response);
-    }
-
-    /**
-     * Save a workflow test configuration connection.
-     * Save a workflow test configuration connection
-     */
-    async saveWorkflowTestConfigurationConnection(requestParameters: SaveWorkflowTestConfigurationConnectionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
-        await this.saveWorkflowTestConfigurationConnectionRaw(requestParameters, initOverrides);
-    }
-
-    /**
-     * Save a workflow test configuration inputs.
-     * Save a workflow test configuration inputs
-     */
-    async saveWorkflowTestConfigurationInputsRaw(requestParameters: SaveWorkflowTestConfigurationInputsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+    async saveWorkflowTestConfigurationInputsRequestOpts(requestParameters: SaveWorkflowTestConfigurationInputsOperationRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['workflowId'] == null) {
             throw new runtime.RequiredError(
                 'workflowId',
@@ -254,26 +344,50 @@ export class WorkflowTestConfigurationApi extends runtime.BaseAPI {
             );
         }
 
-        if (requestParameters['saveWorkflowTestConfigurationInputsRequestModel'] == null) {
+        if (requestParameters['environmentId'] == null) {
             throw new runtime.RequiredError(
-                'saveWorkflowTestConfigurationInputsRequestModel',
-                'Required parameter "saveWorkflowTestConfigurationInputsRequestModel" was null or undefined when calling saveWorkflowTestConfigurationInputs().'
+                'environmentId',
+                'Required parameter "environmentId" was null or undefined when calling saveWorkflowTestConfigurationInputs().'
+            );
+        }
+
+        if (requestParameters['saveWorkflowTestConfigurationInputsRequest'] == null) {
+            throw new runtime.RequiredError(
+                'saveWorkflowTestConfigurationInputsRequest',
+                'Required parameter "saveWorkflowTestConfigurationInputsRequest" was null or undefined when calling saveWorkflowTestConfigurationInputs().'
             );
         }
 
         const queryParameters: any = {};
 
+        if (requestParameters['environmentId'] != null) {
+            queryParameters['environmentId'] = requestParameters['environmentId'];
+        }
+
         const headerParameters: runtime.HTTPHeaders = {};
 
         headerParameters['Content-Type'] = 'application/json';
 
-        const response = await this.request({
-            path: `/workflow-test-configurations/{workflowId}/inputs`.replace(`{${"workflowId"}}`, encodeURIComponent(String(requestParameters['workflowId']))),
+
+        let urlPath = `/workflow-test-configurations/{workflowId}/inputs`;
+        urlPath = urlPath.replace('{workflowId}', encodeURIComponent(String(requestParameters['workflowId'])));
+
+        return {
+            path: urlPath,
             method: 'PUT',
             headers: headerParameters,
             query: queryParameters,
-            body: SaveWorkflowTestConfigurationInputsRequestModelToJSON(requestParameters['saveWorkflowTestConfigurationInputsRequestModel']),
-        }, initOverrides);
+            body: SaveWorkflowTestConfigurationInputsRequestToJSON(requestParameters['saveWorkflowTestConfigurationInputsRequest']),
+        };
+    }
+
+    /**
+     * Save a workflow test configuration inputs.
+     * Save a workflow test configuration inputs
+     */
+    async saveWorkflowTestConfigurationInputsRaw(requestParameters: SaveWorkflowTestConfigurationInputsOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        const requestOptions = await this.saveWorkflowTestConfigurationInputsRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
 
         return new runtime.VoidApiResponse(response);
     }
@@ -282,7 +396,7 @@ export class WorkflowTestConfigurationApi extends runtime.BaseAPI {
      * Save a workflow test configuration inputs.
      * Save a workflow test configuration inputs
      */
-    async saveWorkflowTestConfigurationInputs(requestParameters: SaveWorkflowTestConfigurationInputsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+    async saveWorkflowTestConfigurationInputs(requestParameters: SaveWorkflowTestConfigurationInputsOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
         await this.saveWorkflowTestConfigurationInputsRaw(requestParameters, initOverrides);
     }
 

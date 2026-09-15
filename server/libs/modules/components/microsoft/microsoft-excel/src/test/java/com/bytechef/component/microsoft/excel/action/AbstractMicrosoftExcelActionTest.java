@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,28 +16,33 @@
 
 package com.bytechef.component.microsoft.excel.action;
 
+import static org.mockito.ArgumentCaptor.forClass;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 
 import com.bytechef.component.definition.ActionContext;
-import com.bytechef.component.definition.Context.Http;
 import com.bytechef.component.definition.Parameters;
 import com.bytechef.component.microsoft.excel.util.MicrosoftExcelUpdateWorksheetUtils;
 import com.bytechef.component.microsoft.excel.util.MicrosoftExcelUtils;
+import java.util.List;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.mockito.ArgumentCaptor;
 import org.mockito.MockedStatic;
 
 /**
- * @author Monika Domiter
+ * @author Monika Kušter
  */
-public abstract class AbstractMicrosoftExcelActionTest {
+abstract class AbstractMicrosoftExcelActionTest {
 
+    protected ArgumentCaptor<ActionContext> actionContextArgumentCaptor = forClass(ActionContext.class);
+    protected ArgumentCaptor<Integer> integerArgumentCaptor = forClass(Integer.class);
+    @SuppressWarnings("rawtypes")
+    protected ArgumentCaptor<List> listArgumentCaptor = forClass(List.class);
     protected MockedStatic<MicrosoftExcelUtils> microsoftExcelUtilsMockedStatic;
     protected MockedStatic<MicrosoftExcelUpdateWorksheetUtils> updateWorksheetUtilsMockedStatic;
-    protected ActionContext mockedContext = mock(ActionContext.class);
-    protected Http.Executor mockedExecutor = mock(Http.Executor.class);
-    protected Parameters mockedParameters = mock(Parameters.class);
+    protected ActionContext mockedActionContext = mock(ActionContext.class);
+    protected ArgumentCaptor<Parameters> parametersArgumentCaptor = forClass(Parameters.class);
 
     @BeforeEach
     void beforeEach() {

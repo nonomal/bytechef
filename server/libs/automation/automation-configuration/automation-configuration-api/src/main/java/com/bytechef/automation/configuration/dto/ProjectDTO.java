@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,11 +17,12 @@
 package com.bytechef.automation.configuration.dto;
 
 import com.bytechef.automation.configuration.domain.Project;
+import com.bytechef.automation.configuration.domain.ProjectVersion;
 import com.bytechef.automation.configuration.domain.ProjectVersion.Status;
 import com.bytechef.platform.category.domain.Category;
 import com.bytechef.platform.tag.domain.Tag;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 
 /**
@@ -29,16 +30,27 @@ import java.util.List;
  */
 @SuppressFBWarnings("EI")
 public record ProjectDTO(
-    Category category, String createdBy, LocalDateTime createdDate, String description, Long id, String name,
-    String lastModifiedBy, LocalDateTime lastModifiedDate, int projectVersion, LocalDateTime publishedDate,
-    Status status, List<Tag> tags, int version, List<Long> projectWorkflowIds, Long workspaceId) {
+    Category category, String createdBy, Instant createdDate, String description, Long id, String name,
+    String lastModifiedBy, Instant lastModifiedDate, Instant lastPublishedDate, Status lastStatus,
+    int lastProjectVersion, List<ProjectVersion> projectVersions, List<Long> projectWorkflowIds, List<Tag> tags,
+    String uuid, int version, Long workspaceId) {
 
-    public ProjectDTO(Category category, Project project, List<Tag> tags, List<Long> projectWorkflowIds) {
+    public ProjectDTO(Category category, Project project, List<Long> projectWorkflowIds, List<Tag> tags) {
         this(
             category, project.getCreatedBy(), project.getCreatedDate(), project.getDescription(), project.getId(),
-            project.getName(), project.getLastModifiedBy(), project.getLastModifiedDate(), project.getLastVersion(),
-            project.getLastPublishedDate(), project.getLastStatus(), tags, project.getVersion(), projectWorkflowIds,
+            project.getName(), project.getLastModifiedBy(), project.getLastModifiedDate(),
+            project.getLastPublishedDate(), project.getLastStatus(), project.getLastProjectVersion(),
+            project.getProjectVersions(), projectWorkflowIds, tags, project.getUuid(), project.getVersion(),
             project.getWorkspaceId());
+    }
+
+    public ProjectDTO(Project project) {
+        this(
+            project.getCategoryId() == null ? null : new Category(project.getCategoryId()), project.getCreatedBy(),
+            project.getCreatedDate(), project.getDescription(), project.getId(), project.getName(),
+            project.getLastModifiedBy(), project.getLastModifiedDate(), project.getLastPublishedDate(),
+            project.getLastStatus(), project.getLastProjectVersion(), project.getProjectVersions(), List.of(),
+            List.of(), project.getUuid(), project.getVersion(), project.getWorkspaceId());
     }
 
     public static Builder builder() {
@@ -52,7 +64,9 @@ public record ProjectDTO(
         project.setDescription(description);
         project.setId(id);
         project.setName(name);
+        project.setProjectVersions(projectVersions == null ? List.of() : projectVersions);
         project.setVersion(version);
+        project.setTags(tags);
         project.setWorkspaceId(workspaceId);
 
         return project;
@@ -62,17 +76,19 @@ public record ProjectDTO(
     public static final class Builder {
         private Category category;
         private String createdBy;
-        private LocalDateTime createdDate;
+        private Instant createdDate;
         private String description;
         private Long id;
         private String name;
         private String lastModifiedBy;
-        private LocalDateTime lastModifiedDate;
-        private int projectVersion;
-        private LocalDateTime publishedDate;
-        private Status status = Status.DRAFT;
+        private Instant lastModifiedDate;
+        private Instant lastPublishedDate;
+        private Status lastStatus = Status.DRAFT;
+        private int lastProjectVersion;
         private List<Tag> tags;
+        private String uuid;
         private int version;
+        private List<ProjectVersion> projectVersions;
         private List<Long> projectWorkflowIds;
         private Long workspaceId;
 
@@ -91,7 +107,7 @@ public record ProjectDTO(
             return this;
         }
 
-        public Builder createdDate(LocalDateTime createdDate) {
+        public Builder createdDate(Instant createdDate) {
             this.createdDate = createdDate;
 
             return this;
@@ -121,14 +137,32 @@ public record ProjectDTO(
             return this;
         }
 
-        public Builder lastModifiedDate(LocalDateTime lastModifiedDate) {
+        public Builder lastModifiedDate(Instant lastModifiedDate) {
             this.lastModifiedDate = lastModifiedDate;
 
             return this;
         }
 
-        public Builder projectVersion(int projectVersion) {
-            this.projectVersion = projectVersion;
+        public Builder lastProjectVersion(int lastProjectVersion) {
+            this.lastProjectVersion = lastProjectVersion;
+
+            return this;
+        }
+
+        public Builder lastPublishedDate(Instant lastPublishedDate) {
+            this.lastPublishedDate = lastPublishedDate;
+
+            return this;
+        }
+
+        public Builder lastStatus(Status lastStatus) {
+            this.lastStatus = lastStatus;
+
+            return this;
+        }
+
+        public Builder projectVersions(List<ProjectVersion> projectVersions) {
+            this.projectVersions = projectVersions;
 
             return this;
         }
@@ -139,20 +173,14 @@ public record ProjectDTO(
             return this;
         }
 
-        public Builder publishedDate(LocalDateTime publishedDate) {
-            this.publishedDate = publishedDate;
-
-            return this;
-        }
-
-        public Builder status(Status status) {
-            this.status = status;
-
-            return this;
-        }
-
         public Builder tags(List<Tag> tags) {
             this.tags = tags;
+
+            return this;
+        }
+
+        public Builder uuid(String uuid) {
+            this.uuid = uuid;
 
             return this;
         }
@@ -172,7 +200,8 @@ public record ProjectDTO(
         public ProjectDTO build() {
             return new ProjectDTO(
                 category, createdBy, createdDate, description, id, name, lastModifiedBy, lastModifiedDate,
-                projectVersion, publishedDate, status, tags, version, projectWorkflowIds, workspaceId);
+                lastPublishedDate, lastStatus, lastProjectVersion, projectVersions, projectWorkflowIds, tags, uuid,
+                version, workspaceId);
         }
     }
 }

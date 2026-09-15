@@ -20,14 +20,14 @@ import com.fasterxml.jackson.annotation.JsonValue;
  * Gets or Sets WorkflowFormat
  */
 
-@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2024-06-30T07:20:54.243996+02:00[Europe/Zagreb]", comments = "Generator version: 7.5.0")
+@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2026-07-03T17:58:15.504637+02:00[Europe/Zagreb]", comments = "Generator version: 7.22.0")
 public enum WorkflowFormatModel {
   
   JSON("JSON"),
   
   YAML("YAML");
 
-  private String value;
+  private final String value;
 
   WorkflowFormatModel(String value) {
     this.value = value;

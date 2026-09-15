@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,12 +21,12 @@ import static com.bytechef.component.definition.Authorization.CLIENT_ID;
 import static com.bytechef.component.definition.Authorization.CLIENT_SECRET;
 import static com.bytechef.component.definition.Authorization.KEY;
 import static com.bytechef.component.definition.Authorization.VALUE;
-import static com.bytechef.component.definition.ComponentDSL.authorization;
-import static com.bytechef.component.definition.ComponentDSL.connection;
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.definition.ComponentDsl.authorization;
+import static com.bytechef.component.definition.ComponentDsl.connection;
+import static com.bytechef.component.definition.ComponentDsl.string;
 
-import com.bytechef.component.definition.ComponentDSL;
-import java.util.List;
+import com.bytechef.component.definition.ComponentDsl;
+import java.util.Map;
 
 /**
  * Provides the component connection definition.
@@ -34,7 +34,7 @@ import java.util.List;
  * @generated
  */
 public class PetstoreConnection {
-    public static final ComponentDSL.ModifiableConnectionDefinition CONNECTION_DEFINITION = connection()
+    public static final ComponentDsl.ModifiableConnectionDefinition CONNECTION_DEFINITION = connection()
         .baseUri((connectionParameters, context) -> "https://petstore3.swagger.io/api/v3")
         .authorizations(authorization(AuthorizationType.OAUTH2_IMPLICIT_CODE)
             .title("OAuth2 Implicit")
@@ -46,7 +46,7 @@ public class PetstoreConnection {
                     .label("Client Secret")
                     .required(true))
             .authorizationUrl((connectionParameters, context) -> "https://petstore3.swagger.io/oauth/authorize")
-            .scopes((connectionParameters, context) -> List.of("write:pets", "read:pets")),
+            .scopes((connectionParameters, context) -> Map.of("write:pets", false, "read:pets", false)),
             authorization(AuthorizationType.API_KEY)
                 .title("API Key")
                 .properties(

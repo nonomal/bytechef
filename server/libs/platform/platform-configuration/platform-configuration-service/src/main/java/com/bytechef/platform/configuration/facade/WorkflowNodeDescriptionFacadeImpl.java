@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,14 +19,18 @@ package com.bytechef.platform.configuration.facade;
 import com.bytechef.atlas.configuration.domain.Workflow;
 import com.bytechef.atlas.configuration.domain.WorkflowTask;
 import com.bytechef.atlas.configuration.service.WorkflowService;
-import com.bytechef.commons.util.MapUtils;
-import com.bytechef.platform.component.registry.facade.ActionDefinitionFacade;
-import com.bytechef.platform.component.registry.facade.TriggerDefinitionFacade;
+import com.bytechef.evaluator.Evaluator;
+import com.bytechef.platform.component.service.ActionDefinitionService;
+import com.bytechef.platform.component.service.ClusterElementDefinitionService;
+import com.bytechef.platform.component.service.TriggerDefinitionService;
 import com.bytechef.platform.configuration.domain.WorkflowTrigger;
 import com.bytechef.platform.configuration.service.WorkflowTestConfigurationService;
 import com.bytechef.platform.definition.WorkflowNodeType;
+import com.bytechef.platform.workflow.task.dispatcher.service.TaskDispatcherDefinitionService;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 /**
@@ -35,60 +39,104 @@ import org.springframework.stereotype.Service;
 @Service
 public class WorkflowNodeDescriptionFacadeImpl implements WorkflowNodeDescriptionFacade {
 
-    private final ActionDefinitionFacade actionDefinitionFacade;
-    private final TriggerDefinitionFacade triggerDefinitionFacade;
+    private static final Logger log = LoggerFactory.getLogger(WorkflowNodeDescriptionFacadeImpl.class);
+
+    private final ActionDefinitionService actionDefinitionService;
+    private final ClusterElementDefinitionService clusterElementDefinitionService;
+    private final Evaluator evaluator;
+    private final TaskDispatcherDefinitionService taskDispatcherDefinitionService;
+    private final TriggerDefinitionService triggerDefinitionService;
     private final WorkflowService workflowService;
-    private final WorkflowNodeOutputFacade workflowNodeOutputFacade;
     private final WorkflowTestConfigurationService workflowTestConfigurationService;
 
     @SuppressFBWarnings("EI")
     public WorkflowNodeDescriptionFacadeImpl(
-        ActionDefinitionFacade actionDefinitionFacade, TriggerDefinitionFacade triggerDefinitionFacade,
-        WorkflowService workflowService, WorkflowNodeOutputFacade workflowNodeOutputFacade,
+        ActionDefinitionService actionDefinitionService,
+        ClusterElementDefinitionService clusterElementDefinitionService, Evaluator evaluator,
+        TaskDispatcherDefinitionService taskDispatcherDefinitionService,
+        TriggerDefinitionService triggerDefinitionFacade, WorkflowService workflowService,
         WorkflowTestConfigurationService workflowTestConfigurationService) {
 
-        this.actionDefinitionFacade = actionDefinitionFacade;
-        this.triggerDefinitionFacade = triggerDefinitionFacade;
+        this.actionDefinitionService = actionDefinitionService;
+        this.clusterElementDefinitionService = clusterElementDefinitionService;
+        this.evaluator = evaluator;
+        this.taskDispatcherDefinitionService = taskDispatcherDefinitionService;
+        this.triggerDefinitionService = triggerDefinitionFacade;
         this.workflowService = workflowService;
-        this.workflowNodeOutputFacade = workflowNodeOutputFacade;
         this.workflowTestConfigurationService = workflowTestConfigurationService;
     }
 
     @Override
-    @SuppressWarnings("unchecked")
-    public String getWorkflowNodeDescription(String workflowId, String workflowNodeName) {
+    public String getClusterElementWorkflowNodeDescription(
+        String workflowId, String workflowNodeName, String clusterElementName, Long environmentId) {
+
         Workflow workflow = workflowService.getWorkflow(workflowId);
-        Map<String, ?> inputs = workflowTestConfigurationService.getWorkflowTestConfigurationInputs(workflowId);
+        Map<String, ?> inputs = workflowTestConfigurationService.getWorkflowTestConfigurationInputs(
+            workflowId, environmentId);
+
+        WorkflowTask workflowTask = workflow.getTask(workflowNodeName);
+
+        WorkflowNodeType workflowNodeType = WorkflowNodeType.ofType(workflowTask.getType());
+
+        Map<String, ?> inputParameters = getInputParameters(workflowTask, inputs);
+
+        return clusterElementDefinitionService.executeWorkflowNodeDescription(
+            workflowNodeType.name(), workflowNodeType.version(), workflowNodeType.operation(),
+            inputParameters);
+    }
+
+    @Override
+    public String getWorkflowNodeDescription(String workflowId, String workflowNodeName, long environmentId) {
+        Workflow workflow = workflowService.getWorkflow(workflowId);
+        Map<String, ?> inputs = workflowTestConfigurationService.getWorkflowTestConfigurationInputs(
+            workflowId, environmentId);
 
         String description;
 
         if (workflowNodeName.equals("manual")) {
-            description = triggerDefinitionFacade.executeWorkflowNodeDescription("manual", 1, "manual", Map.of());
+            description = triggerDefinitionService.executeWorkflowNodeDescription("manual", 1, "manual", Map.of());
         } else {
-            description = WorkflowTrigger
-                .fetch(workflow, workflowNodeName)
+            description = WorkflowTrigger.fetch(workflow, workflowNodeName)
                 .map(workflowTrigger -> {
                     WorkflowNodeType workflowNodeType = WorkflowNodeType.ofType(workflowTrigger.getType());
 
-                    return triggerDefinitionFacade.executeWorkflowNodeDescription(
-                        workflowNodeType.componentName(), workflowNodeType.componentVersion(),
-                        workflowNodeType.componentOperationName(), workflowTrigger.evaluateParameters(inputs));
+                    return triggerDefinitionService.executeWorkflowNodeDescription(
+                        workflowNodeType.name(), workflowNodeType.version(),
+                        workflowNodeType.operation(), workflowTrigger.evaluateParameters(inputs, evaluator));
                 })
                 .orElseGet(() -> {
                     WorkflowTask workflowTask = workflow.getTask(workflowNodeName);
 
-                    Map<String, ?> outputs = workflowNodeOutputFacade.getWorkflowNodeSampleOutputs(
-                        workflowId, workflowTask.getName());
                     WorkflowNodeType workflowNodeType = WorkflowNodeType.ofType(workflowTask.getType());
 
-                    return actionDefinitionFacade.executeWorkflowNodeDescription(
-                        workflowNodeType.componentName(), workflowNodeType.componentVersion(),
-                        workflowNodeType.componentOperationName(),
-                        workflowTask.evaluateParameters(
-                            MapUtils.concat((Map<String, Object>) inputs, (Map<String, Object>) outputs)));
+                    Map<String, ?> inputParameters = getInputParameters(workflowTask, inputs);
+
+                    if (workflowNodeType.operation() == null) {
+                        return taskDispatcherDefinitionService.executeWorkflowNodeDescription(
+                            workflowNodeType.name(), workflowNodeType.version(), inputParameters);
+                    } else {
+                        return actionDefinitionService.executeWorkflowNodeDescription(
+                            workflowNodeType.name(), workflowNodeType.version(), workflowNodeType.operation(),
+                            inputParameters);
+                    }
                 });
         }
 
         return description;
+    }
+
+    private Map<String, ?> getInputParameters(WorkflowTask workflowTask, Map<String, ?> inputs) {
+        Map<String, ?> inputParameters;
+
+        try {
+            inputParameters = workflowTask.evaluateParameters(inputs, evaluator);
+        } catch (Exception e) {
+            if (log.isTraceEnabled()) {
+                log.trace(e.getMessage());
+            }
+
+            inputParameters = workflowTask.getParameters();
+        }
+        return inputParameters;
     }
 }

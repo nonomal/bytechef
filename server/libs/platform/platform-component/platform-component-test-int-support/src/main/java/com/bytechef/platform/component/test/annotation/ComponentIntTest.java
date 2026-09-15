@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,6 +27,9 @@ import org.springframework.boot.test.context.SpringBootTest;
 @Retention(RetentionPolicy.RUNTIME)
 @SpringBootTest(
     classes = ComponentTestIntConfiguration.class,
-    properties = "bytechef.workflow.repository.classpath.enabled=true")
+    properties = {
+        "bytechef.file-storage.provider=jdbc",
+        "bytechef.workflow.repository.classpath.enabled=true"
+    })
 public @interface ComponentIntTest {
 }

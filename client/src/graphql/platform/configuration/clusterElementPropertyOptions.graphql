@@ -1,0 +1,23 @@
+query clusterElementOptions(
+    $componentName: String!
+    $componentVersion: Int!
+    $clusterElementName: String!
+    $propertyName: String!
+    $connectionId: Long
+    $inputParameters: Map
+    $lookupDependsOnPaths: [String!]
+) {
+    clusterElementOptions(
+        componentName: $componentName
+        componentVersion: $componentVersion
+        clusterElementName: $clusterElementName
+        propertyName: $propertyName
+        connectionId: $connectionId
+        inputParameters: $inputParameters
+        lookupDependsOnPaths: $lookupDependsOnPaths
+    ) {
+        description
+        label
+        value
+    }
+}

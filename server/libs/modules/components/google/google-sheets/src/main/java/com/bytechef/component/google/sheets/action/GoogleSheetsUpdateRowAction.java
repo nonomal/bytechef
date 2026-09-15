@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,76 +16,88 @@
 
 package com.bytechef.component.google.sheets.action;
 
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.bool;
-import static com.bytechef.component.definition.ComponentDSL.integer;
-import static com.bytechef.component.definition.ComponentDSL.number;
-import static com.bytechef.component.definition.ComponentDSL.object;
-import static com.bytechef.component.definition.ComponentDSL.string;
-import static com.bytechef.component.google.sheets.constant.GoogleSheetsConstants.INCLUDE_ITEMS_FROM_ALL_DRIVES_PROPERTY;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.bool;
+import static com.bytechef.component.definition.ComponentDsl.dynamicProperties;
+import static com.bytechef.component.definition.ComponentDsl.integer;
+import static com.bytechef.component.google.sheets.constant.GoogleSheetsConstants.IS_THE_FIRST_ROW_HEADER;
 import static com.bytechef.component.google.sheets.constant.GoogleSheetsConstants.IS_THE_FIRST_ROW_HEADER_PROPERTY;
+import static com.bytechef.component.google.sheets.constant.GoogleSheetsConstants.ROW;
 import static com.bytechef.component.google.sheets.constant.GoogleSheetsConstants.ROW_NUMBER;
-import static com.bytechef.component.google.sheets.constant.GoogleSheetsConstants.ROW_PROPERTY;
 import static com.bytechef.component.google.sheets.constant.GoogleSheetsConstants.SHEET_NAME;
 import static com.bytechef.component.google.sheets.constant.GoogleSheetsConstants.SHEET_NAME_PROPERTY;
 import static com.bytechef.component.google.sheets.constant.GoogleSheetsConstants.SPREADSHEET_ID;
 import static com.bytechef.component.google.sheets.constant.GoogleSheetsConstants.SPREADSHEET_ID_PROPERTY;
-import static com.bytechef.component.google.sheets.constant.GoogleSheetsConstants.UPDATE_ROW;
+import static com.bytechef.component.google.sheets.constant.GoogleSheetsConstants.UPDATE_WHOLE_ROW;
 import static com.bytechef.component.google.sheets.util.GoogleSheetsUtils.createRange;
 import static com.bytechef.component.google.sheets.util.GoogleSheetsUtils.getMapOfValuesForRow;
-import static com.bytechef.component.google.sheets.util.GoogleSheetsUtils.getRowValues;
+import static com.bytechef.component.google.sheets.util.GoogleSheetsUtils.getUpdatedRowValues;
 
-import com.bytechef.component.definition.ActionContext;
-import com.bytechef.component.definition.ComponentDSL.ModifiableActionDefinition;
+import com.bytechef.component.definition.ComponentDsl.ModifiableActionDefinition;
+import com.bytechef.component.definition.Context;
 import com.bytechef.component.definition.Parameters;
+import com.bytechef.component.google.sheets.util.GoogleSheetsUtils;
 import com.bytechef.google.commons.GoogleServices;
+import com.bytechef.google.commons.GoogleUtils;
 import com.google.api.services.sheets.v4.Sheets;
 import com.google.api.services.sheets.v4.model.ValueRange;
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
 /**
- * @author Monika Domiter
+ * @author Monika Kušter
  */
 public class GoogleSheetsUpdateRowAction {
 
-    public static final ModifiableActionDefinition ACTION_DEFINITION = action(UPDATE_ROW)
-        .title("Update row")
-        .description("Overwrite values in an existing row")
+    public static final ModifiableActionDefinition ACTION_DEFINITION = action("updateRow")
+        .title("Update Row")
+        .description("Overwrite values in an existing row.")
         .properties(
             SPREADSHEET_ID_PROPERTY,
-            INCLUDE_ITEMS_FROM_ALL_DRIVES_PROPERTY,
             SHEET_NAME_PROPERTY,
             integer(ROW_NUMBER)
-                .label("Row number")
-                .description("The row number to update")
+                .label("Row Number")
+                .description("The row number to update.")
                 .required(true),
             IS_THE_FIRST_ROW_HEADER_PROPERTY,
-            ROW_PROPERTY)
-        .outputSchema(
-            object()
-                .additionalProperties(bool(), number(), string()))
-        .perform(GoogleSheetsUpdateRowAction::perform);
+            bool(UPDATE_WHOLE_ROW)
+                .label("Update Whole Row")
+                .description("Whether to update the whole row or just specific columns.")
+                .defaultValue(true)
+                .required(true),
+            dynamicProperties(ROW)
+                .propertiesLookupDependsOn(SPREADSHEET_ID, SHEET_NAME, IS_THE_FIRST_ROW_HEADER, UPDATE_WHOLE_ROW)
+                .properties(GoogleSheetsUtils::createPropertiesToUpdateRow)
+                .required(true))
+        .output()
+        .perform(GoogleSheetsUpdateRowAction::perform)
+        .help("", "https://docs.bytechef.io/reference/components/google-sheets_v1#update-row");
 
     private GoogleSheetsUpdateRowAction() {
     }
 
     public static Map<String, Object> perform(
-        Parameters inputParameters, Parameters connectionParameters, ActionContext actionContext) throws Exception {
+        Parameters inputParameters, Parameters connectionParameters, Context context) {
+
         Sheets sheets = GoogleServices.getSheets(connectionParameters);
         String range = createRange(
             inputParameters.getRequiredString(SHEET_NAME), inputParameters.getRequiredInteger(ROW_NUMBER));
-        List<Object> row = getRowValues(inputParameters);
+        List<Object> row = getUpdatedRowValues(inputParameters, connectionParameters);
 
         ValueRange valueRange = new ValueRange()
             .setValues(List.of(row))
             .setMajorDimension("ROWS");
 
-        sheets.spreadsheets()
-            .values()
-            .update(inputParameters.getRequiredString(SPREADSHEET_ID), range, valueRange)
-            .setValueInputOption("USER_ENTERED")
-            .execute();
+        try {
+            sheets.spreadsheets()
+                .values()
+                .update(inputParameters.getRequiredString(SPREADSHEET_ID), range, valueRange)
+                .setValueInputOption("USER_ENTERED")
+                .execute();
+        } catch (IOException e) {
+            throw GoogleUtils.translateGoogleIOException(e);
+        }
 
         return getMapOfValuesForRow(inputParameters, sheets, row);
     }

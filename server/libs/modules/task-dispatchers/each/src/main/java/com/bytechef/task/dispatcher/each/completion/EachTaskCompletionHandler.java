@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * Modifications copyright (C) 2023 ByteChef Inc.
+ * Modifications copyright (C) 2025 ByteChef
  */
 
 package com.bytechef.task.dispatcher.each.completion;
@@ -25,7 +25,7 @@ import com.bytechef.atlas.execution.domain.TaskExecution;
 import com.bytechef.atlas.execution.service.CounterService;
 import com.bytechef.atlas.execution.service.TaskExecutionService;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import org.apache.commons.lang3.Validate;
 
 /**
@@ -74,7 +74,9 @@ public class EachTaskCompletionHandler implements TaskCompletionHandler {
         if (subTasksLeft == 0) {
             TaskExecution eachTaskExecution = taskExecutionService.getTaskExecution(taskExecution.getParentId());
 
-            eachTaskExecution.setEndDate(LocalDateTime.now());
+            eachTaskExecution.setEndDate(Instant.now());
+
+            eachTaskExecution = taskExecutionService.update(eachTaskExecution);
 
             taskCompletionHandler.handle(eachTaskExecution);
             counterService.delete(taskExecution.getParentId());

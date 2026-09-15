@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@
 package com.bytechef.platform.configuration.repository;
 
 import com.bytechef.platform.configuration.domain.WorkflowNodeTestOutput;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jdbc.repository.query.Modifying;
@@ -32,9 +33,15 @@ import org.springframework.stereotype.Repository;
 public interface WorkflowNodeTestOutputRepository
     extends ListCrudRepository<WorkflowNodeTestOutput, Long> {
 
+    boolean existsByWorkflowIdAndWorkflowNodeName(String workflowId, String workflowNodeName);
+
+    boolean existsByWorkflowIdAndWorkflowNodeNameAndLastModifiedDateAfter(
+        String workflowId, String workflowNodeName, Instant lastModifiedDate);
+
     List<WorkflowNodeTestOutput> findByWorkflowId(String workflowId);
 
-    Optional<WorkflowNodeTestOutput> findByWorkflowIdAndWorkflowNodeName(String workflowId, String workflowNodeName);
+    Optional<WorkflowNodeTestOutput> findByWorkflowIdAndWorkflowNodeNameAndEnvironmentId(
+        String workflowId, String workflowNodeName, long environmentId);
 
     @Modifying
     @Query("UPDATE workflow_node_test_output SET workflow_id = :newWorkflowId WHERE workflow_id = :oldWorkflowId")

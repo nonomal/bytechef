@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,10 +21,17 @@ package com.bytechef.platform.component.constant;
  */
 public class MetadataConstants {
 
+    public static final String CALLABLE_RESPONSE = "__callableResponse";
     public static final String CONNECTION_IDS = "connectionIds";
-    public static final String INSTANCE_ID = "instanceId";
-    public static final String INSTANCE_WORKFLOW_ID = "instanceWorkflowId";
+    public static final String WEBHOOK_RESPONSE = "__webhookResponse";
+    public static final String EDITOR_ENVIRONMENT = "editorEnvironment";
+    public static final String ENVIRONMENT_ID = "environmentId";
+    public static final String JOB_PRINCIPAL_ID = "jobPrincipalId";
+    public static final String JOB_PRINCIPAL_WORKFLOW_ID = "jobPrincipalWorkflowId";
+    public static final String JOB_RESUME_ID = "jobResumeId";
+    public static final String RESUME_DATA = "__resumeData";
+    public static final String SUSPEND = "suspend";
+    public static final String TASK_EXECUTION_RESUME_ID = "taskExecutionResumeId";
     public static final String TYPE = "type";
     public static final String WORKFLOW_ID = "workflowId";
-
 }

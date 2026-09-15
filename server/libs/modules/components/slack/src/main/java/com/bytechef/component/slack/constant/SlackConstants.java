@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,13 +16,13 @@
 
 package com.bytechef.component.slack.constant;
 
-import static com.bytechef.component.definition.ComponentDSL.array;
-import static com.bytechef.component.definition.ComponentDSL.bool;
-import static com.bytechef.component.definition.ComponentDSL.object;
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.definition.ComponentDsl.array;
+import static com.bytechef.component.definition.ComponentDsl.bool;
+import static com.bytechef.component.definition.ComponentDsl.object;
+import static com.bytechef.component.definition.ComponentDsl.string;
 
-import com.bytechef.component.definition.ComponentDSL.ModifiableObjectProperty;
-import com.bytechef.component.definition.ComponentDSL.ModifiableStringProperty;
+import com.bytechef.component.definition.ComponentDsl.ModifiableObjectProperty;
+import com.bytechef.component.definition.ComponentDsl.ModifiableStringProperty;
 import com.bytechef.component.definition.Property.ControlType;
 
 /**
@@ -32,25 +32,37 @@ import com.bytechef.component.definition.Property.ControlType;
 public class SlackConstants {
 
     public static final String CHANNEL = "channel";
+    public static final String CHALLENGE = "challenge";
+    public static final String ERROR = "error";
     public static final String ID = "id";
     public static final String NAME = "name";
-    public static final String SEND_DIRECT_MESSAGE = "sendDirectMessage";
-    public static final String SEND_MESSAGE = "sendMessage";
-    public static final String SLACK = "slack";
+    public static final String OK = "ok";
+    public static final String POST_AT = "post_at";
     public static final String TEXT = "text";
+    public static final String TIMESTAMP = "timestamp";
+    public static final String TYPE = "type";
 
     public static final ModifiableObjectProperty CHAT_POST_MESSAGE_RESPONSE_PROPERTY = object()
         .properties(
-            bool("ok"),
-            string(CHANNEL),
-            string("ts"),
+            bool(OK)
+                .description("Indicates if the message was successfully sent."),
+            string(CHANNEL)
+                .description("ID of the channel the message was sent to."),
+            string("ts")
+                .description("Timestamp of the message."),
             object("message")
+                .description("The sent message.")
                 .properties(
-                    string("user"),
-                    string("type"),
-                    string("ts"),
-                    string("text"),
-                    string("team"),
+                    string("user")
+                        .description("ID of the user who sent the message."),
+                    string(TYPE)
+                        .description("Type of the message."),
+                    string("ts")
+                        .description("Timestamp of the message."),
+                    string("text")
+                        .description("The text of the message."),
+                    string("team")
+                        .description("ID of the team the message was sent to."),
                     string("subtype")),
             string("warning"),
             object("responseMetadata")
@@ -58,12 +70,11 @@ public class SlackConstants {
                     array("messages")
                         .items(string())));
 
-    public static final ModifiableStringProperty TEXT_PROPERTY =
-        string(TEXT)
-            .label("Message")
-            .description("The text of your message.")
-            .controlType(ControlType.TEXT_AREA)
-            .required(true);
+    public static final ModifiableStringProperty TEXT_PROPERTY = string(TEXT)
+        .label("Message")
+        .description("The text of your message.")
+        .controlType(ControlType.TEXT_AREA)
+        .required(true);
 
     private SlackConstants() {
     }

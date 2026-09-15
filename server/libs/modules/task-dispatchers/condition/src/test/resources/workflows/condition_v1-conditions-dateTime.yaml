@@ -12,37 +12,35 @@ tasks:
   type: "condition/v1"
   parameters:
     conditions:
-    - dateTime:
+    - - type: "dateTime"
         value1: "${value1}"
         operation: "AFTER"
         value2: "${value2}"
-    combineOperation: "ANY"
     caseTrue:
     - name: "afterResult"
-      type: "var"
+      type: "var/v1/set"
       parameters:
         value: "true branch"
     caseFalse:
     - name: "afterResult"
-      type: "var"
+      type: "var/v1/set"
       parameters:
         value: "false branch"
 - name: "condition_1"
   type: "condition/v1"
   parameters:
     conditions:
-    - dateTime:
+    - - type: "dateTime"
         value1: "${value1}"
         operation: "BEFORE"
         value2: "${value2}"
-    combineOperation: "ANY"
     caseTrue:
     - name: "beforeResult"
-      type: "var"
+      type: "var/v1/set"
       parameters:
         value: "true branch"
     caseFalse:
     - name: "beforeResult"
-      type: "var"
+      type: "var/v1/set"
       parameters:
         value: "false branch"

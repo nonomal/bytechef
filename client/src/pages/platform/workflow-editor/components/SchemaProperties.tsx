@@ -1,4 +1,4 @@
-import {PropertyType} from '@/shared/types';
+import {PropertyAllType} from '@/shared/types';
 
 import PropertyField from './PropertyField';
 
@@ -6,7 +6,7 @@ interface SchemaPropertiesProps {
     copiedValue: string | null;
     copyToClipboard: (text: string) => Promise<void>;
     parentPath?: string;
-    properties: Array<PropertyType>;
+    properties: Array<PropertyAllType>;
     sampleOutput: object;
     workflowNodeName: string;
 }
@@ -19,7 +19,7 @@ const SchemaProperties = ({
     sampleOutput,
     workflowNodeName,
 }: SchemaPropertiesProps) => (
-    <ul className="ml-2 h-full">
+    <ul className="ml-2">
         {properties.map((property, index) => {
             const {items, name, properties} = property;
 
@@ -38,7 +38,7 @@ const SchemaProperties = ({
                     />
 
                     {properties && !!properties.length && (
-                        <div className="ml-3 flex flex-col overflow-y-auto border-l border-gray-200 pl-1" key={name}>
+                        <div className="ml-3 flex flex-col overflow-y-auto border-l border-l-border/50 pl-1" key={name}>
                             <SchemaProperties
                                 copiedValue={copiedValue}
                                 copyToClipboard={copyToClipboard}
@@ -51,7 +51,7 @@ const SchemaProperties = ({
                     )}
 
                     {items && !!items.length && (
-                        <div className="ml-3 flex flex-col overflow-y-auto border-l border-gray-200 pl-1" key={name}>
+                        <div className="ml-3 flex flex-col overflow-y-auto border-l border-l-border/50 pl-1" key={name}>
                             <SchemaProperties
                                 copiedValue={copiedValue}
                                 copyToClipboard={copyToClipboard}

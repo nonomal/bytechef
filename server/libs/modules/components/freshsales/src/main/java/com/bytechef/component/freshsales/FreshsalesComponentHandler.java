@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,9 +16,8 @@
 
 package com.bytechef.component.freshsales;
 
-import static com.bytechef.component.definition.ComponentDSL.component;
+import static com.bytechef.component.definition.ComponentDsl.component;
 import static com.bytechef.component.freshsales.connection.FreshsalesConnection.CONNECTION_DEFINITION;
-import static com.bytechef.component.freshsales.constant.FreshsalesConstants.FRESHSALES;
 
 import com.bytechef.component.ComponentHandler;
 import com.bytechef.component.definition.ComponentCategory;
@@ -34,18 +33,21 @@ import com.google.auto.service.AutoService;
 @AutoService(ComponentHandler.class)
 public class FreshsalesComponentHandler implements ComponentHandler {
 
-    private static final ComponentDefinition COMPONENT_DEFINITION = component(FRESHSALES)
+    private static final ComponentDefinition COMPONENT_DEFINITION = component("freshsales")
         .title("Freshsales")
         .description(
             "Freshsales is a customer relationship management (CRM) software designed to help businesses streamline " +
                 "sales processes and manage customer interactions effectively.")
         .icon("path:assets/freshsales.svg")
         .categories(ComponentCategory.CRM)
+        .customAction(true)
+        .customActionHelp("", "https://developer.freshsales.io/api/")
         .connection(CONNECTION_DEFINITION)
         .actions(
             FreshsalesCreateAccountAction.ACTION_DEFINITION,
             FreshsalesCreateContactAction.ACTION_DEFINITION,
-            FreshsalesCreateLeadAction.ACTION_DEFINITION);
+            FreshsalesCreateLeadAction.ACTION_DEFINITION)
+        .version(1);
 
     @Override
     public ComponentDefinition getDefinition() {

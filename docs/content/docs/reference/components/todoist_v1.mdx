@@ -1,0 +1,250 @@
+---
+title: "Todoist"
+description: "Todoist is a task management application that helps users organize and prioritize their to-do lists."
+---
+
+
+Categories: Productivity and Collaboration
+
+
+Type: todoist/v1
+
+<hr />
+
+
+
+
+## Connections
+
+Version: 1
+
+
+### OAuth2 Authorization Code
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| clientId | Client Id | STRING |  | true |
+| clientSecret | Client Secret | STRING |  | true |
+
+
+
+## Connection Setup
+
+Connect Todoist to ByteChef using OAuth 2.0 (Authorization Code).
+
+### Create a Todoist OAuth app
+1. Open the [Todoist App Management Console](https://app.todoist.com/app/settings/integrations/app-management).
+2. Click on **Add new integration**.
+3. Enter an app name (for example, `ByteChef Integration`). Click **Create App**.
+4. Add the ByteChef OAuth redirect (callback) URL(s):
+    - Cloud: `https://app.bytechef.io/callback`
+    - Local development: `http://127.0.0.1:5173/callback`
+5. Click **Save settings**.
+6. Copy the **Client ID** and **Client secret**.
+
+<div style={{ position: 'relative', height:0, width: '100%', overflow: 'hidden', zIndex: 49, boxSizing: 'border-box', paddingBottom: 'calc(53.05219207% + 32px)'}}>
+    <iframe src="https://www.guidejar.com/embed/5GVuKzFOsxfADSfE8hDf?type=1&controls=on" width="100%" height="100%" style={{height:'100%', position:'absolute', inset:0}} allowFullScreen frameBorder="0"></iframe>
+</div>
+
+
+
+<hr />
+
+
+## Actions
+
+
+### Create Project
+Name: createProject
+
+`Creates a new project.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| name | Name | STRING | Name of the project. | true |
+| description | Description | STRING | Description of the project. | false |
+| parent_id | Parent Project ID | STRING | ID of the parent project. | false |
+| color | Color | STRING <details> <summary> Options </summary> <span>beryy_red</span>, <span>red</span>, <span>orange</span>, <span>yellow</span>, <span>olive_green</span>, <span>lime_green</span>, <span>green</span>, <span>mint_green</span>, <span>teal</span>, <span>sky_blue</span>, <span>light_blue</span>, <span>blue</span>, <span>grape</span>, <span>violet</span>, <span>lavender</span>, <span>magenta</span>, <span>salmon</span>, <span>charcoal</span>, <span>grey</span>, <span>taupe</span> </details> | Color of the project icon. | false |
+| is_favorite | Is Project a Favorite? | BOOLEAN <details> <summary> Options </summary> <span>true</span>, <span>false</span> </details> | Whether the project is a favorite. | false |
+| workspace_id | Workspace ID | INTEGER | ID of the workspace. If provided, creates a workspace project instead of a personal project. | false |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Create Project",
+  "name" : "createProject",
+  "parameters" : {
+    "name" : "",
+    "description" : "",
+    "parent_id" : "",
+    "color" : "",
+    "is_favorite" : false,
+    "workspace_id" : 1
+  },
+  "type" : "todoist/v1/createProject"
+}
+```
+
+#### Output
+
+
+
+Type: OBJECT
+
+
+#### Properties
+
+|     Name     |     Type     |     Description     |
+|:------------:|:------------:|:-------------------:|
+| id | STRING | ID of the project. |
+| name | STRING | Name of the project. |
+| description | STRING | Description of the project. |
+| color | STRING | Color of the project icon. |
+| is_favorite | STRING | Whether the project is a favorite. |
+| url | STRING | URL of the project. |
+| parent_id | STRING | ID of the parent project. |
+
+
+
+
+#### Output Example
+```json
+{
+  "id" : "",
+  "name" : "",
+  "description" : "",
+  "color" : "",
+  "is_favorite" : "",
+  "url" : "",
+  "parent_id" : ""
+}
+```
+
+
+
+
+### Create Task
+Name: createTask
+
+`Creates a new task.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| content | Content | STRING | Task content. | true |
+| description | Description | STRING | A description for the task. | false |
+| project_id | Project ID | STRING | ID of the project to add the task to. If not set, task is put to user's Inbox. | false |
+| priority | Priority | INTEGER <details> <summary> Options </summary> <span>1</span>, <span>2</span>, <span>3</span>, <span>4</span> </details> | Task priority from 1 (normal) to 4 (urgent). | false |
+| labels | Labels | ARRAY <details> <summary> Items </summary> [STRING] </details> | List of labels to be applied to the task. | false |
+| section_id | Section ID | STRING <details> <summary> Depends On </summary> project_id </details> | ID of the section to add the task to. | false |
+| parent_id | Parent Task ID | STRING | ID of the parent task. | false |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Create Task",
+  "name" : "createTask",
+  "parameters" : {
+    "content" : "",
+    "description" : "",
+    "project_id" : "",
+    "priority" : 1,
+    "labels" : [ "" ],
+    "section_id" : "",
+    "parent_id" : ""
+  },
+  "type" : "todoist/v1/createTask"
+}
+```
+
+#### Output
+
+
+
+Type: OBJECT
+
+
+#### Properties
+
+|     Name     |     Type     |     Description     |
+|:------------:|:------------:|:-------------------:|
+| user_id | STRING | ID of the user. |
+| id | STRING | ID of the task. |
+| project_id | STRING | ID of the project. |
+| section_id | STRING | ID of the section. |
+| parent_id | STRING | ID of the parent task. |
+| labels | ARRAY <details> <summary> Items </summary> [STRING] </details> | List of labels applied to the task. |
+| checked | BOOLEAN <details> <summary> Options </summary> <span>true</span>, <span>false</span> </details> | Whether the task is checked. |
+| is_deleted | BOOLEAN <details> <summary> Options </summary> <span>true</span>, <span>false</span> </details> | Whether the task is deleted. |
+| content | STRING | Task content. |
+| description | STRING | Task description. |
+| priority | INTEGER | Task priority. |
+
+
+
+
+#### Output Example
+```json
+{
+  "user_id" : "",
+  "id" : "",
+  "project_id" : "",
+  "section_id" : "",
+  "parent_id" : "",
+  "labels" : [ "" ],
+  "checked" : false,
+  "is_deleted" : false,
+  "content" : "",
+  "description" : "",
+  "priority" : 1
+}
+```
+
+
+
+
+### Mark Task as Completed
+Name: markTaskCompleted
+
+`Marks a task as being completed.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| taskId | Task ID | STRING | ID of the task to be closed. | true |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Mark Task as Completed",
+  "name" : "markTaskCompleted",
+  "parameters" : {
+    "taskId" : ""
+  },
+  "type" : "todoist/v1/markTaskCompleted"
+}
+```
+
+#### Output
+
+This action does not produce any output.
+
+
+
+
+
+
+
+
+## What to do if your action is not listed here?
+
+If this component doesn't have the action you need, you can use **Custom Action** to create your own. Custom Actions empower you to define HTTP requests tailored to your specific requirements, allowing for greater flexibility in integrating with external services or APIs.
+
+To create a Custom Action, simply specify the desired HTTP method, path, and any necessary parameters. This way, you can extend the functionality of your component beyond the predefined actions, ensuring that you can meet all your integration needs effectively.
+

@@ -5,6 +5,7 @@ import java.util.Objects;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import org.springframework.lang.Nullable;
 import org.openapitools.jackson.nullable.JsonNullable;
 import java.time.OffsetDateTime;
 import jakarta.validation.Valid;
@@ -21,14 +22,14 @@ import jakarta.annotation.Generated;
 
 @Schema(name = "ConnectionDefinitionBasic", description = "Definition of a connection to an outside service.")
 @JsonTypeName("ConnectionDefinitionBasic")
-@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2024-06-30T07:20:54.243996+02:00[Europe/Zagreb]", comments = "Generator version: 7.5.0")
+@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2026-07-03T17:58:15.504637+02:00[Europe/Zagreb]", comments = "Generator version: 7.22.0")
 public class ConnectionDefinitionBasicModel {
 
-  private String componentDescription;
+  private @Nullable String componentDescription;
 
   private String componentName;
 
-  private String componentTitle;
+  private @Nullable String componentTitle;
 
   private Integer version;
 
@@ -44,7 +45,7 @@ public class ConnectionDefinitionBasicModel {
     this.version = version;
   }
 
-  public ConnectionDefinitionBasicModel componentDescription(String componentDescription) {
+  public ConnectionDefinitionBasicModel componentDescription(@Nullable String componentDescription) {
     this.componentDescription = componentDescription;
     return this;
   }
@@ -52,15 +53,16 @@ public class ConnectionDefinitionBasicModel {
   /**
    * The description used from the connection's component.
    * @return componentDescription
-  */
+   */
   
   @Schema(name = "componentDescription", description = "The description used from the connection's component.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("componentDescription")
-  public String getComponentDescription() {
+  public @Nullable String getComponentDescription() {
     return componentDescription;
   }
 
-  public void setComponentDescription(String componentDescription) {
+  @JsonProperty("componentDescription")
+  public void setComponentDescription(@Nullable String componentDescription) {
     this.componentDescription = componentDescription;
   }
 
@@ -72,7 +74,7 @@ public class ConnectionDefinitionBasicModel {
   /**
    * The component name used from the connection's component.
    * @return componentName
-  */
+   */
   @NotNull 
   @Schema(name = "componentName", description = "The component name used from the connection's component.", requiredMode = Schema.RequiredMode.REQUIRED)
   @JsonProperty("componentName")
@@ -80,11 +82,12 @@ public class ConnectionDefinitionBasicModel {
     return componentName;
   }
 
+  @JsonProperty("componentName")
   public void setComponentName(String componentName) {
     this.componentName = componentName;
   }
 
-  public ConnectionDefinitionBasicModel componentTitle(String componentTitle) {
+  public ConnectionDefinitionBasicModel componentTitle(@Nullable String componentTitle) {
     this.componentTitle = componentTitle;
     return this;
   }
@@ -92,15 +95,16 @@ public class ConnectionDefinitionBasicModel {
   /**
    * The title used from the connection's component
    * @return componentTitle
-  */
+   */
   
   @Schema(name = "componentTitle", description = "The title used from the connection's component", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("componentTitle")
-  public String getComponentTitle() {
+  public @Nullable String getComponentTitle() {
     return componentTitle;
   }
 
-  public void setComponentTitle(String componentTitle) {
+  @JsonProperty("componentTitle")
+  public void setComponentTitle(@Nullable String componentTitle) {
     this.componentTitle = componentTitle;
   }
 
@@ -112,7 +116,7 @@ public class ConnectionDefinitionBasicModel {
   /**
    * The version of a connection.
    * @return version
-  */
+   */
   @NotNull 
   @Schema(name = "version", description = "The version of a connection.", requiredMode = Schema.RequiredMode.REQUIRED)
   @JsonProperty("version")
@@ -120,6 +124,7 @@ public class ConnectionDefinitionBasicModel {
     return version;
   }
 
+  @JsonProperty("version")
   public void setVersion(Integer version) {
     this.version = version;
   }
@@ -160,11 +165,8 @@ public class ConnectionDefinitionBasicModel {
    * Convert the given object to string with each line indented by 4 spaces
    * (except the first line).
    */
-  private String toIndentedString(Object o) {
-    if (o == null) {
-      return "null";
-    }
-    return o.toString().replace("\n", "\n    ");
+  private String toIndentedString(@Nullable Object o) {
+    return o == null ? "null" : o.toString().replace("\n", "\n    ");
   }
 }
 

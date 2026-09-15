@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,15 +27,8 @@ public class JsonFileConstants {
     public static final String PAGE_SIZE = "pageSize";
     public static final String PAGE_NUMBER = "pageNumber";
     public static final String SOURCE = "source";
-    public static final String JSON_FILE = "jsonFile";
-    public static final String READ = "read";
-    public static final String WRITE = "write";
     public static final String FILE_ENTRY = "fileEntry";
     public static final String FILENAME = "filename";
     public static final String TYPE = "type";
 
-    public enum FileType {
-        JSON,
-        JSONL,
-    }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,9 +18,9 @@ package com.bytechef.platform.component.trigger;
 
 import com.bytechef.commons.util.ConvertUtils;
 import com.bytechef.commons.util.MapUtils;
-import com.bytechef.component.definition.Context.TypeReference;
 import com.bytechef.component.definition.TriggerDefinition.WebhookBody;
 import com.bytechef.component.definition.TriggerDefinition.WebhookMethod;
+import com.bytechef.component.definition.TypeReference;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.List;
 import java.util.Map;
@@ -90,6 +90,16 @@ public record WebhookRequest(
         @Override
         public String getRawContent() {
             return rawContent;
+        }
+
+        @Override
+        public String toString() {
+            return "WebhookBodyImpl{" +
+                "content=" + content +
+                ", contentType=" + contentType +
+                ", mimeType='" + mimeType + '\'' +
+                ", rawContent='" + rawContent + '\'' +
+                '}';
         }
     }
 }

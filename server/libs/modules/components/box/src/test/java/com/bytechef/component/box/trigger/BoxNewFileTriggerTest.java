@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,58 +16,57 @@
 
 package com.bytechef.component.box.trigger;
 
+import static com.bytechef.component.box.constant.BoxConstants.FOLDER;
 import static com.bytechef.component.box.constant.BoxConstants.FOLDER_ID;
 import static com.bytechef.component.box.constant.BoxConstants.ID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 import com.bytechef.component.box.util.BoxUtils;
-import com.bytechef.component.definition.Context.TypeReference;
-import com.bytechef.component.definition.TriggerDefinition.DynamicWebhookEnableOutput;
-import java.time.LocalDateTime;
+import com.bytechef.component.definition.TriggerDefinition.WebhookEnableOutput;
+import com.bytechef.component.definition.TypeReference;
+import com.bytechef.component.test.definition.MockParametersFactory;
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 /**
- * @author Monika Domiter
+ * @author Monika Kušter
  */
 class BoxNewFileTriggerTest extends AbstractBoxTriggerTest {
 
     @Test
-    void testDynamicWebhookEnable() {
+    void testWebhookEnable() {
+        mockedParameters = MockParametersFactory.create(Map.of(FOLDER_ID, "folderId"));
         String webhookUrl = "testWebhookUrl";
 
-        when(mockedParameters.getRequiredString(FOLDER_ID))
-            .thenReturn("folderId");
-
         boxUtilsMockedStatic.when(
-            () -> BoxUtils.subscribeWebhook(webhookUrl, mockedTriggerContext, "folder", "FILE.UPLOADED", "folderId"))
+            () -> BoxUtils.subscribeWebhook(
+                stringArgumentCaptor.capture(), triggerContextArgumentCaptor.capture(),
+                stringArgumentCaptor.capture(), stringArgumentCaptor.capture(), stringArgumentCaptor.capture()))
             .thenReturn("123");
 
-        DynamicWebhookEnableOutput dynamicWebhookEnableOutput = BoxNewFileTrigger.dynamicWebhookEnable(
+        WebhookEnableOutput webhookEnableOutput = BoxNewFileTrigger.webhookEnable(
             mockedParameters, mockedParameters, webhookUrl, workflowExecutionId, mockedTriggerContext);
 
-        Map<String, ?> parameters = dynamicWebhookEnableOutput.parameters();
-        LocalDateTime webhookExpirationDate = dynamicWebhookEnableOutput.webhookExpirationDate();
+        WebhookEnableOutput expectedWebhookEnableOutput = new WebhookEnableOutput(Map.of(ID, "123"), null);
 
-        Map<String, Object> expectedParameters = Map.of(ID, "123");
-
-        assertEquals(expectedParameters, parameters);
-        assertNull(webhookExpirationDate);
+        assertEquals(expectedWebhookEnableOutput, webhookEnableOutput);
+        assertEquals(List.of(webhookUrl, FOLDER, "FILE.UPLOADED", "folderId"), stringArgumentCaptor.getAllValues());
+        assertEquals(mockedTriggerContext, triggerContextArgumentCaptor.getValue());
     }
 
     @Test
-    void testDynamicWebhookRequest() {
+    void testWebhookRequest() {
         Map<String, ?> sourceMap = Map.of("source", mockedObject);
 
         when(mockedWebhookBody.getContent(any(TypeReference.class)))
             .thenReturn(sourceMap);
 
-        Object result = BoxNewFileTrigger.dynamicWebhookRequest(
+        Object result = BoxNewFileTrigger.webhookRequest(
             mockedParameters, mockedParameters, mockedHttpHeaders, mockedHttpParameters, mockedWebhookBody,
-            mockedWebhookMethod, mockedDynamicWebhookEnableOutput, mockedTriggerContext);
+            mockedWebhookMethod, mockedParameters, mockedTriggerContext);
 
         assertEquals(mockedObject, result);
     }

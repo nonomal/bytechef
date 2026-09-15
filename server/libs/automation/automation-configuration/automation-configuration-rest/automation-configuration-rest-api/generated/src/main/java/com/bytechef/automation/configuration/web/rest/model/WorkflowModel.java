@@ -10,12 +10,12 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.annotation.JsonValue;
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.lang.Nullable;
 import org.openapitools.jackson.nullable.JsonNullable;
 import java.time.OffsetDateTime;
 import jakarta.validation.Valid;
@@ -32,35 +32,35 @@ import jakarta.annotation.Generated;
 
 @Schema(name = "Workflow", description = "The blueprint that describe the execution of a job.")
 @JsonTypeName("Workflow")
-@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2024-07-08T07:14:48.742903+02:00[Europe/Zagreb]", comments = "Generator version: 7.5.0")
+@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2026-07-03T17:58:17.010679+02:00[Europe/Zagreb]", comments = "Generator version: 7.22.0")
 public class WorkflowModel implements com.bytechef.platform.configuration.web.rest.model.WorkflowModelAware {
 
-  private String createdBy;
+  private @Nullable String createdBy;
 
   @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
-  private LocalDateTime createdDate;
+  private @Nullable OffsetDateTime createdDate;
 
-  private Integer connectionsCount;
+  private @Nullable Integer connectionsCount;
 
-  private String definition;
+  private @Nullable String definition;
 
-  private String description;
+  private @Nullable String description;
 
-  private com.bytechef.platform.configuration.web.rest.model.WorkflowFormatModel format;
+  private @Nullable com.bytechef.platform.configuration.web.rest.model.WorkflowFormatModel format;
 
-  private String id;
+  private @Nullable String id;
 
   @Valid
   private List<@Valid WorkflowInputModel> inputs = new ArrayList<>();
 
-  private Integer inputsCount;
+  private @Nullable Integer inputsCount;
 
-  private String label;
+  private @Nullable String label;
 
-  private String lastModifiedBy;
+  private @Nullable String lastModifiedBy;
 
   @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
-  private LocalDateTime lastModifiedDate;
+  private @Nullable OffsetDateTime lastModifiedDate;
 
   @Valid
   private List<@Valid WorkflowOutputModel> outputs = new ArrayList<>();
@@ -77,7 +77,7 @@ public class WorkflowModel implements com.bytechef.platform.configuration.web.re
     
     JDBC("JDBC");
 
-    private String value;
+    private final String value;
 
     SourceTypeEnum(String value) {
       this.value = value;
@@ -104,9 +104,9 @@ public class WorkflowModel implements com.bytechef.platform.configuration.web.re
     }
   }
 
-  private SourceTypeEnum sourceType;
+  private @Nullable SourceTypeEnum sourceType;
 
-  private Integer maxRetries;
+  private @Nullable Integer maxRetries;
 
   @Valid
   private List<String> workflowTaskComponentNames = new ArrayList<>();
@@ -120,13 +120,15 @@ public class WorkflowModel implements com.bytechef.platform.configuration.web.re
   @Valid
   private List<@Valid WorkflowTriggerModel> triggers = new ArrayList<>();
 
-  private Integer version;
+  private @Nullable Integer version;
 
-  private BigDecimal projectWorkflowId;
+  private @Nullable Long projectWorkflowId;
 
-  private String workflowReferenceCode;
+  private @Nullable Boolean sseStreamResponse;
 
-  public WorkflowModel createdBy(String createdBy) {
+  private @Nullable String workflowUuid;
+
+  public WorkflowModel createdBy(@Nullable String createdBy) {
     this.createdBy = createdBy;
     return this;
   }
@@ -134,19 +136,20 @@ public class WorkflowModel implements com.bytechef.platform.configuration.web.re
   /**
    * The created by.
    * @return createdBy
-  */
+   */
   
   @Schema(name = "createdBy", accessMode = Schema.AccessMode.READ_ONLY, description = "The created by.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("createdBy")
-  public String getCreatedBy() {
+  public @Nullable String getCreatedBy() {
     return createdBy;
   }
 
-  public void setCreatedBy(String createdBy) {
+  @JsonProperty("createdBy")
+  public void setCreatedBy(@Nullable String createdBy) {
     this.createdBy = createdBy;
   }
 
-  public WorkflowModel createdDate(LocalDateTime createdDate) {
+  public WorkflowModel createdDate(@Nullable OffsetDateTime createdDate) {
     this.createdDate = createdDate;
     return this;
   }
@@ -154,19 +157,20 @@ public class WorkflowModel implements com.bytechef.platform.configuration.web.re
   /**
    * The created date.
    * @return createdDate
-  */
+   */
   @Valid 
   @Schema(name = "createdDate", accessMode = Schema.AccessMode.READ_ONLY, description = "The created date.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("createdDate")
-  public LocalDateTime getCreatedDate() {
+  public @Nullable OffsetDateTime getCreatedDate() {
     return createdDate;
   }
 
-  public void setCreatedDate(LocalDateTime createdDate) {
+  @JsonProperty("createdDate")
+  public void setCreatedDate(@Nullable OffsetDateTime createdDate) {
     this.createdDate = createdDate;
   }
 
-  public WorkflowModel connectionsCount(Integer connectionsCount) {
+  public WorkflowModel connectionsCount(@Nullable Integer connectionsCount) {
     this.connectionsCount = connectionsCount;
     return this;
   }
@@ -174,19 +178,20 @@ public class WorkflowModel implements com.bytechef.platform.configuration.web.re
   /**
    * The number of workflow connections
    * @return connectionsCount
-  */
+   */
   
   @Schema(name = "connectionsCount", accessMode = Schema.AccessMode.READ_ONLY, description = "The number of workflow connections", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("connectionsCount")
-  public Integer getConnectionsCount() {
+  public @Nullable Integer getConnectionsCount() {
     return connectionsCount;
   }
 
-  public void setConnectionsCount(Integer connectionsCount) {
+  @JsonProperty("connectionsCount")
+  public void setConnectionsCount(@Nullable Integer connectionsCount) {
     this.connectionsCount = connectionsCount;
   }
 
-  public WorkflowModel definition(String definition) {
+  public WorkflowModel definition(@Nullable String definition) {
     this.definition = definition;
     return this;
   }
@@ -194,19 +199,20 @@ public class WorkflowModel implements com.bytechef.platform.configuration.web.re
   /**
    * The definition of a workflow.
    * @return definition
-  */
+   */
   
   @Schema(name = "definition", description = "The definition of a workflow.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("definition")
-  public String getDefinition() {
+  public @Nullable String getDefinition() {
     return definition;
   }
 
-  public void setDefinition(String definition) {
+  @JsonProperty("definition")
+  public void setDefinition(@Nullable String definition) {
     this.definition = definition;
   }
 
-  public WorkflowModel description(String description) {
+  public WorkflowModel description(@Nullable String description) {
     this.description = description;
     return this;
   }
@@ -214,19 +220,20 @@ public class WorkflowModel implements com.bytechef.platform.configuration.web.re
   /**
    * The description of a workflow.
    * @return description
-  */
+   */
   
   @Schema(name = "description", description = "The description of a workflow.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("description")
-  public String getDescription() {
+  public @Nullable String getDescription() {
     return description;
   }
 
-  public void setDescription(String description) {
+  @JsonProperty("description")
+  public void setDescription(@Nullable String description) {
     this.description = description;
   }
 
-  public WorkflowModel format(com.bytechef.platform.configuration.web.rest.model.WorkflowFormatModel format) {
+  public WorkflowModel format(@Nullable com.bytechef.platform.configuration.web.rest.model.WorkflowFormatModel format) {
     this.format = format;
     return this;
   }
@@ -234,19 +241,20 @@ public class WorkflowModel implements com.bytechef.platform.configuration.web.re
   /**
    * Get format
    * @return format
-  */
+   */
   @Valid 
   @Schema(name = "format", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("format")
-  public com.bytechef.platform.configuration.web.rest.model.WorkflowFormatModel getFormat() {
+  public @Nullable com.bytechef.platform.configuration.web.rest.model.WorkflowFormatModel getFormat() {
     return format;
   }
 
-  public void setFormat(com.bytechef.platform.configuration.web.rest.model.WorkflowFormatModel format) {
+  @JsonProperty("format")
+  public void setFormat(@Nullable com.bytechef.platform.configuration.web.rest.model.WorkflowFormatModel format) {
     this.format = format;
   }
 
-  public WorkflowModel id(String id) {
+  public WorkflowModel id(@Nullable String id) {
     this.id = id;
     return this;
   }
@@ -254,15 +262,16 @@ public class WorkflowModel implements com.bytechef.platform.configuration.web.re
   /**
    * The id of a workflow.
    * @return id
-  */
+   */
   
   @Schema(name = "id", accessMode = Schema.AccessMode.READ_ONLY, description = "The id of a workflow.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("id")
-  public String getId() {
+  public @Nullable String getId() {
     return id;
   }
 
-  public void setId(String id) {
+  @JsonProperty("id")
+  public void setId(@Nullable String id) {
     this.id = id;
   }
 
@@ -282,7 +291,7 @@ public class WorkflowModel implements com.bytechef.platform.configuration.web.re
   /**
    * The workflow's expected list of inputs.
    * @return inputs
-  */
+   */
   @Valid 
   @Schema(name = "inputs", accessMode = Schema.AccessMode.READ_ONLY, description = "The workflow's expected list of inputs.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("inputs")
@@ -290,11 +299,12 @@ public class WorkflowModel implements com.bytechef.platform.configuration.web.re
     return inputs;
   }
 
+  @JsonProperty("inputs")
   public void setInputs(List<@Valid WorkflowInputModel> inputs) {
     this.inputs = inputs;
   }
 
-  public WorkflowModel inputsCount(Integer inputsCount) {
+  public WorkflowModel inputsCount(@Nullable Integer inputsCount) {
     this.inputsCount = inputsCount;
     return this;
   }
@@ -302,19 +312,20 @@ public class WorkflowModel implements com.bytechef.platform.configuration.web.re
   /**
    * The number of workflow inputs
    * @return inputsCount
-  */
+   */
   
   @Schema(name = "inputsCount", accessMode = Schema.AccessMode.READ_ONLY, description = "The number of workflow inputs", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("inputsCount")
-  public Integer getInputsCount() {
+  public @Nullable Integer getInputsCount() {
     return inputsCount;
   }
 
-  public void setInputsCount(Integer inputsCount) {
+  @JsonProperty("inputsCount")
+  public void setInputsCount(@Nullable Integer inputsCount) {
     this.inputsCount = inputsCount;
   }
 
-  public WorkflowModel label(String label) {
+  public WorkflowModel label(@Nullable String label) {
     this.label = label;
     return this;
   }
@@ -322,19 +333,20 @@ public class WorkflowModel implements com.bytechef.platform.configuration.web.re
   /**
    * The descriptive name for the workflow
    * @return label
-  */
+   */
   
   @Schema(name = "label", accessMode = Schema.AccessMode.READ_ONLY, description = "The descriptive name for the workflow", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("label")
-  public String getLabel() {
+  public @Nullable String getLabel() {
     return label;
   }
 
-  public void setLabel(String label) {
+  @JsonProperty("label")
+  public void setLabel(@Nullable String label) {
     this.label = label;
   }
 
-  public WorkflowModel lastModifiedBy(String lastModifiedBy) {
+  public WorkflowModel lastModifiedBy(@Nullable String lastModifiedBy) {
     this.lastModifiedBy = lastModifiedBy;
     return this;
   }
@@ -342,19 +354,20 @@ public class WorkflowModel implements com.bytechef.platform.configuration.web.re
   /**
    * The last modified by.
    * @return lastModifiedBy
-  */
+   */
   
   @Schema(name = "lastModifiedBy", accessMode = Schema.AccessMode.READ_ONLY, description = "The last modified by.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("lastModifiedBy")
-  public String getLastModifiedBy() {
+  public @Nullable String getLastModifiedBy() {
     return lastModifiedBy;
   }
 
-  public void setLastModifiedBy(String lastModifiedBy) {
+  @JsonProperty("lastModifiedBy")
+  public void setLastModifiedBy(@Nullable String lastModifiedBy) {
     this.lastModifiedBy = lastModifiedBy;
   }
 
-  public WorkflowModel lastModifiedDate(LocalDateTime lastModifiedDate) {
+  public WorkflowModel lastModifiedDate(@Nullable OffsetDateTime lastModifiedDate) {
     this.lastModifiedDate = lastModifiedDate;
     return this;
   }
@@ -362,15 +375,16 @@ public class WorkflowModel implements com.bytechef.platform.configuration.web.re
   /**
    * The last modified date.
    * @return lastModifiedDate
-  */
+   */
   @Valid 
   @Schema(name = "lastModifiedDate", accessMode = Schema.AccessMode.READ_ONLY, description = "The last modified date.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("lastModifiedDate")
-  public LocalDateTime getLastModifiedDate() {
+  public @Nullable OffsetDateTime getLastModifiedDate() {
     return lastModifiedDate;
   }
 
-  public void setLastModifiedDate(LocalDateTime lastModifiedDate) {
+  @JsonProperty("lastModifiedDate")
+  public void setLastModifiedDate(@Nullable OffsetDateTime lastModifiedDate) {
     this.lastModifiedDate = lastModifiedDate;
   }
 
@@ -390,7 +404,7 @@ public class WorkflowModel implements com.bytechef.platform.configuration.web.re
   /**
    * The workflow's list of expected outputs.
    * @return outputs
-  */
+   */
   @Valid 
   @Schema(name = "outputs", accessMode = Schema.AccessMode.READ_ONLY, description = "The workflow's list of expected outputs.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("outputs")
@@ -398,11 +412,12 @@ public class WorkflowModel implements com.bytechef.platform.configuration.web.re
     return outputs;
   }
 
+  @JsonProperty("outputs")
   public void setOutputs(List<@Valid WorkflowOutputModel> outputs) {
     this.outputs = outputs;
   }
 
-  public WorkflowModel sourceType(SourceTypeEnum sourceType) {
+  public WorkflowModel sourceType(@Nullable SourceTypeEnum sourceType) {
     this.sourceType = sourceType;
     return this;
   }
@@ -410,19 +425,20 @@ public class WorkflowModel implements com.bytechef.platform.configuration.web.re
   /**
    * The type of the source which stores the workflow definition.
    * @return sourceType
-  */
+   */
   
   @Schema(name = "sourceType", description = "The type of the source which stores the workflow definition.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("sourceType")
-  public SourceTypeEnum getSourceType() {
+  public @Nullable SourceTypeEnum getSourceType() {
     return sourceType;
   }
 
-  public void setSourceType(SourceTypeEnum sourceType) {
+  @JsonProperty("sourceType")
+  public void setSourceType(@Nullable SourceTypeEnum sourceType) {
     this.sourceType = sourceType;
   }
 
-  public WorkflowModel maxRetries(Integer maxRetries) {
+  public WorkflowModel maxRetries(@Nullable Integer maxRetries) {
     this.maxRetries = maxRetries;
     return this;
   }
@@ -430,15 +446,16 @@ public class WorkflowModel implements com.bytechef.platform.configuration.web.re
   /**
    * The maximum number of times a task may retry.
    * @return maxRetries
-  */
+   */
   
   @Schema(name = "maxRetries", accessMode = Schema.AccessMode.READ_ONLY, description = "The maximum number of times a task may retry.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("maxRetries")
-  public Integer getMaxRetries() {
+  public @Nullable Integer getMaxRetries() {
     return maxRetries;
   }
 
-  public void setMaxRetries(Integer maxRetries) {
+  @JsonProperty("maxRetries")
+  public void setMaxRetries(@Nullable Integer maxRetries) {
     this.maxRetries = maxRetries;
   }
 
@@ -458,7 +475,7 @@ public class WorkflowModel implements com.bytechef.platform.configuration.web.re
   /**
    * Get workflowTaskComponentNames
    * @return workflowTaskComponentNames
-  */
+   */
   
   @Schema(name = "workflowTaskComponentNames", accessMode = Schema.AccessMode.READ_ONLY, requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("workflowTaskComponentNames")
@@ -466,6 +483,7 @@ public class WorkflowModel implements com.bytechef.platform.configuration.web.re
     return workflowTaskComponentNames;
   }
 
+  @JsonProperty("workflowTaskComponentNames")
   public void setWorkflowTaskComponentNames(List<String> workflowTaskComponentNames) {
     this.workflowTaskComponentNames = workflowTaskComponentNames;
   }
@@ -486,7 +504,7 @@ public class WorkflowModel implements com.bytechef.platform.configuration.web.re
   /**
    * Get workflowTriggerComponentNames
    * @return workflowTriggerComponentNames
-  */
+   */
   
   @Schema(name = "workflowTriggerComponentNames", accessMode = Schema.AccessMode.READ_ONLY, requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("workflowTriggerComponentNames")
@@ -494,6 +512,7 @@ public class WorkflowModel implements com.bytechef.platform.configuration.web.re
     return workflowTriggerComponentNames;
   }
 
+  @JsonProperty("workflowTriggerComponentNames")
   public void setWorkflowTriggerComponentNames(List<String> workflowTriggerComponentNames) {
     this.workflowTriggerComponentNames = workflowTriggerComponentNames;
   }
@@ -514,7 +533,7 @@ public class WorkflowModel implements com.bytechef.platform.configuration.web.re
   /**
    * The steps that make up the workflow.
    * @return tasks
-  */
+   */
   @Valid 
   @Schema(name = "tasks", accessMode = Schema.AccessMode.READ_ONLY, description = "The steps that make up the workflow.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("tasks")
@@ -522,6 +541,7 @@ public class WorkflowModel implements com.bytechef.platform.configuration.web.re
     return tasks;
   }
 
+  @JsonProperty("tasks")
   public void setTasks(List<@Valid WorkflowTaskModel> tasks) {
     this.tasks = tasks;
   }
@@ -542,7 +562,7 @@ public class WorkflowModel implements com.bytechef.platform.configuration.web.re
   /**
    * The steps that make up the workflow.
    * @return triggers
-  */
+   */
   @Valid 
   @Schema(name = "triggers", accessMode = Schema.AccessMode.READ_ONLY, description = "The steps that make up the workflow.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("triggers")
@@ -550,11 +570,12 @@ public class WorkflowModel implements com.bytechef.platform.configuration.web.re
     return triggers;
   }
 
+  @JsonProperty("triggers")
   public void setTriggers(List<@Valid WorkflowTriggerModel> triggers) {
     this.triggers = triggers;
   }
 
-  public WorkflowModel version(Integer version) {
+  public WorkflowModel version(@Nullable Integer version) {
     this.version = version;
     return this;
   }
@@ -562,19 +583,20 @@ public class WorkflowModel implements com.bytechef.platform.configuration.web.re
   /**
    * Get version
    * @return version
-  */
+   */
   
   @Schema(name = "__version", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("__version")
-  public Integer getVersion() {
+  public @Nullable Integer getVersion() {
     return version;
   }
 
-  public void setVersion(Integer version) {
+  @JsonProperty("__version")
+  public void setVersion(@Nullable Integer version) {
     this.version = version;
   }
 
-  public WorkflowModel projectWorkflowId(BigDecimal projectWorkflowId) {
+  public WorkflowModel projectWorkflowId(@Nullable Long projectWorkflowId) {
     this.projectWorkflowId = projectWorkflowId;
     return this;
   }
@@ -582,36 +604,59 @@ public class WorkflowModel implements com.bytechef.platform.configuration.web.re
   /**
    * The project workflow id
    * @return projectWorkflowId
-  */
-  @Valid 
+   */
+  
   @Schema(name = "projectWorkflowId", accessMode = Schema.AccessMode.READ_ONLY, description = "The project workflow id", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("projectWorkflowId")
-  public BigDecimal getProjectWorkflowId() {
+  public @Nullable Long getProjectWorkflowId() {
     return projectWorkflowId;
   }
 
-  public void setProjectWorkflowId(BigDecimal projectWorkflowId) {
+  @JsonProperty("projectWorkflowId")
+  public void setProjectWorkflowId(@Nullable Long projectWorkflowId) {
     this.projectWorkflowId = projectWorkflowId;
   }
 
-  public WorkflowModel workflowReferenceCode(String workflowReferenceCode) {
-    this.workflowReferenceCode = workflowReferenceCode;
+  public WorkflowModel sseStreamResponse(@Nullable Boolean sseStreamResponse) {
+    this.sseStreamResponse = sseStreamResponse;
     return this;
   }
 
   /**
-   * The workflow reference code
-   * @return workflowReferenceCode
-  */
+   * Indicates if the workflow has SSE stream response
+   * @return sseStreamResponse
+   */
   
-  @Schema(name = "workflowReferenceCode", accessMode = Schema.AccessMode.READ_ONLY, description = "The workflow reference code", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
-  @JsonProperty("workflowReferenceCode")
-  public String getWorkflowReferenceCode() {
-    return workflowReferenceCode;
+  @Schema(name = "sseStreamResponse", accessMode = Schema.AccessMode.READ_ONLY, description = "Indicates if the workflow has SSE stream response", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+  @JsonProperty("sseStreamResponse")
+  public @Nullable Boolean getSseStreamResponse() {
+    return sseStreamResponse;
   }
 
-  public void setWorkflowReferenceCode(String workflowReferenceCode) {
-    this.workflowReferenceCode = workflowReferenceCode;
+  @JsonProperty("sseStreamResponse")
+  public void setSseStreamResponse(@Nullable Boolean sseStreamResponse) {
+    this.sseStreamResponse = sseStreamResponse;
+  }
+
+  public WorkflowModel workflowUuid(@Nullable String workflowUuid) {
+    this.workflowUuid = workflowUuid;
+    return this;
+  }
+
+  /**
+   * The workflow uuid
+   * @return workflowUuid
+   */
+  
+  @Schema(name = "workflowUuid", accessMode = Schema.AccessMode.READ_ONLY, description = "The workflow uuid", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+  @JsonProperty("workflowUuid")
+  public @Nullable String getWorkflowUuid() {
+    return workflowUuid;
+  }
+
+  @JsonProperty("workflowUuid")
+  public void setWorkflowUuid(@Nullable String workflowUuid) {
+    this.workflowUuid = workflowUuid;
   }
 
   @Override
@@ -644,12 +689,13 @@ public class WorkflowModel implements com.bytechef.platform.configuration.web.re
         Objects.equals(this.triggers, workflow.triggers) &&
         Objects.equals(this.version, workflow.version) &&
         Objects.equals(this.projectWorkflowId, workflow.projectWorkflowId) &&
-        Objects.equals(this.workflowReferenceCode, workflow.workflowReferenceCode);
+        Objects.equals(this.sseStreamResponse, workflow.sseStreamResponse) &&
+        Objects.equals(this.workflowUuid, workflow.workflowUuid);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(createdBy, createdDate, connectionsCount, definition, description, format, id, inputs, inputsCount, label, lastModifiedBy, lastModifiedDate, outputs, sourceType, maxRetries, workflowTaskComponentNames, workflowTriggerComponentNames, tasks, triggers, version, projectWorkflowId, workflowReferenceCode);
+    return Objects.hash(createdBy, createdDate, connectionsCount, definition, description, format, id, inputs, inputsCount, label, lastModifiedBy, lastModifiedDate, outputs, sourceType, maxRetries, workflowTaskComponentNames, workflowTriggerComponentNames, tasks, triggers, version, projectWorkflowId, sseStreamResponse, workflowUuid);
   }
 
   @Override
@@ -677,7 +723,8 @@ public class WorkflowModel implements com.bytechef.platform.configuration.web.re
     sb.append("    triggers: ").append(toIndentedString(triggers)).append("\n");
     sb.append("    version: ").append(toIndentedString(version)).append("\n");
     sb.append("    projectWorkflowId: ").append(toIndentedString(projectWorkflowId)).append("\n");
-    sb.append("    workflowReferenceCode: ").append(toIndentedString(workflowReferenceCode)).append("\n");
+    sb.append("    sseStreamResponse: ").append(toIndentedString(sseStreamResponse)).append("\n");
+    sb.append("    workflowUuid: ").append(toIndentedString(workflowUuid)).append("\n");
     sb.append("}");
     return sb.toString();
   }
@@ -686,11 +733,8 @@ public class WorkflowModel implements com.bytechef.platform.configuration.web.re
    * Convert the given object to string with each line indented by 4 spaces
    * (except the first line).
    */
-  private String toIndentedString(Object o) {
-    if (o == null) {
-      return "null";
-    }
-    return o.toString().replace("\n", "\n    ");
+  private String toIndentedString(@Nullable Object o) {
+    return o == null ? "null" : o.toString().replace("\n", "\n    ");
   }
 }
 

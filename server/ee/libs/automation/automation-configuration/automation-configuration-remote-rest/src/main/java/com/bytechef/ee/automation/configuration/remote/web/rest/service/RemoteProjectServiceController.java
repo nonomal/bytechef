@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the ByteChef Enterprise license (the "Enterprise License");
  * you may not use this file except in compliance with the Enterprise License.
@@ -47,12 +47,12 @@ public class RemoteProjectServiceController {
 
     @RequestMapping(
         method = RequestMethod.GET,
-        value = "/get-project-instance-project/{projectInstanceId}",
+        value = "/get-project/deployment-project/{projectDeploymentId}",
         produces = {
             "application/json"
         })
-    public ResponseEntity<Project> getProjectInstanceProject(@PathVariable long projectInstanceId) {
-        return ResponseEntity.ok(projectService.getProjectInstanceProject(projectInstanceId));
+    public ResponseEntity<Project> getProjectDeploymentProject(@PathVariable long projectDeploymentId) {
+        return ResponseEntity.ok(projectService.getProjectDeploymentProject(projectDeploymentId));
     }
 
     @RequestMapping(

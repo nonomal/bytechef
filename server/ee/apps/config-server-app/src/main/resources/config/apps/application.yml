@@ -10,8 +10,26 @@ springdoc:
 ---
 
 info:
+  ai:
+    enabled: ${bytechef.ai.enabled:false}
+  analytics:
+    enabled: ${bytechef.analytics.enabled:false}
+    postHog:
+      apiKey: ${bytechef.analytics.postHog.apiKey:}
+      host: ${bytechef.analytics.postHog.host:}
   application:
-    edition: ${bytechef.edition}
+    edition: ${bytechef.edition:}
+  featureFlags: ${bytechef.featureFlags}
+  helpHub:
+    enabled: ${bytechef.helpHub.enabled:false}
+    commandBar:
+      orgId: ${bytechef.helpHub.commandBar.orgId:}
+  signUp:
+    activationRequired: ${bytechef.signUp.activationRequired:false}
+    enabled: ${bytechef.signUp.enabled}
+  userGuiding:
+    containerId: ${bytechef.userGuiding.containerId:}
+    enabled: ${bytechef.userGuiding.enabled:false}
 
 management:
   endpoints:
@@ -51,12 +69,29 @@ management:
   observations:
     key-values:
       application: ${spring.application.name}
-  # Prometheus is the default metrics backend
-  prometheus:
+  opentelemetry:
+    tracing:
+      export:
+        otlp:
+          endpoint: ${bytechef.observability.tracing.endpoint}
+    logging:
+      export:
+        otlp:
+          endpoint: ${bytechef.observability.logging.endpoint}
+  logging:
+    export:
+      enabled: ${bytechef.observability.enabled}
+  tracing:
+    export:
+      enabled: ${bytechef.observability.enabled}
+    sampling:
+      probability: 1.0
+  otlp:
     metrics:
       export:
-        enabled: true
-        step: 60
+        enabled: ${bytechef.observability.enabled}
+        step: 10s
+        url: ${bytechef.observability.metrics.endpoint}
 
 openapi:
   openAPIDefinition:
@@ -75,6 +110,9 @@ spring:
       enabled: false
   jmx:
     enabled: false
+  mvc:
+    async:
+      request-timeout: 10m
   output:
     ansi:
       console-available: true
@@ -88,10 +126,8 @@ spring:
         prefetch: 1
   task:
     execution:
-      pool:
-        core-size: 2
-        max-size: 50
-        queue-capacity: 10000
+      simple:
+        concurrency-limit: ${bytechef.async.concurrency-limit}
   threads:
     virtual:
       enabled: true
@@ -99,24 +135,34 @@ spring:
 #####
 
 bytechef:
+  ai:
+    openai:
+      chat:
+        options:
+          model: gpt-4o
+  async:
+    # Upper bound on concurrent @Async tasks on the default executor. There is no queue: a submitter waits for a
+    # permit. Workflow task and trigger execution are bounded separately by bytechef.worker.task.*.
+    concurrency-limit: 200
   cache:
-    # Cache provider (redis | simple) default: simple
+    # Cache provider (redis) default: redis
     provider: redis
   data-storage:
+    # Data storage provider (aws(ee) | filesystem | jdbc) default: jdbc
     provider: jdbc
-  discovery-service:
-    provider: redis
-  edition: ee
+  # Edition (CE - Community Edition | EE - Enterprise Edition) default: EE
+  edition: EE
+  # Encryption key provider (filesystem - the key generated on filesystem, property - the key read from property) default: filesystem
   encryption:
     provider: filesystem
   file-storage:
-    # File storage provider for files (base64 | filesystem) default: filesystem
+    # File storage provider (aws(ee) | filesystem | jdbc) default: filesystem
     provider: filesystem
     filesystem:
       basedir: ${user.home}/bytechef/data/file-storage
   mail:
     base-url: ${bytechef.public-url}
-    from: noreply@bytechef.io
+    from: noreply@app.bytechef.io
   message-broker:
     # Messaging provider between Coordinator and Workers (amqp | jms | kafka | redis) default: redis
     provider: redis
@@ -128,13 +174,12 @@ bytechef:
     redirect-uri: ${bytechef.public-url}/callback
   public-url: http://127.0.0.1:5173
   resources:
-    web: file:///opt/bytechef/client
+    web: file:///opt/bytechef/client/
+  scheduler:
+    # Trigger scheduler provider (aws(ee) | quartz) default: quartz
+    provider: quartz
   security:
-    content-security-policy: "default-src 'self'; frame-src 'self' data:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://storage.googleapis.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:"
-    email:
-      temp-domains-url: #https://gist.githubusercontent.com/SimonHoiberg/f5a23b1fa3762330c8af1e9090918b63/raw/53963d0dbdd93c594fbc067cee95966156ee066b/temp-email-list.txt
-    remember-me:
-      key: remember_me
+    content-security-policy: "default-src 'self'; frame-src 'self' data:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://storage.googleapis.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; img-src 'self' data:; font-src 'self' data:; script-src: https://*.command.ai; frame-src: https://*.command.ai; img-src: https://*.command.ai; media-src: https://*.command.ai; connect-src: https://*.command.ai; style-src: https://*.command.ai;"
   # Tenant support mode (single | multi - ee only) default: single
   tenant:
     mode: single
@@ -148,11 +193,11 @@ bytechef:
   worker:
     task:
       subscriptions:
-        default: "10"
+        default: 10
   workflow:
     output-storage:
-      # Output storage provider for workflow output data (base64 | filesystem) default: base64
-      provider: base64
+      # Output storage provider for workflow output data (aws(ee) | filesystem | jdbc) default: jdbc
+      provider: jdbc
     repository:
       jdbc:
         enabled: true

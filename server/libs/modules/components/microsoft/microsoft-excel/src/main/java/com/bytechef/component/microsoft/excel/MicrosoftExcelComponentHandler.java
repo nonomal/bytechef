@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,18 +16,21 @@
 
 package com.bytechef.component.microsoft.excel;
 
-import static com.bytechef.component.definition.ComponentDSL.component;
-import static com.bytechef.component.microsoft.excel.constant.MicrosoftExcelConstants.MICROSOFT_EXCEL;
+import static com.bytechef.component.definition.ComponentDsl.component;
+import static com.bytechef.component.definition.ComponentDsl.tool;
 
 import com.bytechef.component.ComponentHandler;
 import com.bytechef.component.definition.ComponentCategory;
 import com.bytechef.component.definition.ComponentDefinition;
 import com.bytechef.component.microsoft.excel.action.MicrosoftExcelAppendRowAction;
 import com.bytechef.component.microsoft.excel.action.MicrosoftExcelClearWorksheetAction;
+import com.bytechef.component.microsoft.excel.action.MicrosoftExcelCreateWorksheetAction;
 import com.bytechef.component.microsoft.excel.action.MicrosoftExcelDeleteRowAction;
 import com.bytechef.component.microsoft.excel.action.MicrosoftExcelFindRowByNumAction;
+import com.bytechef.component.microsoft.excel.action.MicrosoftExcelListWorksheetsAction;
 import com.bytechef.component.microsoft.excel.action.MicrosoftExcelUpdateRowAction;
 import com.bytechef.component.microsoft.excel.connection.MicrosoftExcelConnection;
+import com.bytechef.component.microsoft.excel.trigger.MicrosoftExcelNewRowTrigger;
 import com.google.auto.service.AutoService;
 
 /**
@@ -36,20 +39,36 @@ import com.google.auto.service.AutoService;
 @AutoService(ComponentHandler.class)
 public class MicrosoftExcelComponentHandler implements ComponentHandler {
 
-    private static final ComponentDefinition COMPONENT_DEFINITION = component(MICROSOFT_EXCEL)
+    private static final ComponentDefinition COMPONENT_DEFINITION = component("microsoftExcel")
         .title("Microsoft Excel")
         .description(
             "Microsoft Excel is a spreadsheet program used for organizing, analyzing, and visualizing data in " +
                 "tabular form.")
+        .customAction(true)
+        .customActionHelp(
+            "",
+            "https://learn.microsoft.com/en-us/graph/api/resources/excel?view=graph-rest-1.0")
         .icon("path:assets/microsoft-excel.svg")
         .categories(ComponentCategory.PRODUCTIVITY_AND_COLLABORATION)
         .connection(MicrosoftExcelConnection.CONNECTION_DEFINITION)
         .actions(
             MicrosoftExcelAppendRowAction.ACTION_DEFINITION,
             MicrosoftExcelClearWorksheetAction.ACTION_DEFINITION,
+            MicrosoftExcelCreateWorksheetAction.ACTION_DEFINITION,
             MicrosoftExcelDeleteRowAction.ACTION_DEFINITION,
             MicrosoftExcelFindRowByNumAction.ACTION_DEFINITION,
-            MicrosoftExcelUpdateRowAction.ACTION_DEFINITION);
+            MicrosoftExcelListWorksheetsAction.ACTION_DEFINITION,
+            MicrosoftExcelUpdateRowAction.ACTION_DEFINITION)
+        .clusterElements(
+            tool(MicrosoftExcelAppendRowAction.ACTION_DEFINITION),
+            tool(MicrosoftExcelClearWorksheetAction.ACTION_DEFINITION),
+            tool(MicrosoftExcelCreateWorksheetAction.ACTION_DEFINITION),
+            tool(MicrosoftExcelDeleteRowAction.ACTION_DEFINITION),
+            tool(MicrosoftExcelFindRowByNumAction.ACTION_DEFINITION),
+            tool(MicrosoftExcelListWorksheetsAction.ACTION_DEFINITION),
+            tool(MicrosoftExcelUpdateRowAction.ACTION_DEFINITION))
+        .triggers(MicrosoftExcelNewRowTrigger.TRIGGER_DEFINITION)
+        .version(1);
 
     @Override
     public ComponentDefinition getDefinition() {

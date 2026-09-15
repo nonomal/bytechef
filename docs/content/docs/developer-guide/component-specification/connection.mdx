@@ -1,0 +1,87 @@
+---
+title: "Connection"
+---
+
+## Connection [toc]
+
+The connection definition configures how a component authenticates to external systems. Below is an explanation of each method available on the connection DSL:
+
+- `connection()` - Builds a new `ModifiableConnectionDefinition` used inside a component.
+- [`properties(P... properties)`](/developer-guide/component-specification/property) - Declares user-configurable connection properties (e.g., region, account ID). These appear in the connection dialog.
+- `authorizations(ModifiableAuthorization... authorizations)` - Declares one or more authorization mechanisms supported by this connection (OAuth2, API Key, Basic Auth, etc.).
+- `authorizationRequired(boolean authorizationRequired)` - Indicates if actions/triggers require a successful authorization before they can run.
+- `baseUri(BaseUriFunction baseUri)` - Returns the base URI for all HTTP requests for this connection. If the component has `customAction(true)`, the Base URI is shown in the Connection tab.
+- `version(int version)` - Connection version. Bump when introducing breaking changes to connection fields or auth behavior.
+
+## Authorizations
+
+Each authorization is configured via `ModifiableAuthorization` and can drive how credentials are acquired, applied to requests, refreshed, and detected.
+
+### Modifiable Authorization
+
+- `authorization(AuthorizationType authorizationType)` - Builds a new authorization of the given type. Supported values: `API_KEY`, `BASIC_AUTH`, `BEARER_TOKEN`, `CUSTOM`, `DIGEST_AUTH`, `OAUTH2_AUTHORIZATION_CODE`, `OAUTH2_AUTHORIZATION_CODE_PKCE`, `OAUTH2_CLIENT_CREDENTIALS`, `OAUTH2_IMPLICIT_CODE`, `OAUTH2_RESOURCE_OWNER_PASSWORD`.
+- `title(String title)` - Display name shown in the UI.
+- `description(String description)` - Optional help text for this auth method.
+- [`properties(P... properties)`](/developer-guide/component-specification/property) - Additional fields needed for the chosen auth (e.g., Client ID/Secret, tenant, audience). Use constants from `Authorization` when applicable: `USERNAME`, `PASSWORD`, `TOKEN`, `CLIENT_ID`, `CLIENT_SECRET`, `VALUE`.
+- `apply(ApplyFunction apply)` - Inject credentials into outgoing requests. Return `Authorization.ApplyResponse` using helpers:
+  - `ApplyResponse.ofHeaders(Map<String, List<String>> headers)`
+  - `ApplyResponse.ofQueryParameters(Map<String, List<String>> queryParameters)`
+- `authorizationUrl(AuthorizationUrlFunction authorizationUrl)` - For OAuth2 flows, compute the authorization URL.
+- `authorizationCallback(AuthorizationCallbackFunction authorizationCallback)` - Handle the redirect from the OAuth2 server and exchange the code for tokens.
+- `tokenUrl(TokenUrlFunction tokenUrl)` / `refreshUrl(RefreshUrlFunction refreshUrl)` - Provide OAuth2 token/refresh endpoints when needed.
+- `refresh(RefreshFunction refresh)` / `refreshToken(RefreshTokenFunction refreshTokenFunction)` - Implement custom refresh logic or provide only the refresh token value.
+- `scopes(ScopesFunction scopes)` - Defines the list of OAuth2 scopes to request.
+- `oAuth2AuthorizationExtraQueryParameters(...)` - Add extra query parameters to the OAuth2 authorization URL.
+
+### Examples
+
+Different auth types require different inputs. Below are practical examples.
+
+#### Basic Auth
+
+Basic Auth is a simple authentication scheme built into the HTTP protocol. It requires a username and password, which are sent with each request.
+
+```java
+authorization(AuthorizationType.BASIC_AUTH)
+    .title("Basic Auth")
+    .properties(
+        string(USERNAME)
+            .label("Username")
+            .required(true),
+        string(PASSWORD)
+            .label("Password")
+            .required(true))
+```
+
+#### Bearer Token
+
+Bearer Token authentication involves sending a token with each request. This token is typically obtained from an authorization server and represents the user's identity.
+
+```java
+authorization(AuthorizationType.BEARER_TOKEN)
+    .title("Bearer Token")
+    .properties(
+        string(TOKEN)
+            .label("Token")
+            .required(true))
+```
+
+#### OAuth2 Authorization
+
+OAuth2 Authorization Code is a robust authorization framework that allows third-party applications to obtain limited access to a web service. It involves redirecting the user to an authorization server to obtain an authorization code, which is then exchanged for an access token.
+
+```java
+authorization(AuthorizationType.OAUTH2_AUTHORIZATION_CODE)
+    .title("OAuth2 Authorization Code")
+    .properties(
+        string(CLIENT_ID)
+            .label("Client Id")
+            .required(true),
+        string(CLIENT_SECRET)
+            .label("Client Secret")
+            .required(true))
+    .authorizationUrl((connectionParameters, context) -> "authorization url")
+    .scopes((connection, context) -> List.of("scope1", "scope2"))
+    .tokenUrl((connectionParameters, context) -> "token url")
+    .refreshUrl((connectionParameters, context) -> "refresh url")
+```

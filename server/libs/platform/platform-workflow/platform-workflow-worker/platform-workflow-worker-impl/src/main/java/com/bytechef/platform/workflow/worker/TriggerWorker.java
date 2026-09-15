@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,24 +16,24 @@
 
 package com.bytechef.platform.workflow.worker;
 
-import com.bytechef.commons.util.ExceptionUtils;
 import com.bytechef.error.ExecutionError;
 import com.bytechef.message.event.MessageEvent;
 import com.bytechef.platform.component.trigger.TriggerOutput;
 import com.bytechef.platform.configuration.domain.CancelControlTrigger;
 import com.bytechef.platform.file.storage.TriggerFileStorage;
+import com.bytechef.platform.workflow.WorkflowExecutionId;
 import com.bytechef.platform.workflow.coordinator.event.TriggerExecutionCompleteEvent;
 import com.bytechef.platform.workflow.coordinator.event.TriggerExecutionErrorEvent;
 import com.bytechef.platform.workflow.coordinator.event.TriggerStartedApplicationEvent;
-import com.bytechef.platform.workflow.execution.WorkflowExecutionId;
 import com.bytechef.platform.workflow.execution.domain.TriggerExecution;
+import com.bytechef.platform.workflow.worker.event.CancelControlTriggerEvent;
+import com.bytechef.platform.workflow.worker.event.TriggerExecutionEvent;
+import com.bytechef.platform.workflow.worker.exception.TriggerExecutionException;
 import com.bytechef.platform.workflow.worker.executor.TriggerWorkerExecutor;
-import com.bytechef.platform.workflow.worker.trigger.event.CancelControlTriggerEvent;
-import com.bytechef.platform.workflow.worker.trigger.event.TriggerExecutionEvent;
 import com.bytechef.platform.workflow.worker.trigger.handler.TriggerHandler;
 import com.bytechef.platform.workflow.worker.trigger.handler.TriggerHandlerResolver;
 import java.time.Duration;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.Objects;
@@ -45,6 +45,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import org.apache.commons.lang3.Validate;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
@@ -54,28 +55,37 @@ import org.springframework.context.ApplicationEventPublisher;
  */
 public class TriggerWorker {
 
-    private static final Logger logger = LoggerFactory.getLogger(TriggerWorker.class);
+    private static final Logger log = LoggerFactory.getLogger(TriggerWorker.class);
 
     private static final long DEFAULT_TIME_OUT = 24 * 60 * 60 * 1000; // 24 hours
 
+    /**
+     * Ceiling on the wait for the submitted runnable to signal completion. Cancellation can win before the runnable
+     * body is entered, in which case its {@code finally} never counts the latch down; without a bound the caller — a
+     * broker dispatch thread — would wait forever.
+     */
+    private static final long LATCH_TIME_OUT = 30 * 1000; // 30 seconds
+
     private final ApplicationEventPublisher eventPublisher;
-    private final TriggerFileStorage triggerFileStorage;
-    private final TriggerWorkerExecutor triggerWorkerExecutor;
     private final Map<WorkflowExecutionId, TriggerExecutionFuture<?>> triggerExecutions = new ConcurrentHashMap<>();
+    private final TriggerFileStorage triggerFileStorage;
     private final TriggerHandlerResolver triggerHandlerResolver;
+    private final TriggerWorkerExecutor triggerWorkerExecutor;
 
     public TriggerWorker(
         ApplicationEventPublisher eventPublisher, TriggerFileStorage triggerFileStorage,
-        TriggerWorkerExecutor executorService, TriggerHandlerResolver triggerHandlerResolver) {
+        TriggerHandlerResolver triggerHandlerResolver, TriggerWorkerExecutor triggerWorkerExecutor) {
 
         this.eventPublisher = eventPublisher;
         this.triggerFileStorage = triggerFileStorage;
-        this.triggerWorkerExecutor = executorService;
         this.triggerHandlerResolver = triggerHandlerResolver;
+        this.triggerWorkerExecutor = triggerWorkerExecutor;
     }
 
     public void onTriggerExecutionEvent(TriggerExecutionEvent triggerExecutionEvent) {
-        logger.debug("onTriggerExecutionEvent: triggerExecutionEvent={}", triggerExecutionEvent);
+        if (log.isTraceEnabled()) {
+            log.trace("onTriggerExecutionEvent: triggerExecutionEvent={}", triggerExecutionEvent);
+        }
 
         TriggerExecution triggerExecution = triggerExecutionEvent.getTriggerExecution();
         CountDownLatch latch = new CountDownLatch(1);
@@ -85,12 +95,16 @@ public class TriggerWorker {
                 eventPublisher.publishEvent(
                     new TriggerStartedApplicationEvent(Validate.notNull(triggerExecution.getId(), "id")));
 
-                TriggerExecution completedTriggerExecution = doExecuteTrigger(triggerExecution);
+                TriggerExecution execution = doExecuteTrigger(triggerExecution);
 
-                eventPublisher.publishEvent(new TriggerExecutionCompleteEvent(completedTriggerExecution));
+                TriggerExecution.Status status = execution.getStatus();
+
+                if (status.equals(TriggerExecution.Status.COMPLETED)) {
+                    eventPublisher.publishEvent(new TriggerExecutionCompleteEvent(execution));
+                }
             } catch (InterruptedException e) {
-                if (logger.isTraceEnabled()) {
-                    logger.trace(e.getMessage(), e);
+                if (log.isTraceEnabled()) {
+                    log.trace(e.getMessage(), e);
                 }
             } catch (Exception e) {
                 TriggerExecutionFuture<?> triggerExecutionFuture = triggerExecutions.get(
@@ -105,17 +119,23 @@ public class TriggerWorker {
         });
 
         triggerExecutions.put(
-            triggerExecution.getWorkflowExecutionId(), new TriggerExecutionFuture<>(triggerExecution, future));
+            triggerExecution.getWorkflowExecutionId(), new TriggerExecutionFuture<>(future, triggerExecution));
 
         try {
             future.get(calculateTimeout(triggerExecution), TimeUnit.MILLISECONDS);
         } catch (InterruptedException | ExecutionException | TimeoutException e) {
+            future.cancel(true);
+
             handleException(triggerExecution, e);
         } catch (CancellationException e) {
-            logger.debug("Cancelled trigger: {}", triggerExecution.getWorkflowExecutionId());
+            log.debug("Cancelled trigger: {}", triggerExecution.getWorkflowExecutionId());
         } finally {
             try {
-                latch.await();
+                if (!latch.await(LATCH_TIME_OUT, TimeUnit.MILLISECONDS)) {
+                    log.warn(
+                        "Trigger execution did not signal completion within {} ms: {}", LATCH_TIME_OUT,
+                        triggerExecution.getWorkflowExecutionId());
+                }
             } catch (InterruptedException e) {
                 handleException(triggerExecution, e);
             }
@@ -128,13 +148,13 @@ public class TriggerWorker {
         if (event instanceof CancelControlTriggerEvent cancelControlTriggerEvent) {
             CancelControlTrigger cancelControlTrigger = cancelControlTriggerEvent.getControlTrigger();
 
-            logger.debug("onCancelControlTriggerEvent: cancelControlTrigger={}", cancelControlTrigger);
+            log.debug("onCancelControlTriggerEvent: cancelControlTrigger={}", cancelControlTrigger);
 
             long id = cancelControlTrigger.getTriggerExecutionId();
 
             for (TriggerExecutionFuture<?> triggerExecutionFuture : triggerExecutions.values()) {
                 if (Objects.equals(triggerExecutionFuture.triggerExecution.getId(), id)) {
-                    logger.info("Cancelling trigger id={}", triggerExecutionFuture.triggerExecution.getId());
+                    log.info("Cancelling trigger id={}", triggerExecutionFuture.triggerExecution.getId());
 
                     triggerExecutionFuture.cancel(true);
                 }
@@ -143,11 +163,23 @@ public class TriggerWorker {
     }
 
     private TriggerExecution doExecuteTrigger(TriggerExecution triggerExecution) throws Exception {
-        long startTime = System.currentTimeMillis();
+        Instant startDate = Instant.now();
+
+        long startTime = startDate.toEpochMilli();
+
+        triggerExecution.setStartDate(startDate);
 
         TriggerHandler triggerHandler = triggerHandlerResolver.resolve(triggerExecution);
 
-        TriggerOutput triggerOutput = triggerHandler.handle(triggerExecution.clone());
+        TriggerOutput triggerOutput;
+
+        try {
+            triggerOutput = triggerHandler.handle(triggerExecution.clone());
+        } catch (TriggerExecutionException exception) {
+            handleException(triggerExecution, exception);
+
+            return triggerExecution;
+        }
 
         if (triggerOutput == null) {
             triggerExecution.setState(null);
@@ -167,7 +199,7 @@ public class TriggerWorker {
             }
         }
 
-        triggerExecution.setEndDate(LocalDateTime.now());
+        triggerExecution.setEndDate(Instant.now());
         triggerExecution.setExecutionTime(System.currentTimeMillis() - startTime);
         triggerExecution.setStatus(TriggerExecution.Status.COMPLETED);
 
@@ -185,18 +217,23 @@ public class TriggerWorker {
     }
 
     private void handleException(TriggerExecution triggerExecution, Exception exception) {
-        logger.error(exception.getMessage(), exception);
+        log.error(exception.getMessage(), exception);
 
+        Instant endDate = Instant.now();
+        Instant startDate = triggerExecution.getStartDate();
+
+        triggerExecution.setEndDate(endDate);
         triggerExecution.setError(
             new ExecutionError(exception.getMessage(), Arrays.asList(ExceptionUtils.getStackFrames(exception))));
+        triggerExecution.setExecutionTime(endDate.toEpochMilli() - startDate.toEpochMilli());
         triggerExecution.setStatus(TriggerExecution.Status.FAILED);
 
         eventPublisher.publishEvent(new TriggerExecutionErrorEvent(triggerExecution));
     }
 
-    private record TriggerExecutionFuture<T>(TriggerExecution triggerExecution, Future<T> future) implements Future<T> {
+    private record TriggerExecutionFuture<T>(Future<T> future, TriggerExecution triggerExecution) implements Future<T> {
 
-        private TriggerExecutionFuture(TriggerExecution triggerExecution, Future<T> future) {
+        private TriggerExecutionFuture(Future<T> future, TriggerExecution triggerExecution) {
             this.triggerExecution = Validate.notNull(triggerExecution, "triggerExecution");
             this.future = Validate.notNull(future, "future");
         }

@@ -1,0 +1,179 @@
+bytechef:
+  ai:
+    copilot:
+      enabled: false
+    firecrawl:
+      base-url: https://api.firecrawl.dev/v2
+      enabled: false
+    knowledge-base:
+      enabled: false
+    memory:
+      # Chat memory provider (inmemory | jdbc | redis | aws) default: jdbc
+      provider: jdbc
+    provider:
+      chat:
+        anthropic:
+          options:
+            model: claude-sonnet-4-6
+            temperature: 0.5
+        deep-seek:
+          options:
+            model: deepseek-chat
+        groq:
+          options:
+            model: llama-3.3-70b-versatile
+        mistral:
+          options:
+            model: mistral-large-latest
+        nvidia:
+          options:
+            model: meta/llama-3.1-70b-instruct
+        openai:
+          options:
+            model: gpt-5.1
+            temperature: 1
+            reasoning-effect: medium
+            verbosity: low
+        perplexity:
+          options:
+            model: sonar
+        vertex-gemini:
+          options:
+            model: gemini-2.5-pro
+      embedding:
+        mistral:
+          options:
+            model: mistral-embed
+        openai:
+          options:
+            model: text-embedding-3-small
+      image:
+        openai:
+          options:
+            model: dall-e-3
+    vectorstore:
+      provider: pgvector
+  analytics:
+    enabled: false
+  async:
+    # Upper bound on concurrent @Async tasks on the default executor (mail, notifications, background work).
+    # There is no queue: a submitter waits for a permit. Workflow task and trigger execution are bounded
+    # separately by bytechef.worker.task.*.
+    concurrency-limit: 200
+  cache:
+    # Cache provider (redis | caffeine) default: caffeine
+    provider: caffeine
+  coordinator:
+    trigger:
+      polling:
+        # Trigger polling interval in minutes (default: 5)
+        check-period: 5
+  data-storage:
+    # Data storage provider (aws(ee) | filesystem | jdbc) default: jdbc
+    provider: jdbc
+  datasource:
+    # Maximum JDBC connections. Shared by Quartz's 10 job-store threads, workflow task execution and request
+    # threads, so it must stay comfortably above Quartz's thread count on its own.
+    maximum-pool-size: 30
+  # Edition (CE - Community Edition | EE - Enterprise Edition) default: EE
+  edition: EE
+  # Encryption key provider (filesystem - the key generated on filesystem, property - the key read from property) default: filesystem
+  encryption:
+    provider: filesystem
+  file-storage:
+    # File storage provider (aws(ee) | filesystem | jdbc) default: filesystem
+    provider: filesystem
+    filesystem:
+      basedir: ${user.home}/bytechef/data/file-storage
+  help-hub:
+    enabled: false
+  mail:
+    auth: false
+    base-url: ${bytechef.public-url}
+    debug: false
+    from: noreply@app.bytechef.io
+    host: localhost
+    port: 25
+    protocol: smtp
+    ssl:
+      enabled: false
+    starttls:
+      enable: false
+      required: false
+  message-broker:
+    # Messaging provider between Coordinator and Workers (amqp | jms | kafka | memory | redis) default: memory
+    provider: memory
+  oauth2:
+#    predefinedApps:
+#      mailchimp:
+#        clientId: 123456789
+#        clientSecret: 123456789
+    redirect-uri: ${bytechef.public-url}/callback
+  observability:
+    logging:
+      enabled: false
+      endpoint: http://localhost:4318/v1/logs
+    metrics:
+      enabled: false
+      endpoint: http://localhost:4318/v1/metrics
+    tracing:
+      enabled: false
+      endpoint: http://localhost:4318/v1/traces
+  public-url:
+  resources:
+    web: file:///opt/bytechef/client/
+  scheduler:
+    # Trigger scheduler provider (aws(ee) | quartz) default: quartz
+    provider: quartz
+  security:
+    content-security-policy: "default-src 'self'; frame-src 'self' https://*.command.ai data:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.command.ai https://*.commandbar.com https://*.i.posthog.com https://cdn.jsdelivr.net https://storage.googleapis.com https://unpkg.com; style-src 'self' 'unsafe-inline' https://*.commandbar.com https://cdn.jsdelivr.net https://*.command.ai https://unpkg.com; img-src 'self' https://*.command.ai data:; font-src 'self' data:; media-src 'self' https://*.command.ai; connect-src 'self' https://*.command.ai https://*.i.posthog.com https://*.commandbar.com; worker-src blob: 'self';"
+    social-login:
+      enabled: false
+      google:
+        client-id:
+        client-secret:
+      github:
+        client-id:
+        client-secret:
+    system:
+      username: system_admin
+      password:
+    sso:
+      enabled: false
+    two-factor-authentication:
+      enabled: false
+  sign-up:
+    activation-required: false
+    enabled: true
+  # Tenant support mode (single | multi - ee only) default: single
+  tenant:
+    mode: single
+  user-guiding:
+    container-id: 38U111210PF6ID
+    enabled: false
+  upgrade:
+    enabled: true
+  webhook-url:
+  # When the worker is enabled, subscribe to the default "default" queue with 10 concurrent consumers.
+  # You may also route workflow tasks to other arbitrarily named task queues by specifying the "node"
+  # property on any given task.
+  # E.g. node: captions will route to the captions queue which a worker would subscribe to with workflow.worker.subscriptions.captions.
+  # Note: queue must be created before tasks can be routed to it. ByteChef will create the queue if it isn't already there when the worker
+  # bootstraps.
+  worker:
+    task:
+      # Per-route consumer concurrency for the AMQP/Kafka/Redis/JMS/SQS brokers; the memory broker ignores it.
+      # `default` additionally caps concurrent task execution process-wide, so on a monolith this is simply
+      # "max concurrent workflow tasks".
+      subscriptions:
+        default: 10
+      # Concurrent executions in the synchronous, interactive lane (API Platform sync path, editor Test button),
+      # kept separate so a burst of scheduled runs cannot leave an interactive caller waiting for a permit.
+      sync-concurrency-limit: 5
+  workflow:
+    output-storage:
+      # Output storage provider for workflow output data (aws(ee) | filesystem | jdbc) default: jdbc
+      provider: jdbc
+    repository:
+      jdbc:
+        enabled: true

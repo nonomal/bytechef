@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,18 +18,17 @@ package com.bytechef.atlas.execution.service;
 
 import com.bytechef.atlas.execution.domain.Context;
 import com.bytechef.file.storage.domain.FileEntry;
-import org.springframework.lang.NonNull;
 
 /**
  * @author Ivica Cardic
  */
 public interface ContextService {
 
-    FileEntry peek(long stackId, @NonNull Context.Classname classname);
+    FileEntry peek(long stackId, Context.Classname classname);
 
-    FileEntry peek(long stackId, int subStackId, @NonNull Context.Classname classname);
+    FileEntry peek(long stackId, int subStackId, Context.Classname classname);
 
-    void push(long stackId, @NonNull Context.Classname classname, @NonNull FileEntry value);
+    void push(long stackId, Context.Classname classname, FileEntry value);
 
-    void push(long stackId, int subStackId, @NonNull Context.Classname classname, @NonNull FileEntry value);
+    void push(long stackId, int subStackId, Context.Classname classname, FileEntry value);
 }

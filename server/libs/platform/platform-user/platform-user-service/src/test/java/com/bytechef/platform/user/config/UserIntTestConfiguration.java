@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,9 +17,13 @@
 package com.bytechef.platform.user.config;
 
 import com.bytechef.config.ApplicationProperties;
+import com.bytechef.encryption.EncryptionKey;
 import com.bytechef.jdbc.config.AuditingJdbcConfiguration;
 import com.bytechef.liquibase.config.LiquibaseConfiguration;
+import com.bytechef.platform.mail.MailService;
+import com.bytechef.tenant.service.TenantService;
 import com.bytechef.test.config.testcontainers.PostgreSQLContainerConfiguration;
+import org.mockito.Mockito;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.cache.annotation.EnableCaching;
@@ -27,12 +31,14 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.JavaMailSenderImpl;
+import org.springframework.data.jdbc.repository.config.AbstractJdbcConfiguration;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-@ComponentScan(basePackages = "com.bytechef.platform.user")
+@ComponentScan(
+    basePackages = {
+        "com.bytechef.encryption", "com.bytechef.platform.user"
+    })
 @EnableAutoConfiguration
 @EnableCaching
 @EnableConfigurationProperties(ApplicationProperties.class)
@@ -40,15 +46,25 @@ import org.springframework.security.crypto.password.PasswordEncoder;
     AuditingJdbcConfiguration.class, LiquibaseConfiguration.class, PostgreSQLContainerConfiguration.class
 })
 @Configuration
-public class UserIntTestConfiguration {
+public class UserIntTestConfiguration extends AbstractJdbcConfiguration {
 
     @Bean
-    JavaMailSender javaMailSender() {
-        return new JavaMailSenderImpl();
+    EncryptionKey encryptionKey() {
+        return () -> "tTB1/UBIbYLuCXVi4PPfzA==";
+    }
+
+    @Bean
+    MailService mailService() {
+        return Mockito.mock(MailService.class);
     }
 
     @Bean
     PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
+    }
+
+    @Bean
+    TenantService tenantService() {
+        return Mockito.mock(TenantService.class);
     }
 }

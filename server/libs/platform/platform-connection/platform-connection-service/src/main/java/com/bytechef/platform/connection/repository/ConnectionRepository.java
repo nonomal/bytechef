@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -59,6 +59,8 @@ public interface ConnectionRepository
     List<Connection> findAllByCNCVTITOrderByName(
         @Param("componentName") String componentName, @Param("connectionVersion") int connectionVersion,
         @Param("tagId") long tagId, @Param("type") int type);
+
+    List<Connection> findAllByIdIn(List<Long> ids);
 
     @Query("""
             SELECT connection.* FROM connection

@@ -6,6 +6,7 @@ import com.bytechef.platform.workflow.execution.web.rest.model.WebhookRetryModel
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import org.springframework.lang.Nullable;
 import org.openapitools.jackson.nullable.JsonNullable;
 import java.time.OffsetDateTime;
 import jakarta.validation.Valid;
@@ -22,16 +23,16 @@ import jakarta.annotation.Generated;
 
 @Schema(name = "Webhook", description = "Used to register to receive notifications for certain events.")
 @JsonTypeName("Webhook")
-@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2024-06-30T07:20:55.672695+02:00[Europe/Zagreb]", comments = "Generator version: 7.5.0")
+@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2026-07-03T17:58:17.150015+02:00[Europe/Zagreb]", comments = "Generator version: 7.22.0")
 public class WebhookModel {
 
-  private String type;
+  private @Nullable String type;
 
-  private String url;
+  private @Nullable String url;
 
-  private WebhookRetryModel retry;
+  private @Nullable WebhookRetryModel retry;
 
-  public WebhookModel type(String type) {
+  public WebhookModel type(@Nullable String type) {
     this.type = type;
     return this;
   }
@@ -39,19 +40,20 @@ public class WebhookModel {
   /**
    * Get type
    * @return type
-  */
+   */
   
   @Schema(name = "type", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("type")
-  public String getType() {
+  public @Nullable String getType() {
     return type;
   }
 
-  public void setType(String type) {
+  @JsonProperty("type")
+  public void setType(@Nullable String type) {
     this.type = type;
   }
 
-  public WebhookModel url(String url) {
+  public WebhookModel url(@Nullable String url) {
     this.url = url;
     return this;
   }
@@ -59,19 +61,20 @@ public class WebhookModel {
   /**
    * Get url
    * @return url
-  */
+   */
   
   @Schema(name = "url", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("url")
-  public String getUrl() {
+  public @Nullable String getUrl() {
     return url;
   }
 
-  public void setUrl(String url) {
+  @JsonProperty("url")
+  public void setUrl(@Nullable String url) {
     this.url = url;
   }
 
-  public WebhookModel retry(WebhookRetryModel retry) {
+  public WebhookModel retry(@Nullable WebhookRetryModel retry) {
     this.retry = retry;
     return this;
   }
@@ -79,15 +82,16 @@ public class WebhookModel {
   /**
    * Get retry
    * @return retry
-  */
+   */
   @Valid 
   @Schema(name = "retry", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("retry")
-  public WebhookRetryModel getRetry() {
+  public @Nullable WebhookRetryModel getRetry() {
     return retry;
   }
 
-  public void setRetry(WebhookRetryModel retry) {
+  @JsonProperty("retry")
+  public void setRetry(@Nullable WebhookRetryModel retry) {
     this.retry = retry;
   }
 
@@ -125,11 +129,8 @@ public class WebhookModel {
    * Convert the given object to string with each line indented by 4 spaces
    * (except the first line).
    */
-  private String toIndentedString(Object o) {
-    if (o == null) {
-      return "null";
-    }
-    return o.toString().replace("\n", "\n    ");
+  private String toIndentedString(@Nullable Object o) {
+    return o == null ? "null" : o.toString().replace("\n", "\n    ");
   }
 }
 

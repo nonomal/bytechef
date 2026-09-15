@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,40 +16,74 @@
 
 package com.bytechef.component.google.mail;
 
-import static com.bytechef.component.definition.ComponentDSL.component;
+import static com.bytechef.component.definition.ComponentDsl.component;
+import static com.bytechef.component.definition.ComponentDsl.tool;
 import static com.bytechef.component.google.mail.connection.GoogleMailConnection.CONNECTION_DEFINITION;
-import static com.bytechef.component.google.mail.constant.GoogleMailConstants.GOOGLE_MAIL;
 
 import com.bytechef.component.ComponentHandler;
 import com.bytechef.component.definition.ComponentCategory;
 import com.bytechef.component.definition.ComponentDefinition;
-import com.bytechef.component.google.mail.action.GoogleMailGetMailAction;
+import com.bytechef.component.google.mail.action.GoogleMailAddLabelsAction;
+import com.bytechef.component.google.mail.action.GoogleMailArchiveEmailAction;
+import com.bytechef.component.google.mail.action.GoogleMailCreateLabelAction;
+import com.bytechef.component.google.mail.action.GoogleMailDeleteEmailAction;
+import com.bytechef.component.google.mail.action.GoogleMailGetEmailAction;
 import com.bytechef.component.google.mail.action.GoogleMailGetThreadAction;
+import com.bytechef.component.google.mail.action.GoogleMailListLabelsAction;
+import com.bytechef.component.google.mail.action.GoogleMailRemoveLabelsAction;
+import com.bytechef.component.google.mail.action.GoogleMailReplyToEmailAction;
 import com.bytechef.component.google.mail.action.GoogleMailSearchEmailAction;
 import com.bytechef.component.google.mail.action.GoogleMailSendEmailAction;
+import com.bytechef.component.google.mail.cluster.GoogleMailApprovalChannel;
+import com.bytechef.component.google.mail.trigger.GoogleMailNewEmailPollingTrigger;
 import com.bytechef.component.google.mail.trigger.GoogleMailNewEmailTrigger;
 import com.google.auto.service.AutoService;
 
 /**
- * @author Monika Domiter
+ * @author Monika Kušter
  */
 @AutoService(ComponentHandler.class)
 public class GoogleMailComponentHandler implements ComponentHandler {
 
-    private static final ComponentDefinition COMPONENT_DEFINITION = component(GOOGLE_MAIL)
-        .title("Google Mail")
+    private static final ComponentDefinition COMPONENT_DEFINITION = component("googleMail")
+        .title("Gmail")
         .description(
-            "Google Mail, commonly known as Gmail, is a widely used email service by Google, offering free and " +
-                "feature-rich communication, organization, and storage capabilities accessible through web browsers " +
-                "and mobile apps.")
+            "Gmail is a widely used email service by Google, offering free and feature-rich communication, " +
+                "organization, and storage capabilities accessible through web browsers and mobile apps.")
         .icon("path:assets/google-mail.svg")
+        .customAction(true)
+        .customActionHelp("", "https://developers.google.com/workspace/gmail/api/reference/rest")
         .categories(ComponentCategory.COMMUNICATION)
         .connection(CONNECTION_DEFINITION)
-        .actions(GoogleMailGetMailAction.ACTION_DEFINITION,
+        .actions(
+            GoogleMailAddLabelsAction.ACTION_DEFINITION,
+            GoogleMailArchiveEmailAction.ACTION_DEFINITION,
+            GoogleMailCreateLabelAction.ACTION_DEFINITION,
+            GoogleMailDeleteEmailAction.ACTION_DEFINITION,
+            GoogleMailGetEmailAction.ACTION_DEFINITION,
             GoogleMailGetThreadAction.ACTION_DEFINITION,
+            GoogleMailListLabelsAction.ACTION_DEFINITION,
+            GoogleMailRemoveLabelsAction.ACTION_DEFINITION,
+            GoogleMailReplyToEmailAction.ACTION_DEFINITION,
             GoogleMailSearchEmailAction.ACTION_DEFINITION,
             GoogleMailSendEmailAction.ACTION_DEFINITION)
-        .triggers(GoogleMailNewEmailTrigger.TRIGGER_DEFINITION);
+        .triggers(
+            GoogleMailNewEmailTrigger.TRIGGER_DEFINITION,
+            GoogleMailNewEmailPollingTrigger.TRIGGER_DEFINITION)
+        .clusterElements(
+            GoogleMailApprovalChannel.CLUSTER_ELEMENT_DEFINITION,
+            tool(GoogleMailAddLabelsAction.ACTION_DEFINITION),
+            tool(GoogleMailArchiveEmailAction.ACTION_DEFINITION),
+            tool(GoogleMailCreateLabelAction.ACTION_DEFINITION),
+            tool(GoogleMailDeleteEmailAction.ACTION_DEFINITION),
+            tool(GoogleMailGetEmailAction.ACTION_DEFINITION),
+            tool(GoogleMailGetThreadAction.ACTION_DEFINITION),
+            tool(GoogleMailListLabelsAction.ACTION_DEFINITION),
+            tool(GoogleMailRemoveLabelsAction.ACTION_DEFINITION),
+            tool(GoogleMailReplyToEmailAction.ACTION_DEFINITION),
+            tool(GoogleMailSearchEmailAction.ACTION_DEFINITION),
+            tool(GoogleMailSendEmailAction.ACTION_DEFINITION))
+        .version(1);
 
     @Override
     public ComponentDefinition getDefinition() {

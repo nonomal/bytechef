@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,8 +16,7 @@
 
 package com.bytechef.platform.configuration.web.rest.mapper;
 
-import com.bytechef.platform.component.registry.domain.ConnectionDefinition;
-import com.bytechef.platform.component.registry.domain.ConnectionDefinitionBasic;
+import com.bytechef.platform.component.domain.ConnectionDefinition;
 import com.bytechef.platform.configuration.web.rest.mapper.config.PlatformConfigurationMapperSpringConfig;
 import com.bytechef.platform.configuration.web.rest.model.ConnectionDefinitionBasicModel;
 import com.bytechef.platform.configuration.web.rest.model.ConnectionDefinitionModel;
@@ -29,14 +28,6 @@ import org.springframework.core.convert.converter.Converter;
  * @author Ivica Cardic
  */
 public class ConnectionDefinitionMapper {
-
-    @Mapper(config = PlatformConfigurationMapperSpringConfig.class)
-    public interface ConnectionDefinitionBasicToConnectionDefinitionModelMapper
-        extends Converter<ConnectionDefinitionBasic, ConnectionDefinitionBasicModel> {
-
-        @Override
-        ConnectionDefinitionBasicModel convert(ConnectionDefinitionBasic connectionDefinition);
-    }
 
     @Mapper(config = PlatformConfigurationMapperSpringConfig.class)
     public interface ConnectionDefinitionToConnectionDefinitionModelMapper

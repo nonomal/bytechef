@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,32 +16,54 @@
 
 package com.bytechef.component.google.docs.util;
 
+import static com.bytechef.google.commons.GoogleUtils.translateGoogleIOException;
+
 import com.google.api.services.docs.v1.Docs;
 import com.google.api.services.docs.v1.model.BatchUpdateDocumentRequest;
+import com.google.api.services.docs.v1.model.BatchUpdateDocumentResponse;
 import com.google.api.services.docs.v1.model.Document;
 import com.google.api.services.docs.v1.model.Request;
 import java.io.IOException;
 import java.util.List;
 
 /**
- * @author Monika Domiter
+ * @author Monika Kušter
  */
 public class GoogleDocsUtils {
 
     private GoogleDocsUtils() {
     }
 
-    public static Document createDocument(String title, Docs docs) throws IOException {
-        return docs
-            .documents()
-            .create(new Document().setTitle(title))
-            .execute();
+    public static Document createDocument(String title, Docs docs) {
+        try {
+            return docs
+                .documents()
+                .create(new Document().setTitle(title))
+                .execute();
+        } catch (IOException e) {
+            throw translateGoogleIOException(e);
+        }
     }
 
-    public static void writeToDocument(Docs docs, String documentId, List<Request> requests) throws IOException {
-        docs
-            .documents()
-            .batchUpdate(documentId, new BatchUpdateDocumentRequest().setRequests(requests))
-            .execute();
+    public static Document getDocument(Docs docs, String documentId) {
+        try {
+            return docs
+                .documents()
+                .get(documentId)
+                .execute();
+        } catch (IOException e) {
+            throw translateGoogleIOException(e);
+        }
+    }
+
+    public static BatchUpdateDocumentResponse writeToDocument(Docs docs, String documentId, List<Request> requests) {
+        try {
+            return docs
+                .documents()
+                .batchUpdate(documentId, new BatchUpdateDocumentRequest().setRequests(requests))
+                .execute();
+        } catch (IOException e) {
+            throw translateGoogleIOException(e);
+        }
     }
 }

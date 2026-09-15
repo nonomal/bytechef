@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,12 +16,15 @@
 
 package com.bytechef.component.random.helper.action;
 
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.integer;
-import static com.bytechef.component.definition.ComponentDSL.number;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.integer;
+import static com.bytechef.component.definition.ComponentDsl.number;
+import static com.bytechef.component.definition.ComponentDsl.outputSchema;
+import static com.bytechef.component.random.helper.constant.RandomHelperConstants.END_INCLUSIVE;
+import static com.bytechef.component.random.helper.constant.RandomHelperConstants.START_INCLUSIVE;
 
-import com.bytechef.component.definition.ActionContext;
-import com.bytechef.component.definition.ComponentDSL.ModifiableActionDefinition;
+import com.bytechef.component.definition.ComponentDsl.ModifiableActionDefinition;
+import com.bytechef.component.definition.Context;
 import com.bytechef.component.definition.Parameters;
 import com.bytechef.component.random.helper.constant.RandomHelperConstants;
 
@@ -30,29 +33,33 @@ import com.bytechef.component.random.helper.constant.RandomHelperConstants;
  */
 public class RandomHelperRandomFloatAction {
 
-    public static final ModifiableActionDefinition ACTION_DEFINITION = action(RandomHelperConstants.RANDOM_FLOAT)
-        .title("Float")
+    public static final ModifiableActionDefinition ACTION_DEFINITION = action("randomFloat")
+        .title("Random Float")
         .description("Generates a random float value.")
+        .help("", "https://docs.bytechef.io/reference/components/random-helper_v1#random-float")
         .properties(
-            integer(RandomHelperConstants.START_INCLUSIVE)
+            integer(START_INCLUSIVE)
+                .label("Start Inclusive")
                 .description("The minimum possible generated value.")
                 .required(true)
                 .defaultValue(0),
-            integer(RandomHelperConstants.END_INCLUSIVE)
+            integer(END_INCLUSIVE)
+                .label("End Inclusive")
                 .description("The maximum possible generated value.")
                 .required(true)
                 .defaultValue(100))
-        .outputSchema(number())
+        .output(
+            outputSchema(
+                number()
+                    .description("Generated random float value.")))
         .perform(RandomHelperRandomFloatAction::perform);
 
-    /**
-     * Generates a random float.
-     */
-    protected static Float perform(
-        Parameters inputParameters, Parameters connectionParameters, ActionContext context) {
+    private RandomHelperRandomFloatAction() {
+    }
 
-        int startInclusive = inputParameters.getInteger(RandomHelperConstants.START_INCLUSIVE, 0);
-        int endInclusive = inputParameters.getInteger(RandomHelperConstants.END_INCLUSIVE, 100);
+    public static Float perform(Parameters inputParameters, Parameters connectionParameters, Context context) {
+        int startInclusive = inputParameters.getInteger(START_INCLUSIVE, 0);
+        int endInclusive = inputParameters.getInteger(END_INCLUSIVE, 100);
 
         return nextFloat(startInclusive, endInclusive);
     }

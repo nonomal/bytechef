@@ -1,3 +1,5 @@
+import {getCookie} from '@/shared/util/cookie-utils';
+
 /* eslint-disable sort-keys */
 
 import {create} from 'zustand';
@@ -31,6 +33,9 @@ const fetchGetSessions = async (): Promise<Response> => {
 
 const fetchInvalidateSession = async (series: string): Promise<Response> => {
     return await fetch(`${apiUrl}/${series}`, {
+        headers: {
+            'X-XSRF-TOKEN': getCookie('XSRF-TOKEN') || '',
+        },
         method: 'DELETE',
     }).then((response) => response);
 };

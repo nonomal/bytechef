@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,9 +28,7 @@ public class OdsFileConstants {
     public static final String READ_AS_STRING = "readAsString";
     public static final String SHEET_NAME = "sheetName";
     public static final String INCLUDE_EMPTY_CELLS = "includeEmptyCells";
-    public static final String ODS_FILE = "odsFile";
     public static final String READ = "read";
-    public static final String WRITE = "write";
     public static final String FILE_ENTRY = "fileEntry";
     public static final String FILENAME = "filename";
 }

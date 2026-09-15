@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,14 +17,15 @@
 package com.bytechef.component.insightly.action;
 
 import static com.bytechef.component.OpenApiComponentHandler.PropertyType;
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.integer;
-import static com.bytechef.component.definition.ComponentDSL.object;
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.integer;
+import static com.bytechef.component.definition.ComponentDsl.object;
+import static com.bytechef.component.definition.ComponentDsl.outputSchema;
+import static com.bytechef.component.definition.ComponentDsl.string;
 import static com.bytechef.component.definition.Context.Http.BodyContentType;
 import static com.bytechef.component.definition.Context.Http.ResponseType;
 
-import com.bytechef.component.definition.ComponentDSL;
+import com.bytechef.component.definition.ComponentDsl;
 import java.util.Map;
 
 /**
@@ -33,38 +34,48 @@ import java.util.Map;
  * @generated
  */
 public class InsightlyCreateOrganizationAction {
-    public static final ComponentDSL.ModifiableActionDefinition ACTION_DEFINITION = action("createOrganization")
-        .title("Create organization")
-        .description("Creates new Organization")
+    public static final ComponentDsl.ModifiableActionDefinition ACTION_DEFINITION = action("createOrganization")
+        .title("Create Organization")
+        .description("Creates new organization.")
         .metadata(
             Map.of(
                 "method", "POST",
                 "path", "/Organisations", "bodyContentType", BodyContentType.JSON, "mimeType", "application/json"
 
             ))
-        .properties(object("__item").properties(string("ORGANISATION_NAME").maxLength(255)
-            .label("Organization   Name")
-            .description("The name of the organization")
+        .properties(string("ORGANISATION_NAME").maxLength(255)
+            .metadata(
+                Map.of(
+                    "type", PropertyType.BODY))
+            .label("Organization Name")
+            .description("The name of the organization.")
             .required(true),
             string("PHONE").maxLength(255)
+                .metadata(
+                    Map.of(
+                        "type", PropertyType.BODY))
                 .label("Phone")
                 .description("A contact phone number for the organization.")
                 .required(false),
             string("WEBSITE").maxLength(255)
+                .metadata(
+                    Map.of(
+                        "type", PropertyType.BODY))
                 .label("Website")
                 .description("The organization's website.")
                 .required(false))
-            .label("Organization")
-            .required(true)
+        .output(outputSchema(object().properties(integer("ORGANISATION_ID").description("ID of the organization.")
+            .required(false),
+            string("ORGANISATION_NAME").description("The name of the organization.")
+                .required(false),
+            string("PHONE").description("A contact phone number for the organization.")
+                .required(false),
+            string("WEBSITE").description("The organization's website.")
+                .required(false))
             .metadata(
                 Map.of(
-                    "type", PropertyType.BODY)))
-        .outputSchema(object()
-            .properties(integer("ORGANISATION_ID").required(false), string("ORGANISATION_NAME").required(false),
-                string("PHONE").required(false), string("WEBSITE").required(false))
-            .metadata(
-                Map.of(
-                    "responseType", ResponseType.JSON)));
+                    "responseType", ResponseType.JSON))))
+        .help("", "https://docs.bytechef.io/reference/components/insightly_v1#create-organization");
 
     private InsightlyCreateOrganizationAction() {
     }

@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * Modifications copyright (C) 2023 ByteChef Inc.
+ * Modifications copyright (C) 2025 ByteChef
  */
 
 package com.bytechef.atlas.coordinator.event.listener;
@@ -28,12 +28,10 @@ import org.slf4j.LoggerFactory;
  */
 public class LogTaskApplicationEventListener implements ApplicationEventListener {
 
-    private final Logger logger = LoggerFactory.getLogger(getClass());
+    private static final Logger log = LoggerFactory.getLogger(LogTaskApplicationEventListener.class);
 
     @Override
     public void onApplicationEvent(ApplicationEvent applicationEvent) {
-        if (logger.isDebugEnabled()) {
-            logger.debug("{}", applicationEvent);
-        }
+        log.debug("{}", applicationEvent);
     }
 }

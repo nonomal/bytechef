@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,12 +19,12 @@ package com.bytechef.component.copper.connection;
 import static com.bytechef.component.definition.Authorization.ApplyResponse.ofHeaders;
 import static com.bytechef.component.definition.Authorization.KEY;
 import static com.bytechef.component.definition.Authorization.USERNAME;
-import static com.bytechef.component.definition.ComponentDSL.authorization;
-import static com.bytechef.component.definition.ComponentDSL.connection;
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.definition.ComponentDsl.authorization;
+import static com.bytechef.component.definition.ComponentDsl.connection;
+import static com.bytechef.component.definition.ComponentDsl.string;
 
 import com.bytechef.component.definition.Authorization.AuthorizationType;
-import com.bytechef.component.definition.ComponentDSL.ModifiableConnectionDefinition;
+import com.bytechef.component.definition.ComponentDsl.ModifiableConnectionDefinition;
 import java.util.List;
 import java.util.Map;
 
@@ -34,12 +34,13 @@ import java.util.Map;
 public class CopperConnection {
 
     public static final ModifiableConnectionDefinition CONNECTION_DEFINITION = connection()
+        .baseUri((connectionParameters, context) -> "https://api.copper.com/developer_api/v1")
         .authorizations(
             authorization(AuthorizationType.API_KEY)
                 .title("API Key")
                 .properties(
                     string(USERNAME)
-                        .label("Email address")
+                        .label("Email Address")
                         .required(true),
                     string(KEY)
                         .label("Key")
@@ -48,7 +49,9 @@ public class CopperConnection {
                     Map.of(
                         "X-PW-AccessToken", List.of(connectionParameters.getRequiredString(KEY)),
                         "X-PW-Application", List.of("developer_api"),
-                        "X-PW-UserEmail", List.of(connectionParameters.getRequiredString(USERNAME))))));
+                        "X-PW-UserEmail", List.of(connectionParameters.getRequiredString(USERNAME))))))
+        .help("", "https://docs.bytechef.io/reference/components/copper_v1#connection-setup")
+        .version(1);
 
     private CopperConnection() {
     }

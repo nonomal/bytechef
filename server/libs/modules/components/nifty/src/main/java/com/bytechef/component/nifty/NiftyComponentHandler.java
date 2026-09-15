@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,34 +16,67 @@
 
 package com.bytechef.component.nifty;
 
-import static com.bytechef.component.definition.ComponentDSL.component;
-import static com.bytechef.component.nifty.connection.NiftyConnection.CONNECTION_DEFINITION;
-import static com.bytechef.component.nifty.constant.NiftyConstants.NIFTY;
+import static com.bytechef.component.nifty.constant.NiftyConstants.PROJECT_PROPERTY;
 
-import com.bytechef.component.ComponentHandler;
+import com.bytechef.component.OpenApiComponentHandler;
 import com.bytechef.component.definition.ComponentCategory;
-import com.bytechef.component.definition.ComponentDefinition;
-import com.bytechef.component.nifty.action.NiftyCreateTaskAction;
+import com.bytechef.component.definition.ComponentDsl.ModifiableActionDefinition;
+import com.bytechef.component.definition.ComponentDsl.ModifiableComponentDefinition;
+import com.bytechef.component.definition.ComponentDsl.ModifiableConnectionDefinition;
+import com.bytechef.component.definition.ComponentDsl.ModifiableTriggerDefinition;
+import com.bytechef.component.definition.Property;
+import com.bytechef.component.nifty.trigger.NiftyNewTaskTrigger;
 import com.google.auto.service.AutoService;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
 
 /**
- * @author Luka Ljubić
+ * @author Monika Kušter
  */
-@AutoService(ComponentHandler.class)
-public class NiftyComponentHandler implements ComponentHandler {
-
-    private static final ComponentDefinition COMPONENT_DEFINITION = component(NIFTY)
-        .title("Nifty")
-        .description(
-            "Nifty Project Management tool is a software designed to aid project managers in organizing, planning, " +
-                "and tracking tasks and resources within a project")
-        .categories(ComponentCategory.PROJECT_MANAGEMENT)
-        .connection(CONNECTION_DEFINITION)
-        .actions(NiftyCreateTaskAction.ACTION_DEFINITION)
-        .icon("path:assets/nifty.svg");
+@AutoService(OpenApiComponentHandler.class)
+public class NiftyComponentHandler extends AbstractNiftyComponentHandler {
 
     @Override
-    public ComponentDefinition getDefinition() {
-        return COMPONENT_DEFINITION;
+    public List<ModifiableTriggerDefinition> getTriggers() {
+        return List.of(NiftyNewTaskTrigger.TRIGGER_DEFINITION);
     }
+
+    @Override
+    public List<ModifiableActionDefinition> modifyActions(ModifiableActionDefinition... actionDefinitions) {
+        for (ModifiableActionDefinition modifiableActionDefinition : actionDefinitions) {
+            Optional<List<? extends Property>> propertiesOptional = modifiableActionDefinition.getProperties();
+            List<Property> properties = new ArrayList<>(propertiesOptional.orElse(Collections.emptyList()));
+
+            if (Objects.equals(modifiableActionDefinition.getName(), "createTask")) {
+                properties.addFirst(PROJECT_PROPERTY);
+            }
+            modifiableActionDefinition.properties(properties);
+        }
+
+        return super.modifyActions(actionDefinitions);
+    }
+
+    @Override
+    public ModifiableComponentDefinition modifyComponent(ModifiableComponentDefinition modifiableComponentDefinition) {
+        return modifiableComponentDefinition
+            .customAction(true)
+            .customActionHelp(
+                "Nifty Web API documentation", "https://developers.niftypm.com/")
+            .icon("path:assets/nifty.svg")
+            .version(1)
+            .categories(ComponentCategory.PROJECT_MANAGEMENT, ComponentCategory.PRODUCTIVITY_AND_COLLABORATION);
+    }
+
+    @Override
+    public ModifiableConnectionDefinition modifyConnection(
+        ModifiableConnectionDefinition modifiableConnectionDefinition) {
+
+        return modifiableConnectionDefinition
+            .help("", "https://docs.bytechef.io/reference/components/nifty_v1#connection-setup")
+            .version(1);
+    }
+
 }

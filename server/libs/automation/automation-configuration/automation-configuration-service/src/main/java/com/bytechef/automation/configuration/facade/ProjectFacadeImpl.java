@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,39 +17,56 @@
 package com.bytechef.automation.configuration.facade;
 
 import com.bytechef.atlas.configuration.domain.Workflow;
-import com.bytechef.atlas.configuration.domain.Workflow.Format;
-import com.bytechef.atlas.configuration.domain.Workflow.SourceType;
 import com.bytechef.atlas.configuration.service.WorkflowService;
 import com.bytechef.automation.configuration.domain.Project;
-import com.bytechef.automation.configuration.domain.ProjectInstance;
-import com.bytechef.automation.configuration.domain.ProjectInstanceWorkflow;
+import com.bytechef.automation.configuration.domain.ProjectDeployment;
 import com.bytechef.automation.configuration.domain.ProjectVersion.Status;
 import com.bytechef.automation.configuration.domain.ProjectWorkflow;
+import com.bytechef.automation.configuration.domain.SharedTemplate;
 import com.bytechef.automation.configuration.dto.ProjectDTO;
-import com.bytechef.automation.configuration.dto.WorkflowDTO;
-import com.bytechef.automation.configuration.service.ProjectInstanceService;
-import com.bytechef.automation.configuration.service.ProjectInstanceWorkflowService;
+import com.bytechef.automation.configuration.dto.ProjectTemplateDTO;
+import com.bytechef.automation.configuration.dto.ProjectTemplateDTO.ComponentDefinitionTuple;
+import com.bytechef.automation.configuration.dto.ProjectTemplateDTO.WorkflowInfo;
+import com.bytechef.automation.configuration.dto.ProjectWorkflowDTO;
+import com.bytechef.automation.configuration.dto.SharedProjectDTO;
+import com.bytechef.automation.configuration.service.PreBuiltTemplateService;
+import com.bytechef.automation.configuration.service.ProjectDeploymentService;
 import com.bytechef.automation.configuration.service.ProjectService;
 import com.bytechef.automation.configuration.service.ProjectWorkflowService;
+import com.bytechef.automation.configuration.service.SharedTemplateService;
+import com.bytechef.automation.configuration.util.ComponentDefinitionHelper;
 import com.bytechef.commons.util.CollectionUtils;
+import com.bytechef.commons.util.EncodingUtils;
 import com.bytechef.commons.util.JsonUtils;
-import com.bytechef.commons.util.MapUtils;
+import com.bytechef.config.ApplicationProperties;
+import com.bytechef.file.storage.domain.FileEntry;
 import com.bytechef.platform.category.domain.Category;
 import com.bytechef.platform.category.service.CategoryService;
-import com.bytechef.platform.configuration.facade.WorkflowFacade;
 import com.bytechef.platform.configuration.service.WorkflowNodeTestOutputService;
 import com.bytechef.platform.configuration.service.WorkflowTestConfigurationService;
+import com.bytechef.platform.file.storage.SharedTemplateFileStorage;
 import com.bytechef.platform.tag.domain.Tag;
 import com.bytechef.platform.tag.service.TagService;
-import com.fasterxml.jackson.core.type.TypeReference;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
-import org.apache.commons.lang3.Validate;
-import org.springframework.lang.NonNull;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
+import java.util.zip.ZipOutputStream;
+import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -60,83 +77,60 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class ProjectFacadeImpl implements ProjectFacade {
 
-    private static final String WORKFLOW_DEFINITION = """
-        {
-            "label": "New Workflow",
-            "description": "",
-            "inputs": [
-            ],
-            "triggers": [
-            ],
-            "tasks": [
-            ]
-        }
-        """;
+    private static final Logger log = LoggerFactory.getLogger(ProjectFacadeImpl.class);
 
     private final CategoryService categoryService;
+    private final ComponentDefinitionHelper componentDefinitionHelper;
+    private final PreBuiltTemplateService preBuiltTemplateService;
     private final ProjectService projectService;
     private final ProjectWorkflowService projectWorkflowService;
-    private final ProjectInstanceFacade projectInstanceFacade;
-    private final ProjectInstanceService projectInstanceService;
-    private final ProjectInstanceWorkflowService projectInstanceWorkflowService;
+    private final ProjectDeploymentFacade projectDeploymentFacade;
+    private final ProjectDeploymentService projectDeploymentService;
+    private final ProjectWorkflowFacade projectWorkflowFacade;
+    private final String publicUrl;
+    private final SharedTemplateFileStorage sharedTemplateFileStorage;
+    private final SharedTemplateService sharedTemplateService;
     private final TagService tagService;
-    private final WorkflowFacade workflowFacade;
     private final WorkflowService workflowService;
     private final WorkflowTestConfigurationService workflowTestConfigurationService;
     private final WorkflowNodeTestOutputService workflowNodeTestOutputService;
 
     @SuppressFBWarnings("EI2")
     public ProjectFacadeImpl(
-        CategoryService categoryService, ProjectWorkflowService projectWorkflowService,
-        ProjectInstanceService projectInstanceService, ProjectService projectService,
-        ProjectInstanceFacade projectInstanceFacade, ProjectInstanceWorkflowService projectInstanceWorkflowService,
-        TagService tagService, WorkflowFacade workflowFacade, WorkflowService workflowService,
+        ApplicationProperties applicationProperties, CategoryService categoryService,
+        ComponentDefinitionHelper componentDefinitionHelper, PreBuiltTemplateService preBuiltTemplateService,
+        ProjectWorkflowService projectWorkflowService,
+        ProjectDeploymentService projectDeploymentService, ProjectService projectService,
+        ProjectDeploymentFacade projectDeploymentFacade, ProjectWorkflowFacade projectWorkflowFacade,
+        SharedTemplateFileStorage sharedTemplateFileStorage, SharedTemplateService sharedTemplateService,
+        TagService tagService, WorkflowService workflowService,
         WorkflowTestConfigurationService workflowTestConfigurationService,
         WorkflowNodeTestOutputService workflowNodeTestOutputService) {
 
         this.categoryService = categoryService;
+        this.componentDefinitionHelper = componentDefinitionHelper;
+        this.preBuiltTemplateService = preBuiltTemplateService;
         this.projectWorkflowService = projectWorkflowService;
-        this.projectInstanceService = projectInstanceService;
+        this.projectDeploymentService = projectDeploymentService;
         this.projectService = projectService;
-        this.projectInstanceFacade = projectInstanceFacade;
-        this.projectInstanceWorkflowService = projectInstanceWorkflowService;
+        this.projectDeploymentFacade = projectDeploymentFacade;
+        this.projectWorkflowFacade = projectWorkflowFacade;
+        this.publicUrl = applicationProperties.getPublicUrl();
+        this.sharedTemplateFileStorage = sharedTemplateFileStorage;
+        this.sharedTemplateService = sharedTemplateService;
         this.tagService = tagService;
-        this.workflowFacade = workflowFacade;
         this.workflowService = workflowService;
         this.workflowTestConfigurationService = workflowTestConfigurationService;
         this.workflowNodeTestOutputService = workflowNodeTestOutputService;
     }
 
     @Override
-    public WorkflowDTO addWorkflow(long id, @NonNull String definition) {
-        Project project = projectService.getProject(id);
-
-        Workflow workflow = workflowService.create(definition, Format.JSON, SourceType.JDBC);
-
-        ProjectWorkflow projectWorkflow = projectWorkflowService.addWorkflow(
-            id, project.getLastVersion(), workflow.getId());
-
-        List<ProjectInstance> projectInstances = projectInstanceService.getProjectInstances(id);
-
-        for (ProjectInstance projectInstance : projectInstances) {
-            ProjectInstanceWorkflow projectInstanceWorkflow = new ProjectInstanceWorkflow();
-
-            projectInstanceWorkflow.setProjectInstanceId(projectInstance.getId());
-            projectInstanceWorkflow.setWorkflowId(workflow.getId());
-
-            projectInstanceWorkflowService.create(projectInstanceWorkflow);
-        }
-
-        return new WorkflowDTO(workflowFacade.getWorkflow(workflow.getId()), projectWorkflow);
-    }
-
-    @Override
-    public ProjectDTO createProject(@NonNull ProjectDTO projectDTO) {
+    @PreAuthorize("hasPermission(#projectDTO.workspaceId, 'Workspace', 'PROJECT_CREATE')")
+    public long createProject(ProjectDTO projectDTO) {
         Project project = projectDTO.toProject();
-
         Category category = projectDTO.category();
 
-        if (projectDTO.category() != null) {
+        if (category != null) {
             category = categoryService.save(category);
 
             project.setCategory(category);
@@ -150,33 +144,33 @@ public class ProjectFacadeImpl implements ProjectFacade {
 
         project = projectService.create(project);
 
-        Workflow workflow = workflowService.create(WORKFLOW_DEFINITION, Format.JSON, SourceType.JDBC);
-
-        projectWorkflowService.addWorkflow(
-            project.getId(), project.getLastVersion(), Validate.notNull(workflow.getId(), "id"));
-
-        return new ProjectDTO(
-            category, project, tags,
-            projectWorkflowService.getProjectWorkflowIds(project.getId(), project.getLastVersion()));
+        return project.getId();
     }
 
     @Override
+    @PreAuthorize("hasPermission(#id, 'Project', 'PROJECT_DELETE')")
     public void deleteProject(long id) {
-        List<ProjectInstance> projectInstances = projectInstanceService.getProjectInstances(id);
+        List<ProjectDeployment> projectDeployments = projectDeploymentService.getProjectDeployments(id);
 
-        for (ProjectInstance projectInstance : projectInstances) {
-            projectInstanceFacade.deleteProjectInstance(projectInstance.getId());
+        for (ProjectDeployment projectDeployment : projectDeployments) {
+            projectDeploymentFacade.deleteProjectDeployment(projectDeployment.getId());
         }
 
         List<ProjectWorkflow> projectWorkflows = projectWorkflowService.getProjectWorkflows(id);
 
-        for (ProjectWorkflow projectWorkflow : projectWorkflows) {
-            workflowService.delete(projectWorkflow.getWorkflowId());
-        }
-
-        projectWorkflowService.deleteProjectWorkflows(
+        projectWorkflowService.delete(
             projectWorkflows.stream()
                 .map(ProjectWorkflow::getId)
+                .toList());
+
+        workflowService.delete(
+            projectWorkflows.stream()
+                .map(ProjectWorkflow::getWorkflowId)
+                .toList());
+
+        workflowTestConfigurationService.delete(
+            projectWorkflows.stream()
+                .map(ProjectWorkflow::getWorkflowId)
                 .toList());
 
         projectService.delete(id);
@@ -187,70 +181,66 @@ public class ProjectFacadeImpl implements ProjectFacade {
     }
 
     @Override
-    public void deleteWorkflow(@NonNull String workflowId) {
-        Project project = projectService.getWorkflowProject(workflowId);
+    @PreAuthorize("hasPermission(#id, 'Project', 'PROJECT_SETTINGS')")
+    public void deleteSharedProject(long id) {
+        Project project = projectService.getProject(id);
 
-        List<ProjectInstance> projectInstances = projectInstanceService.getProjectInstances(project.getId());
+        SharedTemplate sharedTemplate = sharedTemplateService.getSharedTemplate(
+            UUID.fromString(Objects.requireNonNull(project.getUuid())));
 
-        for (ProjectInstance projectInstance : projectInstances) {
-            List<ProjectInstanceWorkflow> projectInstanceWorkflows = projectInstanceWorkflowService
-                .getProjectInstanceWorkflows(Validate.notNull(projectInstance.getId(), "id"));
+        sharedTemplateFileStorage.deleteFile(sharedTemplate.getTemplate());
 
-            if (CollectionUtils.anyMatch(
-                projectInstanceWorkflows,
-                projectInstanceWorkflow -> Objects.equals(projectInstanceWorkflow.getWorkflowId(), workflowId))) {
+        sharedTemplate.setTemplate(null);
 
-                projectInstanceWorkflows.stream()
-                    .filter(
-                        projectInstanceWorkflow -> Objects.equals(projectInstanceWorkflow.getWorkflowId(), workflowId))
-                    .findFirst()
-                    .ifPresent(
-                        projectInstanceWorkflow -> projectInstanceWorkflowService.delete(
-                            projectInstanceWorkflow.getId()));
-            }
-        }
-
-        projectWorkflowService.removeWorkflow(project.getId(), project.getLastVersion(), workflowId);
-
-        workflowService.delete(workflowId);
+        sharedTemplateService.update(sharedTemplate);
     }
 
     @Override
+    @PreAuthorize("hasPermission(#id, 'Project', 'WORKFLOW_VIEW')")
     public ProjectDTO duplicateProject(long id) {
         Project project = projectService.getProject(id);
 
-        final Project newProject = new Project();
+        Project newProject = new Project();
 
         newProject.setName(generateName(project.getName()));
         newProject.setTagIds(project.getTagIds());
+        newProject.setWorkspaceId(project.getWorkspaceId());
 
-        copyWorkflowIds(projectWorkflowService.getWorkflowIds(project.getId(), project.getLastVersion()))
-            .forEach(workflowId -> projectWorkflowService.addWorkflow(
-                newProject.getId(), newProject.getLastVersion(), workflowId));
+        List<String> workflowIds = copyWorkflowIds(
+            projectWorkflowService.getProjectWorkflowIds(project.getId(), project.getLastProjectVersion()));
 
-        return toProjectDTO(projectService.create(newProject));
+        newProject = projectService.create(newProject);
+
+        for (String workflowId : workflowIds) {
+            projectWorkflowService.addWorkflow(newProject.getId(), newProject.getLastProjectVersion(), workflowId);
+        }
+
+        return toProjectDTO(newProject);
     }
 
     @Override
-    public String duplicateWorkflow(long id, @NonNull String workflowId) {
-        Project project = projectService.getWorkflowProject(workflowId);
-
-        Workflow workflow = workflowService.duplicateWorkflow(workflowId);
-
-        Map<String, Object> definitionMap = JsonUtils.read(workflow.getDefinition(), new TypeReference<>() {});
-
-        definitionMap.put("label", MapUtils.getString(definitionMap, "label", "(2)") + " (2)");
-
-        workflowService.update(
-            Validate.notNull(workflow.getId(), "id"),
-            JsonUtils.writeWithDefaultPrettyPrinter(definitionMap), workflow.getVersion());
-
-        projectWorkflowService.addWorkflow(id, project.getLastVersion(), workflow.getId());
-
-        return workflow.getId();
+    @PreAuthorize("hasPermission(#id, 'Project', 'WORKFLOW_VIEW')")
+    public byte[] exportProject(long id) {
+        return createTemplate(id, null, false);
     }
 
     @Override
+    @PreAuthorize("hasPermission(#id, 'Project', 'PROJECT_SETTINGS')")
+    public void exportSharedProject(long id, String description) {
+        Project project = projectService.getProject(id);
+
+        String fileName = "project_" + project.getUuid() + ".zip";
+
+        byte[] projectData = createTemplate(id, description, true);
+
+        FileEntry fileEntry =
+            sharedTemplateFileStorage.storeFileContent(fileName, new ByteArrayInputStream(projectData));
+
+        sharedTemplateService.save(UUID.fromString(Objects.requireNonNull(project.getUuid())), fileEntry);
+    }
+
+    @Override
+    @PreAuthorize("hasPermission(#id, 'Project', 'WORKFLOW_VIEW')")
     @Transactional(readOnly = true)
     public ProjectDTO getProject(long id) {
         Project project = projectService.getProject(id);
@@ -260,142 +250,224 @@ public class ProjectFacadeImpl implements ProjectFacade {
 
     @Override
     @Transactional(readOnly = true)
-    public List<Category> getProjectCategories() {
-        List<Project> projects = projectService.getProjects();
+    public ProjectTemplateDTO getProjectTemplate(String id, boolean sharedProject) {
+        byte[] data;
 
-        return categoryService.getCategories(
-            CollectionUtils.filter(CollectionUtils.map(projects, Project::getCategoryId), Objects::nonNull));
+        if (sharedProject) {
+            SharedTemplate sharedTemplate = sharedTemplateService.getSharedTemplate(UUID.fromString(id));
+
+            if (sharedTemplate.getTemplate() == null) {
+                throw new IllegalStateException("Shared template is not available");
+            }
+
+            try (InputStream inputStream = sharedTemplateFileStorage.getInputStream(sharedTemplate.getTemplate())) {
+                data = inputStream.readAllBytes();
+            } catch (IOException e) {
+                throw new RuntimeException("Failed to import shared project", e);
+            }
+        } else {
+            data = preBuiltTemplateService.getPrebuiltTemplateData(id);
+        }
+
+        TemplateFiles templateFiles = readTemplate(data, true);
+
+        ProjectInfo projectInfo = JsonUtils.read(templateFiles.projectJson, ProjectInfo.class);
+        Template template = JsonUtils.read(templateFiles.templateJson, Template.class);
+
+        List<Workflow> workflows = getWorkflows(templateFiles);
+
+        List<ComponentDefinitionTuple> componentDefinitions = getComponentDefinitions(workflows);
+
+        ProjectTemplateDTO.ProjectInfo newProjectInfo = new ProjectTemplateDTO.ProjectInfo(
+            projectInfo.name, projectInfo.description);
+        List<WorkflowInfo> workflowInfos = workflows.stream()
+            .map(workflow -> new WorkflowInfo(workflow.getId(), workflow.getLabel(), workflow.getDescription()))
+            .toList();
+
+        List<String> categories = template.categories == null || template.categories.isEmpty()
+            ? List.of("other") : template.categories;
+
+        return new ProjectTemplateDTO(
+            template.authorName, template.authorEmail, template.authorRole, template.authorSocialLinks,
+            categories, componentDefinitions, template.description, id, template.lastModifiedDate, newProjectInfo,
+            template.projectVersion, publicUrl, workflowInfos);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<Tag> getProjectTags() {
-        List<Project> projects = projectService.getProjects();
-
-        return tagService.getTags(CollectionUtils.flatMap(projects, Project::getTagIds));
-    }
-
-    @Override
-    public WorkflowDTO getProjectWorkflow(String workflowId) {
-        ProjectWorkflow projectWorkflow = projectWorkflowService.getWorkflowProjectWorkflow(workflowId);
-
-        return new WorkflowDTO(workflowFacade.getWorkflow(workflowId), projectWorkflow);
-    }
-
-    @Override
-    public WorkflowDTO getProjectWorkflow(long projectWorkflowId) {
-        ProjectWorkflow projectWorkflow = projectWorkflowService.getProjectWorkflow(projectWorkflowId);
-
-        return new WorkflowDTO(workflowFacade.getWorkflow(projectWorkflow.getWorkflowId()), projectWorkflow);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<WorkflowDTO> getProjectWorkflows() {
-        return projectWorkflowService.getProjectWorkflows()
+    public List<ProjectTemplateDTO> getPreBuiltProjectTemplates(String query, String category) {
+        return preBuiltTemplateService.getFiles("projects")
             .stream()
-            .map(projectWorkflow -> new WorkflowDTO(
-                workflowFacade.getWorkflow(projectWorkflow.getWorkflowId()), projectWorkflow))
+            .map(fileItem -> {
+                try {
+                    ProjectTemplateDTO projectTemplateDTO = getProjectTemplate(
+                        EncodingUtils.base64EncodeToString(fileItem.path()), false);
+
+                    if (StringUtils.isEmpty(query) && StringUtils.isEmpty(category)) {
+                        return projectTemplateDTO;
+                    } else {
+                        if (StringUtils.isNotEmpty(query)) {
+                            ProjectTemplateDTO.ProjectInfo projectInfo = projectTemplateDTO.project();
+
+                            if (StringUtils.containsIgnoreCase(projectTemplateDTO.description(), query) ||
+                                StringUtils.containsIgnoreCase(projectInfo.name(), query) ||
+                                StringUtils.containsIgnoreCase(projectInfo.description(), query)) {
+
+                                return projectTemplateDTO;
+                            }
+                        }
+
+                        if (StringUtils.isNotEmpty(category)) {
+                            List<String> categories = projectTemplateDTO.categories();
+
+                            if (categories != null && categories.contains(category)) {
+                                return projectTemplateDTO;
+                            }
+                        }
+
+                        return null;
+                    }
+                } catch (Exception e) {
+                    log.error("Failed to get workflow template", e);
+
+                    return null;
+                }
+
+            })
+            .filter(Objects::nonNull)
             .toList();
     }
 
     @Override
+    @PreAuthorize("isTenantAdmin()")
     @Transactional(readOnly = true)
-    public List<WorkflowDTO> getProjectWorkflows(long id) {
+    public List<ProjectDTO> getProjects(Long categoryId, Boolean projectDeployments, Long tagId, Status status) {
+        return getProjects(null, categoryId, tagId, projectDeployments, status, true, null);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public SharedProjectDTO getSharedProject(String projectUuid) {
+        SharedProjectDTO sharedProjectDTO = null;
+        Optional<SharedTemplate> sharedTemplateOptional = sharedTemplateService.fetchSharedTemplate(
+            UUID.fromString(projectUuid));
+
+        if (sharedTemplateOptional.isPresent()) {
+            SharedTemplate sharedTemplate = sharedTemplateOptional.get();
+
+            if (sharedTemplate.getTemplate() == null) {
+                sharedProjectDTO = new SharedProjectDTO(false);
+            } else {
+                try (InputStream inputStream = sharedTemplateFileStorage.getInputStream(sharedTemplate.getTemplate())) {
+                    TemplateFiles templateFiles = readTemplate(inputStream.readAllBytes(), true);
+
+                    Template template = JsonUtils.read(templateFiles.templateJson, Template.class);
+
+                    sharedProjectDTO = new SharedProjectDTO(
+                        template.description, true, template.projectVersion, publicUrl);
+                } catch (IOException e) {
+                    throw new RuntimeException("Failed to import shared project", e);
+                }
+            }
+        }
+
+        return sharedProjectDTO;
+    }
+
+    @Override
+    @PreAuthorize("hasPermission(#workspaceId, 'Workspace', 'WORKFLOW_VIEW')")
+    @Transactional(readOnly = true)
+    public List<ProjectDTO> getWorkspaceProjects(
+        Boolean apiCollections, Long categoryId, boolean includeAllFields, Boolean projectDeployments, Status status,
+        Long tagId, long workspaceId) {
+
+        return getProjects(
+            apiCollections, categoryId, tagId, projectDeployments, status, includeAllFields, workspaceId);
+    }
+
+    @Override
+    @PreAuthorize("hasPermission(#workspaceId, 'Workspace', 'WORKFLOW_VIEW')")
+    public List<ProjectWorkflowDTO> getWorkspaceProjectWorkflows(long workspaceId) {
+        return projectWorkflowService.getProjectWorkflows(projectService.getWorkspaceProjectIds(workspaceId))
+            .stream()
+            .map(projectWorkflow -> new ProjectWorkflowDTO(
+                workflowService.getWorkflow(projectWorkflow.getWorkflowId()), projectWorkflow, false))
+            .toList();
+    }
+
+    @Override
+    @PreAuthorize("hasPermission(#workspaceId, 'Workspace', 'PROJECT_CREATE')")
+    public long importProject(byte[] projectData, long workspaceId) {
+        return importProjectTemplate(projectData, workspaceId);
+    }
+
+    @Override
+    @PreAuthorize("hasPermission(#workspaceId, 'Workspace', 'PROJECT_CREATE')")
+    public long importProjectTemplate(String id, long workspaceId, boolean sharedProject) {
+        byte[] data;
+
+        if (sharedProject) {
+            SharedTemplate sharedTemplate = sharedTemplateService.getSharedTemplate(UUID.fromString(id));
+
+            try (InputStream inputStream = sharedTemplateFileStorage.getInputStream(sharedTemplate.getTemplate())) {
+                data = inputStream.readAllBytes();
+            } catch (IOException e) {
+                throw new RuntimeException("Failed to import shared project", e);
+            }
+        } else {
+            data = preBuiltTemplateService.getPrebuiltTemplateData(id);
+        }
+
+        return importProjectTemplate(data, workspaceId);
+    }
+
+    @Override
+    @PreAuthorize("hasPermission(#id, 'Project', 'WORKFLOW_EDIT')")
+    public int publishProject(long id, String description, boolean syncWithGit) {
         Project project = projectService.getProject(id);
 
-        return projectWorkflowService
-            .getProjectWorkflows(project.getId(), project.getLastVersion())
-            .stream()
-            .map(projectWorkflow -> new WorkflowDTO(
-                workflowFacade.getWorkflow(projectWorkflow.getWorkflowId()), projectWorkflow))
-            .toList();
+        int oldProjectVersion = project.getLastProjectVersion();
+
+        List<ProjectWorkflow> oldProjectWorkflows = projectWorkflowService.getProjectWorkflows(
+            project.getId(), oldProjectVersion);
+
+        int newProjectVersion = projectService.publishProject(id, description, syncWithGit);
+
+        for (ProjectWorkflow oldProjectWorkflow : oldProjectWorkflows) {
+            String oldWorkflowId = oldProjectWorkflow.getWorkflowId();
+
+            Workflow duplicatedWorkflow = workflowService.duplicateWorkflow(oldWorkflowId);
+
+            oldProjectWorkflow.setProjectVersion(newProjectVersion);
+            oldProjectWorkflow.setWorkflowId(duplicatedWorkflow.getId());
+
+            projectWorkflowService.publishWorkflow(
+                project.getId(), oldProjectVersion, oldWorkflowId, oldProjectWorkflow);
+
+            workflowTestConfigurationService.updateWorkflowId(oldWorkflowId, duplicatedWorkflow.getId());
+            workflowNodeTestOutputService.updateWorkflowId(oldWorkflowId, duplicatedWorkflow.getId());
+        }
+
+        return newProjectVersion;
     }
 
     @Override
-    public List<WorkflowDTO> getProjectVersionWorkflows(long id, int projectVersion) {
-        return projectWorkflowService.getProjectWorkflows(id, projectVersion)
-            .stream()
-            .map(projectWorkflow -> new WorkflowDTO(
-                workflowFacade.getWorkflow(projectWorkflow.getWorkflowId()), projectWorkflow))
-            .toList();
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<ProjectDTO> getProjects(Long categoryId, boolean projectInstances, Long tagId, Status status) {
-        return getProjects(null, categoryId, projectInstances, tagId, status);
-    }
-
-    @Override
-    public List<ProjectDTO> getWorkspaceProjects(
-        long workspaceId, Long categoryId, boolean projectInstances, Long tagId, Status status) {
-
-        return getProjects(workspaceId, categoryId, projectInstances, tagId, status);
-    }
-
-    @Override
-    public void publishProject(long id, String description) {
-        Project project = projectService.publishProject(id, description);
-
-        checkProjectWorkflowsStatus(project);
-    }
-
-    @Override
-    public ProjectDTO updateProject(@NonNull ProjectDTO projectDTO) {
-        Category category = projectDTO.category() == null ? null : categoryService.save(projectDTO.category());
+    @PreAuthorize("hasPermission(#projectDTO.id, 'Project', 'WORKFLOW_EDIT')")
+    public void updateProject(ProjectDTO projectDTO) {
         List<Tag> tags = checkTags(projectDTO.tags());
 
         Project project = projectDTO.toProject();
+        Category category = projectDTO.category();
+
+        if (category != null) {
+            category = categoryService.save(category);
+
+            project.setCategory(category);
+        }
 
         project.setTags(tags);
 
-        return new ProjectDTO(
-            category, projectService.update(project), tags,
-            projectWorkflowService.getProjectWorkflowIds(project.getId(), project.getLastVersion()));
-    }
-
-    @Override
-    public void updateProjectTags(long id, @NonNull List<Tag> tags) {
-        tags = checkTags(tags);
-
-        projectService.update(id, CollectionUtils.map(tags, Tag::getId));
-    }
-
-    @Override
-    public WorkflowDTO updateWorkflow(String workflowId, String definition, int version) {
-        ProjectWorkflow projectWorkflow = projectWorkflowService.getWorkflowProjectWorkflow(workflowId);
-
-        return new WorkflowDTO(workflowFacade.update(workflowId, definition, version), projectWorkflow);
-    }
-
-    private void checkProjectWorkflowsStatus(Project project) {
-        List<ProjectWorkflow> latestProjectWorkflows = projectWorkflowService.getProjectWorkflows(
-            project.getId(), project.getLastVersion());
-
-        if (project.getLastStatus() == Status.PUBLISHED) {
-            int lastVersion = project.getLastVersion();
-            int newVersion = projectService.addVersion(project.getId());
-
-            for (ProjectWorkflow projectWorkflow : latestProjectWorkflows) {
-                String oldWorkflowId = projectWorkflow.getWorkflowId();
-
-                Workflow duplicatedWorkflow = workflowService.duplicateWorkflow(oldWorkflowId);
-
-                projectWorkflow.setProjectVersion(newVersion);
-                projectWorkflow.setWorkflowId(duplicatedWorkflow.getId());
-
-                projectWorkflowService.update(projectWorkflow);
-
-                projectWorkflowService.addWorkflow(
-                    project.getId(), lastVersion, oldWorkflowId, projectWorkflow.getWorkflowReferenceCode());
-
-                workflowTestConfigurationService.updateWorkflowId(oldWorkflowId, duplicatedWorkflow.getId());
-                workflowNodeTestOutputService.updateWorkflowId(oldWorkflowId, duplicatedWorkflow.getId());
-            }
-        } else {
-            throw new IllegalStateException("Project id=%s must be published".formatted(project.getId()));
-        }
+        projectService.update(project);
     }
 
     private List<Tag> checkTags(List<Tag> tags) {
@@ -416,9 +488,61 @@ public class ProjectFacadeImpl implements ProjectFacade {
         return newWorkflowIds;
     }
 
+    private byte[] createTemplate(long id, String description, boolean sharedTemplate) {
+        Project project = projectService.getProject(id);
+
+        List<ProjectWorkflow> projectWorkflows = projectWorkflowService.getProjectWorkflows(
+            id, project.getLastProjectVersion());
+
+        try (ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+            ZipOutputStream zipOutputStream = new ZipOutputStream(byteArrayOutputStream)) {
+
+            if (sharedTemplate) {
+                ZipEntry zipEntry = new ZipEntry("template.json");
+
+                zipOutputStream.putNextEntry(zipEntry);
+
+                String templateJson = JsonUtils.write(new Template(description, project.getLastProjectVersion()));
+
+                zipOutputStream.write(templateJson.getBytes(StandardCharsets.UTF_8));
+
+                zipOutputStream.closeEntry();
+            }
+
+            ZipEntry projectZipEntry = new ZipEntry("project.json");
+
+            zipOutputStream.putNextEntry(projectZipEntry);
+
+            String projectJson = JsonUtils.write(new ProjectInfo(project));
+
+            zipOutputStream.write(projectJson.getBytes(StandardCharsets.UTF_8));
+
+            zipOutputStream.closeEntry();
+
+            for (ProjectWorkflow projectWorkflow : projectWorkflows) {
+                Workflow workflow = workflowService.getWorkflow(projectWorkflow.getWorkflowId());
+
+                ZipEntry workflowZipEntry = new ZipEntry(String.format("workflow-%s.json", projectWorkflow.getUuid()));
+
+                zipOutputStream.putNextEntry(workflowZipEntry);
+
+                String workflowJson = JsonUtils.write(workflow.getDefinition());
+
+                zipOutputStream.write(workflowJson.getBytes(StandardCharsets.UTF_8));
+
+                zipOutputStream.closeEntry();
+            }
+
+            zipOutputStream.finish();
+
+            return byteArrayOutputStream.toByteArray();
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to export project", e);
+        }
+    }
+
     private String generateName(String oldName) {
         List<Project> projects = projectService.getProjects();
-
         int addendum = 0;
 
         for (Project curProject : projects) {
@@ -437,42 +561,158 @@ public class ProjectFacadeImpl implements ProjectFacade {
     }
 
     private List<ProjectDTO> getProjects(
-        Long workspaceId, Long categoryId, boolean projectInstances, Long tagId, Status status) {
+        Boolean apiCollections, Long categoryId, Long tagId, Boolean projectDeployments, Status status,
+        boolean includeAllFields, Long workspaceId) {
 
-        List<Long> projectIds = List.of();
+        List<Project> projects = projectService.getProjects(
+            apiCollections, categoryId, projectDeployments, tagId, status, workspaceId);
 
-        if (projectInstances) {
-            projectIds = projectInstanceService.getProjectIds();
+        if (includeAllFields) {
+            List<Long> projectIds = projects.stream()
+                .map(Project::getId)
+                .toList();
+
+            List<ProjectWorkflow> allProjectWorkflows = projectWorkflowService.getProjectWorkflows(projectIds);
+
+            List<Category> categories = categoryService.getCategories(
+                projects.stream()
+                    .map(Project::getCategoryId)
+                    .filter(Objects::nonNull)
+                    .toList());
+
+            List<Tag> allTags = tagService.getTags(
+                projects.stream()
+                    .flatMap(curProject -> CollectionUtils.stream(curProject.getTagIds()))
+                    .filter(Objects::nonNull)
+                    .toList());
+
+            return CollectionUtils.map(
+                projects,
+                project -> new ProjectDTO(
+                    CollectionUtils.findFirstFilterOrElse(
+                        categories,
+                        category -> Objects.equals(project.getCategoryId(), category.getId()),
+                        null),
+                    project,
+                    allProjectWorkflows.stream()
+                        .filter(projectWorkflow -> Objects.equals(projectWorkflow.getProjectId(), project.getId()) &&
+                            projectWorkflow.getProjectVersion() == project.getLastProjectVersion())
+                        .map(ProjectWorkflow::getId)
+                        .toList(),
+                    CollectionUtils.filter(
+                        allTags,
+                        tag -> CollectionUtils.contains(project.getTagIds(), tag.getId()))));
+        } else {
+            return CollectionUtils.map(projects, ProjectDTO::new);
+        }
+    }
+
+    private List<Workflow> getWorkflows(TemplateFiles templateFiles) {
+        List<Workflow> workflows = new ArrayList<>();
+
+        for (String workflowJson : templateFiles.workflowJsons) {
+            workflows.add(
+                new Workflow(
+                    String.valueOf(UUID.randomUUID()), JsonUtils.read(workflowJson, String.class),
+                    Workflow.Format.JSON));
         }
 
-        List<Project> projects = projectService.getProjects(workspaceId, categoryId, projectIds, tagId, status);
+        return workflows;
+    }
 
-        return CollectionUtils.map(
-            projects,
-            project -> new ProjectDTO(
-                CollectionUtils.findFirstFilterOrElse(
-                    categoryService.getCategories(
-                        projects
-                            .stream()
-                            .map(Project::getCategoryId)
-                            .filter(Objects::nonNull)
-                            .toList()),
-                    category -> Objects.equals(project.getCategoryId(), category.getId()),
-                    null),
-                project,
-                CollectionUtils.filter(
-                    tagService.getTags(
-                        projects.stream()
-                            .flatMap(curProject -> CollectionUtils.stream(curProject.getTagIds()))
-                            .filter(Objects::nonNull)
-                            .toList()),
-                    tag -> CollectionUtils.contains(project.getTagIds(), tag.getId())),
-                projectWorkflowService.getProjectWorkflowIds(project.getId(), project.getLastVersion())));
+    private List<ComponentDefinitionTuple> getComponentDefinitions(List<Workflow> workflows) {
+        List<ComponentDefinitionTuple> componentDefinitions = new ArrayList<>();
+
+        for (Workflow workflow : workflows) {
+            String id = Objects.requireNonNull(workflow.getId());
+
+            componentDefinitions.add(
+                new ComponentDefinitionTuple(id, componentDefinitionHelper.getComponentDefinitions(workflow)));
+        }
+
+        return componentDefinitions;
+    }
+
+    private long importProjectTemplate(byte[] projectData, long workspaceId) {
+        TemplateFiles templateFiles = readTemplate(projectData, false);
+
+        ProjectInfo projectInfo = JsonUtils.read(templateFiles.projectJson, ProjectInfo.class);
+
+        Project project = new Project();
+
+        project.setName(projectInfo.name());
+        project.setDescription(projectInfo.description());
+        project.setWorkspaceId(workspaceId);
+
+        ProjectDTO projectDTO = new ProjectDTO(project);
+
+        long projectId = createProject(projectDTO);
+
+        for (String workflowJson : templateFiles.workflowJsons) {
+            String definition = JsonUtils.read(workflowJson, String.class);
+
+            projectWorkflowFacade.addWorkflow(projectId, definition);
+        }
+
+        return projectId;
+    }
+
+    private TemplateFiles readTemplate(byte[] data, boolean sharedTemplate) {
+        try (ZipInputStream zipInputStream = new ZipInputStream(new ByteArrayInputStream(data))) {
+            String projectJson = null;
+            String templateJson = null;
+            ZipEntry zipEntry;
+            List<String> workflowJsons = new ArrayList<>();
+
+            while ((zipEntry = zipInputStream.getNextEntry()) != null) {
+                byte[] entryData = zipInputStream.readAllBytes();
+
+                String name = zipEntry.getName();
+
+                if ("project.json".equals(name)) {
+                    projectJson = new String(entryData, StandardCharsets.UTF_8);
+                } else if ("template.json".equals(name)) {
+                    templateJson = new String(entryData, StandardCharsets.UTF_8);
+                } else if (name.startsWith("workflow-") && name.endsWith(".json")) {
+                    workflowJsons.add(new String(entryData, StandardCharsets.UTF_8));
+                }
+
+                zipInputStream.closeEntry();
+            }
+
+            if (projectJson == null || sharedTemplate && (templateJson == null) || workflowJsons.isEmpty()) {
+                throw new RuntimeException("Missing files in a shared project file");
+            }
+
+            return new TemplateFiles(templateJson, projectJson, workflowJsons);
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to read shared project", e);
+        }
     }
 
     private ProjectDTO toProjectDTO(Project project) {
         return new ProjectDTO(
-            getCategory(project), project, tagService.getTags(project.getTagIds()),
-            projectWorkflowService.getProjectWorkflowIds(project.getId(), project.getLastVersion()));
+            getCategory(project), project,
+            projectWorkflowService.getProjectProjectWorkflowIds(project.getId(), project.getLastProjectVersion()),
+            tagService.getTags(project.getTagIds()));
+    }
+
+    record ProjectInfo(String name, String description) {
+
+        ProjectInfo(Project project) {
+            this(project.getName(), project.getDescription());
+        }
+    }
+
+    private record Template(
+        String authorName, String authorRole, String authorEmail, String authorSocialLinks, List<String> categories,
+        String description, Instant lastModifiedDate, Integer projectVersion) {
+
+        public Template(String description, int lastProjectVersion) {
+            this(null, null, null, null, Collections.emptyList(), description, Instant.now(), lastProjectVersion);
+        }
+    }
+
+    private record TemplateFiles(String templateJson, String projectJson, List<String> workflowJsons) {
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ package com.bytechef.automation.configuration.repository;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.bytechef.automation.configuration.config.ProjectIntTestConfiguration;
+import com.bytechef.automation.configuration.config.ProjectIntTestConfigurationSharedMocks;
 import com.bytechef.automation.configuration.domain.Project;
 import com.bytechef.automation.configuration.domain.Workspace;
 import com.bytechef.commons.util.OptionalUtils;
@@ -36,6 +37,7 @@ import org.springframework.context.annotation.Import;
  */
 @SpringBootTest(classes = ProjectIntTestConfiguration.class)
 @Import(PostgreSQLContainerConfiguration.class)
+@ProjectIntTestConfigurationSharedMocks
 public class ProjectRepositoryIntTest {
 
     @Autowired

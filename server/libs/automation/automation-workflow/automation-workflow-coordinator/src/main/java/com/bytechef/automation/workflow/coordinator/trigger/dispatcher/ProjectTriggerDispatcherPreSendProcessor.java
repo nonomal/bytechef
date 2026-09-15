@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,49 +16,70 @@
 
 package com.bytechef.automation.workflow.coordinator.trigger.dispatcher;
 
-import com.bytechef.automation.configuration.service.ProjectInstanceWorkflowService;
+import com.bytechef.automation.configuration.service.ProjectDeploymentWorkflowService;
 import com.bytechef.automation.configuration.service.ProjectWorkflowService;
 import com.bytechef.automation.workflow.coordinator.AbstractDispatcherPreSendProcessor;
 import com.bytechef.platform.component.constant.MetadataConstants;
+import com.bytechef.platform.constant.PlatformType;
+import com.bytechef.platform.workflow.WorkflowExecutionId;
 import com.bytechef.platform.workflow.coordinator.trigger.dispatcher.TriggerDispatcherPreSendProcessor;
-import com.bytechef.platform.workflow.execution.WorkflowExecutionId;
+import com.bytechef.platform.workflow.execution.accessor.JobPrincipalAccessorRegistry;
 import com.bytechef.platform.workflow.execution.domain.TriggerExecution;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Map;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 /**
  * @author Ivica Cardic
  */
 @Component
+@Order(2)
 public class ProjectTriggerDispatcherPreSendProcessor extends AbstractDispatcherPreSendProcessor
     implements TriggerDispatcherPreSendProcessor {
 
     private final ProjectWorkflowService projectWorkflowService;
+    private final JobPrincipalAccessorRegistry jobPrincipalAccessorRegistry;
 
     @SuppressFBWarnings("EI")
     public ProjectTriggerDispatcherPreSendProcessor(
-        ProjectInstanceWorkflowService projectInstanceWorkflowService, ProjectWorkflowService projectWorkflowService) {
+        ProjectDeploymentWorkflowService projectDeploymentWorkflowService,
+        ProjectWorkflowService projectWorkflowService,
+        JobPrincipalAccessorRegistry jobPrincipalAccessorRegistry) {
 
-        super(projectInstanceWorkflowService);
+        super(projectDeploymentWorkflowService);
 
         this.projectWorkflowService = projectWorkflowService;
+        this.jobPrincipalAccessorRegistry = jobPrincipalAccessorRegistry;
     }
 
     @Override
     public TriggerExecution process(TriggerExecution triggerExecution) {
         WorkflowExecutionId workflowExecutionId = triggerExecution.getWorkflowExecutionId();
 
-        String workflowId = projectWorkflowService.getProjectWorkflowId(
-            triggerExecution.getInstanceId(), workflowExecutionId.getWorkflowReferenceCode());
+        String workflowId = projectWorkflowService.getProjectWorkflowWorkflowId(
+            triggerExecution.getInstanceId(), workflowExecutionId.getWorkflowUuid());
 
         Map<String, Long> connectionIdMap = getConnectionIdMap(
-            workflowExecutionId.getInstanceId(), workflowId, triggerExecution.getName());
+            workflowExecutionId.getJobPrincipalId(), workflowId, triggerExecution.getName());
 
         if (!connectionIdMap.isEmpty()) {
             triggerExecution.putMetadata(MetadataConstants.CONNECTION_IDS, connectionIdMap);
         }
 
+        // Add environment id for downstream processing
+        int environmentId = (int) jobPrincipalAccessorRegistry
+            .getJobPrincipalAccessor(PlatformType.AUTOMATION)
+            .getEnvironmentId(workflowExecutionId.getJobPrincipalId());
+        triggerExecution.putMetadata(MetadataConstants.ENVIRONMENT_ID, environmentId);
+
         return triggerExecution;
+    }
+
+    @Override
+    public boolean canProcess(TriggerExecution triggerExecution) {
+        WorkflowExecutionId workflowExecutionId = triggerExecution.getWorkflowExecutionId();
+
+        return workflowExecutionId.getType() == PlatformType.AUTOMATION;
     }
 }

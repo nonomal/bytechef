@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,7 +22,7 @@ import com.bytechef.platform.workflow.coordinator.event.TriggerStartedApplicatio
 import com.bytechef.platform.workflow.execution.domain.TriggerExecution;
 import com.bytechef.platform.workflow.execution.domain.TriggerExecution.Status;
 import com.bytechef.platform.workflow.execution.service.TriggerExecutionService;
-import com.bytechef.platform.workflow.worker.trigger.event.CancelControlTriggerEvent;
+import com.bytechef.platform.workflow.worker.event.CancelControlTriggerEvent;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,7 +35,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class TriggerStartedApplicationEventListener implements ApplicationEventListener {
 
-    private static final Logger logger = LoggerFactory.getLogger(TriggerStartedApplicationEventListener.class);
+    private static final Logger log = LoggerFactory.getLogger(TriggerStartedApplicationEventListener.class);
 
     private final ApplicationEventPublisher eventPublisher;
     private final TriggerExecutionService triggerExecutionService;
@@ -55,8 +55,8 @@ public class TriggerStartedApplicationEventListener implements ApplicationEventL
 
             TriggerExecution triggerExecution = triggerExecutionService.getTriggerExecution(triggerExecutionId);
 
-            if (logger.isDebugEnabled()) {
-                logger.debug(
+            if (log.isDebugEnabled()) {
+                log.debug(
                     "Trigger id={}, name='{}', type='{}' started", triggerExecution.getId(), triggerExecution.getName(),
                     triggerExecution.getType());
             }

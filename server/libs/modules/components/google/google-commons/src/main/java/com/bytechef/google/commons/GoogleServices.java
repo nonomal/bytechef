@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -89,7 +89,7 @@ public class GoogleServices {
                 .build();
     }
 
-    public static Sheets getSheets(Parameters connectionParameters) throws Exception {
+    public static Sheets getSheets(Parameters connectionParameters) {
         return new Sheets.Builder(
             new NetHttpTransport(),
             GsonFactory.getDefaultInstance(), new OAuthAuthentication(connectionParameters))

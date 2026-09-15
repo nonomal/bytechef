@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,13 +18,14 @@ package com.bytechef.component.github.connection;
 
 import static com.bytechef.component.definition.Authorization.CLIENT_ID;
 import static com.bytechef.component.definition.Authorization.CLIENT_SECRET;
-import static com.bytechef.component.definition.ComponentDSL.ModifiableConnectionDefinition;
-import static com.bytechef.component.definition.ComponentDSL.authorization;
-import static com.bytechef.component.definition.ComponentDSL.connection;
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.definition.ComponentDsl.ModifiableConnectionDefinition;
+import static com.bytechef.component.definition.ComponentDsl.authorization;
+import static com.bytechef.component.definition.ComponentDsl.connection;
+import static com.bytechef.component.definition.ComponentDsl.string;
 
 import com.bytechef.component.definition.Authorization.AuthorizationType;
-import java.util.List;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 /**
  * @author Luka Ljubić
@@ -45,12 +46,48 @@ public class GithubConnection {
                         .required(true))
                 .authorizationUrl((connection, context) -> "https://github.com/login/oauth/authorize")
                 .tokenUrl((connection, context) -> "https://github.com/login/oauth/access_token")
-                .scopes((connection, context) -> List.of(
-                    "admin:repo_hook",
-                    "admin:org",
-                    "repo",
-                    "issues:write",
-                    "pull_requests:write")));
+                .scopes((connection, context) -> {
+                    Map<String, Boolean> map = new LinkedHashMap<>();
+
+                    map.put("repo", true);
+                    map.put("repo:status", false);
+                    map.put("repo_deployment", false);
+                    map.put("public_repo", false);
+                    map.put("repo:invite", false);
+                    map.put("security_events", false);
+                    map.put("admin:repo_hook", true);
+                    map.put("write:repo_hook", false);
+                    map.put("read:repo_hook", false);
+                    map.put("admin:org", true);
+                    map.put("write:org", false);
+                    map.put("read:org", true);
+                    map.put("admin:public_key", false);
+                    map.put("write:public_key", false);
+                    map.put("read:public_key", false);
+                    map.put("admin:org_hook", false);
+                    map.put("gist", false);
+                    map.put("notifications", false);
+                    map.put("user", false);
+                    map.put("read:user", false);
+                    map.put("user:email", false);
+                    map.put("user:follow", false);
+                    map.put("project", false);
+                    map.put("read:project", false);
+                    map.put("delete_repo", false);
+                    map.put("write:packages", false);
+                    map.put("read:packages", false);
+                    map.put("delete:packages", false);
+                    map.put("admin:gpg_key", false);
+                    map.put("write:gpg_key", false);
+                    map.put("read:gpg_key", false);
+                    map.put("codespace", false);
+                    map.put("workflow", false);
+                    map.put("read:audit_log", false);
+
+                    return map;
+                }))
+        .version(1)
+        .help("", "https://docs.bytechef.io/reference/components/github_v1#connection-setup");
 
     private GithubConnection() {
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,34 +16,38 @@
 
 package com.bytechef.component.discord.util;
 
-import static com.bytechef.component.definition.ComponentDSL.option;
-import static com.bytechef.component.discord.constant.DiscordConstants.BASE_URL;
+import static com.bytechef.component.definition.ComponentDsl.option;
 import static com.bytechef.component.discord.constant.DiscordConstants.GUILD_ID;
 import static com.bytechef.component.discord.constant.DiscordConstants.RECIPIENT_ID;
 
 import com.bytechef.component.definition.ActionContext;
+import com.bytechef.component.definition.Context;
 import com.bytechef.component.definition.Context.Http;
-import com.bytechef.component.definition.Context.TypeReference;
 import com.bytechef.component.definition.Option;
 import com.bytechef.component.definition.Parameters;
+import com.bytechef.component.definition.TypeReference;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
 /**
- * @author Monika Domiter
+ * @author Monika Kušter
  */
-public class DiscordUtils {
+public class DiscordUtils extends AbstractDiscordUtils {
 
     private DiscordUtils() {
     }
 
     public static List<Option<String>> getChannelIdOptions(
-        Parameters inputParameters, Parameters connectionParameters, Map<String, String> dependencyPaths,
-        String searchText, ActionContext context) {
+        Parameters inputParameters, Parameters connectionParameters, Map<String, String> lookupDependsOnPaths,
+        String searchText, Context context) {
+
+        if (!inputParameters.containsKey(GUILD_ID)) {
+            return List.of();
+        }
 
         List<Map<String, Object>> body = context.http(http -> http
-            .get(BASE_URL + "/guilds/" + inputParameters.getRequiredString(GUILD_ID) + "/channels"))
+            .get("/guilds/" + inputParameters.getRequiredString(GUILD_ID) + "/channels"))
             .configuration(Http.responseType(Http.ResponseType.JSON))
             .execute()
             .getBody(new TypeReference<>() {});
@@ -52,7 +56,7 @@ public class DiscordUtils {
     }
 
     public static Map<String, Object> getDMChannel(Parameters inputParameters, ActionContext actionContext) {
-        return actionContext.http(http -> http.post(BASE_URL + "/users/@me/channels"))
+        return actionContext.http(http -> http.post("/users/@me/channels"))
             .configuration(Http.responseType(Http.ResponseType.JSON))
             .body(Http.Body.of(RECIPIENT_ID, inputParameters.getRequired(RECIPIENT_ID)))
             .execute()
@@ -60,10 +64,10 @@ public class DiscordUtils {
     }
 
     public static List<Option<String>> getGuildIdOptions(
-        Parameters inputParameters, Parameters connectionParameters, Map<String, String> dependencyPaths,
-        String searchText, ActionContext context) {
+        Parameters inputParameters, Parameters connectionParameters, Map<String, String> lookupDependsOnPaths,
+        String searchText, Context context) {
 
-        List<Map<String, Object>> body = context.http(http -> http.get(BASE_URL + "/users/@me/guilds"))
+        List<Map<String, Object>> body = context.http(http -> http.get("/users/@me/guilds"))
             .configuration(Http.responseType(Http.ResponseType.JSON))
             .execute()
             .getBody(new TypeReference<>() {});
@@ -72,11 +76,15 @@ public class DiscordUtils {
     }
 
     public static List<Option<String>> getGuildMemberIdOptions(
-        Parameters inputParameters, Parameters connectionParameters, Map<String, String> dependencyPaths,
+        Parameters inputParameters, Parameters connectionParameters, Map<String, String> lookupDependsOnPaths,
         String searchText, ActionContext context) {
 
-        List<Map<String, ?>> body = context.http(http -> http
-            .get(BASE_URL + "/guilds/" + inputParameters.getRequiredString(GUILD_ID) + "/members"))
+        if (!inputParameters.containsKey(GUILD_ID)) {
+            return List.of();
+        }
+
+        List<Map<String, ?>> body = context.http(
+            http -> http.get("/guilds/" + inputParameters.getRequiredString(GUILD_ID) + "/members"))
             .configuration(Http.responseType(Http.ResponseType.JSON))
             .queryParameter("limit", "1000")
             .execute()

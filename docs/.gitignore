@@ -1,21 +1,40 @@
-# build output
-dist/
-# generated types
-.astro/
+# deps
+/node_modules
 
-# dependencies
-node_modules/
+# generated content
+.contentlayer
+.content-collections
+.source
 
-# logs
+# test & build
+/coverage
+/.next/
+/out/
+/build
+*.tsbuildinfo
+
+# misc
+.DS_Store
+*.pem
+/.pnp
+.pnp.js
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-pnpm-debug.log*
 
+# others
+.env*.local
+.vercel
+next-env.d.ts
 
-# environment variables
-.env
-.env.production
-
-# macOS-specific files
-.DS_Store
+# openapi — one directory per generated group, written by `npm run generate:openapi`, which
+# `npm run build` runs before `next build`. Group ids are derived from each spec's tags and the
+# audience of its operations, so they are matched by pattern rather than listed: a new tag or a new
+# spec needs no edit here.
+#
+# The generator emits BOTH .mdx pages and a meta.json per group, so ignore the directories
+# rather than a file extension — ignoring only *.mdx previously left the group meta.json
+# files tracked, where they drifted whenever GROUP_META changed and were rewritten in place
+# by the jsonSchema plugin on every fumadocs-mdx run.
+content/docs/openapi/*/
+# openapi/index.mdx and openapi/meta.json are hand-written and stay tracked.

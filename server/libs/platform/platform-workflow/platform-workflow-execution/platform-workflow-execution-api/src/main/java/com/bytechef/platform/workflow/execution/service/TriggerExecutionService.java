@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@
 package com.bytechef.platform.workflow.execution.service;
 
 import com.bytechef.platform.workflow.execution.domain.TriggerExecution;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -31,6 +32,10 @@ public interface TriggerExecutionService {
     void deleteJobTriggerExecution(long jobId);
 
     Optional<TriggerExecution> fetchJobTriggerExecution(long jobId);
+
+    List<TriggerExecution> getJobTriggerExecutions(List<Long> jobIds);
+
+    List<TriggerExecution> getTriggerExecutions(List<Long> ids);
 
     TriggerExecution getTriggerExecution(long id);
 

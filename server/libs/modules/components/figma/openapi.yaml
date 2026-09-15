@@ -1,0 +1,150 @@
+---
+openapi: "3.0.2"
+info:
+  title: "Figma"
+  description: "Figma is a cloud-based design and prototyping tool that enables teams to collaborate in real-time on user interface and user experience projects."
+  version: "v1"
+servers:
+  - url: "https://api.figma.com"
+paths:
+  /v1/files/{fileKey}/comments:
+    get:
+      summary: "Get Comments"
+      description: "Gets a list of comments left on the file."
+      operationId: "getComments"
+      x-ai-agent-tool: true
+      x-help: "https://docs.bytechef.io/reference/components/figma_v1#get-comments"
+      security:
+        - oauth2:
+            - "file_comments:read"
+      parameters:
+        - name: "fileKey"
+          in: "path"
+          description: "File to get comments from. Figma file key copy from Figma file URL."
+          required: true
+          schema:
+            type: "string"
+            title: "File Key"
+      responses:
+        200:
+          description: "Successful response."
+          content:
+            application/json:
+              schema:
+                type: "object"
+                properties:
+                  comments:
+                    type: "array"
+                    description: "List of comments."
+                    items:
+                      type: "object"
+                      properties:
+                        id:
+                          type: "string"
+                          description: "ID of the comment."
+                        file_key:
+                          type: "string"
+                          description: "File key of the file the comment is on."
+                        parent_id:
+                          type: "string"
+                          description: "ID of comment this comment is a reply to."
+                        user:
+                          type: "object"
+                          description: "User who posted the comment."
+                          properties:
+                            id:
+                              type: "string"
+                              description: "ID of the user."
+                            handle:
+                              type: "string"
+                              description: "Name of the user."
+                            img_url:
+                              type: "string"
+                              description: "URL of the user's profile image."
+                            email:
+                              type: "string"
+                              description: "Email of the user."
+    post:
+      summary: "Post Comment"
+      description: "Posts a new comment on the file."
+      operationId: "postComment"
+      x-help: "https://docs.bytechef.io/reference/components/figma_v1#post-comment"
+      x-ai-agent-tool: true
+      security:
+        - oauth2:
+            - "file_comments:write"
+      parameters:
+        - name: "fileKey"
+          in: "path"
+          description: "File to add comments in. Figma file key copy from Figma file URL."
+          required: true
+          schema:
+            type: "string"
+            title: "File Key"
+      requestBody:
+        description: "Comment to post."
+        required: true
+        content:
+          application/json:
+            schema:
+              type: "object"
+              required:
+                - "message"
+              properties:
+                message:
+                  type: "string"
+                  description: "Comment to post on the file."
+                  title: "Comment"
+      responses:
+        200:
+          description: "Creation confirmation."
+          content:
+            application/json:
+              schema:
+                type: "object"
+                properties:
+                  id:
+                    type: "string"
+                    description: "ID of the comment."
+                  file_key:
+                    type: "string"
+                    description: "File key of the file the comment is on."
+                  parent_id:
+                    type: "string"
+                    description: "ID of comment this comment is a reply to."
+                  message:
+                    type: "string"
+                    description: "Message of the comment."
+components:
+  securitySchemes:
+    oauth2:
+      type: "oauth2"
+      flows:
+        authorizationCode:
+          authorizationUrl: "https://www.figma.com/oauth"
+          tokenUrl: "https://api.figma.com/v1/oauth/token"
+          refreshUrl: "https://api.figma.com/v1/oauth/refresh"
+          scopes:
+            current_user:read: "Read your name, email, and profile image."
+            file_comments:read: "Read the comments for files."
+            file_comments:write: "Post and delete comments and comment reactions in files."
+            file_content:read: "Read the contents of files, such as nodes and the editor type."
+            file_dev_resources:read: "Read dev resources in files."
+            file_dev_resources:write: "Write dev resources to files."
+            file_metadata:read: "Read metadata of files."
+            file_variables:read: "Read variables in files. Note: Enterprise plan only."
+            file_variables:write: "Write variables and collections in files. Note: Enterprise plan only."
+            file_versions:read: "Read the version history for files you can access."
+            library_analytics:read:
+                "Read your design system analytics. Note: Enterprise plan only."
+            library_assets:read: "Read data of individual published components and styles."
+            library_content:read: "Read published components and styles of files."
+            org:activity_log_read:
+                "Read organization activity logs. Note: Enterprise plan only. Must be an organization admin."
+            org:discovery_read:
+                "Read text event data in the organization. Note: Enterprise plans with Governance+ only. Must be an organization admin."
+            projects:read: "List projects and files in projects."
+            selections:read: "Read most recent selection in files you can access."
+            team_library_content:read: "Read published components and styles of teams."
+            webhooks:read: "Read metadata of webhooks."
+            webhooks:write: "Create and manage webhooks."

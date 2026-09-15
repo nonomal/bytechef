@@ -1,0 +1,9 @@
+dependencies {
+    implementation("org.apache.commons:commons-lang3")
+    implementation("org.springframework:spring-context")
+    implementation("org.springframework:spring-jdbc")
+    implementation("org.springframework.ai:spring-ai-model")
+    implementation("org.springframework.ai:spring-ai-model-chat-memory-repository-jdbc")
+    implementation("org.springframework.boot:spring-boot-autoconfigure")
+    implementation(project(":server:libs:modules:components:ai:agent:chat-memory:chat-memory-jdbc"))
+}

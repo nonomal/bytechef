@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,12 +22,13 @@ package com.bytechef.component.sendgrid.constant;
 public final class SendgridConstants {
 
     public static final String ATTACHMENTS = "attachments";
-    public static final String BASE_URL = "https://api.sendgrid.com/v3";
     public static final String CC = "cc";
     public static final String FROM = "from";
-    public static final String SEND_EMAIL = "sendEmail";
-    public static final String SENDGRID = "sendgrid";
+    public static final String ID = "id";
+    public static final String NAME = "name";
     public static final String SUBJECT = "subject";
+    public static final String DYNAMIC_TEMPLATE_DATA = "dynamic_template_data";
+    public static final String TEMPLATE_ID = "template_id";
     public static final String TEXT = "text";
     public static final String TO = "to";
     public static final String TYPE = "type";

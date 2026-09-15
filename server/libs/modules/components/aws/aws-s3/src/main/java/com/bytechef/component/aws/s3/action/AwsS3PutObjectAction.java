@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,19 +20,17 @@ import static com.bytechef.component.aws.s3.constant.AwsS3Constants.ACL;
 import static com.bytechef.component.aws.s3.constant.AwsS3Constants.BUCKET_NAME;
 import static com.bytechef.component.aws.s3.constant.AwsS3Constants.FILE_ENTRY;
 import static com.bytechef.component.aws.s3.constant.AwsS3Constants.KEY;
-import static com.bytechef.component.aws.s3.constant.AwsS3Constants.PUT_OBJECT;
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.fileEntry;
-import static com.bytechef.component.definition.ComponentDSL.option;
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.fileEntry;
+import static com.bytechef.component.definition.ComponentDsl.option;
+import static com.bytechef.component.definition.ComponentDsl.string;
 
 import com.bytechef.component.aws.s3.util.AwsS3Utils;
 import com.bytechef.component.definition.ActionContext;
-import com.bytechef.component.definition.ComponentDSL.ModifiableActionDefinition;
+import com.bytechef.component.definition.ComponentDsl.ModifiableActionDefinition;
 import com.bytechef.component.definition.FileEntry;
 import com.bytechef.component.definition.Parameters;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
@@ -41,19 +39,18 @@ import java.nio.file.StandardCopyOption;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.ObjectCannedACL;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
-import software.amazon.awssdk.services.s3.model.PutObjectResponse;
 
 /**
  * @author Ivica Cardic
  */
 public class AwsS3PutObjectAction {
 
-    public static final ModifiableActionDefinition ACTION_DEFINITION = action(PUT_OBJECT)
+    public static final ModifiableActionDefinition ACTION_DEFINITION = action("putObject")
         .title("Put Object")
         .description("Store an object to AWS S3.")
         .properties(
             fileEntry(FILE_ENTRY)
-                .label("File")
+                .label("File Entry")
                 .description(
                     "The object property which contains a reference to the file that needs to be written to AWS S3.")
                 .required(true),
@@ -73,7 +70,6 @@ public class AwsS3PutObjectAction {
                     option("private", "private"),
                     option("public-read", "public-read"),
                     option("public-read-write", "public-read-write")))
-        .outputSchema(string())
         .perform(AwsS3PutObjectAction::perform);
 
     @SuppressFBWarnings("RV")
@@ -83,28 +79,25 @@ public class AwsS3PutObjectAction {
         FileEntry fileEntry = inputParameters.getRequiredFileEntry(FILE_ENTRY);
 
         try (S3Client s3Client = AwsS3Utils.buildS3Client(connectionParameters)) {
-            File directory = new File("/tmp/bytechef/AWS");
+            Path tempDirPath = Files.createTempDirectory("aws_s3");
 
-            if (!directory.exists()) {
-                directory.mkdirs();
-            }
+            Path tempFilePath = Files.createTempFile(tempDirPath, "", ".tmp");
 
-            Path tempFilePath = Files.createTempFile(directory.toPath(), "", ".tmp");
-
-            Files.copy((InputStream) context.file(file -> file.getStream(
+            Files.copy((InputStream) context.file(file -> file.getInputStream(
                 fileEntry)), tempFilePath, StandardCopyOption.REPLACE_EXISTING);
 
-            PutObjectResponse putObjectResponse = s3Client.putObject(
+            s3Client.putObject(
                 PutObjectRequest.builder()
                     .bucket(connectionParameters.getRequiredString(BUCKET_NAME))
                     .key(inputParameters.getRequiredString(KEY))
-                    .acl(inputParameters.getString(ACL) != null
-                        ? ObjectCannedACL.fromValue(inputParameters.getString(ACL))
-                        : null)
+                    .acl(
+                        inputParameters.getString(ACL) != null
+                            ? ObjectCannedACL.fromValue(inputParameters.getString(ACL))
+                            : null)
                     .build(),
                 tempFilePath);
 
-            return putObjectResponse.versionId();
+            return null;
         }
     }
 }

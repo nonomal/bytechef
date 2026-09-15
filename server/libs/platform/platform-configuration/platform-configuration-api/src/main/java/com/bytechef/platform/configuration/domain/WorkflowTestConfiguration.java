@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@
 package com.bytechef.platform.configuration.domain;
 
 import com.bytechef.commons.data.jdbc.wrapper.MapWrapper;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -46,7 +46,10 @@ public class WorkflowTestConfiguration implements Comparable<WorkflowTestConfigu
 
     @Column("created_date")
     @CreatedDate
-    private LocalDateTime createdDate;
+    private Instant createdDate;
+
+    @Column("environment")
+    private Long environmentId;
 
     @Column
     private MapWrapper inputs = new MapWrapper();
@@ -60,7 +63,7 @@ public class WorkflowTestConfiguration implements Comparable<WorkflowTestConfigu
 
     @Column("last_modified_date")
     @LastModifiedDate
-    private LocalDateTime lastModifiedDate;
+    private Instant lastModifiedDate;
 
     @MappedCollection(idColumn = "workflow_test_configuration_id")
     private Set<WorkflowTestConfigurationConnection> workflowTestConfigurationConnections = Collections.emptySet();
@@ -75,11 +78,13 @@ public class WorkflowTestConfiguration implements Comparable<WorkflowTestConfigu
     }
 
     public WorkflowTestConfiguration(
-        List<WorkflowTestConfigurationConnection> connections, Map<String, Object> inputs, String workflowId) {
+        long environmentId, Map<String, Object> inputs, String workflowId,
+        List<WorkflowTestConfigurationConnection> workflowTestConfigurationConnections) {
 
-        this.workflowTestConfigurationConnections = new HashSet<>(connections);
+        this.environmentId = environmentId;
         this.inputs = new MapWrapper(inputs);
         this.workflowId = workflowId;
+        this.workflowTestConfigurationConnections = new HashSet<>(workflowTestConfigurationConnections);
     }
 
     @Override
@@ -114,13 +119,16 @@ public class WorkflowTestConfiguration implements Comparable<WorkflowTestConfigu
         return createdBy;
     }
 
-    public LocalDateTime getCreatedDate() {
+    public Instant getCreatedDate() {
         return createdDate;
     }
 
-    @SuppressWarnings("unchecked")
-    public Map<String, String> getInputs() {
-        return Collections.unmodifiableMap((Map<String, String>) inputs.getMap());
+    public Long getEnvironmentId() {
+        return environmentId;
+    }
+
+    public Map<String, Object> getInputs() {
+        return Collections.unmodifiableMap(inputs.getMap());
     }
 
     public Long getId() {
@@ -131,7 +139,7 @@ public class WorkflowTestConfiguration implements Comparable<WorkflowTestConfigu
         return lastModifiedBy;
     }
 
-    public LocalDateTime getLastModifiedDate() {
+    public Instant getLastModifiedDate() {
         return lastModifiedDate;
     }
 
@@ -149,11 +157,15 @@ public class WorkflowTestConfiguration implements Comparable<WorkflowTestConfigu
         }
     }
 
+    public void setEnvironmentId(long environmentId) {
+        this.environmentId = environmentId;
+    }
+
     public void setId(Long id) {
         this.id = id;
     }
 
-    public void setInputs(Map<String, String> inputs) {
+    public void setInputs(Map<String, Object> inputs) {
         if (inputs != null) {
             this.inputs = new MapWrapper(inputs);
         }
@@ -170,15 +182,16 @@ public class WorkflowTestConfiguration implements Comparable<WorkflowTestConfigu
     @Override
     public String toString() {
         return "WorkflowTestConfiguration{" +
-            "createdBy='" + createdBy + '\'' +
-            ", createdDate=" + createdDate +
+            "id=" + id +
+            ", workflowId='" + workflowId + '\'' +
+            ", environmentId=" + environmentId +
             ", inputs=" + inputs +
-            ", id=" + id +
+            ", workflowTestConfigurationConnections=" + workflowTestConfigurationConnections +
+            ", createdBy='" + createdBy + '\'' +
+            ", createdDate=" + createdDate +
             ", lastModifiedBy='" + lastModifiedBy + '\'' +
             ", lastModifiedDate=" + lastModifiedDate +
-            ", workflowTestConfigurationConnections=" + workflowTestConfigurationConnections +
             ", version=" + version +
-            ", workflowId='" + workflowId + '\'' +
             '}';
     }
 }

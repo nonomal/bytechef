@@ -1,11 +1,9 @@
 dependencies {
-    implementation("org.apache.commons:commons-lang3")
+    implementation("com.github.spotbugs:spotbugs-annotations")
     implementation("org.springframework:spring-context")
-    implementation("org.springframework:spring-tx")
-    implementation(project(":server:libs:core:commons:commons-util"))
-    implementation(project(":server:libs:automation:automation-connection:automation-connection-api"))
-
-    testImplementation("org.springframework.data:spring-data-jdbc")
-    testImplementation(project(":server:libs:config:liquibase-config"))
-    testImplementation(project(":server:libs:test:test-int-support"))
+    implementation("org.springframework.data:spring-data-relational")
+    implementation(project(":server:libs:automation:automation-configuration:automation-configuration-api"))
+    implementation(project(":server:libs:core:tenant:tenant-api"))
+    implementation(project(":server:libs:platform:platform-connection:platform-connection-api"))
+    implementation(project(":server:libs:platform:platform-workflow:platform-workflow-execution:platform-workflow-execution-api"))
 }

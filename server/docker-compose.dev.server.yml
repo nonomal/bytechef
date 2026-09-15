@@ -1,16 +1,32 @@
-version: '3.9'
-
 services:
-  postgres:
-    image: postgres:14-alpine
+  mailpit:
+    image: axllent/mailpit
+    container_name: mailpit
     ports:
-      - 5432:5432
+      - "1025:1025"
+      - "8025:8025"
+  pgvector:
+    image: pgvector/pgvector:pg16
+    platform: linux/amd64
+    ports:
+      - "5433:5432"
     volumes:
-      - db:/var/lib/postgresql/data
+      - "pgvector:/var/lib/postgresql/data"
     environment:
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_USER=postgres
-      - POSTGRES_DB=bytechef
+      - "POSTGRES_PASSWORD=${PASSWORD_FROM_LOCAL_DOT_ENV_FILE}"
+      - "POSTGRES_USER=postgres"
+      - "POSTGRES_DB=bytechef_vectorstore"
+  postgres:
+    image: postgres:16-alpine
+    platform: linux/amd64
+    ports:
+      - "5432:5432"
+    volumes:
+      - "db:/var/lib/postgresql/data"
+    environment:
+      - "POSTGRES_PASSWORD=${PASSWORD_FROM_LOCAL_DOT_ENV_FILE}"
+      - "POSTGRES_USER=postgres"
+      - "POSTGRES_DB=bytechef"
 #  rabbitmq:
 #    image: rabbitmq:3.11-management-alpine
 #    ports:
@@ -19,10 +35,11 @@ services:
 #      # HTTP management UI
 #      - '15672:15672'
   redis:
-    image: redis:7-alpine
+    image: redis:8-alpine
+    platform: linux/amd64
     restart: always
     ports:
-      - '6379:6379'
+      - "6379:6379"
     command: redis-server --save 20 1 --loglevel warning
     volumes:
       - cache:/data
@@ -30,24 +47,37 @@ services:
     build:
       context: ../
       dockerfile: ./server/apps/server-app/Dockerfile_dev
+      args:
+        BUILDKIT_INLINE_CACHE: 1
     container_name: bytechef-server
+    volumes:
+      - ~/.bytechef:/root/.bytechef
     depends_on:
       - postgres
-#      - rabbitmq
+      - pgvector
+      #      - rabbitmq
       - redis
     environment:
       - SERVER_PORT=9555
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/bytechef
       - SPRING_DATASOURCE_USERNAME=postgres
-      - SPRING_DATASOURCE_PASSWORD=postgres
+      - SPRING_DATASOURCE_PASSWORD=${PASSWORD_FROM_LOCAL_DOT_ENV_FILE}
+      - JAVA_TOOL_OPTIONS=--enable-native-access=ALL-UNNAMED
 #      - SPRING_RABBITMQ_HOST=rabbitmq
 #      - SPRING_RABBITMQ_PORT=5672
       - SPRING_DATA_REDIS_HOST=redis
 #      - WORKFLOW_MESSAGE_BROKER_PROVIDER=amqp
+      - BYTECHEF_AI_VECTORSTORE_PGVECTOR_URL=jdbc:postgresql://pgvector:5432/bytechef_vectorstore
+      - BYTECHEF_AI_VECTORSTORE_PGVECTOR_USERNAME=postgres
+      - BYTECHEF_AI_VECTORSTORE_PGVECTOR_PASSWORD=${PASSWORD_FROM_LOCAL_DOT_ENV_FILE}
+    env_file:
+      - local.env
     ports:
-      - '9555:9555'
+      - "9555:9555"
 volumes:
   cache:
     driver: local
   db:
     driver: local
+  pgvector:
+    driver: "local"

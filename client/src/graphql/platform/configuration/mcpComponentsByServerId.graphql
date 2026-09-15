@@ -1,0 +1,20 @@
+query mcpComponentsByServerId($mcpServerId: ID!) {
+    mcpComponentsByServerId(mcpServerId: $mcpServerId) {
+        id
+        componentName
+        componentVersion
+        title
+        connectionId,
+        lastModifiedDate
+        mcpServerId
+        mcpTools {
+            id,
+            mcpComponentId
+            name
+            parameters
+            title
+            version
+        }
+        version
+    }
+}

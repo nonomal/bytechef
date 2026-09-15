@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,10 +22,12 @@ package com.bytechef.platform.configuration.constant;
 public class WorkflowExtConstants {
 
     public static final String AUTHORIZATION_REQUIRED = "authorizationRequired";
+    public static final String CLUSTER_ELEMENTS = "clusterElements";
     public static final String COMPONENT_NAME = "componentName";
     public static final String COMPONENT_VERSION = "componentVersion";
     public static final String CONNECTIONS = "connections";
-    public static final String DESTINATION = "destination";
-    public static final String SOURCE = "source";
+    public static final String GROUP_NAME = "groupName";
+    public static final String INTERNAL_ONLY = "internalOnly";
+    public static final String OBJECT_NAME = "objectName";
     public static final String TRIGGERS = "triggers";
 }

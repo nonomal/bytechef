@@ -1,27 +1,31 @@
 /* eslint-disable sort-keys */
+import {WorkflowExecutionKindType} from '@/shared/queries/automation/workflowExecutions.queries';
 import {create} from 'zustand';
 
 interface WorkflowExecutionSheetStateI {
-    workflowExecutionDetailsSheetOpen: boolean;
-    setWorkflowExecutionDetailsSheetOpen: (workflowExecutionDetailsSheetOpen: boolean) => void;
+    workflowExecutionSheetOpen: boolean;
+    setWorkflowExecutionSheetOpen: (workflowExecutionDetailsSheetOpen: boolean) => void;
 
     workflowExecutionId: number;
-    setWorkflowExecutionId: (workflowExecutionId: number) => void;
+    workflowExecutionKind: WorkflowExecutionKindType;
+    setWorkflowExecutionId: (workflowExecutionId: number, workflowExecutionKind?: WorkflowExecutionKindType) => void;
 }
 
 export const useWorkflowExecutionSheetStore = create<WorkflowExecutionSheetStateI>()((set) => ({
     workflowExecutionId: 0,
-    setWorkflowExecutionId: (workflowExecutionId) =>
+    workflowExecutionKind: 'JOB',
+    setWorkflowExecutionId: (workflowExecutionId, workflowExecutionKind = 'JOB') =>
         set((state) => ({
             ...state,
             workflowExecutionId: workflowExecutionId,
+            workflowExecutionKind: workflowExecutionKind,
         })),
 
-    workflowExecutionDetailsSheetOpen: false,
-    setWorkflowExecutionDetailsSheetOpen: (workflowExecutionDetailsSheetOpen) =>
+    workflowExecutionSheetOpen: false,
+    setWorkflowExecutionSheetOpen: (workflowExecutionSheetOpen) =>
         set((state) => ({
             ...state,
-            workflowExecutionDetailsSheetOpen: workflowExecutionDetailsSheetOpen,
+            workflowExecutionSheetOpen: workflowExecutionSheetOpen,
         })),
 }));
 

@@ -1,0 +1,88 @@
+management:
+  info:
+    git:
+      mode: full
+    env:
+      enabled: true
+  metrics:
+    enable:
+      http: true
+      jvm: true
+      logback: true
+      process: true
+      system: true
+    distribution:
+      percentiles-histogram:
+        all: true
+      percentiles:
+        all: 0, 0.5, 0.75, 0.95, 0.99, 1.0
+    tags:
+      application: ${spring.application.name}
+  observations:
+    key-values:
+      application: ${spring.application.name}
+  opentelemetry:
+    tracing:
+      export:
+        otlp:
+          endpoint: ${bytechef.observability.tracing.endpoint}
+    logging:
+      export:
+        otlp:
+          endpoint: ${bytechef.observability.logging.endpoint}
+  logging:
+    export:
+      enabled: ${bytechef.observability.logging.enabled}
+  tracing:
+    export:
+      enabled: ${bytechef.observability.tracing.enabled}
+    sampling:
+      probability: 1.0
+  otlp:
+    metrics:
+      export:
+        enabled: ${bytechef.observability.metrics.enabled}
+        step: 10s
+        url: ${bytechef.observability.metrics.endpoint}
+  # Prometheus is the default metrics backend
+  prometheus:
+    metrics:
+      export:
+        enabled: true
+        step: 60
+
+spring:
+  config:
+    import: classpath:config/application-bytechef.yml
+  application:
+    name: runtime-job-app
+  cache:
+    type: ${bytechef.cache.provider}
+  jmx:
+    enabled: false
+  output:
+    ansi:
+      console-available: true
+  profiles:
+    active: #spring.profiles.active#
+  shell:
+    noninteractive:
+      enabled: false
+  quartz:
+    job-store-type: jdbc
+    jdbc:
+      initialize-schema: never
+    properties:
+      org.quartz.jobStore.driverDelegateClass: org.quartz.impl.jdbcjobstore.PostgreSQLDelegate
+  task:
+    execution:
+      thread-name-prefix: server-app-task-
+      simple:
+        concurrency-limit: ${bytechef.async.concurrency-limit}
+    scheduling:
+      thread-name-prefix: server-app-scheduling-
+      pool:
+        size: 2
+  threads:
+    virtual:
+      enabled: true

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 
 package com.bytechef.component.schedule;
 
-import static com.bytechef.component.definition.ComponentDSL.component;
+import static com.bytechef.component.definition.ComponentDsl.component;
 import static com.bytechef.component.schedule.constant.ScheduleConstants.SCHEDULE;
 
 import com.bytechef.component.ComponentHandler;
@@ -56,7 +56,8 @@ public class ScheduleComponentHandler implements ComponentHandler {
             super(component(SCHEDULE)
                 .title("Schedule")
                 .description(
-                    "With the Scheduled trigger, you can initiate customized workflows at specific time intervals.")
+                    "Start workflows automatically on a recurring schedule. Choose daily, weekly, monthly, " +
+                        "interval-based, or cron-based triggers.")
                 .icon("path:assets/schedule.svg")
                 .categories(ComponentCategory.HELPERS)
                 .triggers(

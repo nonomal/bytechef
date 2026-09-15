@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,13 +21,13 @@ import com.bytechef.automation.configuration.domain.ProjectVersion;
 import com.bytechef.automation.configuration.domain.ProjectVersion.Status;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
+import org.jspecify.annotations.Nullable;
 
 /**
  * @author Ivica Cardic
  */
 public interface ProjectService {
-
-    int addVersion(long id);
 
     long countProjects();
 
@@ -37,11 +37,13 @@ public interface ProjectService {
 
     Optional<Project> fetchProject(String name);
 
-    Optional<Project> fetchWorkflowProject(String workflowId);
+    Optional<Project> fetchProject(String name, long workspaceId);
 
-    Project getProjectInstanceProject(long projectInstanceId);
+    Project getProjectDeploymentProject(long projectDeploymentId);
 
     Project getProject(long id);
+
+    Project getProject(UUID uuid);
 
     List<Project> getProjects();
 
@@ -49,13 +51,19 @@ public interface ProjectService {
 
     List<Project> getProjects(List<Long> ids);
 
-    List<Project> getProjects(Long workspaceId, Long categoryId, List<Long> ids, Long tagId, Status status);
+    List<Project> getProjects(
+        @Nullable Boolean apiCollections, @Nullable Long categoryId, Boolean projectDeployments,
+        @Nullable Long tagId, @Nullable Status status, @Nullable Long workspaceId);
 
     Project getWorkflowProject(String workflowId);
 
-    Project publishProject(long id, String description);
+    List<Long> getWorkspaceProjectIds(long workspaceId);
+
+    int publishProject(long id, @Nullable String description, boolean syncWithGit);
 
     Project update(long id, List<Long> tagIds);
 
     Project update(Project project);
+
+    Project updatePermissionExpression(long id, @Nullable String permissionExpression);
 }

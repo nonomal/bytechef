@@ -1,48 +1,40 @@
-import useRightSidebarStore from '@/pages/platform/workflow-editor/stores/useRightSidebarStore';
-import {NodeType} from '@/shared/types';
+import {NodeDataType, TabNameType} from '@/shared/types';
+import {NodeProps} from '@xyflow/react';
 import {useCallback} from 'react';
-import {NodeProps, useReactFlow} from 'reactflow';
+import {useShallow} from 'zustand/react/shallow';
 
-import useWorkflowNodeDetailsPanelStore from '../stores/useWorkflowNodeDetailsPanelStore';
+import useClusterElementsDataStore from '../../cluster-element-editor/stores/useClusterElementsDataStore';
+import useWorkflowDataStore from '../stores/useWorkflowDataStore';
+import useWorkflowEditorStore from '../stores/useWorkflowEditorStore';
+import openNodeDetails from '../utils/openNodeDetails';
 
-export default function useNodeClick(data: NodeProps['data'], id: NodeProps['id']) {
-    const {setCurrentComponent, setCurrentNode, setWorkflowNodeDetailsPanelOpen} = useWorkflowNodeDetailsPanelStore();
-    const {setRightSidebarOpen} = useRightSidebarStore();
+export default function useNodeClick(data: NodeDataType, id: NodeProps['id'], activeTab?: TabNameType) {
+    const {nodes} = useWorkflowDataStore(
+        useShallow((state) => ({
+            nodes: state.nodes,
+        }))
+    );
 
-    const {getNode} = useReactFlow();
+    const {nodes: clusterElementsCanvasNodes} = useClusterElementsDataStore(
+        useShallow((state) => ({
+            nodes: state.nodes,
+        }))
+    );
+
+    const {clusterElementsCanvasOpen} = useWorkflowEditorStore();
 
     return useCallback(() => {
-        const currentNode = getNode(id);
+        const clickedNode = nodes.find((node) => node.id === id);
+        const clickedClusterNode = clusterElementsCanvasNodes.find((node) => node.id === id);
 
-        if (!currentNode) {
+        if (!clusterElementsCanvasOpen && !clickedNode) {
             return;
         }
 
-        let nodeData: NodeType = data;
-
-        if (currentNode.position.y === 0) {
-            nodeData = {
-                ...data,
-                trigger: true,
-            };
+        if (clusterElementsCanvasOpen && !clickedClusterNode) {
+            return;
         }
 
-        setRightSidebarOpen(false);
-
-        setWorkflowNodeDetailsPanelOpen(true);
-
-        setCurrentNode(nodeData);
-
-        if (nodeData.componentName && nodeData.operationName) {
-            setCurrentComponent({
-                componentName: nodeData.componentName,
-                displayConditions: nodeData.displayConditions,
-                metadata: nodeData.metadata,
-                operationName: nodeData.operationName,
-                parameters: nodeData.parameters,
-                title: nodeData.label,
-                workflowNodeName: nodeData.name,
-            });
-        }
-    }, [getNode, id, data, setRightSidebarOpen, setWorkflowNodeDetailsPanelOpen, setCurrentNode, setCurrentComponent]);
+        openNodeDetails(data, activeTab);
+    }, [activeTab, clusterElementsCanvasNodes, clusterElementsCanvasOpen, data, id, nodes]);
 }

@@ -1,0 +1,217 @@
+---
+title: "AITable.ai"
+description: "AITable is an AI-powered platform that enables users to create interactive and dynamic tables for data visualization and analysis without requiring coding skills."
+---
+
+
+Categories: Productivity and Collaboration
+
+
+Type: aitable/v1
+
+<hr />
+
+
+
+
+## Connections
+
+Version: 1
+
+
+### Bearer Token
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| token | Token | STRING |  | true |
+
+
+
+## Connection Setup
+
+Connect AITable to ByteChef using a Bearer Token (API Token).
+
+### Create an AITable API Token
+1. Sign in to AITable.
+2. Click your profile avatar in the lower-left corner and open **My Settings**.
+3. Go to the **Developer** tab.
+4. Click the icon to generate a new **API Token**.
+5. Copy the token and store it securely.
+
+<div style={{ position: 'relative', height:0, width: '100%', overflow: 'hidden', zIndex: 49, boxSizing: 'border-box', paddingBottom: 'calc(52.69531250% + 32px)'}}>
+    <iframe src="https://www.guidejar.com/embed/51781518-3dd5-4d75-9a37-0cc85a58a66f?type=1&controls=on" width="100%" height="100%" style={{height:'100%', position:'absolute', inset:0}} allowFullScreen frameBorder="0"></iframe>
+</div>
+
+### References
+- AITable Quick Start and API Token: https://developers.aitable.ai/api/quick-start/
+
+
+
+<hr />
+
+
+## Actions
+
+
+### Create Record
+Name: createRecord
+
+`Creates a new record in datasheet.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| spaceId | Space ID | STRING |  | false |
+| datasheetId | Datasheet ID | STRING <details> <summary> Depends On </summary> spaceId </details> | AITable Datasheet ID | true |
+| fields | | DYNAMIC_PROPERTIES <details> <summary> Depends On </summary> datasheetId </details> |  | false |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Create Record",
+  "name" : "createRecord",
+  "parameters" : {
+    "spaceId" : "",
+    "datasheetId" : "",
+    "fields" : { }
+  },
+  "type" : "aitable/v1/createRecord"
+}
+```
+
+#### Output
+
+The output for this action is dynamic and may vary depending on the input parameters. To determine the exact structure of the output, you need to execute the action.
+
+
+
+#### Find Space ID and Datasheet ID
+
+To find the Space ID, click [here](/reference/components/aitable_v1#how-to-find-the-space-id).
+
+To find the Datasheet ID, click [here](/reference/components/aitable_v1#how-to-find-the-datasheet-id).
+
+
+
+### Find Records
+Name: findRecords
+
+`Find records in datasheet`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| spaceId | Space ID | STRING |  | false |
+| datasheetId | Datasheet ID | STRING <details> <summary> Depends On </summary> spaceId </details> | AITable Datasheet ID | true |
+| fields | Field Names | ARRAY <details> <summary> Items </summary> [STRING] </details> | The returned record results are limited to the specified fields. | false |
+| recordIds | Record IDs | ARRAY <details> <summary> Items </summary> [STRING] </details> | The IDs of the records to find. | false |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Find Records",
+  "name" : "findRecords",
+  "parameters" : {
+    "spaceId" : "",
+    "datasheetId" : "",
+    "fields" : [ "" ],
+    "recordIds" : [ "" ]
+  },
+  "type" : "aitable/v1/findRecords"
+}
+```
+
+#### Output
+
+The output for this action is dynamic and may vary depending on the input parameters. To determine the exact structure of the output, you need to execute the action.
+
+
+
+#### Find Space ID, Datasheet ID and Record ID
+
+To find the Space ID, click [here](/reference/components/aitable_v1#how-to-find-the-space-id).
+
+To find the Datasheet ID, click [here](/reference/components/aitable_v1#how-to-find-the-datasheet-id).
+
+To find the Record ID, click [here](/reference/components/aitable_v1#how-to-find-the-record-id).
+
+
+
+### Update Record
+Name: updateRecord
+
+`Update record in datasheet`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| spaceId | Space ID | STRING |  | false |
+| datasheetId | Datasheet ID | STRING <details> <summary> Depends On </summary> spaceId </details> | AITable Datasheet ID | true |
+| recordId | Record ID | STRING | ID of the record to update. | true |
+| fields | | DYNAMIC_PROPERTIES <details> <summary> Depends On </summary> datasheetId </details> |  | false |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Update Record",
+  "name" : "updateRecord",
+  "parameters" : {
+    "spaceId" : "",
+    "datasheetId" : "",
+    "recordId" : "",
+    "fields" : { }
+  },
+  "type" : "aitable/v1/updateRecord"
+}
+```
+
+#### Output
+
+The output for this action is dynamic and may vary depending on the input parameters. To determine the exact structure of the output, you need to execute the action.
+
+
+
+#### Find Space ID, Datasheet ID and Record ID
+
+To find the Space ID, click [here](/reference/components/aitable_v1#how-to-find-the-space-id).
+
+To find the Datasheet ID, click [here](/reference/components/aitable_v1#how-to-find-the-datasheet-id).
+
+To find the Record ID, click [here](/reference/components/aitable_v1#how-to-find-the-record-id).
+
+
+
+
+
+## What to do if your action is not listed here?
+
+If this component doesn't have the action you need, you can use **Custom Action** to create your own. Custom Actions empower you to define HTTP requests tailored to your specific requirements, allowing for greater flexibility in integrating with external services or APIs.
+
+To create a Custom Action, simply specify the desired HTTP method, path, and any necessary parameters. This way, you can extend the functionality of your component beyond the predefined actions, ensuring that you can meet all your integration needs effectively.
+
+<hr />
+
+# Additional Instructions
+
+### How to find the Space ID
+
+1. Open the AITable management overview page: https://aitable.ai/management/overview.
+2. In the **Overview** section, locate the details of your space.
+3. Your **Space ID** (a string usually starting with `spc`) will be displayed there and can be copied directly.
+
+### How to find the Datasheet ID
+
+1. Open the datasheet in your browser.
+2. Look at the URL in the address bar.
+3. Find the part of the URL that starts with `dst` - this value is the `datasheetId` of the opened datasheet.
+
+### How to find the Record ID
+
+1. Open the datasheet that contains the record.
+2. Expand (open) the row for the record whose ID you need.
+3. Look at the URL in the address bar and find the part that starts with `rec` - this value is the `recordId` for that record.

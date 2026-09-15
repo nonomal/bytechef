@@ -1,0 +1,30 @@
+{
+    "name": "@bytechef/embedded-workspace",
+    "version": "0.1.0",
+    "private": true,
+    "description": "Workspace for ByteChef Embedded SDK development",
+    "scripts": {
+        "format": "prettier --check .",
+        "format:fix": "prettier --write \"**/*.{js,json,jsx,ts,tsx,md}\"",
+        "registry:start": "verdaccio --config verdaccio.config.yaml",
+        "registry:stop": "pkill -f verdaccio",
+        "dev": "concurrently \"npm:dev:library\" \"npm:dev:test-app\"",
+        "dev:library": "cd library && npm run watch",
+        "dev:test-app": "cd test-apps && npm run dev",
+        "setup:link": "cd library && npm run build && npm link && cd ../test-apps && npm link @bytechef/embedded",
+        "setup:registry": "npm run registry:start",
+        "publish:library": "cd library && npm run build && npm run publish:local",
+        "install:test-app": "cd test-apps && npm run install:local",
+        "build:all": "cd library && npm run build",
+        "clean": "rm -rf library/dist library/node_modules test-apps/.next test-apps/node_modules verdaccio-storage"
+    },
+    "devDependencies": {
+        "concurrently": "^9.1.2",
+        "prettier": "3.5.2",
+        "verdaccio": "^6.2.4"
+    },
+    "workspaces": [
+        "library",
+        "test-apps"
+    ]
+}

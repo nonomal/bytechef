@@ -1,0 +1,343 @@
+import {TASK_DISPATCHER_DATA_KEY_MAP} from '@/shared/constants';
+import {ComponentDefinition, WorkflowTask} from '@/shared/middleware/platform/configuration';
+import {NodeDataType, PropertyAllType, TaskDispatcherContextType, UpdateWorkflowMutationType} from '@/shared/types';
+
+import useWorkflowDataStore from '../stores/useWorkflowDataStore';
+import useWorkflowNodeDetailsPanelStore from '../stores/useWorkflowNodeDetailsPanelStore';
+import getParametersWithDefaultValues from './getParametersWithDefaultValues';
+import getRecursivelyUpdatedTasks from './getRecursivelyUpdatedTasks';
+import saveWorkflowDefinition from './saveWorkflowDefinition';
+import {TASK_DISPATCHER_CONFIG} from './taskDispatcherConfig';
+import {enqueuePendingSave, isWorkflowMutating} from './workflowMutationGuard';
+
+type FieldUpdateType = {
+    field: 'description' | 'label' | 'maxRetries' | 'operation';
+    value: number | string;
+};
+
+interface SaveTaskDispatcherSubtaskFieldChangeProps {
+    currentComponentDefinition: ComponentDefinition;
+    currentNodeIndex: number;
+    currentOperationProperties?: Array<PropertyAllType>;
+    fieldUpdate: FieldUpdateType;
+    parameters?: NonNullable<NodeDataType['parameters']>;
+    updateWorkflowMutation: UpdateWorkflowMutationType;
+}
+
+export default function saveTaskDispatcherSubtaskFieldChange(props: SaveTaskDispatcherSubtaskFieldChangeProps): void {
+    const {
+        currentComponentDefinition,
+        currentNodeIndex,
+        currentOperationProperties,
+        fieldUpdate,
+        parameters,
+        updateWorkflowMutation,
+    } = props;
+
+    const {currentNode, setCurrentNode} = useWorkflowNodeDetailsPanelStore.getState();
+
+    const {workflow} = useWorkflowDataStore.getState();
+
+    if (!currentNode || !workflow.definition) {
+        return;
+    }
+
+    if (workflow.id && isWorkflowMutating(workflow.id)) {
+        enqueuePendingSave(workflow.id, () => saveTaskDispatcherSubtaskFieldChange(props));
+
+        return;
+    }
+
+    const {componentName, workflowNodeName} = currentNode;
+
+    const taskDispatcherDataKey = Object.values(TASK_DISPATCHER_DATA_KEY_MAP).find(
+        (dataKey) => dataKey && dataKey in currentNode && currentNode[dataKey as keyof typeof currentNode]
+    );
+
+    let taskDispatcherContext: TaskDispatcherContextType | undefined = undefined;
+    let taskDispatcherComponentName:
+        | 'branch'
+        | 'condition'
+        | 'each'
+        | 'fork-join'
+        | 'loop'
+        | 'on-error'
+        | 'parallel'
+        | 'terminate'
+        | undefined = undefined;
+
+    switch (taskDispatcherDataKey) {
+        case 'branchData': {
+            if (!currentNode.branchData) {
+                break;
+            }
+
+            taskDispatcherContext = {
+                caseKey: currentNode.branchData.caseKey,
+                index: currentNodeIndex,
+                taskDispatcherId: currentNode.branchData.branchId,
+            };
+
+            taskDispatcherComponentName = 'branch';
+
+            break;
+        }
+        case 'conditionData': {
+            if (!currentNode.conditionData) {
+                break;
+            }
+
+            taskDispatcherContext = {
+                conditionCase: currentNode.conditionData.conditionCase,
+                index: currentNodeIndex,
+                taskDispatcherId: currentNode.conditionData.conditionId,
+            };
+
+            taskDispatcherComponentName = 'condition';
+
+            break;
+        }
+        case 'eachData': {
+            if (!currentNode.eachData) {
+                break;
+            }
+
+            taskDispatcherContext = {
+                index: currentNodeIndex,
+                taskDispatcherId: currentNode.eachData.eachId,
+            };
+
+            taskDispatcherComponentName = 'each';
+
+            break;
+        }
+        case 'loopData': {
+            if (!currentNode.loopData) {
+                break;
+            }
+
+            taskDispatcherContext = {
+                index: currentNodeIndex,
+                taskDispatcherId: currentNode.loopData.loopId,
+            };
+
+            taskDispatcherComponentName = 'loop';
+
+            break;
+        }
+        case 'onErrorData': {
+            if (!currentNode.onErrorData) {
+                break;
+            }
+
+            taskDispatcherContext = {
+                index: currentNodeIndex,
+                onErrorCase: currentNode.onErrorData.onErrorCase,
+                onErrorId: currentNode.onErrorData.onErrorId,
+                taskDispatcherId: currentNode.onErrorData.onErrorId,
+            };
+
+            taskDispatcherComponentName = 'on-error';
+
+            break;
+        }
+        case 'parallelData': {
+            if (!currentNode.parallelData) {
+                break;
+            }
+
+            taskDispatcherContext = {
+                index: currentNodeIndex,
+                taskDispatcherId: currentNode.parallelData.parallelId,
+            };
+
+            taskDispatcherComponentName = 'parallel';
+
+            break;
+        }
+        case 'forkJoinData': {
+            if (!currentNode.forkJoinData) {
+                break;
+            }
+
+            taskDispatcherContext = {
+                branchIndex: currentNode.forkJoinData.branchIndex,
+                index: currentNodeIndex,
+                taskDispatcherId: currentNode.forkJoinData.forkJoinId,
+            };
+
+            taskDispatcherComponentName = 'fork-join';
+
+            break;
+        }
+        case 'terminateData': {
+            if (!currentNode.terminateData) {
+                break;
+            }
+
+            taskDispatcherContext = {
+                taskDispatcherId: currentNode.terminateData.terminateId,
+            };
+
+            taskDispatcherComponentName = 'terminate';
+
+            break;
+        }
+        default: {
+            return;
+        }
+    }
+
+    if (!taskDispatcherContext || !taskDispatcherComponentName) {
+        return;
+    }
+
+    const workflowDefinitionTasks = JSON.parse(workflow.definition).tasks;
+
+    const {getSubtasks, getTask, updateTaskParameters} = TASK_DISPATCHER_CONFIG[taskDispatcherComponentName];
+
+    const parentTaskDispatcherTask = getTask({
+        taskDispatcherId: taskDispatcherContext?.taskDispatcherId,
+        tasks: workflowDefinitionTasks,
+    });
+
+    if (!parentTaskDispatcherTask) {
+        console.error(`No parent task dispatcher found for ${taskDispatcherContext?.taskDispatcherId}`);
+
+        return;
+    }
+
+    let recursivelyUpdatedTasks: Array<WorkflowTask>;
+
+    if (taskDispatcherComponentName === 'terminate') {
+        let updatedTask: WorkflowTask = parentTaskDispatcherTask;
+
+        switch (fieldUpdate.field) {
+            case 'operation':
+                updatedTask = {
+                    ...parentTaskDispatcherTask,
+                    parameters:
+                        parameters ??
+                        getParametersWithDefaultValues({
+                            properties: currentOperationProperties as Array<PropertyAllType>,
+                        }),
+                    type: `${currentNode.componentName}/v${currentComponentDefinition.version}/${fieldUpdate.value}`,
+                };
+                break;
+            case 'label':
+                updatedTask = {
+                    ...parentTaskDispatcherTask,
+                    label: fieldUpdate.value as string,
+                };
+                break;
+            case 'description':
+                updatedTask = {
+                    ...parentTaskDispatcherTask,
+                    description: fieldUpdate.value as string,
+                };
+                break;
+            case 'maxRetries':
+                updatedTask = {
+                    ...parentTaskDispatcherTask,
+                    maxRetries: fieldUpdate.value as number,
+                };
+                break;
+            default:
+                break;
+        }
+
+        recursivelyUpdatedTasks = workflowDefinitionTasks.map((task: WorkflowTask) =>
+            task.name === parentTaskDispatcherTask.name ? updatedTask : task
+        );
+    } else {
+        const subtasks: Array<WorkflowTask> = getSubtasks({
+            context: taskDispatcherContext,
+            task: parentTaskDispatcherTask,
+        });
+
+        const updatedSubtasks = subtasks.map((subtask) => {
+            if (subtask.name === currentNode.name) {
+                switch (fieldUpdate.field) {
+                    case 'operation':
+                        return {
+                            ...subtask,
+                            parameters:
+                                parameters ??
+                                getParametersWithDefaultValues({
+                                    properties: currentOperationProperties as Array<PropertyAllType>,
+                                }),
+                            type: `${currentNode.componentName}/v${currentComponentDefinition.version}/${fieldUpdate.value}`,
+                        };
+                    case 'label':
+                        return {
+                            ...subtask,
+                            label: fieldUpdate.value as string,
+                        };
+                    case 'description':
+                        return {
+                            ...subtask,
+                            description: fieldUpdate.value as string,
+                        };
+                    case 'maxRetries':
+                        return {
+                            ...subtask,
+                            maxRetries: fieldUpdate.value as number,
+                        };
+                    default:
+                        return subtask;
+                }
+            }
+
+            return subtask;
+        });
+
+        const updatedTaskDispatcherTask = updateTaskParameters({
+            context: taskDispatcherContext,
+            task: parentTaskDispatcherTask,
+            updatedSubtasks,
+        });
+
+        recursivelyUpdatedTasks = getRecursivelyUpdatedTasks(workflowDefinitionTasks, updatedTaskDispatcherTask);
+    }
+
+    saveWorkflowDefinition({
+        onSuccess: () => {
+            let commonUpdates: NodeDataType = {
+                componentName,
+                name: currentNode.name,
+                workflowNodeName,
+            };
+
+            if (fieldUpdate.field === 'operation') {
+                commonUpdates = {
+                    ...commonUpdates,
+                    displayConditions: {},
+                    metadata: {},
+                    operationName: fieldUpdate.value as string,
+                    parameters:
+                        parameters ??
+                        getParametersWithDefaultValues({
+                            properties: currentOperationProperties as Array<PropertyAllType>,
+                        }),
+                    type: `${componentName}/v${currentComponentDefinition.version}/${fieldUpdate.value}`,
+                    version: currentComponentDefinition.version,
+                };
+            } else if (fieldUpdate.field === 'maxRetries') {
+                commonUpdates.maxRetries = fieldUpdate.value as number;
+            } else {
+                commonUpdates[fieldUpdate.field as 'label' | 'description'] = fieldUpdate.value as string;
+            }
+
+            setCurrentNode({
+                ...currentNode,
+                ...commonUpdates,
+                name: workflowNodeName || '',
+            });
+
+            useWorkflowNodeDetailsPanelStore.getState().setOperationChangeInProgress(false);
+        },
+        taskDispatcherContext,
+        updateWorkflowMutation,
+        updatedWorkflowTasks: recursivelyUpdatedTasks,
+    });
+}

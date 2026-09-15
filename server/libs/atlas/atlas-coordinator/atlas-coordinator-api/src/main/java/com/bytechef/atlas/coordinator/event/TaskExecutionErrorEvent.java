@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ import com.bytechef.atlas.coordinator.message.route.TaskCoordinatorMessageRoute;
 import com.bytechef.atlas.execution.domain.TaskExecution;
 import com.bytechef.error.ExecutionError;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import org.apache.commons.lang3.Validate;
+import org.springframework.util.Assert;
 
 /**
  * @author Ivica CardFic
@@ -36,7 +36,7 @@ public class TaskExecutionErrorEvent extends AbstractEvent implements ErrorEvent
     public TaskExecutionErrorEvent(TaskExecution taskExecution) {
         super(TaskCoordinatorMessageRoute.ERROR_EVENTS);
 
-        Validate.notNull(taskExecution, "'taskExecution' must not be null");
+        Assert.notNull(taskExecution, "'taskExecution' must not be null");
 
         this.taskExecution = taskExecution;
     }

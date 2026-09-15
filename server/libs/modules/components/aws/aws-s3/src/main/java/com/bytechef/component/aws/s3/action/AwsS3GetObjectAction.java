@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,15 +18,15 @@ package com.bytechef.component.aws.s3.action;
 
 import static com.bytechef.component.aws.s3.constant.AwsS3Constants.BUCKET_NAME;
 import static com.bytechef.component.aws.s3.constant.AwsS3Constants.FILENAME;
-import static com.bytechef.component.aws.s3.constant.AwsS3Constants.GET_OBJECT;
 import static com.bytechef.component.aws.s3.constant.AwsS3Constants.KEY;
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.fileEntry;
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.fileEntry;
+import static com.bytechef.component.definition.ComponentDsl.outputSchema;
+import static com.bytechef.component.definition.ComponentDsl.string;
 
 import com.bytechef.component.aws.s3.util.AwsS3Utils;
 import com.bytechef.component.definition.ActionContext;
-import com.bytechef.component.definition.ComponentDSL.ModifiableActionDefinition;
+import com.bytechef.component.definition.ComponentDsl.ModifiableActionDefinition;
 import com.bytechef.component.definition.FileEntry;
 import com.bytechef.component.definition.Parameters;
 import software.amazon.awssdk.core.sync.ResponseTransformer;
@@ -38,7 +38,7 @@ import software.amazon.awssdk.services.s3.model.GetObjectRequest;
  */
 public class AwsS3GetObjectAction {
 
-    public static final ModifiableActionDefinition ACTION_DEFINITION = action(GET_OBJECT)
+    public static final ModifiableActionDefinition ACTION_DEFINITION = action("getObject")
         .title("Get Object")
         .description("Get the AWS S3 object.")
         .properties(
@@ -52,7 +52,7 @@ public class AwsS3GetObjectAction {
                 .description("Key is most likely the name of the file.")
                 .placeholder("file.txt")
                 .required(true))
-        .outputSchema(fileEntry())
+        .output(outputSchema(fileEntry()))
         .perform(AwsS3GetObjectAction::perform);
 
     protected static FileEntry perform(

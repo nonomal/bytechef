@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,12 +16,13 @@
 
 package com.bytechef.component.filesystem.action;
 
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.string;
-import static com.bytechef.component.filesystem.constant.FilesystemConstants.CREATE_TEMP_DIR;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.outputSchema;
+import static com.bytechef.component.definition.ComponentDsl.sampleOutput;
+import static com.bytechef.component.definition.ComponentDsl.string;
 
-import com.bytechef.component.definition.ActionContext;
-import com.bytechef.component.definition.ComponentDSL.ModifiableActionDefinition;
+import com.bytechef.component.definition.ComponentDsl.ModifiableActionDefinition;
+import com.bytechef.component.definition.Context;
 import com.bytechef.component.definition.Parameters;
 import java.io.File;
 import java.io.IOException;
@@ -33,19 +34,20 @@ import java.nio.file.Path;
  */
 public class FilesystemCreateTempDirAction {
 
-    public static final ModifiableActionDefinition ACTION_DEFINITION = action(CREATE_TEMP_DIR)
+    public static final ModifiableActionDefinition ACTION_DEFINITION = action("createTempDir")
         .title("Create Temp Directory")
         .description(
             "Creates a file in the temporary directory on the filesystem. Returns the created directory's full path.")
-        .outputSchema(string())
-        .sampleOutput("/sample_tmp_dir")
+        .output(
+            outputSchema(string().description("The full path of the created directory.")),
+            sampleOutput("/sample_tmp_dir"))
         .perform(FilesystemCreateTempDirAction::perform);
 
     private FilesystemCreateTempDirAction() {
     }
 
     protected static String perform(
-        Parameters inputParameters, Parameters connectionParameters, ActionContext context) throws IOException {
+        Parameters inputParameters, Parameters connectionParameters, Context context) throws IOException {
 
         Path path = Files.createTempDirectory("createTempDir_");
 

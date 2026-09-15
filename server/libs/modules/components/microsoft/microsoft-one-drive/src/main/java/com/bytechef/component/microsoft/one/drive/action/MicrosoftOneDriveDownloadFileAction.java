@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,60 +16,51 @@
 
 package com.bytechef.component.microsoft.one.drive.action;
 
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.fileEntry;
-import static com.bytechef.component.definition.ComponentDSL.string;
-import static com.bytechef.component.microsoft.one.drive.constant.MicrosoftOneDriveConstants.BASE_URL;
-import static com.bytechef.component.microsoft.one.drive.constant.MicrosoftOneDriveConstants.DOWNLOAD_FILE;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.fileEntry;
+import static com.bytechef.component.definition.ComponentDsl.outputSchema;
+import static com.bytechef.component.definition.ComponentDsl.string;
 import static com.bytechef.component.microsoft.one.drive.constant.MicrosoftOneDriveConstants.ID;
-import static com.bytechef.component.microsoft.one.drive.constant.MicrosoftOneDriveConstants.PARENT_ID;
 
-import com.bytechef.component.definition.ActionContext;
-import com.bytechef.component.definition.ComponentDSL.ModifiableActionDefinition;
+import com.bytechef.component.definition.ActionDefinition.OptionsFunction;
+import com.bytechef.component.definition.ComponentDsl.ModifiableActionDefinition;
+import com.bytechef.component.definition.Context;
 import com.bytechef.component.definition.Context.Http;
-import com.bytechef.component.definition.OptionsDataSource.ActionOptionsFunction;
 import com.bytechef.component.definition.Parameters;
-import com.bytechef.component.microsoft.one.drive.util.MicrosoftOneDriveUtils;
+import com.bytechef.microsoft.commons.MicrosoftUtils;
 
 /**
  * @author Monika Domiter
  */
 public class MicrosoftOneDriveDownloadFileAction {
 
-    public static final ModifiableActionDefinition ACTION_DEFINITION = action(DOWNLOAD_FILE)
-        .title("Download file")
-        .description("Download a file from your Microsoft OneDrive")
+    public static final ModifiableActionDefinition ACTION_DEFINITION = action("downloadFile")
+        .title("Download File")
+        .description("Download a file from your Microsoft OneDrive.")
+        .help("", "https://docs.bytechef.io/reference/components/microsoft-one-drive_v1#download-file")
         .properties(
-            string(PARENT_ID)
-                .label("Parent folder")
-                .description("Folder from which you want to download the file.")
-                .options((ActionOptionsFunction<String>) MicrosoftOneDriveUtils::getFolderIdOptions)
-                .required(false),
             string(ID)
-                .label("File")
-                .description("File to download")
-                .optionsLookupDependsOn(PARENT_ID)
-                .options((ActionOptionsFunction<String>) MicrosoftOneDriveUtils::getFileIdOptions)
+                .label("File ID")
+                .description("ID of the file to download.")
+                .options((OptionsFunction<String>) MicrosoftUtils::getFileIdOptions)
                 .required(true))
-        .outputSchema(fileEntry())
-        .perform(MicrosoftOneDriveDownloadFileAction::perform);
+        .output(outputSchema(fileEntry()))
+        .perform(MicrosoftOneDriveDownloadFileAction::perform)
+        .processErrorResponse(MicrosoftUtils::processErrorResponse);
 
     private MicrosoftOneDriveDownloadFileAction() {
     }
 
-    public static Object perform(
-        Parameters inputParameters, Parameters connectionParameters, ActionContext context) {
-
+    public static Object perform(Parameters inputParameters, Parameters connectionParameters, Context context) {
         Http.Response response = context
-            .http(http -> http.get(BASE_URL + "/items/" + inputParameters.getRequiredString(ID) + "/content"))
+            .http(http -> http.get("/me/drive/items/%s/content".formatted(inputParameters.getRequiredString(ID))))
             .configuration(Http.responseType(Http.ResponseType.JSON))
             .execute();
 
-        Http.Response fileResponse = context
+        return context
             .http(http -> http.get(response.getFirstHeader("location")))
-            .configuration(Http.responseType(Http.ResponseType.BINARY))
-            .execute();
-
-        return fileResponse.getBody();
+            .configuration(Http.responseType(Http.ResponseType.binary("text/plain")))
+            .execute()
+            .getBody();
     }
 }

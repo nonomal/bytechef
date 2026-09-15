@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,6 +28,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.bytechef.component.data.mapper.constant.InputType;
 import com.bytechef.component.data.mapper.model.RequiredStringMapping;
 import com.bytechef.component.definition.ActionContext;
 import com.bytechef.component.definition.Parameters;
@@ -35,7 +36,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -43,22 +43,13 @@ import org.junit.jupiter.api.Test;
  */
 class DataMapperMapObjectsToObjectActionTest {
 
-    private Parameters connectionParameters;
-    private ActionContext context;
-    private Parameters inputParameters;
-
-    @BeforeEach
-    void setUp() {
-        connectionParameters = mock(Parameters.class);
-        context = mock(ActionContext.class);
-        inputParameters = mock(Parameters.class);
-    }
+    private final Parameters connectionParameters = mock(Parameters.class);
+    private final ActionContext context = mock(ActionContext.class);
+    private final Parameters inputParameters = mock(Parameters.class);
 
     @Test
     void testPerformWithEmptyMappingsNullFlagsObject() {
-        Map<String, Object> inputJson = new LinkedHashMap<>();
-
-        inputJson.put("key", "value");
+        Map<String, Object> inputJson = Map.of("key", "value");
 
         setupAndAssertTest(
             false, inputJson, List.of(),
@@ -67,9 +58,7 @@ class DataMapperMapObjectsToObjectActionTest {
 
     @Test
     void testPerformWithEmptyMappingsNullFlagsArray() {
-        Map<String, Object> inputJson = new LinkedHashMap<>();
-
-        inputJson.put("key", "value");
+        Map<String, Object> inputJson = Map.of("key", "value");
 
         setupAndAssertTest(
             true, inputJson, List.of(),
@@ -78,9 +67,7 @@ class DataMapperMapObjectsToObjectActionTest {
 
     @Test
     void testPerformNullFlagsObject() {
-        Map<String, Object> inputJson = new LinkedHashMap<>();
-
-        inputJson.put("oldKey", "value");
+        Map<String, Object> inputJson = Map.of("oldKey", "value");
 
         setupAndAssertTest(
             false, inputJson, List.of(new RequiredStringMapping("oldKey", "newKey", false)),
@@ -92,9 +79,7 @@ class DataMapperMapObjectsToObjectActionTest {
 
     @Test
     void testPerformNullFlagsArray() {
-        Map<String, Object> inputJson = new LinkedHashMap<>();
-
-        inputJson.put("oldKey", "value");
+        Map<String, Object> inputJson = Map.of("oldKey", "value");
 
         setupAndAssertTest(
             true, inputJson, List.of(new RequiredStringMapping("oldKey", "newKey", false)),
@@ -108,10 +93,7 @@ class DataMapperMapObjectsToObjectActionTest {
 
     @Test
     void testPerformMultipleMappingNullFlagsObject() {
-        Map<String, Object> inputJson = new LinkedHashMap<>();
-
-        inputJson.put("oldKey1", "oldValue1");
-        inputJson.put("oldKey2", "oldValue2");
+        Map<String, Object> inputJson = Map.of("oldKey1", "oldValue1", "oldKey2", "oldValue2");
 
         setupAndAssertTest(
             false, inputJson,
@@ -128,10 +110,7 @@ class DataMapperMapObjectsToObjectActionTest {
 
     @Test
     void testPerformMultipleMappingNullFlagsArray() {
-        Map<String, Object> inputJson = new LinkedHashMap<>();
-
-        inputJson.put("oldKey1", "oldValue1");
-        inputJson.put("oldKey2", "oldValue2");
+        Map<String, Object> inputJson = Map.of("oldKey1", "oldValue1", "oldKey2", "oldValue2");
 
         setupAndAssertTest(
             true, inputJson,
@@ -152,9 +131,8 @@ class DataMapperMapObjectsToObjectActionTest {
 
     @Test
     void testPerformNestedNullFlagsObject() {
-        Map<String, Object> inner = new LinkedHashMap<>();
-        inner.put("innerKey", "value");
-        Map<String, Object> inputJson = Map.of("outerKey", inner);
+        Map<String, Object> inputJson = Map.of("outerKey", Map.of("innerKey", "value"));
+
         setupAndAssertTest(
             false, inputJson, List.of(new RequiredStringMapping("outerKey.innerKey", "newKey", false)),
             (Map<String, Object> result) -> {
@@ -166,9 +144,7 @@ class DataMapperMapObjectsToObjectActionTest {
 
     @Test
     void testPerformNestedNullFlagsArray() {
-        Map<String, Object> inner = new LinkedHashMap<>();
-        inner.put("innerKey", "value");
-        Map<String, Object> inputJson = Map.of("outerKey", inner);
+        Map<String, Object> inputJson = Map.of("outerKey", Map.of("innerKey", "value"));
 
         setupAndAssertTest(
             true, inputJson, List.of(new RequiredStringMapping("outerKey.innerKey", "newKey", false)),
@@ -184,8 +160,8 @@ class DataMapperMapObjectsToObjectActionTest {
 
     @Test
     void testPerformNestedNullFlagsMultipleObjectsArray() {
-        Map<String, Object> inner = new LinkedHashMap<>();
-        inner.put("innerKey", "value");
+        Map<String, Object> inner = Map.of("innerKey", "value");
+
         List<Object> inputValue = List.of(Map.of("outerKey", inner), Map.of("outerKey", inner));
 
         setupAndAssertTest(inputValue, List.of(new RequiredStringMapping("outerKey.innerKey", "newKey", false)),
@@ -465,8 +441,9 @@ class DataMapperMapObjectsToObjectActionTest {
                 List.of(inputValue), mappings, (Consumer<List<Map<String, Object>>>) consumer, includeUnmapped,
                 includeNulls, includeEmptyStrings);
         } else {
-            setupAndAssertTest(inputValue, mappings, (Consumer<Map<String, Object>>) consumer, includeUnmapped,
-                includeNulls, includeEmptyStrings);
+            setupAndAssertTest(
+                inputValue, mappings, (Consumer<Map<String, Object>>) consumer, includeUnmapped, includeNulls,
+                includeEmptyStrings);
         }
     }
 
@@ -474,13 +451,19 @@ class DataMapperMapObjectsToObjectActionTest {
         List<Object> inputValue, List<RequiredStringMapping> mappings, Consumer<List<Map<String, Object>>> consumer,
         Boolean includeUnmapped, Boolean includeNulls, Boolean includeEmptyStrings) {
 
-        when(inputParameters.getBoolean(INCLUDE_UNMAPPED)).thenReturn(includeUnmapped);
-        when(inputParameters.getBoolean(INCLUDE_NULLS)).thenReturn(includeNulls);
-        when(inputParameters.getBoolean(INCLUDE_EMPTY_STRINGS)).thenReturn(includeEmptyStrings);
+        when(inputParameters.getBoolean(INCLUDE_UNMAPPED))
+            .thenReturn(includeUnmapped);
+        when(inputParameters.getBoolean(INCLUDE_NULLS))
+            .thenReturn(includeNulls);
+        when(inputParameters.getBoolean(INCLUDE_EMPTY_STRINGS))
+            .thenReturn(includeEmptyStrings);
 
-        when(inputParameters.getList(MAPPINGS, RequiredStringMapping.class, List.of())).thenReturn(mappings);
-        when(inputParameters.getList(INPUT, Object.class, List.of())).thenReturn(inputValue);
-        when(inputParameters.getInteger(INPUT_TYPE)).thenReturn(2);
+        when(inputParameters.getList(MAPPINGS, RequiredStringMapping.class, List.of()))
+            .thenReturn(mappings);
+        when(inputParameters.getList(INPUT, Object.class, List.of()))
+            .thenReturn(inputValue);
+        when(inputParameters.getInteger(INPUT_TYPE))
+            .thenReturn(2);
 
         List<Map<String, Object>> result = (List<Map<String, Object>>) DataMapperMapObjectsToObjectAction.perform(
             inputParameters, connectionParameters, context);
@@ -489,16 +472,22 @@ class DataMapperMapObjectsToObjectActionTest {
     }
 
     private void setupAndAssertTest(
-        Map<String, Object> inputValue,  List<RequiredStringMapping> mappings, Consumer<Map<String, Object>> consumer,
+        Map<String, Object> inputValue, List<RequiredStringMapping> mappings, Consumer<Map<String, Object>> consumer,
         Boolean includeUnmapped, Boolean includeNulls, Boolean includeEmptyStrings) {
 
-        when(inputParameters.getBoolean(INCLUDE_UNMAPPED)).thenReturn(includeUnmapped);
-        when(inputParameters.getBoolean(INCLUDE_NULLS)).thenReturn(includeNulls);
-        when(inputParameters.getBoolean(INCLUDE_EMPTY_STRINGS)).thenReturn(includeEmptyStrings);
+        when(inputParameters.getBoolean(INCLUDE_UNMAPPED))
+            .thenReturn(includeUnmapped);
+        when(inputParameters.getBoolean(INCLUDE_NULLS))
+            .thenReturn(includeNulls);
+        when(inputParameters.getBoolean(INCLUDE_EMPTY_STRINGS))
+            .thenReturn(includeEmptyStrings);
 
-        when(inputParameters.getList(MAPPINGS, RequiredStringMapping.class, List.of())).thenReturn(mappings);
-        when(inputParameters.getMap(INPUT, Object.class, Map.of())).thenReturn(inputValue);
-        when(inputParameters.getInteger(INPUT_TYPE)).thenReturn(1);
+        when(inputParameters.getList(MAPPINGS, RequiredStringMapping.class, List.of()))
+            .thenReturn(mappings);
+        when(inputParameters.getMap(INPUT, Object.class, Map.of()))
+            .thenReturn(inputValue);
+        when(inputParameters.get(INPUT_TYPE, InputType.class))
+            .thenReturn(InputType.OBJECT);
 
         Map<String, Object> result = (Map<String, Object>) DataMapperMapObjectsToObjectAction.perform(
             inputParameters, connectionParameters, context);

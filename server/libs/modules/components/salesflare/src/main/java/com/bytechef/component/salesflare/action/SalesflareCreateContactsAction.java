@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,15 +17,16 @@
 package com.bytechef.component.salesflare.action;
 
 import static com.bytechef.component.OpenApiComponentHandler.PropertyType;
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.array;
-import static com.bytechef.component.definition.ComponentDSL.integer;
-import static com.bytechef.component.definition.ComponentDSL.object;
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.array;
+import static com.bytechef.component.definition.ComponentDsl.integer;
+import static com.bytechef.component.definition.ComponentDsl.object;
+import static com.bytechef.component.definition.ComponentDsl.outputSchema;
+import static com.bytechef.component.definition.ComponentDsl.string;
 import static com.bytechef.component.definition.Context.Http.BodyContentType;
 import static com.bytechef.component.definition.Context.Http.ResponseType;
 
-import com.bytechef.component.definition.ComponentDSL;
+import com.bytechef.component.definition.ComponentDsl;
 import java.util.Map;
 
 /**
@@ -34,9 +35,9 @@ import java.util.Map;
  * @generated
  */
 public class SalesflareCreateContactsAction {
-    public static final ComponentDSL.ModifiableActionDefinition ACTION_DEFINITION = action("createContacts")
-        .title("Create contacts")
-        .description("Creates new contacts")
+    public static final ComponentDsl.ModifiableActionDefinition ACTION_DEFINITION = action("createContacts")
+        .title("Create Contacts")
+        .description("Creates new contacts.")
         .metadata(
             Map.of(
                 "method", "POST",
@@ -47,13 +48,13 @@ public class SalesflareCreateContactsAction {
             .label("Email")
             .description("Email address of the contact.")
             .required(true),
-            string("firstname").label("First   Name")
+            string("firstname").label("First Name")
                 .description("The first name of the contact.")
                 .required(false),
-            string("lastname").label("Last   Name")
+            string("lastname").label("Last Name")
                 .description("The last name of the contact.")
                 .required(false),
-            string("phone_number").label("Work   Phone   Number")
+            string("phone_number").label("Work Phone Number")
                 .required(false),
             string("mobile_phone_number").label("Mobile Phone Number")
                 .required(false),
@@ -67,16 +68,18 @@ public class SalesflareCreateContactsAction {
                 .description("Social profile URL")
                 .required(false)))
             .placeholder("Add to Items")
+            .metadata(
+                Map.of(
+                    "type", PropertyType.BODY))
             .label("Contacts")
-            .required(true)
-            .metadata(
-                Map.of(
-                    "type", PropertyType.BODY)))
-        .outputSchema(object().properties(array("body").items(object().properties(integer("id").required(false)))
+            .required(true))
+        .output(outputSchema(array().items(object().properties(integer("id").description("ID of the contact.")
             .required(false))
+            .description("List of created contacts."))
+            .description("List of created contacts.")
             .metadata(
                 Map.of(
-                    "responseType", ResponseType.JSON)));
+                    "responseType", ResponseType.JSON))));
 
     private SalesflareCreateContactsAction() {
     }

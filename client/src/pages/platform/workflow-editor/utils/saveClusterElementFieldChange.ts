@@ -1,0 +1,166 @@
+import {ComponentDefinition} from '@/shared/middleware/platform/configuration';
+import {ClusterElementsType, NodeDataType, PropertyAllType, UpdateWorkflowMutationType} from '@/shared/types';
+
+import useWorkflowDataStore from '../stores/useWorkflowDataStore';
+import useWorkflowEditorStore from '../stores/useWorkflowEditorStore';
+import useWorkflowNodeDetailsPanelStore from '../stores/useWorkflowNodeDetailsPanelStore';
+import {updateClusterRootElementField, updateNestedClusterElementField} from './clusterElementsFieldChangeUtils';
+import getParametersWithDefaultValues from './getParametersWithDefaultValues';
+import {getTask} from './getTask';
+import saveWorkflowDefinition from './saveWorkflowDefinition';
+
+type FieldUpdateType = {
+    field: 'operation' | 'label' | 'description';
+    value: string;
+};
+
+interface SaveClusterElementFieldChangeProps {
+    currentComponentDefinition: ComponentDefinition;
+    currentOperationProperties?: Array<PropertyAllType>;
+    fieldUpdate: FieldUpdateType;
+    parameters?: NonNullable<NodeDataType['parameters']>;
+    updateWorkflowMutation: UpdateWorkflowMutationType;
+}
+
+export default function saveClusterElementFieldChange({
+    currentComponentDefinition,
+    currentOperationProperties,
+    fieldUpdate,
+    parameters,
+    updateWorkflowMutation,
+}: SaveClusterElementFieldChangeProps): void {
+    const {currentNode, setCurrentNode} = useWorkflowNodeDetailsPanelStore.getState();
+    const {rootClusterElementNodeData, setRootClusterElementNodeData} = useWorkflowEditorStore.getState();
+    const {workflow} = useWorkflowDataStore.getState();
+
+    if (!currentNode || !workflow.definition) {
+        return;
+    }
+
+    const {componentName, name, workflowNodeName} = currentNode;
+
+    if (!rootClusterElementNodeData?.workflowNodeName || !rootClusterElementNodeData?.componentName) {
+        console.error('Root cluster element node data is missing required properties');
+
+        return;
+    }
+
+    const workflowDefinitionTasks = JSON.parse(workflow.definition).tasks;
+
+    const mainClusterRootTask = getTask({
+        tasks: workflowDefinitionTasks,
+        workflowNodeName: rootClusterElementNodeData.workflowNodeName,
+    });
+
+    if (!mainClusterRootTask) {
+        return;
+    }
+
+    let updatedMainRootData: NodeDataType;
+    let updatedClusterElements: ClusterElementsType;
+
+    if (
+        currentNode.clusterRoot &&
+        currentNode.workflowNodeName === rootClusterElementNodeData.workflowNodeName &&
+        !currentNode.isNestedClusterRoot
+    ) {
+        updatedMainRootData = updateClusterRootElementField({
+            currentComponentDefinition,
+            currentOperationProperties,
+            fieldUpdate,
+            mainRootElement: {
+                ...mainClusterRootTask,
+                componentName: rootClusterElementNodeData.componentName,
+                workflowNodeName: rootClusterElementNodeData.workflowNodeName,
+            },
+            parameters,
+        });
+    } else if (
+        currentNode.clusterElementType &&
+        currentNode.workflowNodeName !== rootClusterElementNodeData.workflowNodeName
+    ) {
+        const clusterElements = mainClusterRootTask.clusterElements;
+
+        if (!clusterElements || Object.keys(clusterElements).length === 0) {
+            return;
+        }
+
+        updatedClusterElements = updateNestedClusterElementField({
+            clusterElements,
+            currentComponentDefinition,
+            currentOperationProperties,
+            elementName: workflowNodeName,
+            fieldUpdate,
+            parameters,
+        });
+
+        updatedMainRootData = {
+            ...mainClusterRootTask,
+            clusterElements: updatedClusterElements,
+            componentName: rootClusterElementNodeData.componentName,
+            workflowNodeName: rootClusterElementNodeData.workflowNodeName,
+        };
+    } else {
+        console.error('Unknown cluster element type or root element mismatch');
+
+        return;
+    }
+
+    saveWorkflowDefinition({
+        decorative: true,
+        nodeData: updatedMainRootData,
+        onSuccess: () => {
+            let commonUpdates: NodeDataType = {
+                componentName,
+                name,
+                workflowNodeName,
+            };
+
+            if (fieldUpdate.field === 'operation') {
+                commonUpdates = {
+                    ...commonUpdates,
+                    clusterElementName: fieldUpdate.value,
+                    metadata: {
+                        ui: {
+                            nodePosition: currentNode.metadata?.ui?.nodePosition
+                                ? currentNode.metadata?.ui?.nodePosition
+                                : undefined,
+                        },
+                    },
+                    operationName: fieldUpdate.value,
+                    parameters:
+                        parameters ??
+                        getParametersWithDefaultValues({
+                            properties: currentOperationProperties as Array<PropertyAllType>,
+                        }),
+                    type: `${currentComponentDefinition.name}/v${currentComponentDefinition.version}/${fieldUpdate.value}`,
+                    version: currentComponentDefinition.version,
+                };
+            } else {
+                commonUpdates[fieldUpdate.field] = fieldUpdate.value;
+            }
+
+            setCurrentNode({
+                ...currentNode,
+                ...commonUpdates,
+            });
+
+            if (rootClusterElementNodeData) {
+                if (currentNode.clusterRoot && !currentNode.isNestedClusterRoot) {
+                    setRootClusterElementNodeData({
+                        ...rootClusterElementNodeData,
+                        ...commonUpdates,
+                    });
+                } else {
+                    setRootClusterElementNodeData({
+                        ...rootClusterElementNodeData,
+                        clusterElements: updatedClusterElements,
+                    });
+                }
+            }
+
+            useWorkflowNodeDetailsPanelStore.getState().setOperationChangeInProgress(false);
+        },
+        updateWorkflowMutation,
+    });
+}

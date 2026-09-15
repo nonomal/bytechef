@@ -1,0 +1,362 @@
+import {useAiSkillsStore} from '@/pages/automation/ai/skills/stores/useAiSkillsStore';
+import downloadAiSkill from '@/pages/automation/ai/skills/utils/downloadAiSkill';
+import getAiSkillsBasePath from '@/pages/automation/ai/skills/utils/getAiSkillsBasePath';
+import parseFrontmatter from '@/pages/automation/ai/skills/utils/parseFrontmatter';
+import {
+    useAiSkillFileContentQuery,
+    useAiSkillFilePathsQuery,
+    useAiSkillQuery,
+    useCreateAdditionalFilesInSkillMutation,
+    useDeleteAiSkillMutation,
+    useRemoveFileInSkillMutation,
+    useUpdateAiSkillContentMutation,
+    useUpdateAiSkillMutation,
+} from '@/shared/middleware/graphql';
+import {useQueryClient} from '@tanstack/react-query';
+import {useCallback, useEffect, useMemo, useState} from 'react';
+import {useLocation, useNavigate} from 'react-router-dom';
+import {toast} from 'sonner';
+
+interface FileTreeNodeI {
+    children: FileTreeNodeI[];
+    name: string;
+    path: string;
+    type: 'directory' | 'file';
+}
+
+const FILE_LANGUAGE_MAP: Record<string, string> = {
+    css: 'css',
+    html: 'html',
+    java: 'java',
+    js: 'javascript',
+    json: 'json',
+    jsx: 'javascript',
+    py: 'python',
+    rb: 'ruby',
+    sh: 'shell',
+    ts: 'typescript',
+    tsx: 'typescript',
+    xml: 'xml',
+    yaml: 'yaml',
+    yml: 'yaml',
+};
+
+export function buildFileTree(paths: string[]): FileTreeNodeI[] {
+    const root: FileTreeNodeI[] = [];
+
+    for (const filePath of paths) {
+        const parts = filePath.split('/');
+        let currentLevel = root;
+
+        for (let index = 0; index < parts.length; index++) {
+            const part = parts[index];
+            const isFile = index === parts.length - 1;
+            const existingNode = currentLevel.find((node) => node.name === part);
+
+            if (existingNode) {
+                currentLevel = existingNode.children;
+            } else {
+                const newNode: FileTreeNodeI = {
+                    children: [],
+                    name: part,
+                    path: isFile ? filePath : parts.slice(0, index + 1).join('/'),
+                    type: isFile ? 'file' : 'directory',
+                };
+
+                currentLevel.push(newNode);
+                currentLevel = newNode.children;
+            }
+        }
+    }
+
+    return root;
+}
+
+export function getFileLanguage(filename: string): string {
+    const extension = filename.substring(filename.lastIndexOf('.') + 1).toLowerCase();
+
+    return FILE_LANGUAGE_MAP[extension] || 'plaintext';
+}
+
+export function findDefaultFilePath(filePaths: string[]): string | undefined {
+    return filePaths.find((path) => path.split('/').pop()?.toLowerCase() === 'skill.md');
+}
+
+export function isMarkdownPath(path: string): boolean {
+    return path.toLowerCase().endsWith('.md');
+}
+
+export type {FileTreeNodeI};
+
+export default function useAiSkillDetail() {
+    const [selectedFilePath, setSelectedFilePath] = useState<string | null>(null);
+    const [isSaving, setIsSaving] = useState(false);
+
+    const {closeSkillDetail, selectedSkillId} = useAiSkillsStore();
+
+    const location = useLocation();
+    const navigate = useNavigate();
+    const queryClient = useQueryClient();
+
+    const {mutateAsync: updateAiSkillContent} = useUpdateAiSkillContentMutation();
+    const {mutateAsync: updateAiSkill} = useUpdateAiSkillMutation({
+        onSuccess: () => {
+            queryClient.invalidateQueries({queryKey: ['aiSkill', {id: selectedSkillId}]});
+            queryClient.invalidateQueries({queryKey: ['aiSkills']});
+        },
+    });
+    const {mutateAsync: deleteAiSkill} = useDeleteAiSkillMutation({
+        onSuccess: () => queryClient.invalidateQueries({queryKey: ['aiSkills']}),
+    });
+    const {mutateAsync: removeFileInSkill} = useRemoveFileInSkillMutation();
+    const {mutateAsync: createAdditionalFilesInSkill} = useCreateAdditionalFilesInSkillMutation();
+
+    const {data: skillData, isError: isSkillError} = useAiSkillQuery(
+        {id: selectedSkillId ?? ''},
+        {enabled: !!selectedSkillId}
+    );
+
+    const {data: filePathsData, isError: isFilePathsError} = useAiSkillFilePathsQuery(
+        {id: selectedSkillId ?? ''},
+        {enabled: !!selectedSkillId}
+    );
+
+    const {
+        data: fileContentData,
+        isError: isFileContentError,
+        isLoading: isFileContentLoading,
+    } = useAiSkillFileContentQuery(
+        {id: selectedSkillId ?? '', path: selectedFilePath ?? ''},
+        {enabled: !!selectedSkillId && !!selectedFilePath}
+    );
+
+    const filePaths = useMemo(() => filePathsData?.aiSkillFilePaths ?? [], [filePathsData]);
+    const fileContent = useMemo(() => fileContentData?.aiSkillFileContent ?? '', [fileContentData]);
+    const skill = skillData?.aiSkill;
+
+    const fileTree = useMemo(() => buildFileTree(filePaths), [filePaths]);
+
+    const editorLanguage = useMemo(
+        () => (selectedFilePath ? getFileLanguage(selectedFilePath) : 'plaintext'),
+        [selectedFilePath]
+    );
+
+    const isMarkdown = selectedFilePath ? isMarkdownPath(selectedFilePath) : false;
+
+    useEffect(() => {
+        if (skill?.name) {
+            useAiSkillsStore.setState((state) => ({
+                skillsHeaderInfo: {...state.skillsHeaderInfo, title: skill.name},
+            }));
+        }
+    }, [skill?.name]);
+
+    useEffect(() => {
+        setSelectedFilePath(null);
+    }, [selectedSkillId]);
+
+    useEffect(() => {
+        if (selectedFilePath !== null || filePaths.length === 0) {
+            return;
+        }
+
+        const skillMdPath = findDefaultFilePath(filePaths);
+
+        if (skillMdPath) {
+            setSelectedFilePath(skillMdPath);
+        }
+    }, [filePaths, selectedFilePath]);
+
+    const handleBack = useCallback(() => {
+        setSelectedFilePath(null);
+        closeSkillDetail();
+    }, [closeSkillDetail]);
+
+    const handleDownload = useCallback(async () => {
+        if (!selectedSkillId || !skill) {
+            return;
+        }
+
+        try {
+            await downloadAiSkill(selectedSkillId, skill.name);
+        } catch (error) {
+            toast.error('Failed to download skill', {
+                description: error instanceof Error ? error.message : 'An unexpected error occurred',
+            });
+        }
+    }, [selectedSkillId, skill]);
+
+    const handleFileSelect = useCallback((path: string) => {
+        setSelectedFilePath(path);
+    }, []);
+
+    const handleAddFile = useCallback(
+        async (path: string) => {
+            if (!selectedSkillId) {
+                return;
+            }
+
+            try {
+                await createAdditionalFilesInSkill({additionalFiles: {[path]: ''}, id: selectedSkillId});
+
+                await queryClient.invalidateQueries({queryKey: ['aiSkillFilePaths', {id: selectedSkillId}]});
+
+                setSelectedFilePath(path);
+
+                toast.success('File added');
+            } catch (error) {
+                toast.error('Failed to add file', {
+                    description: error instanceof Error ? error.message : 'An unexpected error occurred',
+                });
+            }
+        },
+        [createAdditionalFilesInSkill, queryClient, selectedSkillId]
+    );
+
+    const handleDelete = useCallback(async () => {
+        if (!selectedSkillId) {
+            return;
+        }
+
+        const idToDelete = selectedSkillId;
+
+        closeSkillDetail();
+        navigate(getAiSkillsBasePath(location.pathname));
+
+        try {
+            await deleteAiSkill({id: idToDelete});
+
+            queryClient.removeQueries({queryKey: ['aiSkill', {id: idToDelete}]});
+            queryClient.removeQueries({queryKey: ['aiSkillFilePaths', {id: idToDelete}]});
+            queryClient.removeQueries({
+                predicate: (query) =>
+                    Array.isArray(query.queryKey) &&
+                    query.queryKey[0] === 'aiSkillFileContent' &&
+                    typeof query.queryKey[1] === 'object' &&
+                    query.queryKey[1] !== null &&
+                    (query.queryKey[1] as {id?: string}).id === idToDelete,
+            });
+
+            toast.success('Skill deleted');
+        } catch (error) {
+            toast.error('Failed to delete skill', {
+                description: error instanceof Error ? error.message : 'An unexpected error occurred',
+            });
+        }
+    }, [closeSkillDetail, deleteAiSkill, location.pathname, navigate, queryClient, selectedSkillId]);
+
+    const handleRemoveFile = useCallback(
+        async (path: string) => {
+            if (!selectedSkillId) {
+                return;
+            }
+
+            try {
+                await removeFileInSkill({id: selectedSkillId, path});
+
+                queryClient.removeQueries({queryKey: ['aiSkillFileContent', {id: selectedSkillId, path}]});
+
+                await queryClient.invalidateQueries({queryKey: ['aiSkillFilePaths', {id: selectedSkillId}]});
+
+                if (selectedFilePath === path) {
+                    setSelectedFilePath(null);
+                }
+
+                toast.success('File removed');
+            } catch (error) {
+                toast.error('Failed to remove file', {
+                    description: error instanceof Error ? error.message : 'An unexpected error occurred',
+                });
+            }
+        },
+        [queryClient, removeFileInSkill, selectedFilePath, selectedSkillId]
+    );
+
+    const handleSaveContent = useCallback(
+        async (content: string) => {
+            if (!selectedSkillId) {
+                return;
+            }
+
+            setIsSaving(true);
+
+            try {
+                const isSkillMd = selectedFilePath?.split('/').pop()?.toLowerCase() === 'skill.md';
+
+                if (isSkillMd && skill) {
+                    const {frontmatter} = parseFrontmatter(content);
+                    const nextName = frontmatter?.name?.trim();
+                    const nextDescription = frontmatter?.description?.trim() ?? null;
+                    const normalizedDescription = nextDescription === '' ? null : nextDescription;
+                    const metadataChanged =
+                        nextName != null &&
+                        nextName !== '' &&
+                        (nextName !== skill.name || normalizedDescription !== (skill.description ?? null));
+
+                    if (metadataChanged) {
+                        await updateAiSkill({
+                            description: normalizedDescription,
+                            id: selectedSkillId,
+                            name: nextName,
+                        });
+                    }
+                }
+
+                await updateAiSkillContent({content, id: selectedSkillId, path: selectedFilePath});
+
+                queryClient.setQueryData(['aiSkillFileContent', {id: selectedSkillId, path: selectedFilePath}], {
+                    aiSkillFileContent: content,
+                });
+                queryClient.invalidateQueries({
+                    queryKey: ['aiSkillFileContent', {id: selectedSkillId, path: selectedFilePath}],
+                });
+
+                toast.success('Skill content saved');
+            } catch (error) {
+                toast.error('Failed to save skill content', {
+                    description: error instanceof Error ? error.message : 'An unexpected error occurred',
+                });
+            } finally {
+                setIsSaving(false);
+            }
+        },
+        [queryClient, selectedFilePath, selectedSkillId, skill, updateAiSkill, updateAiSkillContent]
+    );
+
+    useEffect(() => {
+        if (isSkillError) {
+            toast.error('Failed to load skill details');
+        }
+    }, [isSkillError]);
+
+    useEffect(() => {
+        if (isFilePathsError) {
+            toast.error('Failed to load skill file list');
+        }
+    }, [isFilePathsError]);
+
+    useEffect(() => {
+        if (isFileContentError) {
+            toast.error('Failed to load file content');
+        }
+    }, [isFileContentError]);
+
+    return {
+        editorLanguage,
+        fileContent,
+        filePaths,
+        fileTree,
+        handleAddFile,
+        handleBack,
+        handleDelete,
+        handleDownload,
+        handleFileSelect,
+        handleRemoveFile,
+        handleSaveContent,
+        isFileContentLoading,
+        isMarkdown,
+        isSaving,
+        selectedFilePath,
+        skill,
+    };
+}

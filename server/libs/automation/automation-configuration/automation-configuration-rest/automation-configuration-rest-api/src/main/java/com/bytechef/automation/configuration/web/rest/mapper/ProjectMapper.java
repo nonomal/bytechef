@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,8 +21,10 @@ import com.bytechef.automation.configuration.dto.ProjectDTO;
 import com.bytechef.automation.configuration.web.rest.mapper.config.AutomationConfigurationMapperSpringConfig;
 import com.bytechef.automation.configuration.web.rest.model.ProjectBasicModel;
 import com.bytechef.automation.configuration.web.rest.model.ProjectModel;
+import org.mapstruct.InheritInverseConfiguration;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
+import org.mapstruct.extensions.spring.DelegatingConverter;
 import org.springframework.core.convert.converter.Converter;
 
 /**
@@ -34,9 +36,6 @@ public class ProjectMapper {
     public interface ProjectToProjectBasicModelMapper extends Converter<Project, ProjectBasicModel> {
 
         @Override
-        @Mapping(target = "projectVersion", source = "lastVersion")
-        @Mapping(target = "publishedDate", source = "lastPublishedDate")
-        @Mapping(target = "status", source = "lastStatus")
         ProjectBasicModel convert(Project project);
     }
 
@@ -45,5 +44,10 @@ public class ProjectMapper {
 
         @Override
         ProjectModel convert(ProjectDTO projectDTO);
+
+        @InheritInverseConfiguration
+        @DelegatingConverter
+        @Mapping(target = "projectVersions", ignore = true)
+        ProjectDTO invertConvert(ProjectModel projectModel);
     }
 }

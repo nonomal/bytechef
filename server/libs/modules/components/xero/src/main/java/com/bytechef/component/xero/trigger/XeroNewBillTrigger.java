@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,12 +16,12 @@
 
 package com.bytechef.component.xero.trigger;
 
-import static com.bytechef.component.definition.ComponentDSL.ModifiableTriggerDefinition;
-import static com.bytechef.component.definition.ComponentDSL.trigger;
+import static com.bytechef.component.definition.ComponentDsl.ModifiableTriggerDefinition;
+import static com.bytechef.component.definition.ComponentDsl.outputSchema;
+import static com.bytechef.component.definition.ComponentDsl.trigger;
 import static com.bytechef.component.xero.constant.XeroConstants.ACCPAY;
 import static com.bytechef.component.xero.constant.XeroConstants.INVOICE;
 import static com.bytechef.component.xero.constant.XeroConstants.INVOICE_OUTPUT_PROPERTY;
-import static com.bytechef.component.xero.constant.XeroConstants.NEW_BILL;
 import static com.bytechef.component.xero.constant.XeroConstants.WEBHOOK_KEY_PROPERTY;
 import static com.bytechef.component.xero.util.XeroUtils.getCreatedObject;
 
@@ -39,22 +39,21 @@ import com.bytechef.component.xero.util.XeroUtils;
  */
 public class XeroNewBillTrigger {
 
-    public static final ModifiableTriggerDefinition TRIGGER_DEFINITION = trigger(NEW_BILL)
+    public static final ModifiableTriggerDefinition TRIGGER_DEFINITION = trigger("newBill")
         .title("New Bill")
         .description("Trigger off whenever a new bill is added.")
         .type(TriggerType.STATIC_WEBHOOK)
         .properties(WEBHOOK_KEY_PROPERTY)
-        .outputSchema(INVOICE_OUTPUT_PROPERTY)
-        .workflowSyncValidation(true)
+        .output(outputSchema(INVOICE_OUTPUT_PROPERTY))
         .webhookValidate(XeroUtils::webhookValidate)
-        .staticWebhookRequest(XeroNewBillTrigger::staticWebhookRequest);
+        .webhookRequest(XeroNewBillTrigger::webhookRequest);
 
     private XeroNewBillTrigger() {
     }
 
-    protected static Object staticWebhookRequest(
-        Parameters inputParameters, HttpHeaders headers, HttpParameters parameters, WebhookBody body,
-        WebhookMethod method, TriggerContext context) {
+    protected static Object webhookRequest(
+        Parameters inputParameters, Parameters connectionParameters, HttpHeaders headers, HttpParameters parameters,
+        WebhookBody body, WebhookMethod method, Parameters webhookEnableOutput, TriggerContext context) {
 
         return getCreatedObject(body, context, INVOICE, ACCPAY);
     }

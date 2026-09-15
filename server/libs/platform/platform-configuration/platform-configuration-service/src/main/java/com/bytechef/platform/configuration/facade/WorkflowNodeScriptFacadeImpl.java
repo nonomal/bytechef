@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,12 +16,36 @@
 
 package com.bytechef.platform.configuration.facade;
 
-import com.bytechef.commons.util.ExceptionUtils;
+import static com.bytechef.component.definition.datastream.ItemReader.SOURCE;
+
+import com.bytechef.atlas.configuration.domain.Workflow;
+import com.bytechef.atlas.configuration.domain.WorkflowTask;
+import com.bytechef.atlas.configuration.service.WorkflowService;
+import com.bytechef.commons.util.MapUtils;
 import com.bytechef.error.ExecutionError;
-import com.bytechef.platform.component.registry.domain.Output;
+import com.bytechef.evaluator.Evaluator;
+import com.bytechef.platform.component.ComponentConnection;
+import com.bytechef.platform.component.domain.Property;
+import com.bytechef.platform.component.script.CodeEditorScriptInputProvider;
+import com.bytechef.platform.configuration.domain.ClusterElement;
+import com.bytechef.platform.configuration.domain.ClusterElementMap;
 import com.bytechef.platform.configuration.domain.WorkflowNodeTestOutput;
+import com.bytechef.platform.configuration.domain.WorkflowTestConfigurationConnection;
 import com.bytechef.platform.configuration.dto.ScriptTestExecutionDTO;
+import com.bytechef.platform.configuration.service.WorkflowTestConfigurationService;
+import com.bytechef.platform.connection.domain.Connection;
+import com.bytechef.platform.connection.service.ConnectionService;
+import com.bytechef.platform.definition.WorkflowNodeType;
+import com.bytechef.platform.domain.OutputResponse;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Arrays;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.function.Supplier;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -32,36 +56,233 @@ import org.springframework.stereotype.Service;
 @Service
 public class WorkflowNodeScriptFacadeImpl implements WorkflowNodeScriptFacade {
 
-    private static final Logger logger = LoggerFactory.getLogger(WorkflowNodeScriptFacadeImpl.class);
+    private static final Logger log = LoggerFactory.getLogger(WorkflowNodeScriptFacadeImpl.class);
 
+    private final List<CodeEditorScriptInputProvider> codeEditorScriptInputProviders;
+    private final ConnectionService connectionService;
+    private final Evaluator evaluator;
+    private final WorkflowNodeOutputFacade workflowNodeOutputFacade;
     private final WorkflowNodeTestOutputFacade workflowNodeTestOutputFacade;
+    private final WorkflowService workflowService;
+    private final WorkflowTestConfigurationService workflowTestConfigurationService;
 
-    public WorkflowNodeScriptFacadeImpl(WorkflowNodeTestOutputFacade workflowNodeTestOutputFacade) {
+    @SuppressFBWarnings("EI")
+    public WorkflowNodeScriptFacadeImpl(
+        List<CodeEditorScriptInputProvider> codeEditorScriptInputProviders, ConnectionService connectionService,
+        Evaluator evaluator, WorkflowNodeOutputFacade workflowNodeOutputFacade,
+        WorkflowNodeTestOutputFacade workflowNodeTestOutputFacade, WorkflowService workflowService,
+        WorkflowTestConfigurationService workflowTestConfigurationService) {
+
+        this.codeEditorScriptInputProviders = codeEditorScriptInputProviders;
+        this.connectionService = connectionService;
+        this.evaluator = evaluator;
+        this.workflowNodeOutputFacade = workflowNodeOutputFacade;
         this.workflowNodeTestOutputFacade = workflowNodeTestOutputFacade;
+        this.workflowService = workflowService;
+        this.workflowTestConfigurationService = workflowTestConfigurationService;
     }
 
     @Override
-    public ScriptTestExecutionDTO testWorkflowNodeScript(String workflowId, String workflowNodeName) {
+    public Map<String, Object> getClusterElementScriptInput(
+        String workflowId, String workflowNodeName, String clusterElementTypeName,
+        String clusterElementWorkflowNodeName, long environmentId) {
+
+        Workflow workflow = workflowService.getWorkflow(workflowId);
+
+        WorkflowTask workflowTask = workflow.getTask(workflowNodeName);
+
+        WorkflowNodeType workflowNodeType = WorkflowNodeType.ofType(workflowTask.getType());
+
+        ClusterElementMap clusterElementMap = ClusterElementMap.of(workflowTask.getExtensions());
+
+        Optional<ClusterElement> sourceClusterElementOptional = clusterElementMap.fetchClusterElement(SOURCE);
+
+        if (sourceClusterElementOptional.isEmpty()) {
+            return Map.of();
+        }
+
+        ClusterElement sourceClusterElement = sourceClusterElementOptional.get();
+
+        Map<String, ?> outputs = workflowNodeOutputFacade.getPreviousWorkflowNodeSampleOutputs(
+            workflowId, workflowNodeName, environmentId);
+
+        Map<String, ?> sourceInputParameters = evaluator.evaluate(sourceClusterElement.getParameters(), outputs);
+
+        ComponentConnection sourceComponentConnection = getComponentConnection(
+            workflowId, sourceClusterElement.getWorkflowNodeName(), environmentId);
+
+        CodeEditorScriptInputProvider provider = codeEditorScriptInputProviders.stream()
+            .filter(inputProvider -> Objects.equals(inputProvider.getRootComponentName(), workflowNodeType.name()))
+            .findFirst()
+            .orElse(null);
+
+        if (provider == null) {
+            return Map.of();
+        }
+
+        try {
+            return provider.getScriptInputParameters(
+                workflowNodeType.version(), sourceClusterElement.getComponentName(),
+                sourceClusterElement.getComponentVersion(), sourceClusterElement.getClusterElementName(),
+                sourceInputParameters, sourceComponentConnection);
+        } catch (Exception exception) {
+            log.warn("Error getting script input from provider: {}", exception.getMessage(), exception);
+
+            return Map.of();
+        }
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> getWorkflowNodeScriptInput(
+        String workflowId, String workflowNodeName, long environmentId) {
+
+        if (log.isDebugEnabled()) {
+            log.debug(
+                "getWorkflowNodeScriptInput called with workflowId={}, workflowNodeName={}, environmentId={}",
+                workflowId, workflowNodeName, environmentId);
+        }
+
+        Workflow workflow = workflowService.getWorkflow(workflowId);
+
+        WorkflowTask workflowTask = workflow.getTask(workflowNodeName);
+
+        if (log.isDebugEnabled()) {
+            log.debug("Found workflow task: name={}, type={}", workflowTask.getName(), workflowTask.getType());
+        }
+
+        Map<String, ?> parameters = workflowTask.getParameters();
+
+        Object input = parameters.get("input");
+
+        if (!(input instanceof Map<?, ?> inputMap)) {
+            return Map.of();
+        }
+
+        Map<String, ?> inputs = workflowTestConfigurationService.getWorkflowTestConfigurationInputs(
+            workflowId, environmentId);
+
+        Map<String, ?> outputs = workflowNodeOutputFacade.getPreviousWorkflowNodeSampleOutputs(
+            workflowId, workflowNodeName, environmentId);
+
+        if (log.isDebugEnabled()) {
+            log.debug("Context for evaluation - inputs: {}, outputs: {}", inputs, outputs);
+        }
+
+        Map<String, Object> evaluatedInput = evaluator.evaluate(
+            (Map<String, Object>) inputMap,
+            MapUtils.concat((Map<String, Object>) inputs, (Map<String, Object>) outputs));
+
+        if (log.isDebugEnabled()) {
+            log.debug("Evaluated input: {}", evaluatedInput);
+        }
+
+        return evaluatedInput;
+    }
+
+    @Override
+    public ScriptTestExecutionDTO testClusterElementScript(
+        String workflowId, String workflowNodeName, String clusterElementType,
+        String clusterElementWorkflowNodeName, long environmentId, Map<String, Object> inputParameters) {
+
+        return executeTestAndBuildResult(() -> {
+            if (inputParameters == null) {
+                return workflowNodeTestOutputFacade.saveClusterElementTestOutput(
+                    workflowId, workflowNodeName, clusterElementType.toUpperCase(Locale.ROOT),
+                    clusterElementWorkflowNodeName, environmentId);
+            }
+
+            return workflowNodeTestOutputFacade.saveClusterElementTestOutput(
+                workflowId, workflowNodeName, clusterElementType.toUpperCase(Locale.ROOT),
+                clusterElementWorkflowNodeName, Map.of("input", inputParameters), environmentId);
+        });
+    }
+
+    @Override
+    public ScriptTestExecutionDTO testWorkflowNodeScript(
+        String workflowId, String workflowNodeName, long environmentId, Map<String, Object> inputParameters) {
+
+        return executeTestAndBuildResult(() -> {
+            if (inputParameters == null) {
+                return workflowNodeTestOutputFacade.saveWorkflowNodeTestOutput(
+                    workflowId, workflowNodeName, environmentId);
+            }
+
+            return workflowNodeTestOutputFacade.saveWorkflowNodeTestOutput(
+                workflowId, workflowNodeName, Map.of("input", inputParameters), environmentId);
+        });
+    }
+
+    private ScriptTestExecutionDTO executeTestAndBuildResult(Supplier<WorkflowNodeTestOutput> testOutputSupplier) {
         ExecutionError executionError = null;
         WorkflowNodeTestOutput workflowNodeTestOutput = null;
 
         try {
-            workflowNodeTestOutput = workflowNodeTestOutputFacade.saveWorkflowNodeTestOutput(
-                workflowId, workflowNodeName);
-        } catch (Exception e) {
-            if (logger.isDebugEnabled()) {
-                logger.debug(e.getMessage(), e);
-            }
+            workflowNodeTestOutput = testOutputSupplier.get();
+        } catch (Exception exception) {
+            log.warn(exception.getMessage(), exception);
 
-            executionError = new ExecutionError(e.getMessage(), Arrays.asList(ExceptionUtils.getStackFrames(e)));
+            executionError = extractExecutionError(exception);
         }
 
-        Output output = null;
+        OutputResponse outputResponse = null;
 
         if (workflowNodeTestOutput != null) {
-            output = workflowNodeTestOutput.getOutput();
+            outputResponse = workflowNodeTestOutput.getOutput(Property.class);
         }
 
-        return new ScriptTestExecutionDTO(executionError, output == null ? null : output.getSampleOutput());
+        return new ScriptTestExecutionDTO(executionError, getOutputAsMap(outputResponse));
+    }
+
+    private ExecutionError extractExecutionError(Exception exception) {
+        Throwable curException = exception;
+        String message = exception.getMessage();
+
+        while (curException.getCause() != null) {
+            curException = curException.getCause();
+
+            message = curException.getMessage();
+        }
+
+        return new ExecutionError(message, Arrays.asList(ExceptionUtils.getStackFrames(exception)));
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> getOutputAsMap(OutputResponse outputResponse) {
+        if (outputResponse == null) {
+            return null;
+        }
+
+        Object sampleOutput = outputResponse.sampleOutput();
+
+        if (sampleOutput == null) {
+            return null;
+        }
+
+        if (sampleOutput instanceof Map) {
+            return (Map<String, Object>) sampleOutput;
+        }
+
+        return Map.of("value", sampleOutput);
+    }
+
+    private ComponentConnection getComponentConnection(
+        String workflowId, String clusterElementWorkflowNodeName, long environmentId) {
+
+        List<WorkflowTestConfigurationConnection> connections =
+            workflowTestConfigurationService.getWorkflowTestConfigurationConnections(
+                workflowId, clusterElementWorkflowNodeName, environmentId);
+
+        if (connections.isEmpty()) {
+            return null;
+        }
+
+        WorkflowTestConfigurationConnection testConnection = connections.getFirst();
+
+        Connection connection = connectionService.getConnection(testConnection.getConnectionId());
+
+        return new ComponentConnection(
+            connection.getComponentName(), connection.getConnectionVersion(), connection.getId(),
+            connection.getParameters(), connection.getAuthorizationType());
     }
 }

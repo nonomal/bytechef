@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,10 +16,10 @@
 
 package com.bytechef.task.dispatcher.forkjoin;
 
-import com.bytechef.atlas.execution.service.ContextService;
-import com.bytechef.atlas.execution.service.TaskExecutionService;
 import com.bytechef.atlas.file.storage.TaskFileStorage;
 import com.bytechef.commons.util.EncodingUtils;
+import com.bytechef.evaluator.Evaluator;
+import com.bytechef.evaluator.SpelEvaluator;
 import com.bytechef.platform.workflow.task.dispatcher.test.annotation.TaskDispatcherIntTest;
 import com.bytechef.platform.workflow.task.dispatcher.test.task.handler.TestVarTaskHandler;
 import com.bytechef.platform.workflow.task.dispatcher.test.workflow.TaskDispatcherJobTestExecutor;
@@ -38,13 +38,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 @TaskDispatcherIntTest
 public class ForkJoinTaskDispatcherIntTest {
 
+    private static final Evaluator EVALUATOR = SpelEvaluator.create();
+
     private TestVarTaskHandler<Object, Object> testVarTaskHandler;
-
-    @Autowired
-    protected ContextService contextService;
-
-    @Autowired
-    protected TaskExecutionService taskExecutionService;
 
     @Autowired
     private TaskDispatcherJobTestExecutor taskDispatcherJobTestExecutor;
@@ -60,18 +56,18 @@ public class ForkJoinTaskDispatcherIntTest {
     @Test
     public void testDispatch() {
         taskDispatcherJobTestExecutor.execute(
-            EncodingUtils.encodeBase64ToString("fork-join_v1"),
+            EncodingUtils.base64EncodeToString("fork-join_v1"),
             (
-                counterService, taskExecutionService) -> List.of(
+                contextService, counterService, taskExecutionService) -> List.of(
                     (taskCompletionHandler, taskDispatcher) -> new ForkJoinTaskCompletionHandler(
-                        taskExecutionService, taskCompletionHandler, counterService, taskDispatcher, contextService,
-                        taskFileStorage)),
+                        contextService, counterService, EVALUATOR, taskExecutionService,
+                        taskCompletionHandler, taskDispatcher, taskFileStorage)),
             (
-                messageBroker, contextService, counterService, taskExecutionService) -> List.of(
+                eventPublisher, contextService, counterService, taskExecutionService) -> List.of(
                     (taskDispatcher) -> new ForkJoinTaskDispatcher(
-                        messageBroker, contextService, counterService, taskDispatcher, taskExecutionService,
-                        taskFileStorage)),
-            () -> Map.of("var", testVarTaskHandler));
+                        contextService, counterService, EVALUATOR, eventPublisher, taskDispatcher,
+                        taskExecutionService, taskFileStorage)),
+            () -> Map.of("var/v1/set", testVarTaskHandler));
 
         Assertions.assertEquals(85, testVarTaskHandler.get("sumVar1"));
         Assertions.assertEquals(112, testVarTaskHandler.get("sumVar2"));

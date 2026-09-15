@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,102 +16,90 @@
 
 package com.bytechef.component.google.contacts.action;
 
-import static com.bytechef.component.google.contacts.constant.GoogleContactsConstants.COMPANY;
 import static com.bytechef.component.google.contacts.constant.GoogleContactsConstants.EMAIL;
-import static com.bytechef.component.google.contacts.constant.GoogleContactsConstants.FIRST_NAME;
-import static com.bytechef.component.google.contacts.constant.GoogleContactsConstants.JOB_TITLE;
-import static com.bytechef.component.google.contacts.constant.GoogleContactsConstants.LAST_NAME;
+import static com.bytechef.component.google.contacts.constant.GoogleContactsConstants.EMAIL_ADDRESSES;
+import static com.bytechef.component.google.contacts.constant.GoogleContactsConstants.FAMILY_NAME;
+import static com.bytechef.component.google.contacts.constant.GoogleContactsConstants.GIVEN_NAME;
 import static com.bytechef.component.google.contacts.constant.GoogleContactsConstants.MIDDLE_NAME;
-import static com.bytechef.component.google.contacts.constant.GoogleContactsConstants.PHONE_NUMBER;
+import static com.bytechef.component.google.contacts.constant.GoogleContactsConstants.NAME;
+import static com.bytechef.component.google.contacts.constant.GoogleContactsConstants.NAMES;
+import static com.bytechef.component.google.contacts.constant.GoogleContactsConstants.ORGANIZATIONS;
+import static com.bytechef.component.google.contacts.constant.GoogleContactsConstants.PERSON_FIELDS;
+import static com.bytechef.component.google.contacts.constant.GoogleContactsConstants.PHONE_NUMBERS;
+import static com.bytechef.component.google.contacts.constant.GoogleContactsConstants.TITLE;
+import static com.bytechef.component.google.contacts.constant.GoogleContactsConstants.TYPE;
+import static com.bytechef.component.google.contacts.constant.GoogleContactsConstants.VALUE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.Mockito.mock;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.mockito.ArgumentCaptor.forClass;
 import static org.mockito.Mockito.when;
 
-import com.google.api.services.people.v1.PeopleService;
-import com.google.api.services.people.v1.model.EmailAddress;
-import com.google.api.services.people.v1.model.Name;
-import com.google.api.services.people.v1.model.Organization;
-import com.google.api.services.people.v1.model.Person;
-import com.google.api.services.people.v1.model.PhoneNumber;
-import java.io.IOException;
+import com.bytechef.component.definition.Context;
+import com.bytechef.component.definition.Context.ContextFunction;
+import com.bytechef.component.definition.Context.Http;
+import com.bytechef.component.definition.Context.Http.Body;
+import com.bytechef.component.definition.Context.Http.BodyContentType;
+import com.bytechef.component.definition.Context.Http.Configuration;
+import com.bytechef.component.definition.Context.Http.Configuration.ConfigurationBuilder;
+import com.bytechef.component.definition.Context.Http.Executor;
+import com.bytechef.component.definition.Context.Http.Response;
+import com.bytechef.component.definition.Context.Http.ResponseType;
+import com.bytechef.component.definition.Parameters;
+import com.bytechef.component.test.definition.MockParametersFactory;
+import com.bytechef.component.test.definition.extension.MockContextSetupExtension;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 
 /**
- * @author Monika Domiter
+ * @author Monika Kušter
+ * @author Nikolina Spehar
  */
-class GoogleContactsCreateContactActionTest extends AbstractGoogleContactsActionTest {
+@ExtendWith(MockContextSetupExtension.class)
+class GoogleContactsCreateContactActionTest {
 
-    private final PeopleService.People.CreateContact mockedCreateContact =
-        mock(PeopleService.People.CreateContact.class);
-    private final PeopleService.People mockedPeople = mock(PeopleService.People.class);
-    private final Person mockedPerson = mock(Person.class);
-    private final ArgumentCaptor<Person> personArgumentCaptor = ArgumentCaptor.forClass(Person.class);
+    private final ArgumentCaptor<Body> bodyArgumentCaptor = forClass(Body.class);
+    private final Parameters mockedParameters = MockParametersFactory.create(
+        Map.of(GIVEN_NAME, "givenName", FAMILY_NAME, "familyName", TITLE, "title", NAME, "name", EMAIL, "email"));
+    private final Map<String, Object> responseMap = Map.of();
+    private final ArgumentCaptor<String> stringArgumentCaptor = forClass(String.class);
 
     @Test
-    void testPerform() throws IOException {
-        when(mockedParameters.getRequiredString(FIRST_NAME))
-            .thenReturn("First name");
-        when(mockedParameters.getString(MIDDLE_NAME))
-            .thenReturn("Middle name");
-        when(mockedParameters.getRequiredString(LAST_NAME))
-            .thenReturn("Last name");
-        when(mockedParameters.getString(EMAIL))
-            .thenReturn("mail@mail.com");
-        when(mockedParameters.getString(PHONE_NUMBER))
-            .thenReturn("123456");
-        when(mockedParameters.getString(COMPANY))
-            .thenReturn("Company");
-        when(mockedParameters.getString(JOB_TITLE))
-            .thenReturn("Job title");
+    void testPerform(
+        Context mockedContext, Response mockedResponse, Executor mockedExecutor, Http mockedHttp,
+        ArgumentCaptor<ContextFunction<Http, Executor>> httpFunctionArgumentCaptor,
+        ArgumentCaptor<ConfigurationBuilder> configurationBuilderArgumentCaptor) {
 
-        when(mockedPeopleService.people())
-            .thenReturn(mockedPeople);
-        when(mockedPeople.createContact(personArgumentCaptor.capture()))
-            .thenReturn(mockedCreateContact);
-        when(mockedCreateContact.execute())
-            .thenReturn(mockedPerson);
+        when(mockedHttp.post(stringArgumentCaptor.capture()))
+            .thenReturn(mockedExecutor);
+        when(mockedExecutor.queryParameter(stringArgumentCaptor.capture(), stringArgumentCaptor.capture()))
+            .thenReturn(mockedExecutor);
+        when(mockedExecutor.body(bodyArgumentCaptor.capture()))
+            .thenReturn(mockedExecutor);
+        when(mockedResponse.getBody())
+            .thenReturn(responseMap);
 
-        Person result = GoogleContactsCreateContactAction.perform(mockedParameters, mockedParameters, mockedContext);
+        Object result = GoogleContactsCreateContactAction.perform(mockedParameters, null, mockedContext);
 
-        assertEquals(mockedPerson, result);
+        assertEquals(responseMap, result);
+        assertNotNull(httpFunctionArgumentCaptor.getValue());
 
-        Person person = personArgumentCaptor.getValue();
+        ConfigurationBuilder configurationBuilder = configurationBuilderArgumentCaptor.getValue();
+        Configuration configuration = configurationBuilder.build();
 
-        List<Name> names = person.getNames();
+        assertEquals(ResponseType.JSON, configuration.getResponseType());
+        assertEquals(
+            List.of("/people:createContact", PERSON_FIELDS, "emailAddresses,names,phoneNumbers,organizations"),
+            stringArgumentCaptor.getAllValues());
 
-        assertEquals(1, names.size());
+        Map<String, Object> expectedBodyMap = Map.of(
+            NAMES, List.of(Map.of(GIVEN_NAME, "givenName", MIDDLE_NAME, "", FAMILY_NAME, "familyName")),
+            ORGANIZATIONS, List.of(Map.of(NAME, "name", TITLE, "title", TYPE, "work")),
+            EMAIL_ADDRESSES, List.of(Map.of(VALUE, "email", TYPE, "work")),
+            PHONE_NUMBERS, List.of(Map.of(VALUE, "", TYPE, "mobile")));
 
-        Name name = names.getFirst();
-
-        assertEquals("First name", name.getGivenName());
-        assertEquals("Middle name", name.getMiddleName());
-        assertEquals("Last name", name.getFamilyName());
-
-        List<EmailAddress> emailAddresses = person.getEmailAddresses();
-
-        assertEquals(1, emailAddresses.size());
-
-        EmailAddress emailAddress = emailAddresses.getFirst();
-
-        assertEquals("mail@mail.com", emailAddress.getValue());
-
-        List<PhoneNumber> phoneNumbers = person.getPhoneNumbers();
-
-        assertEquals(1, emailAddresses.size());
-
-        PhoneNumber phoneNumber = phoneNumbers.getFirst();
-
-        assertEquals("123456", phoneNumber.getValue());
-
-        List<Organization> organizations = person.getOrganizations();
-
-        assertEquals(1, organizations.size());
-
-        Organization organization = organizations.getFirst();
-
-        assertEquals("Company", organization.getName());
-        assertEquals("Job title", organization.getTitle());
+        assertEquals(Body.of(expectedBodyMap, BodyContentType.JSON), bodyArgumentCaptor.getValue());
     }
 }

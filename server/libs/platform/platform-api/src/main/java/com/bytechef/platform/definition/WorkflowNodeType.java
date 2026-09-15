@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,14 +16,16 @@
 
 package com.bytechef.platform.definition;
 
+import org.jspecify.annotations.Nullable;
+
 /**
  * @author Ivica Cardic
  *
- * @param componentName          The component name
- * @param componentVersion       The component version
- * @param componentOperationName The component action or trigger name
+ * @param name      The component action/component trigger/task dispatcher name
+ * @param version   The component action/component trigger/task dispatcher version
+ * @param operation The component action or trigger name
  */
-public record WorkflowNodeType(String componentName, int componentVersion, String componentOperationName) {
+public record WorkflowNodeType(String name, int version, @Nullable String operation) {
 
     public static WorkflowNodeType ofType(String type) {
         String[] typeItems = type.split("/");

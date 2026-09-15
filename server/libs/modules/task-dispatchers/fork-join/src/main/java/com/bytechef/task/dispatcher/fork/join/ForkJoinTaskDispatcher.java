@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * Modifications copyright (C) 2023 ByteChef Inc.
+ * Modifications copyright (C) 2025 ByteChef
  */
 
 package com.bytechef.task.dispatcher.fork.join;
@@ -22,6 +22,7 @@ import com.bytechef.atlas.configuration.constant.WorkflowConstants;
 import com.bytechef.atlas.configuration.domain.Task;
 import com.bytechef.atlas.configuration.domain.WorkflowTask;
 import com.bytechef.atlas.coordinator.event.TaskExecutionCompleteEvent;
+import com.bytechef.atlas.coordinator.task.dispatcher.ErrorHandlingTaskDispatcher;
 import com.bytechef.atlas.coordinator.task.dispatcher.TaskDispatcher;
 import com.bytechef.atlas.coordinator.task.dispatcher.TaskDispatcherResolver;
 import com.bytechef.atlas.execution.domain.Context.Classname;
@@ -30,17 +31,17 @@ import com.bytechef.atlas.execution.service.ContextService;
 import com.bytechef.atlas.execution.service.CounterService;
 import com.bytechef.atlas.execution.service.TaskExecutionService;
 import com.bytechef.atlas.file.storage.TaskFileStorage;
-import com.bytechef.commons.util.CollectionUtils;
 import com.bytechef.commons.util.MapUtils;
+import com.bytechef.evaluator.Evaluator;
 import com.bytechef.task.dispatcher.fork.join.constant.ForkJoinTaskDispatcherConstants;
-import com.fasterxml.jackson.core.type.TypeReference;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import org.apache.commons.lang3.Validate;
 import org.springframework.context.ApplicationEventPublisher;
+import tools.jackson.core.type.TypeReference;
 
 /**
  * Implements a Fork/Join construct.
@@ -80,63 +81,67 @@ import org.springframework.context.ApplicationEventPublisher;
  * @since May 11, 2017
  * @see ForkJoinTaskCompletionHandler
  */
-public class ForkJoinTaskDispatcher implements TaskDispatcher<TaskExecution>, TaskDispatcherResolver {
+public class ForkJoinTaskDispatcher extends ErrorHandlingTaskDispatcher implements TaskDispatcherResolver {
 
-    private final ApplicationEventPublisher eventPublisher;
     private final ContextService contextService;
     private final CounterService counterService;
+    private final Evaluator evaluator;
+    private final ApplicationEventPublisher eventPublisher;
     private final TaskDispatcher<? super Task> taskDispatcher;
     private final TaskExecutionService taskExecutionService;
     private final TaskFileStorage taskFileStorage;
 
     @SuppressFBWarnings("EI")
     public ForkJoinTaskDispatcher(
-        ApplicationEventPublisher eventPublisher, ContextService contextService,
-        CounterService counterService, TaskDispatcher<? super Task> taskDispatcher,
+        ContextService contextService, CounterService counterService, Evaluator evaluator,
+        ApplicationEventPublisher eventPublisher, TaskDispatcher<? super Task> taskDispatcher,
         TaskExecutionService taskExecutionService, TaskFileStorage taskFileStorage) {
 
-        this.eventPublisher = eventPublisher;
+        super(eventPublisher);
+
         this.contextService = contextService;
         this.counterService = counterService;
+        this.evaluator = evaluator;
+        this.eventPublisher = eventPublisher;
         this.taskDispatcher = taskDispatcher;
         this.taskExecutionService = taskExecutionService;
         this.taskFileStorage = taskFileStorage;
     }
 
     @Override
-    public void dispatch(TaskExecution taskExecution) {
-        List<List<Map<String, Object>>> branches = MapUtils.getRequiredList(
+    public void doDispatch(TaskExecution taskExecution) {
+        List<List<WorkflowTask>> branchesWorkflowTasks = MapUtils.getRequiredList(
             taskExecution.getParameters(), ForkJoinTaskDispatcherConstants.BRANCHES, new TypeReference<>() {});
 
-        List<List<WorkflowTask>> branchesWorkflowTasks = branches.stream()
-            .map(source -> CollectionUtils.map(source, WorkflowTask::new))
-            .toList();
-
-        taskExecution.setStartDate(LocalDateTime.now());
+        taskExecution.setStartDate(Instant.now());
         taskExecution.setStatus(TaskExecution.Status.STARTED);
 
         taskExecution = taskExecutionService.update(taskExecution);
 
         if (branchesWorkflowTasks.isEmpty()) {
-            taskExecution.setStartDate(LocalDateTime.now());
-            taskExecution.setEndDate(LocalDateTime.now());
+            taskExecution.setStartDate(Instant.now());
+            taskExecution.setEndDate(Instant.now());
             taskExecution.setExecutionTime(0);
 
             eventPublisher.publishEvent(new TaskExecutionCompleteEvent(taskExecution));
         } else {
-            counterService.set(Validate.notNull(taskExecution.getId(), "id"), branchesWorkflowTasks.size());
+            long taskExecutionId = Validate.notNull(taskExecution.getId(), "id");
+
+            counterService.set(taskExecutionId, branchesWorkflowTasks.size());
+
+            long taskExecutionJobId = Validate.notNull(
+                taskExecution.getJobId(), "'taskExecution.jobId' must not be null");
 
             for (int i = 0; i < branchesWorkflowTasks.size(); i++) {
                 List<WorkflowTask> branchWorkflowTasks = branchesWorkflowTasks.get(i);
 
                 Validate.isTrue(!branchWorkflowTasks.isEmpty(), "branch " + i + " does not contain any tasks");
 
-                WorkflowTask branchWorkflowTask = branchWorkflowTasks.get(0);
-
-                Validate.notNull(taskExecution.getJobId(), "'taskExecution.jobId' must not be null");
+                WorkflowTask branchWorkflowTask = branchWorkflowTasks.getFirst();
 
                 TaskExecution branchTaskExecution = TaskExecution.builder()
-                    .jobId(taskExecution.getJobId())
+                    .jobId(taskExecutionJobId)
+                    .maxRetries(branchWorkflowTask.getMaxRetries())
                     .parentId(taskExecution.getId())
                     .priority(taskExecution.getPriority())
                     .taskNumber(1)
@@ -148,23 +153,21 @@ public class ForkJoinTaskDispatcher implements TaskDispatcher<TaskExecution>, Ta
                     .build();
 
                 Map<String, ?> context = taskFileStorage.readContextValue(
-                    contextService.peek(Validate.notNull(taskExecution.getId(), "id"), Classname.TASK_EXECUTION));
+                    contextService.peek(taskExecutionId, Classname.TASK_EXECUTION));
 
-                branchTaskExecution.evaluate(context);
+                branchTaskExecution.evaluate(context, evaluator);
 
                 branchTaskExecution = taskExecutionService.create(branchTaskExecution);
 
-                contextService.push(
-                    Validate.notNull(branchTaskExecution.getId(), "id"), Classname.TASK_EXECUTION,
-                    taskFileStorage.storeContextValue(
-                        Validate.notNull(branchTaskExecution.getId(), "id"), Classname.TASK_EXECUTION,
-                        context));
-                contextService.push(
-                    Validate.notNull(taskExecution.getId(), "id"), i, Classname.TASK_EXECUTION,
-                    taskFileStorage.storeContextValue(Validate.notNull(taskExecution.getId(), "id"), i,
-                        Classname.TASK_EXECUTION,
-                        context));
+                long branchTaskExecutionId = Validate.notNull(branchTaskExecution.getId(), "id");
 
+                contextService.push(
+                    branchTaskExecutionId, Classname.TASK_EXECUTION,
+                    taskFileStorage.storeContextValue(branchTaskExecutionId, Classname.TASK_EXECUTION, context));
+
+                contextService.push(
+                    taskExecutionId, i, Classname.TASK_EXECUTION,
+                    taskFileStorage.storeContextValue(taskExecutionId, i, Classname.TASK_EXECUTION, context));
                 taskDispatcher.dispatch(branchTaskExecution);
             }
         }

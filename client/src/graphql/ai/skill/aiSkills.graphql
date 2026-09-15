@@ -1,0 +1,13 @@
+query aiSkills {
+    aiSkills {
+        id
+        name
+        description
+        tags {
+            id
+            name
+        }
+        createdDate
+        lastModifiedDate
+    }
+}

@@ -6,7 +6,6 @@ plugins {
     // Apply the common convention plugin for shared build configuration between library and application projects.
     id("com.bytechef.java-application-conventions")
 
-    id("com.google.cloud.tools.jib")
     id("com.gorylenko.gradle-git-properties")
     id("org.springframework.boot")
 }
@@ -23,19 +22,32 @@ if (project.hasProperty("prod")) {
     }
 
     configure<org.springframework.boot.gradle.dsl.SpringBootExtension> {
-        buildInfo()
+        buildInfo {
+            properties {
+                additional = mapOf(
+                    "description" to project.getDescription().toString(),
+                    "java.version" to JavaVersion.current(),
+                    "image.version" to project.properties["bytechefImageVersion"].toString()
+                )
+            }
+        }
     }
 } else {
     dependencies {
         "developmentOnly"("org.springframework.boot:spring-boot-devtools:${libs.findVersion("spring-boot").get()}")
     }
 
-    profiles = "dev"
+    profiles = "dev,local"
 
     configure<org.springframework.boot.gradle.dsl.SpringBootExtension> {
         buildInfo {
             properties {
                 time = null
+                additional = mapOf(
+                    "description" to (project.getDescription() ?: ""),
+                    "java.version" to JavaVersion.current(),
+                    "image.version" to project.properties["bytechefImageVersion"].toString()
+                )
             }
         }
     }
@@ -43,6 +55,22 @@ if (project.hasProperty("prod")) {
 
 tasks.withType(org.springframework.boot.gradle.tasks.run.BootRun::class) {
     args = listOf("--spring.profiles.active=$profiles")
+    jvmArgs(
+        "--enable-native-access=ALL-UNNAMED",
+        "--sun-misc-unsafe-memory-access=allow"
+    )
+}
+
+tasks.withType(org.springframework.boot.gradle.tasks.bundling.BootJar::class) {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+tasks.withType(Tar::class) {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+tasks.withType(Zip::class) {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
 val processResources by tasks.existing(ProcessResources::class) {
@@ -93,13 +121,4 @@ defaultTasks("bootRun")
 configure<com.gorylenko.GitPropertiesPluginExtension> {
     failOnNoGitDirectory = false
     setKeys(listOf("git.branch", "git.build.version", "git.commit.id", "git.commit.id.abbrev", "git.commit.id.describe"))
-}
-
-configure<com.google.cloud.tools.jib.gradle.JibExtension> {
-    from {
-        image = "ghcr.io/graalvm/graalvm-community:21.0.2"
-    }
-    to {
-        image = "bytechef/bytechef-" + project.name + ":latest"
-    }
 }

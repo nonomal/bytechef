@@ -1,0 +1,31 @@
+extend type Query {
+    mcpTool(id: ID): McpTool
+    mcpTools: [McpTool]
+    mcpToolsByComponentId(mcpComponentId: ID): [McpTool]
+}
+
+extend type Mutation {
+    createMcpTool(input: McpToolInput!): McpTool
+    deleteMcpTool(id: ID!): Boolean
+    updateMcpTool(id: ID!, input: McpToolInput!): McpTool
+}
+
+input McpToolInput {
+    mcpComponentId: ID!
+    name: String!
+    parameters: Map
+    version: Int
+}
+
+type McpTool {
+    id: ID!
+    name: String!
+    title: String
+    parameters: Map
+    mcpComponentId: ID!
+    createdBy: String
+    createdDate: Long
+    lastModifiedBy: String
+    lastModifiedDate: Long
+    version: Int
+}

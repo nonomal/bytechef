@@ -1,32 +1,38 @@
-import {Button} from '@/components/ui/button';
-import {DialogClose, DialogContent, DialogDescription, DialogHeader, DialogTitle} from '@/components/ui/dialog';
+import Button from '@/components/Button/Button';
+import {
+    Dialog,
+    DialogCloseButton,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import {Label} from '@/components/ui/label';
 import {Textarea} from '@/components/ui/textarea';
-import {useToast} from '@/components/ui/use-toast';
-import {ProjectModel} from '@/shared/middleware/automation/configuration';
+import {useAnalytics} from '@/shared/hooks/useAnalytics';
+import {Project} from '@/shared/middleware/automation/configuration';
 import {usePublishProjectMutation} from '@/shared/mutations/automation/projects.mutations';
 import {ProjectKeys} from '@/shared/queries/automation/projects.queries';
-import {Dialog} from '@radix-ui/react-dialog';
-import {Cross2Icon} from '@radix-ui/react-icons';
 import {useQueryClient} from '@tanstack/react-query';
 import {useState} from 'react';
+import {toast} from 'sonner';
 
-const ProjectPublishDialog = ({onClose, project}: {onClose: () => void; project: ProjectModel}) => {
+const ProjectPublishDialog = ({onClose, project}: {onClose: () => void; project: Project}) => {
     const [description, setDescription] = useState<string | undefined>(undefined);
 
-    const {toast} = useToast();
+    const {captureProjectPublished} = useAnalytics();
 
     const queryClient = useQueryClient();
 
     const publishProjectMutation = usePublishProjectMutation({
         onSuccess: () => {
+            captureProjectPublished();
+
             queryClient.invalidateQueries({
                 queryKey: ProjectKeys.projects,
             });
 
-            toast({
-                description: 'The project is published.',
-            });
+            toast('The project has been published.');
 
             onClose();
         },
@@ -35,18 +41,14 @@ const ProjectPublishDialog = ({onClose, project}: {onClose: () => void; project:
     return (
         <Dialog onOpenChange={() => onClose()} open={true}>
             <DialogContent className="flex flex-col">
-                <DialogHeader>
-                    <div className="flex items-center justify-between">
+                <DialogHeader className="flex flex-row items-center justify-between space-y-0">
+                    <div className="flex flex-col space-y-1">
                         <DialogTitle>Publish Project {project.name}</DialogTitle>
 
-                        <DialogClose asChild>
-                            <Cross2Icon className="size-4 cursor-pointer opacity-70" />
-                        </DialogClose>
+                        <DialogDescription>Publish project to activate its workflows.</DialogDescription>
                     </div>
 
-                    <DialogDescription>
-                        Publish project to activate its workflows in one of environments.
-                    </DialogDescription>
+                    <DialogCloseButton />
                 </DialogHeader>
 
                 <div className="flex flex-col space-y-4">
@@ -58,19 +60,16 @@ const ProjectPublishDialog = ({onClose, project}: {onClose: () => void; project:
 
                     <div className="flex justify-end">
                         <Button
-                            disabled={!!project?.publishedDate}
+                            label="Publish"
                             onClick={() =>
                                 publishProjectMutation.mutate({
                                     id: project.id!,
-                                    publishProjectRequestModel: {
+                                    publishProjectRequest: {
                                         description,
                                     },
                                 })
                             }
-                            size="sm"
-                        >
-                            Publish
-                        </Button>
+                        />
                     </div>
                 </div>
             </DialogContent>

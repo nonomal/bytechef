@@ -1,0 +1,62 @@
+# Test-only GraphQL base operations and minimal type stubs for GraphQL slice tests.
+
+# Base operation types so that 'extend type Query/Mutation' from main resources can merge.
+type Query {
+    _placeholder: Boolean
+}
+
+type Mutation {
+    _placeholder: Boolean
+}
+
+# Minimal type stubs referenced by mcp graphqls files
+scalar Any
+scalar Long
+scalar Map
+
+type Tag {
+    id: ID
+    name: String
+}
+
+input TagInput {
+    id: ID
+    name: String!
+}
+
+enum PlatformType {
+    AUTOMATION
+    EMBEDDED
+}
+
+interface Property {
+    name: String
+    type: PropertyType!
+}
+
+type StringProperty implements Property {
+    name: String
+    type: PropertyType!
+}
+
+type Option {
+    description: String
+    label: String
+    value: Any
+}
+
+enum PropertyType {
+    ARRAY
+    BOOLEAN
+    DATE
+    DATE_TIME
+    DYNAMIC_PROPERTIES
+    FILE_ENTRY
+    INTEGER
+    NULL
+    NUMBER
+    STRING
+    OBJECT
+    TASK
+    TIME
+}

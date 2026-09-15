@@ -1,0 +1,244 @@
+---
+title: "Spotify"
+description: "Spotify is a popular music streaming service that offers a vast library of songs, podcasts, and playlists for users to enjoy."
+---
+
+
+Categories: 
+
+
+Type: spotify/v1
+
+<hr />
+
+
+
+
+## Connections
+
+Version: 1
+
+
+### OAuth2 Authorization Code
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| clientId | Client Id | STRING |  | true |
+| clientSecret | Client Secret | STRING |  | true |
+
+
+
+## Connection Setup
+
+Connect Spotify to ByteChef using OAuth 2.0 (Authorization Code).
+
+### Create a Spotify OAuth app
+
+1. Go to your [Dashboard](https://developer.spotify.com/dashboard).
+2. Click on the **Create app**.
+3. Enter an app name and description of your choice.
+4. Add the ByteChef OAuth redirect (callback) URL(s):
+    - Cloud: `https://app.bytechef.io/callback`
+    - Local development: `http://127.0.0.1:5173/callback`
+5. Select Web API, put a tick in the Developer Terms of Service checkbox and finally click **Save**.
+6. Click **View client secret**.
+7. Copy **Client ID** and **Client Secret**.
+
+<div style={{ position: 'relative', height:0, width: '100%', overflow: 'hidden', zIndex: 49, boxSizing: 'border-box', paddingBottom: 'calc(53.05219207% + 32px)'}}>
+    <iframe src="https://www.guidejar.com/embed/vp2BqlZRtDLYQdewMKaq?type=1&controls=on" width="100%" height="100%" style={{height:'100%', position:'absolute', inset:0}} allowFullScreen frameBorder="0"></iframe>
+</div>
+
+
+
+<hr />
+
+
+## Actions
+
+
+### Add Items to a Playlist
+Name: addItemsToPlaylist
+
+`Adds one or more items to your playlist.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| playlist_id | Playlist ID | STRING | ID of the playlist the items will be added to. | true |
+| uris | Tracks | ARRAY <details> <summary> Items </summary> [STRING] </details> |  | true |
+| position | Position | INTEGER | Position to insert the items, a zero-based index. | false |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Add Items to a Playlist",
+  "name" : "addItemsToPlaylist",
+  "parameters" : {
+    "playlist_id" : "",
+    "uris" : [ "" ],
+    "position" : 1
+  },
+  "type" : "spotify/v1/addItemsToPlaylist"
+}
+```
+
+#### Output
+
+
+
+Type: OBJECT
+
+
+#### Properties
+
+|     Name     |     Type     |     Description     |
+|:------------:|:------------:|:-------------------:|
+| snapshot_id | STRING | The snapshot ID of the playlist. |
+
+
+
+
+#### Output Example
+```json
+{
+  "snapshot_id" : ""
+}
+```
+
+#### Find playlist ID
+
+1. In your Spotify web app open a playlist you want to find ID for.
+2. In **URL** you will see number like this `/playlist/3rfk5UPuFRMexzVirYZliv`
+3. Because of that your playlist ID is **3rfk5UPuFRMexzVirYZliv**
+
+
+
+### Play/Resume Playback
+Name: startResumePlayback
+
+`Start or resume current playback on an active device.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| deviceId | Device ID | STRING | The id of the device this command is targeting. If not supplied, the user's currently active device is the target. | false |
+| context_uri | Context Uri | STRING | Spotify URI of the context to play (album, artist, playlist). | false |
+| uris | Tracks | ARRAY <details> <summary> Items </summary> [STRING] </details> | Spotify track URIs to play. | false |
+| position_ms | Position | INTEGER | The position in milliseconds to start playback from. | false |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Play/Resume Playback",
+  "name" : "startResumePlayback",
+  "parameters" : {
+    "deviceId" : "",
+    "context_uri" : "",
+    "uris" : [ "" ],
+    "position_ms" : 1
+  },
+  "type" : "spotify/v1/startResumePlayback"
+}
+```
+
+#### Output
+
+This action does not produce any output.
+
+
+
+
+
+
+### Create Playlist
+Name: createPlaylist
+
+`Creates a new playlist`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| name | Name | STRING | The name for the new playlist. | true |
+| description | Description | STRING | The description for the new playlist. | false |
+| public | Public | BOOLEAN <details> <summary> Options </summary> <span>true</span>, <span>false</span> </details> | The public status for the new playlist. | true |
+| collaborative | Collaborative | BOOLEAN <details> <summary> Options </summary> <span>true</span>, <span>false</span> </details> | If the playlist is collaborative or not. | true |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Create Playlist",
+  "name" : "createPlaylist",
+  "parameters" : {
+    "name" : "",
+    "description" : "",
+    "public" : false,
+    "collaborative" : false
+  },
+  "type" : "spotify/v1/createPlaylist"
+}
+```
+
+#### Output
+
+
+
+Type: OBJECT
+
+
+#### Properties
+
+|     Name     |     Type     |     Description     |
+|:------------:|:------------:|:-------------------:|
+| collaborative | BOOLEAN <details> <summary> Options </summary> <span>true</span>, <span>false</span> </details> | Indicates if the owner allows other users to modify the playlist. |
+| description | STRING | The playlist description. |
+| external_urls | OBJECT <details> <summary> Properties </summary> &#123;STRING\(spotify)&#125; </details> | Known external URLs for this playlist. |
+| href | STRING | A link to the Web API endpoint providing full details of the playlist. |
+| id | STRING | The Spotify ID for the playlist. |
+| name | STRING | The name of the playlist. |
+| type | STRING | The object type: 'playlist'. |
+| uri | STRING | The Spotify URI for the playlist. |
+| owner | OBJECT <details> <summary> Properties </summary> &#123;STRING\(href), STRING\(id), STRING\(type), STRING\(uri)&#125; </details> | The user who owns the playlist. |
+| public | BOOLEAN <details> <summary> Options </summary> <span>true</span>, <span>false</span> </details> | The playlist's public/private status. |
+
+
+
+
+#### Output Example
+```json
+{
+  "collaborative" : false,
+  "description" : "",
+  "external_urls" : {
+    "spotify" : ""
+  },
+  "href" : "",
+  "id" : "",
+  "name" : "",
+  "type" : "",
+  "uri" : "",
+  "owner" : {
+    "href" : "",
+    "id" : "",
+    "type" : "",
+    "uri" : ""
+  },
+  "public" : false
+}
+```
+
+
+
+
+
+
+## What to do if your action is not listed here?
+
+If this component doesn't have the action you need, you can use **Custom Action** to create your own. Custom Actions empower you to define HTTP requests tailored to your specific requirements, allowing for greater flexibility in integrating with external services or APIs.
+
+To create a Custom Action, simply specify the desired HTTP method, path, and any necessary parameters. This way, you can extend the functionality of your component beyond the predefined actions, ensuring that you can meet all your integration needs effectively.
+

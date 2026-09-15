@@ -1,82 +1,94 @@
-import {Input} from '@/components/ui/input';
-import {ComponentDefinitionBasicModel, TaskDispatcherDefinitionModel} from '@/shared/middleware/platform/configuration';
-import {useEffect, useState} from 'react';
+import {Input} from '@/components/Input/Input';
+import {ComponentDefinitionBasic, TaskDispatcherDefinition} from '@/shared/middleware/platform/configuration';
+import {useApplicationInfoStore} from '@/shared/stores/useApplicationInfoStore';
+import {useFeatureFlagsStore} from '@/shared/stores/useFeatureFlagsStore';
+import {useMemo} from 'react';
+import {twMerge} from 'tailwind-merge';
 
-import WorkflowNodesTabs from './WorkflowNodesTabs';
+import {useFilteredComponentDefinitions} from '../hooks/useFilteredComponentDefinitions';
+import WorkflowNodesTabs from './workflow-nodes-tabs/WorkflowNodesTabs';
 
 const WorkflowNodesSidebar = ({
     data,
+    visible,
 }: {
     data: {
-        componentDefinitions: Array<ComponentDefinitionBasicModel>;
-        taskDispatcherDefinitions: Array<TaskDispatcherDefinitionModel>;
+        componentDefinitions: Array<ComponentDefinitionBasic>;
+        taskDispatcherDefinitions: Array<TaskDispatcherDefinition>;
     };
+    visible: boolean;
 }) => {
-    const [filter, setFilter] = useState('');
+    const {componentsWithActions, filter, setFilter, trimmedFilter} = useFilteredComponentDefinitions(
+        data.componentDefinitions
+    );
 
-    const [filteredActionComponentDefinitions, setFilteredActionComponentDefinitions] = useState<
-        Array<ComponentDefinitionBasicModel>
-    >([]);
+    const getFeatureFlag = useFeatureFlagsStore();
 
-    const [filteredTaskDispatcherDefinitions, setFilteredTaskDispatcherDefinitions] = useState<
-        Array<TaskDispatcherDefinitionModel>
-    >([]);
+    const ff_797 = getFeatureFlag('ff-797');
 
-    const [filteredTriggerComponentDefinitions, setFilteredTriggerComponentDefinitions] = useState<
-        Array<ComponentDefinitionBasicModel>
-    >([]);
+    const knowledgeBaseEnabled = useApplicationInfoStore((state) => state.ai.knowledgeBase.enabled);
 
-    const {componentDefinitions, taskDispatcherDefinitions} = data;
+    const filteredActionComponentDefinitions = useMemo(() => {
+        if (!componentsWithActions) {
+            return [];
+        }
 
-    useEffect(() => {
-        setFilteredActionComponentDefinitions(
-            componentDefinitions.filter(
-                (componentDefinition) =>
-                    componentDefinition?.actionsCount &&
-                    (componentDefinition.name?.toLowerCase().includes(filter.toLowerCase()) ||
-                        componentDefinition?.title?.toLowerCase().includes(filter.toLowerCase()))
-            )
-        );
+        const actionComponents = componentsWithActions
+            .filter(({actionsCount}) => actionsCount && actionsCount > 0)
+            .filter(
+                ({name}) =>
+                    ((!ff_797 && name !== 'dataStream') || ff_797) &&
+                    ((!knowledgeBaseEnabled && name !== 'knowledgeBase') || knowledgeBaseEnabled)
+            );
 
-        setFilteredTaskDispatcherDefinitions(
-            taskDispatcherDefinitions.filter(
+        return actionComponents;
+    }, [componentsWithActions, ff_797, knowledgeBaseEnabled]);
+
+    const filteredTaskDispatcherDefinitions = useMemo(
+        () =>
+            data.taskDispatcherDefinitions.filter(
                 (taskDispatcherDefinition) =>
-                    taskDispatcherDefinition.name?.toLowerCase().includes(filter.toLowerCase()) ||
-                    taskDispatcherDefinition?.title?.toLowerCase().includes(filter.toLowerCase())
-            )
-        );
+                    taskDispatcherDefinition.name?.toLowerCase().includes(trimmedFilter.toLowerCase()) ||
+                    taskDispatcherDefinition?.title?.toLowerCase().includes(trimmedFilter.toLowerCase())
+            ),
+        [data.taskDispatcherDefinitions, trimmedFilter]
+    );
 
-        setFilteredTriggerComponentDefinitions(
-            componentDefinitions.filter(
-                (componentDefinition) =>
-                    componentDefinition?.triggersCount &&
-                    (componentDefinition.name?.toLowerCase().includes(filter.toLowerCase()) ||
-                        componentDefinition?.title?.toLowerCase().includes(filter.toLowerCase()))
-            )
-        );
-    }, [componentDefinitions, filter, taskDispatcherDefinitions]);
+    const filteredTriggerComponentDefinitions = useMemo(
+        () =>
+            componentsWithActions.filter(
+                (componentDefinition) => componentDefinition?.triggersCount && componentDefinition.triggersCount > 0
+            ),
+        [componentsWithActions]
+    );
 
     return (
-        <div className="flex h-full flex-col border-l bg-white">
-            <header className="p-3 text-center text-gray-600">
+        <aside
+            className={twMerge(
+                'absolute inset-y-2 right-14 flex w-96 flex-col overflow-hidden rounded-md border border-stroke-neutral-secondary bg-surface-neutral-secondary pb-4 transition-[transform,opacity] duration-300 ease-in-out',
+                visible ? 'translate-x-0 opacity-100' : 'translate-x-4 opacity-0'
+            )}
+        >
+            <div className="px-3 pt-3 text-center text-content-neutral-secondary">
                 <Input
+                    className="bg-white shadow-none"
                     name="workflowNodeFilter"
                     onChange={(event) => setFilter(event.target.value)}
-                    placeholder="Filter workflow nodes"
+                    placeholder="Filter components"
                     value={filter}
                 />
-            </header>
+            </div>
 
-            <main className="size-full pt-1">
+            <div className="flex flex-1 flex-col overflow-hidden pt-1">
                 <WorkflowNodesTabs
                     actionComponentDefinitions={filteredActionComponentDefinitions}
+                    hideClusterElementComponents
                     itemsDraggable
-                    popover={false}
                     taskDispatcherDefinitions={filteredTaskDispatcherDefinitions}
                     triggerComponentDefinitions={filteredTriggerComponentDefinitions}
                 />
-            </main>
-        </div>
+            </div>
+        </aside>
     );
 };
 

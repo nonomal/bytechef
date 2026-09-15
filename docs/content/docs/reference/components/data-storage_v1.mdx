@@ -1,0 +1,591 @@
+---
+title: "Data Storage"
+description: "Using the Data Storage component, you can easily manage and operate on lists and objects by setting or retrieving any desired data. This process employs a key-value store mechanism, where the key represents the field's name and the value corresponds to the particular data's actual value."
+---
+
+
+Categories: Helpers
+
+
+Type: dataStorage/v1
+
+<hr />
+
+
+
+
+## Actions
+
+
+### Append Value to List
+Name: appendValueToList
+
+`Append value to the end of a list. If the list does not exist, it will be created.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| scope | Scope | STRING <details> <summary> Options </summary> <span title="The value is accessible only within the current execution.">CURRENT_EXECUTION</span>, <span title="The value is shared across all executions of the same workflow.">WORKFLOW</span>, <span title="The value is shared across all workflows within the same deployment.">PRINCIPAL</span>, <span title="The value is shared across all deployments and workflows under the same account.">ACCOUNT</span> </details> | The namespace for appending a value. | true |
+| key | Key | STRING | The identifier of a list must be unique within the chosen scope, or a new value will overwrite the existing one. | true |
+| type | Type | STRING <details> <summary> Options </summary> <span>ARRAY</span>, <span>BOOLEAN</span>, <span>DATE</span>, <span>DATE_TIME</span>, <span>INTEGER</span>, <span>NULL</span>, <span>NUMBER</span>, <span>OBJECT</span>, <span>STRING</span>, <span>TIME</span> </details> | The value type. | true |
+| value | Value | ARRAY <details> <summary> Items </summary> [] </details> | The value to set under given key. | true |
+| value | Value | BOOLEAN <details> <summary> Options </summary> <span>true</span>, <span>false</span> </details> | The value to set under given key. | true |
+| value | Value | DATE | The value to set under given key. | true |
+| value | Value | DATE_TIME | The value to set under given key. | true |
+| value | Value | INTEGER | The value to set under given key. | true |
+| value | Value | NULL | The value to set under given key. | true |
+| value | Value | NUMBER | The value to set under given key. | true |
+| value | Value | OBJECT <details> <summary> Properties </summary> &#123;&#125; </details> | The value to set under given key. | true |
+| value | Value | STRING | The value to set under given key. | true |
+| value | Value | TIME | The value to set under given key. | true |
+| appendListAsSingleItem | Append a List as a Single Item | BOOLEAN <details> <summary> Options </summary> <span>true</span>, <span>false</span> </details> | When set to true, and the value is a list, it will be added as a single value rather than concatenating the lists. | false |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Append Value to List",
+  "name" : "appendValueToList",
+  "parameters" : {
+    "scope" : "",
+    "key" : "",
+    "type" : "",
+    "value" : "00:00:00",
+    "appendListAsSingleItem" : false
+  },
+  "type" : "dataStorage/v1/appendValueToList"
+}
+```
+
+#### Output
+
+This action does not produce any output.
+
+
+
+
+
+
+### Atomic Increment
+Name: atomicIncrement
+
+`The numeric value can be incremented atomically, and the action can be used concurrently from multiple executions.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| key | Key | STRING | The identifier of a value to increment. | true |
+| scope | Scope | STRING <details> <summary> Options </summary> <span title="The value is accessible only within the current execution.">CURRENT_EXECUTION</span>, <span title="The value is shared across all executions of the same workflow.">WORKFLOW</span>, <span title="The value is shared across all workflows within the same deployment.">PRINCIPAL</span>, <span title="The value is shared across all deployments and workflows under the same account.">ACCOUNT</span> </details> | The namespace to obtain a value from. | true |
+| valueToAdd | Value to Add | INTEGER | The value that can be added to the existing numeric value, which may have a negative value. | true |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Atomic Increment",
+  "name" : "atomicIncrement",
+  "parameters" : {
+    "key" : "",
+    "scope" : "",
+    "valueToAdd" : 1
+  },
+  "type" : "dataStorage/v1/atomicIncrement"
+}
+```
+
+#### Output
+
+
+
+Type: INTEGER
+
+
+
+
+
+
+
+
+
+
+### Await Get Value
+Name: awaitGetValue
+
+`Wait for a value under a specified key, until it's available.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| key | Key | STRING | The identifier of a value to wait for. | true |
+| scope | Scope | STRING <details> <summary> Options </summary> <span title="The value is accessible only within the current execution.">CURRENT_EXECUTION</span>, <span title="The value is shared across all executions of the same workflow.">WORKFLOW</span>, <span title="The value is shared across all workflows within the same deployment.">PRINCIPAL</span>, <span title="The value is shared across all deployments and workflows under the same account.">ACCOUNT</span> </details> | The namespace to obtain a value from. | true |
+| type | Type | STRING <details> <summary> Options </summary> <span>ARRAY</span>, <span>BOOLEAN</span>, <span>DATE</span>, <span>DATE_TIME</span>, <span>INTEGER</span>, <span>NULL</span>, <span>NUMBER</span>, <span>OBJECT</span>, <span>STRING</span>, <span>TIME</span> </details> | The value type. | true |
+| defaultValue | Default Value | ARRAY <details> <summary> Items </summary> [] </details> | The default value to return if no value exists under the given key. | false |
+| defaultValue | Default Value | BOOLEAN <details> <summary> Options </summary> <span>true</span>, <span>false</span> </details> | The default value to return if no value exists under the given key. | false |
+| defaultValue | Default Value | DATE | The default value to return if no value exists under the given key. | false |
+| defaultValue | Default Value | DATE_TIME | The default value to return if no value exists under the given key. | false |
+| defaultValue | Default Value | INTEGER | The default value to return if no value exists under the given key. | false |
+| defaultValue | Default Value | NULL | The default value to return if no value exists under the given key. | false |
+| defaultValue | Default Value | NUMBER | The default value to return if no value exists under the given key. | false |
+| defaultValue | Default Value | OBJECT <details> <summary> Properties </summary> &#123;&#125; </details> | The default value to return if no value exists under the given key. | false |
+| defaultValue | Default Value | STRING | The default value to return if no value exists under the given key. | false |
+| defaultValue | Default Value | TIME | The default value to return if no value exists under the given key. | false |
+| timeout | Timeout | INTEGER | If a value is not found within the specified time, the action returns a null value. Therefore, the maximum wait time should be set accordingly. | true |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Await Get Value",
+  "name" : "awaitGetValue",
+  "parameters" : {
+    "key" : "",
+    "scope" : "",
+    "type" : "",
+    "defaultValue" : "00:00:00",
+    "timeout" : 1
+  },
+  "type" : "dataStorage/v1/awaitGetValue"
+}
+```
+
+#### Output
+
+The output for this action is dynamic and may vary depending on the input parameters. To determine the exact structure of the output, you need to execute the action.
+
+
+
+
+
+
+### Delete Value
+Name: deleteValue
+
+`Remove a value associated with a key in the specified scope.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| key | Key | STRING | The identifier of a value to delete, stored earlier in the selected scope. | true |
+| scope | Scope | STRING <details> <summary> Options </summary> <span title="The value is accessible only within the current execution.">CURRENT_EXECUTION</span>, <span title="The value is shared across all executions of the same workflow.">WORKFLOW</span>, <span title="The value is shared across all workflows within the same deployment.">PRINCIPAL</span>, <span title="The value is shared across all deployments and workflows under the same account.">ACCOUNT</span> </details> | The namespace to delete a value from. The value should have been previously accessible, either in the present workflow execution, or the workflow itself for all the executions, or the user account for all the workflows the user has. | true |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Delete Value",
+  "name" : "deleteValue",
+  "parameters" : {
+    "key" : "",
+    "scope" : ""
+  },
+  "type" : "dataStorage/v1/deleteValue"
+}
+```
+
+#### Output
+
+This action does not produce any output.
+
+
+
+
+
+
+### Delete Value from List
+Name: deleteValueFromlist
+
+`Delete a value from the given index in a list.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| key | Key | STRING | The identifier of a list to delete value from, stored earlier in the selected scope. | true |
+| scope | Scope | STRING <details> <summary> Options </summary> <span title="The value is accessible only within the current execution.">CURRENT_EXECUTION</span>, <span title="The value is shared across all executions of the same workflow.">WORKFLOW</span>, <span title="The value is shared across all workflows within the same deployment.">PRINCIPAL</span>, <span title="The value is shared across all deployments and workflows under the same account.">ACCOUNT</span> </details> | The namespace to delete a value from. The value should have been previously accessible, either in the present workflow execution, or the workflow itself for all the executions, or the user account for all the workflows the user has. | true |
+| index | Index | INTEGER | The specified index in the list will be removed, and if it doesn't exist, the list will remain unaltered. | true |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Delete Value from List",
+  "name" : "deleteValueFromlist",
+  "parameters" : {
+    "key" : "",
+    "scope" : "",
+    "index" : 1
+  },
+  "type" : "dataStorage/v1/deleteValueFromlist"
+}
+```
+
+#### Output
+
+This action does not produce any output.
+
+
+
+
+
+
+### Get All Entries(Keys and Values)
+Name: getAllEntries
+
+`Retrieve all the currently existing keys from storage, along with their values within the provided scope.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| scope | Scope | STRING <details> <summary> Options </summary> <span title="The value is accessible only within the current execution.">CURRENT_EXECUTION</span>, <span title="The value is shared across all executions of the same workflow.">WORKFLOW</span>, <span title="The value is shared across all workflows within the same deployment.">PRINCIPAL</span>, <span title="The value is shared across all deployments and workflows under the same account.">ACCOUNT</span> </details> | The namespace to get keys from. | true |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Get All Entries(Keys and Values)",
+  "name" : "getAllEntries",
+  "parameters" : {
+    "scope" : ""
+  },
+  "type" : "dataStorage/v1/getAllEntries"
+}
+```
+
+#### Output
+
+The output for this action is dynamic and may vary depending on the input parameters. To determine the exact structure of the output, you need to execute the action.
+
+
+
+
+
+
+### Get Value
+Name: getValue
+
+`Retrieve a previously assigned value within the specified scope using its corresponding key.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| key | Key | STRING | The identifier of a value to get, stored earlier in the selected scope. | true |
+| scope | Scope | STRING <details> <summary> Options </summary> <span title="The value is accessible only within the current execution.">CURRENT_EXECUTION</span>, <span title="The value is shared across all executions of the same workflow.">WORKFLOW</span>, <span title="The value is shared across all workflows within the same deployment.">PRINCIPAL</span>, <span title="The value is shared across all deployments and workflows under the same account.">ACCOUNT</span> </details> | The namespace to get a value from. The value should have been previously accessible, either in the present workflow execution, or the workflow itself for all the executions, or the user account for all the workflows the user has. | true |
+| type | Type | STRING <details> <summary> Options </summary> <span>ARRAY</span>, <span>BOOLEAN</span>, <span>DATE</span>, <span>DATE_TIME</span>, <span>INTEGER</span>, <span>NULL</span>, <span>NUMBER</span>, <span>OBJECT</span>, <span>STRING</span>, <span>TIME</span> </details> | The value type. | false |
+| defaultValue | Default Value | ARRAY <details> <summary> Items </summary> [] </details> | The default value to return if no value exists under the given key. | false |
+| defaultValue | Default Value | BOOLEAN <details> <summary> Options </summary> <span>true</span>, <span>false</span> </details> | The default value to return if no value exists under the given key. | false |
+| defaultValue | Default Value | DATE | The default value to return if no value exists under the given key. | false |
+| defaultValue | Default Value | DATE_TIME | The default value to return if no value exists under the given key. | false |
+| defaultValue | Default Value | INTEGER | The default value to return if no value exists under the given key. | false |
+| defaultValue | Default Value | NULL | The default value to return if no value exists under the given key. | false |
+| defaultValue | Default Value | NUMBER | The default value to return if no value exists under the given key. | false |
+| defaultValue | Default Value | OBJECT <details> <summary> Properties </summary> &#123;&#125; </details> | The default value to return if no value exists under the given key. | false |
+| defaultValue | Default Value | STRING | The default value to return if no value exists under the given key. | false |
+| defaultValue | Default Value | TIME | The default value to return if no value exists under the given key. | false |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Get Value",
+  "name" : "getValue",
+  "parameters" : {
+    "key" : "",
+    "scope" : "",
+    "type" : "",
+    "defaultValue" : "00:00:00"
+  },
+  "type" : "dataStorage/v1/getValue"
+}
+```
+
+#### Output
+
+The output for this action is dynamic and may vary depending on the input parameters. To determine the exact structure of the output, you need to execute the action.
+
+
+
+
+
+
+### Set Value
+Name: setValue
+
+`Set a value under a key, in the specified scope.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| key | Key | STRING | The identifier of a value. Must be unique across all keys within the chosen scope to prevent overwriting the existing value with a new one. Also, it must be less than 1024 bytes in length. | true |
+| scope | Scope | STRING <details> <summary> Options </summary> <span title="The value is accessible only within the current execution.">CURRENT_EXECUTION</span>, <span title="The value is shared across all executions of the same workflow.">WORKFLOW</span>, <span title="The value is shared across all workflows within the same deployment.">PRINCIPAL</span>, <span title="The value is shared across all deployments and workflows under the same account.">ACCOUNT</span> </details> | The namespace to set a value in. The value should have been previously accessible, either in the present workflow execution, or the workflow itself for all the executions, or the user account for all the workflows the user has. | true |
+| type | Type | STRING <details> <summary> Options </summary> <span>ARRAY</span>, <span>BOOLEAN</span>, <span>DATE</span>, <span>DATE_TIME</span>, <span>INTEGER</span>, <span>NULL</span>, <span>NUMBER</span>, <span>OBJECT</span>, <span>STRING</span>, <span>TIME</span> </details> | The value type. | true |
+| value | Value | ARRAY <details> <summary> Items </summary> [] </details> | The value to set under the specified key. | true |
+| value | Value | BOOLEAN <details> <summary> Options </summary> <span>true</span>, <span>false</span> </details> | The value to set under the specified key. | true |
+| value | Value | DATE | The value to set under the specified key. | true |
+| value | Value | DATE_TIME | The value to set under the specified key. | true |
+| value | Value | INTEGER | The value to set under the specified key. | true |
+| value | Value | NULL | The value to set under the specified key. | true |
+| value | Value | NUMBER | The value to set under the specified key. | true |
+| value | Value | OBJECT <details> <summary> Properties </summary> &#123;&#125; </details> | The value to set under the specified key. | true |
+| value | Value | STRING | The value to set under the specified key. | true |
+| value | Value | TIME | The value to set under the specified key. | true |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Set Value",
+  "name" : "setValue",
+  "parameters" : {
+    "key" : "",
+    "scope" : "",
+    "type" : "",
+    "value" : "00:00:00"
+  },
+  "type" : "dataStorage/v1/setValue"
+}
+```
+
+#### Output
+
+This action does not produce any output.
+
+
+
+
+
+
+### Set Value in List
+Name: setValueInList
+
+`Set value under a specified index in a list.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| key | Key | STRING | The identifier of a list. Must be unique across all keys within the chosen scope to prevent overwriting the existing value with a new one. Also, it must be less than 1024 bytes in length. | true |
+| scope | Scope | STRING <details> <summary> Options </summary> <span title="The value is accessible only within the current execution.">CURRENT_EXECUTION</span>, <span title="The value is shared across all executions of the same workflow.">WORKFLOW</span>, <span title="The value is shared across all workflows within the same deployment.">PRINCIPAL</span>, <span title="The value is shared across all deployments and workflows under the same account.">ACCOUNT</span> </details> | The namespace to set a value in. The value should have been previously accessible, either in the present workflow execution, or the workflow itself for all the executions, or the user account for all the workflows the user has. | true |
+| index | Index | INTEGER | The index in a list to set a value under. The previous value will be overridden. | true |
+| type | Type | STRING <details> <summary> Options </summary> <span>ARRAY</span>, <span>BOOLEAN</span>, <span>DATE</span>, <span>DATE_TIME</span>, <span>INTEGER</span>, <span>NULL</span>, <span>NUMBER</span>, <span>OBJECT</span>, <span>STRING</span>, <span>TIME</span> </details> | The value type. | true |
+| value | Value | ARRAY <details> <summary> Items </summary> [] </details> | The value to set under the specified list's key. | true |
+| value | Value | BOOLEAN <details> <summary> Options </summary> <span>true</span>, <span>false</span> </details> | The value to set under the specified list's key. | true |
+| value | Value | DATE | The value to set under the specified list's key. | true |
+| value | Value | DATE_TIME | The value to set under the specified list's key. | true |
+| value | Value | INTEGER | The value to set under the specified key. | true |
+| value | Value | NULL | The value to set under the specified key. | true |
+| value | Value | NUMBER | The value to set under the specified list's key. | true |
+| value | Value | OBJECT <details> <summary> Properties </summary> &#123;&#125; </details> | The value to set under the specified list's key. | true |
+| value | Value | STRING | The value to set under the specified list's key. | true |
+| value | Value | TIME | The value to set under the specified list's key. | true |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Set Value in List",
+  "name" : "setValueInList",
+  "parameters" : {
+    "key" : "",
+    "scope" : "",
+    "index" : 1,
+    "type" : "",
+    "value" : "00:00:00"
+  },
+  "type" : "dataStorage/v1/setValueInList"
+}
+```
+
+#### Output
+
+This action does not produce any output.
+
+
+
+
+
+
+
+
+<hr />
+
+# Additional Instructions
+
+### Data Storage: Scopes, getValue behavior, defaults, and examples
+
+This guide complements the component reference and answers common questions with concrete examples.
+
+For the full property list of every action, see the reference page: `/docs/reference/components/data-storage_v1`.
+
+---
+
+### Scopes explained with examples
+
+Data Storage actions accept a `scope` that defines how broadly the value is visible and how long it lives.
+
+- CURRENT_EXECUTION
+  - Visibility: Only within the currently running workflow execution (this single run).
+  - Lifetime: Disappears when this execution finishes.
+  - Example: Accumulate items in a loop and emit at the end of the run.
+
+- WORKFLOW
+  - Visibility: All future and parallel executions of the same workflow (same workflow definition + same deployment) can read it.
+  - Lifetime: Persists until explicitly deleted or overwritten by the workflow.
+  - Example: Cache a per‑workflow token or “last processed timestamp”.
+
+- PRINCIPAL
+  - Visibility: All workflows within the same deployment (principal) can share it.
+  - Lifetime: Persists across all workflows in that deployment until deleted/overwritten.
+  - Example: Share a rate‑limit counter across multiple workflows inside the same deployment/environment.
+
+- ACCOUNT
+  - Visibility: Global for your ByteChef account across deployments and workflows.
+  - Lifetime: Persists until deleted/overwritten.
+  - Example: Organization‑wide configuration or shared lookup tables used by many workflows.
+
+Notes
+- Keys must be unique within a chosen scope; otherwise the new write overwrites the existing value.
+- When you need safe concurrent numeric increments from multiple executions, use `Atomic Increment`.
+- Keys must be smaller than 1024 bytes (see Set Value reference).
+
+---
+
+### Worked example: building and reading a list (heroes)
+
+Imagine a loop where you append three objects to a list under key `heroes`:
+
+```
+Append Value to List (scope: CURRENT_EXECUTION, key: heroes, type: OBJECT, value: {"name":"Peter","secondName":"Pan"})
+Append Value to List (scope: CURRENT_EXECUTION, key: heroes, type: OBJECT, value: {"name":"Donald","secondName":"Duck"})
+Append Value to List (scope: CURRENT_EXECUTION, key: heroes, type: OBJECT, value: {"name":"Mickey","secondName":"Mouse"})
+```
+
+Next, add `Get Value` with `key: heroes`, `scope: CURRENT_EXECUTION`, `type: ARRAY`. Suppose the designer auto‑names this step `dataStorage_2`.
+
+#### What does `{dataStorage_2}` contain?
+
+It evaluates to the array of objects you stored. Using the example above:
+
+```json
+[
+  { "name": "Peter",  "secondName": "Pan" },
+  { "name": "Donald", "secondName": "Duck" },
+  { "name": "Mickey", "secondName": "Mouse" }
+]
+```
+
+Common projections you can use in expressions:
+- `{dataStorage_2[0].name}` → `Peter`
+- `{dataStorage_2[1].secondName}` → `Duck`
+- Iterate in a downstream loop over `{dataStorage_2}` to process each item.
+
+#### Can I rename `dataStorage_2` to `heroesArray`?
+
+Yes. In the workflow designer, rename the step to a meaningful handle (e.g., `heroesArray`). Thereafter `{heroesArray}` refers to the same output. The handle must be unique within the workflow.
+
+Auto‑naming currently uses the component name with an index (e.g., `dataStorage_2`). It does not derive names from the `key`/`type`. We recommend manually renaming important steps using a clear convention such as:
+- `heroesArray`
+- `counterInteger`
+- `yearString`
+- `birthDate`
+
+---
+
+### getValue: type, validation and transformations
+
+`Get Value` retrieves what was previously stored under the given `key` and `scope`.
+
+- If you omit `type`:
+  - The step returns the stored JSON value “as is”.
+
+- If you provide `type`:
+  - The runtime validates/deserializes the stored value as that type.
+  - For complex types (ARRAY/OBJECT), the structure must match.
+  - For numeric sub‑types, requesting `NUMBER` for an integer will yield a number; requesting `INTEGER` for a non‑integer number is invalid.
+  - If the stored value is incompatible with the requested `type`, the action fails validation rather than silently changing your data.
+
+Important
+- `Get Value` does not mutate what is stored. The `type` is about how the output is interpreted/validated at read time, not how it is persisted.
+- To avoid surprises, store values using the intended type up front (via `Set Value` / `Append Value to List`).
+
+---
+
+### Default Value: when and how to use it
+
+`defaultValue` on `Get Value` is returned when the key does not exist in the chosen scope. Examples:
+
+- Return an empty list if `heroes` is missing:
+  - `type: ARRAY`, `defaultValue: []`
+- Return `0` for a missing counter:
+  - `type: INTEGER`, `defaultValue: 0`
+
+Behavior
+- If the key is absent → you receive `defaultValue` (if provided) or `null`.
+- If the key exists but the stored value is incompatible with the requested `type` → the step fails validation; `defaultValue` is not used to repair type mismatches.
+
+Why does the “Default Value” input sometimes disappear when I choose an expression?
+- Some property editors in the UI switch between “literal” and “expression” modes. When you supply an expression for a consuming field, the editor may hide literal defaults to avoid conflicts. Use one of these strategies:
+  1) Put the fallback directly on the `Get Value` step via its `defaultValue` property; or
+  2) Handle fallback at the consumption site (for example, ensure the downstream component can handle empty arrays or use a Script step to coalesce).
+
+---
+
+### Recipes
+
+#### A) Export the list to CSV
+
+Goal: Save the `heroes` array as CSV text with two columns `name,secondName`.
+
+One simple approach is to build rows and then send CSV text to a component that accepts file/content input (e.g., HTTP upload, drive/storage, email attachment). You can assemble a CSV string with a Script step:
+
+```javascript
+// Script (JavaScript) step
+function perform(input, context) {
+  const rows = context.input.heroes; // pass {heroesArray} into the script's input mapping
+  const header = ['name','secondName'];
+  const lines = [header.join(',')];
+  for (const r of rows) {
+    const safe = [r.name, r.secondName].map(v => typeof v === 'string' ? '"' + v.replaceAll('"', '""') + '"' : '');
+    lines.push(safe.join(','));
+  }
+  return { csv: lines.join('\n') };
+}
+```
+
+Then send `output.csv` to your destination using the corresponding component. Map the Script output field (e.g., `{script.csv}`) to the file content/body.
+
+Tips
+- If your workspace includes a dedicated CSV component, you can map the array of objects and headers directly instead of scripting.
+
+#### B) Append rows to Google Sheets
+
+Goal: Append each hero as a new row in a Google Sheet with columns A: `name`, B: `secondName`.
+
+High‑level steps:
+1. Ensure your `Get Value` step returns the array (rename the step to `heroesArray` for readability).
+2. Add Google Sheets → Append Values (or similar) action.
+3. Provide a 2D array where each inner array is a row `[name, secondName]`.
+
+If you need to reshape objects to rows, insert a tiny Script step:
+
+```javascript
+function perform(input, context) {
+  const rows = context.input.heroes.map(h => [h.name, h.secondName]);
+  return { rows };
+}
+```
+
+Set the Google Sheets “values”/“rows” parameter to `{script.rows}` and configure the target spreadsheet, sheet/tab, and insertion mode.
+
+---
+
+### FAQ
+
+Can I append a list as a single item?
+- Yes. In `Append Value to List`, set `appendListAsSingleItem: true` to push the entire list as one element instead of concatenating.
+
+How do deletes work?
+- Use `Delete Value` to remove any key, or `Delete Value from List` to remove by index within a stored list.
+
+How do I see everything stored in a scope?
+- Use `Get All Entries (Keys and Values)` with the desired `scope`.
+
+Where can I find the full schema for each action?
+- See the component reference: `/docs/reference/components/data-storage_v1`.

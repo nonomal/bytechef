@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,15 +16,16 @@
 
 package com.bytechef.component.csv.file;
 
-import static com.bytechef.component.definition.ComponentDSL.component;
+import static com.bytechef.component.definition.ComponentDsl.component;
 
 import com.bytechef.component.ComponentHandler;
+import com.bytechef.component.csv.file.action.CsvFileAppendAction;
 import com.bytechef.component.csv.file.action.CsvFileReadAction;
 import com.bytechef.component.csv.file.action.CsvFileWriteAction;
-import com.bytechef.component.csv.file.constant.CsvFileConstants;
+import com.bytechef.component.csv.file.datastream.CsvFileItemReader;
+import com.bytechef.component.csv.file.datastream.CsvFileItemWriter;
 import com.bytechef.component.definition.ComponentCategory;
 import com.bytechef.component.definition.ComponentDefinition;
-import com.bytechef.component.definition.DataStreamItemReader;
 import com.google.auto.service.AutoService;
 
 /**
@@ -33,13 +34,18 @@ import com.google.auto.service.AutoService;
 @AutoService(ComponentHandler.class)
 public class CsvFileComponentHandler implements ComponentHandler {
 
-    public static final ComponentDefinition COMPONENT_DEFINITION = component(CsvFileConstants.CSV_FILE)
+    public static final ComponentDefinition COMPONENT_DEFINITION = component("csvFile")
         .title("CSV File")
         .description("Reads and writes data from a csv file.")
         .icon("path:assets/csv-file.svg")
         .categories(ComponentCategory.HELPERS)
-        .actions(CsvFileReadAction.ACTION_DEFINITION, CsvFileWriteAction.ACTION_DEFINITION)
-        .dataStreamItemReader(new DataStreamItemReader() {});
+        .actions(
+            CsvFileReadAction.ACTION_DEFINITION,
+            CsvFileWriteAction.ACTION_DEFINITION,
+            CsvFileAppendAction.ACTION_DEFINITION)
+        .clusterElements(
+            CsvFileItemReader.CLUSTER_ELEMENT_DEFINITION,
+            CsvFileItemWriter.CLUSTER_ELEMENT_DEFINITION);
 
     @Override
     public ComponentDefinition getDefinition() {

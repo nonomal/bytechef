@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,7 +21,6 @@ import com.bytechef.component.definition.Authorization;
 import com.bytechef.config.ApplicationProperties;
 import com.bytechef.config.ApplicationProperties.Oauth2;
 import com.bytechef.config.ApplicationProperties.Oauth2.OAuth2App;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -36,7 +35,6 @@ public class OAuth2ServiceImpl implements OAuth2Service {
 
     private final Oauth2 oauth2;
 
-    @SuppressFBWarnings("EI")
     public OAuth2ServiceImpl(ApplicationProperties applicationProperties) {
         this.oauth2 = applicationProperties.getOauth2();
     }
@@ -55,9 +53,6 @@ public class OAuth2ServiceImpl implements OAuth2Service {
                     Map.of(
                         Authorization.CLIENT_ID, oAuth2App.getClientId(),
                         Authorization.CLIENT_SECRET, oAuth2App.getClientSecret()));
-            } else {
-                throw new IllegalArgumentException(
-                    "Component definition with componentName=%s does not exist".formatted(componentName));
             }
         }
 

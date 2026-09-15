@@ -1,34 +1,30 @@
-import ComboBox, {ComboBoxItemType} from '@/components/ComboBox';
-import DatePicker from '@/components/DatePicker';
+import Button from '@/components/Button/Button';
+import ComboBox from '@/components/ComboBox/ComboBox';
+import DatePicker from '@/components/DatePicker/DatePicker';
 import EmptyList from '@/components/EmptyList';
 import PageLoader from '@/components/PageLoader';
 import TablePagination from '@/components/TablePagination';
 import {Label} from '@/components/ui/label';
-import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from '@/components/ui/select';
-import {useWorkspaceStore} from '@/pages/automation/stores/useWorkspaceStore';
+import {Tooltip, TooltipContent, TooltipTrigger} from '@/components/ui/tooltip';
+import {useWorkflowExecutions} from '@/pages/automation/workflow-executions/hooks/useWorkflowExecutions';
+import {getWorkflowExecutionsFilters} from '@/pages/automation/workflow-executions/utils/workflowExecutionsFilters';
+import FilterTitle from '@/shared/components/filters/FilterTitle';
 import Footer from '@/shared/layout/Footer';
 import Header from '@/shared/layout/Header';
 import LayoutContainer from '@/shared/layout/LayoutContainer';
-import {EnvironmentModel, ProjectModel} from '@/shared/middleware/automation/configuration';
-import {
-    GetWorkflowExecutionsPageJobStatusEnum,
-    WorkflowExecutionModelFromJSON,
-} from '@/shared/middleware/automation/workflow/execution';
-import {
-    useGetProjectInstanceQuery,
-    useGetWorkspaceProjectInstancesQuery,
-} from '@/shared/queries/automation/projectInstances.queries';
-import {useGetProjectVersionWorkflowsQuery} from '@/shared/queries/automation/projectWorkflows.queries';
-import {useGetWorkspaceProjectsQuery} from '@/shared/queries/automation/projects.queries';
-import {useGetWorkflowExecutionsQuery} from '@/shared/queries/automation/workflowExecutions.queries';
-import {ActivityIcon} from 'lucide-react';
-import {useState} from 'react';
-import {useNavigate, useSearchParams} from 'react-router-dom';
+import {Project} from '@/shared/middleware/automation/configuration';
+import {GetWorkflowExecutionsPageJobStatusEnum} from '@/shared/middleware/automation/workflow/execution';
+import {ActivityIcon, RefreshCwIcon} from 'lucide-react';
+import {useMemo} from 'react';
+import {twMerge} from 'tailwind-merge';
 
-import WorkflowExecutionSheet from './components/WorkflowExecutionSheet';
 import WorkflowExecutionsTable from './components/WorkflowExecutionsTable';
+import WorkflowExecutionSheet from './components/workflow-execution-sheet/WorkflowExecutionSheet';
+
+const ANY_FILTER_OPTION = {label: 'Any', value: ''};
 
 const jobStatusOptions = [
+    ANY_FILTER_OPTION,
     {
         label: GetWorkflowExecutionsPageJobStatusEnum.Started,
         value: GetWorkflowExecutionsPageJobStatusEnum.Started,
@@ -51,255 +47,77 @@ const jobStatusOptions = [
     },
 ];
 
-const ProjectLabel = ({project}: {project: ProjectModel}) => (
+const ProjectLabel = ({project}: {project: Project}) => (
     <div className="flex items-center">
-        <span className="mr-1 ">{project.name}</span>
+        <span className="mr-1">{project.name}</span>
 
-        <span className="text-xs text-gray-500">{project?.tags?.map((tag) => tag.name).join(', ')}</span>
+        <span className="text-xs text-content-neutral-secondary">
+            {project?.tags?.map((tag) => tag.name).join(', ')}
+        </span>
     </div>
 );
 
 export const WorkflowExecutions = () => {
-    const [searchParams] = useSearchParams();
-
-    const [filterEndDate, setFilterEndDate] = useState<Date | undefined>(
-        searchParams.get('endDate') ? new Date(+searchParams.get('endDate')!) : undefined
-    );
-    const [filterEnvironment, setFilterEnvironment] = useState<string | undefined>(
-        searchParams.get('environment') ? searchParams.get('environment')! : undefined
-    );
-    const [filterPageNumber, setFilterPageNumber] = useState<number | undefined>(
-        searchParams.get('pageNumber') ? +searchParams.get('pageNumber')! : undefined
-    );
-    const [filterProjectId, setFilterProjectId] = useState<number | undefined>(
-        searchParams.get('projectId') ? +searchParams.get('projectId')! : undefined
-    );
-    const [filterProjectInstanceId, setFilterProjectInstanceId] = useState<number | undefined>(
-        searchParams.get('projectInstanceId') ? +searchParams.get('projectInstanceId')! : undefined
-    );
-    const [filterStatus, setFilterStatus] = useState<GetWorkflowExecutionsPageJobStatusEnum | undefined>(
-        searchParams.get('status') ? (searchParams.get('status')! as GetWorkflowExecutionsPageJobStatusEnum) : undefined
-    );
-    const [filterStartDate, setFilterStartDate] = useState<Date | undefined>(
-        searchParams.get('startDate') ? new Date(+searchParams.get('startDate')!) : undefined
-    );
-    const [filterWorkflowId, setFilterWorkflowId] = useState<string | undefined>();
-
-    const {currentWorkspaceId} = useWorkspaceStore();
-
-    const navigate = useNavigate();
-
-    const {data: projectInstance} = useGetProjectInstanceQuery(filterProjectInstanceId!, !!filterProjectInstanceId);
-
-    const {data: projectInstances} = useGetWorkspaceProjectInstancesQuery({
-        id: currentWorkspaceId!,
-        projectId: filterProjectId,
-    });
-
-    const {data: projects} = useGetWorkspaceProjectsQuery({id: currentWorkspaceId!});
-
     const {
-        data: workflowExecutionPage,
-        error: workflowExecutionsError,
-        isLoading: workflowExecutionsIsLoading,
-    } = useGetWorkflowExecutionsQuery({
-        environment: filterEnvironment as EnvironmentModel,
-        jobEndDate: filterEndDate,
-        jobStartDate: filterStartDate,
-        jobStatus: filterStatus,
-        pageNumber: filterPageNumber,
-        projectId: filterProjectId,
-        projectInstanceId: filterProjectInstanceId,
-        workflowId: filterWorkflowId,
-    });
+        emptyListMessage,
+        filterEndDate,
+        filterPageNumber,
+        filterProjectDeploymentId,
+        filterProjectId,
+        filterStartDate,
+        filterStatus,
+        filterWorkflowId,
+        handleEndDateChange,
+        handlePaginationClick,
+        handleProjectChange,
+        handleProjectDeploymentChange,
+        handleStartDateChange,
+        handleStatusChange,
+        handleWorkflowChange,
+        projectDeployments,
+        projects,
+        refetchWorkflowExecutions,
+        setFiltersInteracted,
+        workflowExecutionPage,
+        workflowExecutions,
+        workflowExecutionsError,
+        workflowExecutionsIsFetching,
+        workflowExecutionsIsLoading,
+        workflows,
+    } = useWorkflowExecutions();
 
-    /* eslint-disable @typescript-eslint/no-non-null-asserted-optional-chain */
-    const {data: workflows} = useGetProjectVersionWorkflowsQuery(
-        filterProjectId!,
-        projectInstance?.projectVersion!,
-        !!projectInstance
+    const activeFilters = useMemo(
+        () =>
+            getWorkflowExecutionsFilters({
+                endDate: filterEndDate,
+                projectDeploymentId: filterProjectDeploymentId,
+                projectDeployments,
+                projectId: filterProjectId,
+                projects,
+                startDate: filterStartDate,
+                status: filterStatus,
+                workflowId: filterWorkflowId,
+                workflows,
+            }),
+        [
+            filterEndDate,
+            filterProjectDeploymentId,
+            filterProjectId,
+            filterStartDate,
+            filterStatus,
+            filterWorkflowId,
+            projectDeployments,
+            projects,
+            workflows,
+        ]
     );
-
-    const emptyListMessage =
-        !filterStatus &&
-        !filterStartDate &&
-        !filterEndDate &&
-        !filterProjectId &&
-        !filterProjectInstanceId &&
-        !filterWorkflowId &&
-        !filterPageNumber
-            ? "You don't have any executed workflows yet."
-            : 'There is no executed workflows for the current criteria.';
-
-    const workflowExecutions = workflowExecutionPage?.content?.map((workflowExecutionModel: object) =>
-        WorkflowExecutionModelFromJSON(workflowExecutionModel)
-    );
-
-    function filter(
-        environment?: string,
-        status?: GetWorkflowExecutionsPageJobStatusEnum,
-        startDate?: Date,
-        endDate?: Date,
-        projectId?: number,
-        projectInstanceId?: number,
-        workflowId?: string,
-        pageNumber?: number
-    ) {
-        navigate(
-            `/automation/executions?environment=${environment ?? ''}&status=${status ? status : ''}&startDate=${startDate ? startDate.getTime() : ''}&endDate=${endDate ? endDate.getTime() : ''}&projectId=${projectId ? projectId : ''}&projectInstanceId=${projectInstanceId ? projectInstanceId : ''}&workflowId=${workflowId ? workflowId : ''}&pageNumber=${pageNumber ? pageNumber : ''}`
-        );
-    }
-
-    const handleEndDateChange = (date?: Date) => {
-        setFilterEndDate(date);
-
-        filter(
-            filterEnvironment,
-            filterStatus,
-            filterStartDate,
-            date,
-            filterProjectId,
-            filterProjectInstanceId,
-            filterWorkflowId,
-            filterPageNumber
-        );
-    };
-
-    const handleEnvironmentChange = (environment: string) => {
-        setFilterEnvironment(environment);
-
-        filter(
-            environment,
-            filterStatus,
-            filterStartDate,
-            filterEndDate,
-            filterProjectId,
-            filterProjectInstanceId,
-            filterWorkflowId,
-            filterPageNumber
-        );
-    };
-
-    const handlePaginationClick = (pageNumber: number) => {
-        setFilterPageNumber(pageNumber);
-
-        filter(
-            filterEnvironment,
-            filterStatus,
-            filterStartDate,
-            filterEndDate,
-            filterProjectId,
-            filterProjectInstanceId,
-            filterWorkflowId,
-            pageNumber
-        );
-    };
-
-    const handleProjectChange = (item?: ComboBoxItemType) => {
-        let projectId;
-
-        if (item) {
-            projectId = Number(item.value);
-        }
-
-        setFilterProjectId(projectId);
-
-        filter(
-            filterEnvironment,
-            filterStatus,
-            filterStartDate,
-            filterEndDate,
-            projectId,
-            filterProjectInstanceId,
-            filterWorkflowId,
-            filterPageNumber
-        );
-    };
-
-    const handleProjectInstanceChange = (item?: ComboBoxItemType) => {
-        let projectInstanceId;
-
-        if (item) {
-            projectInstanceId = Number(item.value);
-        }
-
-        setFilterProjectInstanceId(projectInstanceId);
-
-        filter(
-            filterEnvironment,
-            filterStatus,
-            filterStartDate,
-            filterEndDate,
-            filterProjectId,
-            projectInstanceId,
-            filterWorkflowId,
-            filterPageNumber
-        );
-    };
-
-    const handleStatusChange = (item?: ComboBoxItemType) => {
-        let status;
-
-        if (item) {
-            status = item.value as GetWorkflowExecutionsPageJobStatusEnum;
-        }
-
-        setFilterStatus(status);
-
-        filter(
-            filterEnvironment,
-            status,
-            filterStartDate,
-            filterEndDate,
-            filterProjectId,
-            filterProjectInstanceId,
-            filterWorkflowId,
-            filterPageNumber
-        );
-    };
-
-    const handleStartDateChange = (date?: Date) => {
-        setFilterStartDate(date);
-
-        filter(
-            filterEnvironment,
-            filterStatus,
-            date,
-            filterEndDate,
-            filterProjectId,
-            filterProjectInstanceId,
-            filterWorkflowId,
-            filterPageNumber
-        );
-    };
-
-    const handleWorkflowChange = (item?: ComboBoxItemType) => {
-        let workflowId;
-
-        if (item) {
-            workflowId = item.value;
-        }
-
-        setFilterWorkflowId(workflowId);
-
-        filter(
-            filterEnvironment,
-            filterStatus,
-            filterStartDate,
-            filterEndDate,
-            filterProjectId,
-            filterProjectInstanceId,
-            workflowId,
-            filterPageNumber
-        );
-    };
 
     return (
         <LayoutContainer
             footer={
                 workflowExecutionPage?.content &&
                 workflowExecutionPage.content.length > 0 && (
-                    <Footer position="main">
+                    <Footer centerTitle className="border-t border-stroke-neutral-primary 3xl:w-full" position="main">
                         <TablePagination
                             onClick={handlePaginationClick}
                             pageNumber={filterPageNumber ? filterPageNumber : 0}
@@ -311,29 +129,43 @@ export const WorkflowExecutions = () => {
                 )
             }
             header={
-                workflowExecutionPage?.content &&
-                workflowExecutionPage.content.length > 0 && (
-                    <Header centerTitle={true} position="main" title="All Workflow Executions" />
-                )
+                <Header
+                    centerTitle
+                    className="3xl:w-full"
+                    position="main"
+                    right={
+                        <div className="flex items-center gap-2">
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button
+                                        aria-label="Refresh workflow executions"
+                                        disabled={workflowExecutionsIsFetching}
+                                        icon={
+                                            <RefreshCwIcon
+                                                className={twMerge(workflowExecutionsIsFetching && 'animate-spin')}
+                                            />
+                                        }
+                                        onClick={() => refetchWorkflowExecutions()}
+                                        size="icon"
+                                        variant="outline"
+                                    />
+                                </TooltipTrigger>
+
+                                <TooltipContent>Refresh</TooltipContent>
+                            </Tooltip>
+                        </div>
+                    }
+                    title={
+                        workflowExecutionPage?.content && workflowExecutionPage.content.length > 0 ? (
+                            <FilterTitle filters={activeFilters} />
+                        ) : (
+                            ''
+                        )
+                    }
+                />
             }
             leftSidebarBody={
-                <div className="space-y-4 px-4">
-                    <div className="flex flex-col space-y-2">
-                        <Label>Environment</Label>
-
-                        <Select onValueChange={handleEnvironmentChange} value={filterEnvironment}>
-                            <SelectTrigger className="w-full">
-                                <SelectValue placeholder="Select environment" />
-                            </SelectTrigger>
-
-                            <SelectContent>
-                                <SelectItem value="TEST">Test</SelectItem>
-
-                                <SelectItem value="PRODUCTION">Production</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
-
+                <div className="space-y-4 px-2">
                     <div className="flex flex-col space-y-2">
                         <Label>Status</Label>
 
@@ -356,43 +188,45 @@ export const WorkflowExecutions = () => {
                         <Label>Project</Label>
 
                         <ComboBox
-                            items={
-                                projects?.length
-                                    ? projects?.map((project) => ({
-                                          label: <ProjectLabel project={project} />,
-                                          value: project.id,
-                                      }))
-                                    : []
-                            }
+                            emptyMessage={!projects ? 'Loading...' : 'No item found.'}
+                            items={[
+                                ANY_FILTER_OPTION,
+                                ...(projects?.map((project) => ({
+                                    label: <ProjectLabel project={project} />,
+                                    value: project.id,
+                                })) ?? []),
+                            ]}
                             onChange={handleProjectChange}
+                            onOpen={() => setFiltersInteracted(true)}
                             value={filterProjectId}
                         />
                     </div>
 
                     <div className="flex flex-col space-y-2">
-                        <Label>Instance</Label>
+                        <Label>Deployment</Label>
 
                         <ComboBox
-                            items={
-                                projectInstances?.length
-                                    ? projectInstances?.map((projectInstance) => ({
-                                          label: (
-                                              <span className="flex items-center">
-                                                  <span className="mr-1 ">
-                                                      {projectInstance.name} V{projectInstance.projectVersion}
-                                                  </span>
+                            emptyMessage={!projectDeployments ? 'Loading...' : 'No item found.'}
+                            items={[
+                                ANY_FILTER_OPTION,
+                                ...(projectDeployments?.map((projectDeployment) => ({
+                                    label: (
+                                        <span className="flex items-center">
+                                            <span className="mr-1">
+                                                {projectDeployment.name} V{projectDeployment.projectVersion}
+                                            </span>
 
-                                                  <span className="text-xs text-gray-500">
-                                                      {projectInstance?.tags?.map((tag) => tag.name).join(', ')}
-                                                  </span>
-                                              </span>
-                                          ),
-                                          value: projectInstance.id,
-                                      }))
-                                    : []
-                            }
-                            onChange={handleProjectInstanceChange}
-                            value={filterProjectInstanceId}
+                                            <span className="text-xs text-content-neutral-secondary">
+                                                {projectDeployment?.tags?.map((tag) => tag.name).join(', ')}
+                                            </span>
+                                        </span>
+                                    ),
+                                    value: projectDeployment.id,
+                                })) ?? []),
+                            ]}
+                            onChange={handleProjectDeploymentChange}
+                            onOpen={() => setFiltersInteracted(true)}
+                            value={filterProjectDeploymentId}
                         />
                     </div>
 
@@ -400,26 +234,25 @@ export const WorkflowExecutions = () => {
                         <Label>Workflow</Label>
 
                         <ComboBox
-                            items={
-                                workflows?.length
-                                    ? workflows?.map((workflow) => ({
-                                          label: workflow.label || 'undefined label',
-                                          value: workflow.id,
-                                      }))
-                                    : []
-                            }
+                            items={[
+                                ANY_FILTER_OPTION,
+                                ...(workflows?.map((workflow) => ({
+                                    label: workflow.label || 'undefined label',
+                                    value: workflow.id,
+                                })) ?? []),
+                            ]}
                             onChange={handleWorkflowChange}
                             value={filterWorkflowId}
                         />
                     </div>
                 </div>
             }
-            leftSidebarHeader={<Header position="sidebar" title="Execution History" />}
-            leftSidebarWidth="72"
+            leftSidebarHeader={<Header position="sidebar" title="Workflow Executions" />}
+            leftSidebarWidth="64"
         >
             <PageLoader errors={[workflowExecutionsError]} loading={workflowExecutionsIsLoading}>
                 {workflowExecutions && workflowExecutions.length > 0 ? (
-                    <WorkflowExecutionsTable data={workflowExecutions} />
+                    <WorkflowExecutionsTable workflowExecutions={workflowExecutions} />
                 ) : (
                     <EmptyList
                         icon={<ActivityIcon className="size-24 text-gray-300" />}

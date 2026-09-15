@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,15 +17,18 @@
 package com.bytechef.component.pipedrive.action;
 
 import static com.bytechef.component.OpenApiComponentHandler.PropertyType;
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.array;
-import static com.bytechef.component.definition.ComponentDSL.bool;
-import static com.bytechef.component.definition.ComponentDSL.integer;
-import static com.bytechef.component.definition.ComponentDSL.object;
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.array;
+import static com.bytechef.component.definition.ComponentDsl.bool;
+import static com.bytechef.component.definition.ComponentDsl.integer;
+import static com.bytechef.component.definition.ComponentDsl.object;
+import static com.bytechef.component.definition.ComponentDsl.outputSchema;
+import static com.bytechef.component.definition.ComponentDsl.string;
 import static com.bytechef.component.definition.Context.Http.ResponseType;
 
-import com.bytechef.component.definition.ComponentDSL;
+import com.bytechef.component.definition.ActionDefinition;
+import com.bytechef.component.definition.ComponentDsl;
+import com.bytechef.component.pipedrive.util.PipedriveUtils;
 import java.util.Map;
 
 /**
@@ -34,48 +37,47 @@ import java.util.Map;
  * @generated
  */
 public class PipedriveGetPersonDetailsAction {
-    public static final ComponentDSL.ModifiableActionDefinition ACTION_DEFINITION = action("getPersonDetails")
-        .title("Get details of a person")
+    public static final ComponentDsl.ModifiableActionDefinition ACTION_DEFINITION = action("getPersonDetails")
+        .title("Get Details of Person")
         .description(
             "Returns the details of a person. This also returns some additional fields which are not present when asking for all persons.")
         .metadata(
             Map.of(
                 "method", "GET",
-                "path", "/persons/{id}"
+                "path", "/persons/{person_id}"
 
             ))
-        .properties(integer("id").label("Person")
-            .description("Person to get details")
+        .properties(integer("person_id").label("Person ID")
+            .description("ID of the person to get details.")
             .required(true)
+            .options((ActionDefinition.OptionsFunction<Long>) PipedriveUtils::getPersonIdOptions)
             .metadata(
                 Map.of(
                     "type", PropertyType.PATH)))
-        .outputSchema(object()
-            .properties(object("body")
-                .properties(object("data")
-                    .properties(integer("id").required(false), integer("company_id").required(false),
-                        object("owner_id")
-                            .properties(integer("id").required(false), string("name").required(false),
-                                string("email").required(false))
-                            .required(false),
-                        object("org_id")
-                            .properties(string("name").required(false), integer("owner_id").required(false),
-                                string("cc_email").required(false))
-                            .required(false),
-                        string("name").required(false),
-                        array("phone")
-                            .items(object().properties(string("value").required(false), bool("primary").required(false),
-                                string("label").required(false)))
-                            .required(false),
-                        array("email")
-                            .items(object().properties(string("value").required(false), bool("primary").required(false),
-                                string("label").required(false)))
-                            .required(false))
-                    .required(false))
+        .output(outputSchema(object()
+            .properties(object("data")
+                .properties(integer("id").required(false), integer("company_id").required(false),
+                    object("owner_id")
+                        .properties(integer("id").required(false), string("name").required(false),
+                            string("email").required(false))
+                        .required(false),
+                    object("org_id")
+                        .properties(string("name").required(false), integer("owner_id").required(false),
+                            string("cc_email").required(false))
+                        .required(false),
+                    string("name").required(false),
+                    array("phone")
+                        .items(object().properties(string("value").required(false), bool("primary").required(false),
+                            string("label").required(false)))
+                        .required(false),
+                    array("email")
+                        .items(object().properties(string("value").required(false), bool("primary").required(false),
+                            string("label").required(false)))
+                        .required(false))
                 .required(false))
             .metadata(
                 Map.of(
-                    "responseType", ResponseType.JSON)));
+                    "responseType", ResponseType.JSON))));
 
     private PipedriveGetPersonDetailsAction() {
     }

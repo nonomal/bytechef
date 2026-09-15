@@ -1,0 +1,12 @@
+query apiKeys($environmentId: ID!, $type:PlatformType!) {
+    apiKeys(environmentId: $environmentId, type: $type) {
+        id,
+        name,
+        secretKey,
+        lastUsedDate,
+        createdBy,
+        createdDate,
+        lastModifiedBy,
+        lastModifiedDate
+    }
+}

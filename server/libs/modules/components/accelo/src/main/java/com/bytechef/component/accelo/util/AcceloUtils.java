@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,42 +17,45 @@
 package com.bytechef.component.accelo.util;
 
 import static com.bytechef.component.accelo.constant.AcceloConstants.AGAINST_TYPE;
-import static com.bytechef.component.accelo.constant.AcceloConstants.DEPLOYMENT;
-import static com.bytechef.component.definition.ComponentDSL.option;
+import static com.bytechef.component.accelo.constant.AcceloConstants.ID;
+import static com.bytechef.component.accelo.constant.AcceloConstants.TITLE;
+import static com.bytechef.component.definition.ComponentDsl.option;
 
 import com.bytechef.component.definition.ActionContext;
+import com.bytechef.component.definition.Context;
 import com.bytechef.component.definition.Context.Http;
-import com.bytechef.component.definition.Context.TypeReference;
 import com.bytechef.component.definition.Option;
 import com.bytechef.component.definition.Parameters;
+import com.bytechef.component.definition.TypeReference;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
 /**
- * @author Monika Domiter
+ * @author Monika Kušter
  */
-public class AcceloUtils {
+public class AcceloUtils extends AbstractAcceloUtils {
 
     private AcceloUtils() {
     }
 
-    public static String createUrl(Parameters connectionParameters, String resource) {
-        return "https://" + connectionParameters.getRequiredString(DEPLOYMENT) + ".api.accelo.com/api/v0/" + resource;
-    }
-
     public static List<Option<String>> getAgainstIdOptions(
-        Parameters inputParameters, Parameters connectionParameters, Map<String, String> dependencyPaths,
+        Parameters inputParameters, Parameters connectionParameters, Map<String, String> lookupDependsOnPaths,
         String searchText, ActionContext context) {
+
+        if (!inputParameters.containsKey(AGAINST_TYPE)) {
+            return List.of();
+        }
 
         String againstType = inputParameters.getRequiredString(AGAINST_TYPE);
 
         if (Objects.equals("company", againstType)) {
-            return getCompanyIdOptions(inputParameters, connectionParameters, dependencyPaths, searchText, context);
+            return getCompanyIdOptions(inputParameters, connectionParameters, lookupDependsOnPaths, searchText,
+                context);
         } else {
             Map<String, ?> body = context
-                .http(http -> http.get(createUrl(connectionParameters, againstType + "s")))
+                .http(http -> http.get(againstType + "s"))
                 .configuration(Http.responseType(Http.ResponseType.JSON))
                 .execute()
                 .getBody(new TypeReference<>() {});
@@ -62,7 +65,7 @@ public class AcceloUtils {
             if (body.get("response") instanceof List<?> list) {
                 for (Object item : list) {
                     if (item instanceof Map<?, ?> map) {
-                        options.add(option((String) map.get("title"), (String) map.get("id")));
+                        options.add(option((String) map.get(TITLE), (String) map.get(ID)));
                     }
                 }
             }
@@ -72,11 +75,11 @@ public class AcceloUtils {
     }
 
     public static List<Option<String>> getCompanyIdOptions(
-        Parameters inputParameters, Parameters connectionParameters, Map<String, String> dependencyPaths,
-        String searchText, ActionContext context) {
+        Parameters inputParameters, Parameters connectionParameters, Map<String, String> lookupDependsOnPaths,
+        String searchText, Context context) {
 
         Map<String, ?> body = context
-            .http(http -> http.get(createUrl(connectionParameters, "companies")))
+            .http(http -> http.get("companies"))
             .configuration(Http.responseType(Http.ResponseType.JSON))
             .execute()
             .getBody(new TypeReference<>() {});
@@ -86,7 +89,7 @@ public class AcceloUtils {
         if (body.get("response") instanceof List<?> list) {
             for (Object item : list) {
                 if (item instanceof Map<?, ?> map) {
-                    options.add(option((String) map.get("name"), (String) map.get("id")));
+                    options.add(option((String) map.get("name"), (String) map.get(ID)));
                 }
             }
         }

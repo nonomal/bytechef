@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,13 +16,13 @@
 
 package com.bytechef.component.copper;
 
-import static com.bytechef.component.copper.constant.CopperConstants.COPPER;
-import static com.bytechef.component.definition.ComponentDSL.component;
+import static com.bytechef.component.definition.ComponentDsl.component;
 
 import com.bytechef.component.ComponentHandler;
 import com.bytechef.component.copper.action.CopperCreateActivityAction;
 import com.bytechef.component.copper.action.CopperCreateCompanyAction;
 import com.bytechef.component.copper.action.CopperCreatePersonAction;
+import com.bytechef.component.copper.action.CopperCreateTaskAction;
 import com.bytechef.component.copper.connection.CopperConnection;
 import com.bytechef.component.definition.ComponentCategory;
 import com.bytechef.component.definition.ComponentDefinition;
@@ -34,19 +34,23 @@ import com.google.auto.service.AutoService;
 @AutoService(ComponentHandler.class)
 public class CopperComponentHandler implements ComponentHandler {
 
-    private static final ComponentDefinition COMPONENT_DEFINITION = component(COPPER)
+    private static final ComponentDefinition COMPONENT_DEFINITION = component("copper")
         .title("Copper")
         .description(
             "Copper is a customer relationship management (CRM) software designed to streamline and optimize sales " +
                 "processes, providing tools for managing contact, leads, opportunities, and communications in one " +
                 "centralized platform.")
         .icon("path:assets/copper.svg")
+        .customAction(true)
+        .customActionHelp("Copper Developer API", "https://developer.copper.com/")
         .categories(ComponentCategory.CRM)
         .connection(CopperConnection.CONNECTION_DEFINITION)
         .actions(
             CopperCreateActivityAction.ACTION_DEFINITION,
             CopperCreateCompanyAction.ACTION_DEFINITION,
-            CopperCreatePersonAction.ACTION_DEFINITION);
+            CopperCreatePersonAction.ACTION_DEFINITION,
+            CopperCreateTaskAction.ACTION_DEFINITION)
+        .version(1);
 
     @Override
     public ComponentDefinition getDefinition() {

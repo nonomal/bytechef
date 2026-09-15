@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,15 +17,18 @@
 package com.bytechef.component.asana.action;
 
 import static com.bytechef.component.OpenApiComponentHandler.PropertyType;
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.array;
-import static com.bytechef.component.definition.ComponentDSL.date;
-import static com.bytechef.component.definition.ComponentDSL.object;
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.array;
+import static com.bytechef.component.definition.ComponentDsl.date;
+import static com.bytechef.component.definition.ComponentDsl.object;
+import static com.bytechef.component.definition.ComponentDsl.outputSchema;
+import static com.bytechef.component.definition.ComponentDsl.string;
 import static com.bytechef.component.definition.Context.Http.BodyContentType;
 import static com.bytechef.component.definition.Context.Http.ResponseType;
 
-import com.bytechef.component.definition.ComponentDSL;
+import com.bytechef.component.asana.util.AsanaUtils;
+import com.bytechef.component.definition.ActionDefinition;
+import com.bytechef.component.definition.ComponentDsl;
 import java.util.Map;
 
 /**
@@ -34,63 +37,96 @@ import java.util.Map;
  * @generated
  */
 public class AsanaCreateTaskAction {
-    public static final ComponentDSL.ModifiableActionDefinition ACTION_DEFINITION = action("createTask")
-        .title("Create a task")
-        .description("Creates a new task")
+    public static final ComponentDsl.ModifiableActionDefinition ACTION_DEFINITION = action("createTask")
+        .title("Create Task")
+        .description("Creates a new task in a workspace.")
         .metadata(
             Map.of(
                 "method", "POST",
                 "path", "/tasks", "bodyContentType", BodyContentType.JSON, "mimeType", "application/json"
 
             ))
-        .properties(object("__item").properties(object("data").properties(string("workspace").label("Workspace")
-            .description("The workspace to create the task in.")
-            .required(true),
-            string("project").label("Project")
-                .description("Asana project to create the task in.")
-                .required(true),
+        .properties(object("data").properties(string("workspace").label("Workspace GID")
+            .description("The GID of the workspace to create the task in.")
+            .required(true)
+            .options((ActionDefinition.OptionsFunction<String>) AsanaUtils::getWorkspaceOptions),
+            array("projects").items(string().description("The GID of the project to create the task in."))
+                .placeholder("Add to Projects")
+                .label("Projects GID")
+                .description("The GID of the project to create the task in.")
+                .required(false)
+                .options((ActionDefinition.OptionsFunction<String>) AsanaUtils::getProjectsOptions)
+                .optionsLookupDependsOn("data.workspace"),
             string("name").label("Name")
                 .description("Name of the task.")
                 .required(true),
             string("notes").label("Notes")
                 .description("Free-form textual information associated with the task (i.e. its description).")
                 .required(true),
-            date("due_on").label("Due On")
+            date("due_on").label("Due Date")
                 .description("The date on which this task is due.")
                 .required(false),
-            array("tags").items(string().description("Tags to add to the task."))
+            array("tags").items(string().description("The GID of the tags to add to the task."))
                 .placeholder("Add to Tags")
-                .label("Tags")
-                .description("Tags to add to the task.")
-                .required(false),
-            string("assignee").label("Assignee")
-                .description("User to assign the task to.")
-                .required(false))
-            .label("Data")
-            .required(false))
-            .label("Task")
+                .label("Tags GID")
+                .description("The GID of the tags to add to the task.")
+                .required(false)
+                .options((ActionDefinition.OptionsFunction<String>) AsanaUtils::getTagsOptions)
+                .optionsLookupDependsOn("data.workspace"),
+            string("assignee").label("Assignee GID")
+                .description("GID of the user to assign the task to.")
+                .required(false)
+                .options((ActionDefinition.OptionsFunction<String>) AsanaUtils::getAssigneeOptions)
+                .optionsLookupDependsOn("data.workspace"))
             .metadata(
                 Map.of(
-                    "type", PropertyType.BODY)))
-        .outputSchema(
-            object()
-                .properties(
-                    object("data")
-                        .properties(string("gid").required(false), date("due_on").required(false),
-                            string("notes").required(false), string("name").required(false),
-                            object("workspace")
-                                .properties(string("gid").required(false), string("name").required(false))
+                    "type", PropertyType.BODY))
+            .label("Data")
+            .required(false))
+        .output(
+            outputSchema(
+                object()
+                    .properties(object("data")
+                        .properties(string("gid").description("Globally unique identifier for the task.")
+                            .required(false),
+                            date("due_on").description("The date on which this task is due.")
                                 .required(false),
+                            string("notes")
+                                .description(
+                                    "Free-form textual information associated with the task (i.e. its description).")
+                                .required(false),
+                            string("name").description("Name of the task.")
+                                .required(false),
+                            object(
+                                "workspace")
+                                    .properties(
+                                        string("gid").description("Globally unique identifier for the workspace.")
+                                            .required(false),
+                                        string("name").description("Name of the workspace.")
+                                            .required(false))
+                                    .description("The workspace or organization that the task is associated with.")
+                                    .required(false),
                             array("tags")
-                                .items(
-                                    object().properties(string("gid").required(false), string("name").required(false)))
+                                .items(object()
+                                    .properties(string("gid").description("Globally unique identifier for the tag.")
+                                        .required(false),
+                                        string("name").description("Name of the tag.")
+                                            .required(false))
+                                    .description("Tags associated with the task."))
+                                .description("Tags associated with the task.")
                                 .required(false),
-                            object("assignee").properties(string("gid").required(false), string("name").required(false))
+                            object("assignee")
+                                .properties(string("gid").description("Globally unique identifier for the user.")
+                                    .required(false),
+                                    string("name").description("Name of the user.")
+                                        .required(false))
+                                .description("User assigned to the task.")
                                 .required(false))
                         .required(false))
-                .metadata(
-                    Map.of(
-                        "responseType", ResponseType.JSON)));
+                    .metadata(
+                        Map.of(
+                            "responseType", ResponseType.JSON))))
+        .help("", "https://docs.bytechef.io/reference/components/asana_v1#create-task");
 
     private AsanaCreateTaskAction() {
     }

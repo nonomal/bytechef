@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,11 +16,17 @@
 
 package com.bytechef.platform.configuration.web.rest.mapper;
 
-import com.bytechef.platform.component.registry.domain.ComponentDefinition;
+import com.bytechef.component.definition.ClusterElementDefinition.ClusterElementType;
+import com.bytechef.platform.component.domain.ComponentDefinition;
 import com.bytechef.platform.configuration.web.rest.mapper.config.PlatformConfigurationMapperSpringConfig;
 import com.bytechef.platform.configuration.web.rest.model.ComponentDefinitionBasicModel;
 import com.bytechef.platform.configuration.web.rest.model.ComponentDefinitionModel;
+import java.util.List;
+import java.util.stream.Collectors;
+import org.mapstruct.AfterMapping;
 import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
+import org.mapstruct.MappingTarget;
 import org.springframework.core.convert.converter.Converter;
 
 public class ComponentDefinitionMapper {
@@ -30,12 +36,35 @@ public class ComponentDefinitionMapper {
         extends Converter<ComponentDefinition, ComponentDefinitionModel> {
 
         ComponentDefinitionModel convert(ComponentDefinition componentDefinition);
+
+        default List<String> map(List<ClusterElementType> clusterElementTypes) {
+            return clusterElementTypes.stream()
+                .map(ClusterElementType::name)
+                .collect(Collectors.toList());
+        }
+
+        @AfterMapping
+        default void afterMapping(
+            ComponentDefinition componentDefinition,
+            @MappingTarget ComponentDefinitionModel componentDefinitionModel) {
+
+            componentDefinitionModel.setIcon("/icons/%s.svg".formatted(componentDefinition.getName()));
+        }
     }
 
     @Mapper(config = PlatformConfigurationMapperSpringConfig.class)
     public interface ComponentDefinitionToComponentDefinitionBasicModelMapper
         extends Converter<ComponentDefinition, ComponentDefinitionBasicModel> {
 
+        @Mapping(target = "inputsCount", ignore = true)
         ComponentDefinitionBasicModel convert(ComponentDefinition componentDefinition);
+
+        @AfterMapping
+        default void afterMapping(
+            ComponentDefinition componentDefinition,
+            @MappingTarget ComponentDefinitionBasicModel componentDefinitionBasicModel) {
+
+            componentDefinitionBasicModel.setIcon("/icons/%s.svg".formatted(componentDefinition.getName()));
+        }
     }
 }

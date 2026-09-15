@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
 
 package com.bytechef.component.capsule.crm.action;
 
-import static com.bytechef.component.capsule.crm.action.CapsuleCRMCreateContactAction.POST_PARTIES_CONTEXT_FUNCTION;
 import static com.bytechef.component.capsule.crm.constant.CapsuleCRMConstants.ABOUT;
 import static com.bytechef.component.capsule.crm.constant.CapsuleCRMConstants.ADDRESS;
 import static com.bytechef.component.capsule.crm.constant.CapsuleCRMConstants.ADDRESSES;
@@ -29,70 +28,64 @@ import static com.bytechef.component.capsule.crm.constant.CapsuleCRMConstants.PH
 import static com.bytechef.component.capsule.crm.constant.CapsuleCRMConstants.STREET;
 import static com.bytechef.component.capsule.crm.constant.CapsuleCRMConstants.TYPE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
+import com.bytechef.component.capsule.crm.constant.ContactType;
+import com.bytechef.component.definition.ActionContext;
+import com.bytechef.component.definition.Context.ContextFunction;
 import com.bytechef.component.definition.Context.Http;
+import com.bytechef.component.definition.Context.Http.Body;
+import com.bytechef.component.definition.Context.Http.BodyContentType;
+import com.bytechef.component.definition.Context.Http.Configuration;
+import com.bytechef.component.definition.Context.Http.Configuration.ConfigurationBuilder;
+import com.bytechef.component.definition.Context.Http.Executor;
+import com.bytechef.component.definition.Context.Http.ResponseType;
+import com.bytechef.component.test.definition.MockParametersFactory;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 
 /**
  * @author Monika Domiter
  */
 class CapsuleCRMCreateContactActionTest extends AbstractCapsuleCRMActionTest {
 
-    private static final List<Map<String, String>> emails = List.of(
-        Map.of(ADDRESS, "test@mail.com", TYPE, "Home"));
-
-    private static final List<Map<String, String>> addresses = List.of(
-        Map.of(STREET, "street", TYPE, "Home", CITY, "city"));
-
-    private static final List<Map<String, String>> phoneNumbers = List.of(
-        Map.of(NUMBER, "12345678", TYPE, "Home"));
-
     @Test
-    void testPerform() {
+    void testPerform(
+        ActionContext mockedContext, ArgumentCaptor<ContextFunction<Http, Executor>> httpFunctionArgumentCaptor,
+        ArgumentCaptor<ConfigurationBuilder> configurationBuilderArgumentCaptor) {
+
         Map<String, Object> propertyStubsMap = createPropertyStubsMap();
 
-        when(mockedParameters.getString(FIRST_NAME))
-            .thenReturn((String) propertyStubsMap.get(FIRST_NAME));
-        when(mockedParameters.getString(LAST_NAME))
-            .thenReturn((String) propertyStubsMap.get(LAST_NAME));
-        when(mockedParameters.getRequiredString(TYPE))
-            .thenReturn((String) propertyStubsMap.get(TYPE));
-        when(mockedParameters.getString(ABOUT))
-            .thenReturn((String) propertyStubsMap.get(ABOUT));
-        when((List<Map<String, String>>) mockedParameters.getList(EMAIL_ADDRESSES))
-            .thenReturn(emails);
-        when((List<Map<String, String>>) mockedParameters.getList(ADDRESSES))
-            .thenReturn(addresses);
-        when((List<Map<String, String>>) mockedParameters.getList(PHONE_NUMBERS))
-            .thenReturn(phoneNumbers);
+        mockedParameters = MockParametersFactory.create(propertyStubsMap);
 
-        Object result = CapsuleCRMCreateContactAction.perform(mockedParameters, mockedParameters, mockedContext);
+        Object result = CapsuleCRMCreateContactAction.perform(mockedParameters, null, mockedContext);
 
-        assertEquals(responeseMap, result);
+        assertEquals(responseMap, result);
+        assertNotNull(httpFunctionArgumentCaptor.getValue());
+        assertEquals("/parties", stringArgumentCaptor.getValue());
 
-        verify(mockedContext, times(1)).http(POST_PARTIES_CONTEXT_FUNCTION);
+        ConfigurationBuilder configurationBuilder = configurationBuilderArgumentCaptor.getValue();
+        Configuration configuration = configurationBuilder.build();
 
-        Http.Body body = bodyArgumentCaptor.getValue();
-
-        assertEquals(Map.of("party", propertyStubsMap), body.getContent());
+        assertEquals(ResponseType.JSON, configuration.getResponseType());
+        assertEquals(
+            Body.of(Map.of("party", propertyStubsMap), BodyContentType.JSON), bodyArgumentCaptor.getValue());
     }
 
     private static Map<String, Object> createPropertyStubsMap() {
-        Map<String, Object> propertyStubsMap = new HashMap<>();
+        Map<String, Object> map = new HashMap<>();
 
-        propertyStubsMap.put(FIRST_NAME, "fname");
-        propertyStubsMap.put(LAST_NAME, "lname");
-        propertyStubsMap.put(ABOUT, "about");
-        propertyStubsMap.put(EMAIL_ADDRESSES, emails);
-        propertyStubsMap.put(ADDRESSES, addresses);
-        propertyStubsMap.put(PHONE_NUMBERS, phoneNumbers);
+        map.put(FIRST_NAME, "fname");
+        map.put(LAST_NAME, "lname");
+        map.put(ABOUT, "about");
+        map.put(EMAIL_ADDRESSES, List.of(Map.of(ADDRESS, "test@mail.com", TYPE, "Home")));
+        map.put(ADDRESSES, List.of(Map.of(STREET, "street", TYPE, "Home", CITY, "city")));
+        map.put(PHONE_NUMBERS, List.of(Map.of(NUMBER, "12345678", TYPE, "Home")));
+        map.put(TYPE, ContactType.PERSON.getValue());
 
-        return propertyStubsMap;
+        return map;
     }
 }

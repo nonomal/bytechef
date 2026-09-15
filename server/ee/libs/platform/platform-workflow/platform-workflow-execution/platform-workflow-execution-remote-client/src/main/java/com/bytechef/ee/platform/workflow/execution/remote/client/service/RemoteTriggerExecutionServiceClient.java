@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the ByteChef Enterprise license (the "Enterprise License");
  * you may not use this file except in compliance with the Enterprise License.
@@ -11,6 +11,7 @@ import com.bytechef.ee.remote.client.LoadBalancedRestClient;
 import com.bytechef.platform.workflow.execution.domain.TriggerExecution;
 import com.bytechef.platform.workflow.execution.service.TriggerExecutionService;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import java.util.List;
 import java.util.Optional;
 import org.springframework.stereotype.Component;
 
@@ -54,6 +55,16 @@ public class RemoteTriggerExecutionServiceClient implements TriggerExecutionServ
 
     @Override
     public Optional<TriggerExecution> fetchJobTriggerExecution(long jobId) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public List<TriggerExecution> getJobTriggerExecutions(List<Long> jobIds) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public List<TriggerExecution> getTriggerExecutions(List<Long> ids) {
         throw new UnsupportedOperationException();
     }
 

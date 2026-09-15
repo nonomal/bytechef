@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * Modifications copyright (C) 2023 ByteChef Inc.
+ * Modifications copyright (C) 2025 ByteChef
  */
 
 package com.bytechef.atlas.coordinator.task.dispatcher;
@@ -22,33 +22,20 @@ import com.bytechef.atlas.configuration.constant.WorkflowConstants;
 import com.bytechef.atlas.configuration.domain.WorkflowTask;
 import com.bytechef.atlas.execution.domain.TaskExecution;
 import com.bytechef.atlas.worker.message.route.TaskWorkerMessageRoute;
-import com.bytechef.commons.util.MapUtils;
 import com.bytechef.message.event.MessageEvent;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import com.bytechef.test.extension.ObjectMapperSetupExtension;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 /**
  * @author Arik Cohen
  * @author Ivica Cardic
  */
+@ExtendWith(ObjectMapperSetupExtension.class)
 public class DefaultTaskDispatcherTest {
-
-    @BeforeAll
-    @SuppressFBWarnings("RV_RETURN_VALUE_IGNORED_NO_SIDE_EFFECT")
-    public static void beforeAll() {
-        class MapUtilsMock extends MapUtils {
-            static {
-                objectMapper = new ObjectMapper();
-            }
-        }
-
-        new MapUtilsMock();
-    }
 
     @Test
     public void test1() {

@@ -9,13 +9,23 @@ openapi:
       platform: /api/platform
 
 spring:
+  graphql:
+    schema:
+      locations: classpath*:graphql/**/
   liquibase:
     contexts: configuration
 
 bytechef:
+  encryption:
+    provider: filesystem
+  edition: EE
+  file-storage:
+    provider: jdbc
+  worker:
+    enabled: false
   workflow:
     repository:
       jdbc:
         enabled: true
     output-storage:
-      provider: base64
+      provider: jdbc

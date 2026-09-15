@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,9 +16,13 @@
 
 package com.bytechef.platform.configuration.web.rest;
 
+import com.bytechef.atlas.coordinator.annotation.ConditionalOnCoordinator;
 import com.bytechef.commons.util.CollectionUtils;
+import com.bytechef.platform.configuration.dto.ClusterElementOutputDTO;
+import com.bytechef.platform.configuration.dto.WorkflowNodeOutputDTO;
 import com.bytechef.platform.configuration.facade.WorkflowNodeOutputFacade;
 import com.bytechef.platform.configuration.web.rest.model.WorkflowNodeOutputModel;
+import com.bytechef.platform.domain.OutputResponse;
 import java.util.List;
 import org.springframework.core.convert.ConversionService;
 import org.springframework.http.ResponseEntity;
@@ -30,6 +34,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @RestController
 @RequestMapping("${openapi.openAPIDefinition.base-path.platform:}/internal")
+@ConditionalOnCoordinator
 public class WorkflowNodeOutputApiController implements WorkflowNodeOutputApi {
 
     private final ConversionService conversionService;
@@ -43,21 +48,54 @@ public class WorkflowNodeOutputApiController implements WorkflowNodeOutputApi {
     }
 
     @Override
-    public ResponseEntity<WorkflowNodeOutputModel> getWorkflowNodeOutput(String workflowId, String workflowNodeName) {
+    public ResponseEntity<WorkflowNodeOutputModel> getClusterElementOutput(
+        String workflowId, String workflowNodeName, String clusterElementType, String clusterElementName,
+        Long environmentId) {
+
+        ClusterElementOutputDTO clusterElementOutputDTO = workflowNodeOutputFacade.getClusterElementOutput(
+            workflowId, workflowNodeName, clusterElementType, clusterElementName, environmentId);
+
+        if (clusterElementOutputDTO == null) {
+            return ResponseEntity.notFound()
+                .build();
+        }
+
+        OutputResponse outputResponse = clusterElementOutputDTO.outputSchema() != null
+            ? new OutputResponse(
+                clusterElementOutputDTO.outputSchema(), clusterElementOutputDTO.sampleOutput(),
+                clusterElementOutputDTO.placeholder())
+            : null;
+
+        WorkflowNodeOutputDTO workflowNodeOutputDTO = new WorkflowNodeOutputDTO(
+            null, clusterElementOutputDTO.clusterElementDefinition(),
+            outputResponse, null, false, null,
+            clusterElementOutputDTO.clusterElementName());
+
+        return ResponseEntity.ok(
+            conversionService.convert(workflowNodeOutputDTO, WorkflowNodeOutputModel.class));
+    }
+
+    @Override
+    public ResponseEntity<WorkflowNodeOutputModel> getWorkflowNodeOutput(
+        String workflowId, String workflowNodeName, Long environmentId) {
+
         return ResponseEntity.ok(
             conversionService.convert(
-                workflowNodeOutputFacade.getWorkflowNodeOutput(workflowId, workflowNodeName),
+                workflowNodeOutputFacade.getWorkflowNodeOutput(workflowId, workflowNodeName, environmentId),
                 WorkflowNodeOutputModel.class));
     }
 
     @Override
     public ResponseEntity<List<WorkflowNodeOutputModel>> getPreviousWorkflowNodeOutputs(
-        String workflowId, String lastWorkflowNodeName) {
+        String workflowId, Long environmentId, String lastWorkflowNodeName) {
+
+        workflowNodeOutputFacade.checkWorkflowCache(workflowId, lastWorkflowNodeName, environmentId);
 
         return ResponseEntity.ok(
             CollectionUtils.map(
-                workflowNodeOutputFacade.getPreviousWorkflowNodeOutputs(workflowId, lastWorkflowNodeName),
-                workflowNodeOutputDTO -> conversionService.convert(workflowNodeOutputDTO,
-                    WorkflowNodeOutputModel.class)));
+                workflowNodeOutputFacade.getPreviousWorkflowNodeOutputs(
+                    workflowId, lastWorkflowNodeName, environmentId),
+                workflowNodeOutputDTO -> conversionService.convert(
+                    workflowNodeOutputDTO, WorkflowNodeOutputModel.class)));
     }
 }

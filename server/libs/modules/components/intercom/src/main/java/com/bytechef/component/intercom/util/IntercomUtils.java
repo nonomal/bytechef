@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,43 +16,41 @@
 
 package com.bytechef.component.intercom.util;
 
+import static com.bytechef.component.definition.ComponentDsl.option;
 import static com.bytechef.component.definition.Context.Http.ResponseType;
 import static com.bytechef.component.definition.Context.Http.responseType;
-import static com.bytechef.component.intercom.constant.IntercomConstants.BASE_URL;
 import static com.bytechef.component.intercom.constant.IntercomConstants.ID;
 import static com.bytechef.component.intercom.constant.IntercomConstants.TYPE;
 
 import com.bytechef.component.definition.ActionContext;
-import com.bytechef.component.definition.Context.TypeReference;
+import com.bytechef.component.definition.Context;
+import com.bytechef.component.definition.Context.ContextFunction;
+import com.bytechef.component.definition.Context.Http;
+import com.bytechef.component.definition.Option;
+import com.bytechef.component.definition.Parameters;
+import com.bytechef.component.definition.TypeReference;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * @author Luka Ljubić
+ * @author Monika Kušter
+ */
 public class IntercomUtils {
 
+    protected static final ContextFunction<Http, Http.Executor> GET_ADMINS_CONTEXT_FUNCTION =
+        http -> http.get("/admins");
+
+    protected static final ContextFunction<Http, Http.Executor> GET_CONTACTS_CONTEXT_FUNCTION =
+        http -> http.get("/contacts");
+
     private IntercomUtils() {
-
     }
 
-    public static Map<String, String> getContactRole(String id, ActionContext context) {
-        Map<String, Object> body = context.http(http -> http.get(BASE_URL + "/contacts/" + id))
-            .configuration(responseType(ResponseType.JSON))
-            .execute()
-            .getBody(new TypeReference<>() {});
-
-        Map<String, String> contactMap = new LinkedHashMap<>();
-
-        Object type = body.get("role");
-
-        contactMap.put(TYPE, (String) type);
-        contactMap.put(ID, id);
-
-        return contactMap;
-    }
-
-    public static Map<String, String> getAdminId(ActionContext context) {
-
-        Map<String, Object> body = context.http(http -> http.get(BASE_URL + "/admins"))
+    public static Map<String, String> getAdminId(Context context) {
+        Map<String, Object> body = context.http(GET_ADMINS_CONTEXT_FUNCTION)
             .configuration(responseType(ResponseType.JSON))
             .execute()
             .getBody(new TypeReference<>() {});
@@ -68,5 +66,43 @@ public class IntercomUtils {
             }
         }
         return adminMap;
+    }
+
+    public static List<Option<String>> getContactIdOptions(
+        Parameters inputParameters, Parameters connectionParameters, Map<String, String> lookupDependsOnPaths,
+        String searchText, ActionContext context) {
+
+        Map<String, Object> body = context.http(GET_CONTACTS_CONTEXT_FUNCTION)
+            .configuration(responseType(ResponseType.JSON))
+            .execute()
+            .getBody(new TypeReference<>() {});
+
+        List<Option<String>> options = new ArrayList<>();
+
+        if (body != null && body.get("data") instanceof List<?> list) {
+            for (Object item : list) {
+                if (item instanceof Map<?, ?> map) {
+                    options.add(option((String) map.get("name"), (String) map.get(ID)));
+                }
+            }
+        }
+
+        return options;
+    }
+
+    public static Map<String, String> getContactRole(String id, Context context) {
+        Map<String, Object> body = context.http(http -> http.get("/contacts/" + id))
+            .configuration(responseType(ResponseType.JSON))
+            .execute()
+            .getBody(new TypeReference<>() {});
+
+        Map<String, String> contactMap = new LinkedHashMap<>();
+
+        Object type = body.get("role");
+
+        contactMap.put(TYPE, (String) type);
+        contactMap.put(ID, id);
+
+        return contactMap;
     }
 }

@@ -1,0 +1,416 @@
+---
+title: "OpenAI"
+description: "OpenAI is a research organization that aims to develop and direct artificial intelligence (AI) in ways that benefit humanity as a whole."
+---
+
+
+Categories: Artificial Intelligence
+
+
+Type: openAi/v1
+
+<hr />
+
+
+
+
+## Connections
+
+Version: 1
+
+
+### Bearer Token
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| token | Token | STRING |  | true |
+
+
+
+## Connection Setup
+
+1. Go to the [OpenAI API](https://platform.openai.com/settings/organization/general).
+2. In the left sidebar, click on **API Keys**.
+3. Click **Create new secret key**.
+4. Enter a name and select the project for the key and click **Create secret key**.
+5. Copy the API key and use it to create a connection in ByteChef.
+
+<div style={{ position: 'relative', height:0, width: '100%', overflow: 'hidden', zIndex: 49, boxSizing: 'border-box', paddingBottom: 'calc(50.05219207% + 32px)'}}>
+<iframe src="https://www.guidejar.com/embed/coPV2tDXMJmcpVHubS0J?type=1&controls=on" width="100%" height="100%" style={{height:'100%', position:'absolute', inset:0}} allowFullScreen frameBorder="0"></iframe>
+</div>
+
+
+
+<hr />
+
+
+## Actions
+
+
+### Ask
+Name: ask
+
+`Ask anything you want.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| model | Model | STRING <details> <summary> Options </summary> <span>chatgpt-4o-latest</span>, <span>codex-mini-latest</span>, <span>gpt-3.5-turbo</span>, <span>gpt-3.5-turbo-0125</span>, <span>gpt-3.5-turbo-0301</span>, <span>gpt-3.5-turbo-0613</span>, <span>gpt-3.5-turbo-1106</span>, <span>gpt-3.5-turbo-16k</span>, <span>gpt-3.5-turbo-16k-0613</span>, <span>gpt-4</span>, <span>gpt-4-0125-preview</span>, <span>gpt-4-0314</span>, <span>gpt-4-0613</span>, <span>gpt-4-1106-preview</span>, <span>gpt-4-32k</span>, <span>gpt-4-32k-0314</span>, <span>gpt-4-32k-0613</span>, <span>gpt-4-turbo</span>, <span>gpt-4-turbo-2024-04-09</span>, <span>gpt-4-turbo-preview</span>, <span>gpt-4-vision-preview</span>, <span>gpt-4.1</span>, <span>gpt-4.1-2025-04-14</span>, <span>gpt-4.1-mini</span>, <span>gpt-4.1-mini-2025-04-14</span>, <span>gpt-4.1-nano</span>, <span>gpt-4.1-nano-2025-04-14</span>, <span>gpt-4o</span>, <span>gpt-4o-2024-05-13</span>, <span>gpt-4o-2024-08-06</span>, <span>gpt-4o-2024-11-20</span>, <span>gpt-4o-audio-preview</span>, <span>gpt-4o-audio-preview-2024-10-01</span>, <span>gpt-4o-audio-preview-2024-12-17</span>, <span>gpt-4o-audio-preview-2025-06-03</span>, <span>gpt-4o-mini</span>, <span>gpt-4o-mini-2024-07-18</span>, <span>gpt-4o-mini-audio-preview</span>, <span>gpt-4o-mini-audio-preview-2024-12-17</span>, <span>gpt-4o-mini-search-preview</span>, <span>gpt-4o-mini-search-preview-2025-03-11</span>, <span>gpt-4o-search-preview</span>, <span>gpt-4o-search-preview-2025-03-11</span>, <span>gpt-5</span>, <span>gpt-5-2025-08-07</span>, <span>gpt-5-chat-latest</span>, <span>gpt-5-mini</span>, <span>gpt-5-mini-2025-08-07</span>, <span>gpt-5-nano</span>, <span>gpt-5-nano-2025-08-07</span>, <span>gpt-5.1</span>, <span>gpt-5.1-2025-11-13</span>, <span>gpt-5.1-chat-latest</span>, <span>gpt-5.1-codex</span>, <span>gpt-5.1-mini</span>, <span>gpt-5.2</span>, <span>gpt-5.2-2025-12-11</span>, <span>gpt-5.2-chat-latest</span>, <span>gpt-5.2-pro</span>, <span>gpt-5.2-pro-2025-12-11</span>, <span>gpt-5.3-chat-latest</span>, <span>gpt-5.4</span>, <span>gpt-5.4-mini</span>, <span>gpt-5.4-mini-2026-03-17</span>, <span>gpt-5.4-nano</span>, <span>gpt-5.4-nano-2026-03-17</span>, <span>o1</span>, <span>o1-2024-12-17</span>, <span>o1-mini</span>, <span>o1-mini-2024-09-12</span>, <span>o1-preview</span>, <span>o1-preview-2024-09-12</span>, <span>o3</span>, <span>o3-2025-04-16</span>, <span>o3-mini</span>, <span>o3-mini-2025-01-31</span>, <span>o4-mini</span>, <span>o4-mini-2025-04-16</span> </details> | ID of the model to use. | true |
+| format | Format | STRING <details> <summary> Options </summary> <span title="User prompt and optional system prompt.">SIMPLE</span>, <span title="Full control over the messages sent to the model.">ADVANCED</span> </details> | Format of providing the prompt to the model. | true |
+| userPrompt | Prompt | STRING | User prompt to the model. | true |
+| systemPrompt | System Prompt | STRING | System prompt to the model. | false |
+| attachments | Attachments | ARRAY <details> <summary> Items </summary> [FILE_ENTRY] </details> | Only text and image files are supported. Also, only certain models supports images. Please check the documentation. | false |
+| messages | Messages | ARRAY <details> <summary> Items </summary> [&#123;STRING\(role), STRING\(content), [FILE_ENTRY]\(attachments)&#125;] </details> | A list of messages comprising the conversation so far. | true |
+| response | Response | OBJECT <details> <summary> Properties </summary> &#123;STRING\(responseFormat), STRING\(responseSchema)&#125; </details> | The response from the API. | true |
+| maxTokens | Max Tokens | INTEGER | The maximum number of tokens to generate in the chat completion. | false |
+| maxCompletionTokens | Max Completion Tokens | INTEGER | An upper bound for the number of tokens that can be generated for a completion, including visible output tokens and reasoning tokens. Required instead of 'Max Tokens' by reasoning models such as gpt-5 and the o-series. | false |
+| n | Number of Chat Completion Choices | INTEGER | How many chat completion choices to generate for each input message. | false |
+| temperature | Temperature | NUMBER | Controls randomness:  Higher values will make the output more random, while lower values like will make it more focused and deterministic. | false |
+| topP | Top P | NUMBER | An alternative to sampling with temperature, called nucleus sampling,  where the model considers the results of the tokens with top_p probability mass. So 0.1 means only the tokens comprising the top 10% probability mass are considered. | false |
+| frequencyPenalty | Frequency Penalty | NUMBER | Number between -2.0 and 2.0. Positive values penalize new tokens based on their existing frequency in the text so far, decreasing the model's likelihood to repeat the same line verbatim. | false |
+| presencePenalty | Presence Penalty | NUMBER | Number between -2.0 and 2.0. Positive values penalize new tokens based on whether they appear in the text so far, increasing the model's likelihood to talk about new topics. | false |
+| logitBias | Logit Bias | OBJECT <details> <summary> Properties </summary> &#123;&#125; </details> | Modify the likelihood of specified tokens appearing in the completion. | false |
+| stop | Stop | ARRAY <details> <summary> Items </summary> [STRING] </details> | Up to 4 sequences where the API will stop generating further tokens. | false |
+| user | User | STRING | A unique identifier representing your end-user, which can help admins to monitor and detect abuse. | false |
+| reasoning | Reasoning effort | STRING <details> <summary> Options </summary> <span>none</span>, <span>minimal</span>, <span>low</span>, <span>medium</span>, <span>high</span>, <span>xhigh</span> </details> | Constrains effort on reasoning. Reducing reasoning effort can result in faster responses and fewer tokens used on reasoning in a response. For reasoning models for gpt-5 and o-series models only. | false |
+| verbosity | Verbosity | STRING <details> <summary> Options </summary> <span>low</span>, <span>medium</span>, <span>high</span> </details> | Adjusts response verbosity. Lower levels yield shorter answers. | false |
+| store | Store logs | BOOLEAN <details> <summary> Options </summary> <span>true</span>, <span>false</span> </details> | Whether to store the logs for later retrieval. Logs are visible to your organization. | false |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Ask",
+  "name" : "ask",
+  "parameters" : {
+    "model" : "",
+    "format" : "",
+    "userPrompt" : "",
+    "systemPrompt" : "",
+    "attachments" : [ {
+      "extension" : "",
+      "mimeType" : "",
+      "name" : "",
+      "url" : ""
+    } ],
+    "messages" : [ {
+      "role" : "",
+      "content" : "",
+      "attachments" : [ {
+        "extension" : "",
+        "mimeType" : "",
+        "name" : "",
+        "url" : ""
+      } ]
+    } ],
+    "response" : {
+      "responseFormat" : "",
+      "responseSchema" : ""
+    },
+    "maxTokens" : 1,
+    "maxCompletionTokens" : 1,
+    "n" : 1,
+    "temperature" : 0.0,
+    "topP" : 0.0,
+    "frequencyPenalty" : 0.0,
+    "presencePenalty" : 0.0,
+    "logitBias" : { },
+    "stop" : [ "" ],
+    "user" : "",
+    "reasoning" : "",
+    "verbosity" : "",
+    "store" : false
+  },
+  "type" : "openAi/v1/ask"
+}
+```
+
+#### Output
+
+The output for this action is dynamic and may vary depending on the input parameters. To determine the exact structure of the output, you need to execute the action.
+
+
+
+
+
+
+### Ask (stream)
+Name: streamAsk
+
+`Ask anything you want and stream the response.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| model | Model | STRING <details> <summary> Options </summary> <span>chatgpt-4o-latest</span>, <span>codex-mini-latest</span>, <span>gpt-3.5-turbo</span>, <span>gpt-3.5-turbo-0125</span>, <span>gpt-3.5-turbo-0301</span>, <span>gpt-3.5-turbo-0613</span>, <span>gpt-3.5-turbo-1106</span>, <span>gpt-3.5-turbo-16k</span>, <span>gpt-3.5-turbo-16k-0613</span>, <span>gpt-4</span>, <span>gpt-4-0125-preview</span>, <span>gpt-4-0314</span>, <span>gpt-4-0613</span>, <span>gpt-4-1106-preview</span>, <span>gpt-4-32k</span>, <span>gpt-4-32k-0314</span>, <span>gpt-4-32k-0613</span>, <span>gpt-4-turbo</span>, <span>gpt-4-turbo-2024-04-09</span>, <span>gpt-4-turbo-preview</span>, <span>gpt-4-vision-preview</span>, <span>gpt-4.1</span>, <span>gpt-4.1-2025-04-14</span>, <span>gpt-4.1-mini</span>, <span>gpt-4.1-mini-2025-04-14</span>, <span>gpt-4.1-nano</span>, <span>gpt-4.1-nano-2025-04-14</span>, <span>gpt-4o</span>, <span>gpt-4o-2024-05-13</span>, <span>gpt-4o-2024-08-06</span>, <span>gpt-4o-2024-11-20</span>, <span>gpt-4o-audio-preview</span>, <span>gpt-4o-audio-preview-2024-10-01</span>, <span>gpt-4o-audio-preview-2024-12-17</span>, <span>gpt-4o-audio-preview-2025-06-03</span>, <span>gpt-4o-mini</span>, <span>gpt-4o-mini-2024-07-18</span>, <span>gpt-4o-mini-audio-preview</span>, <span>gpt-4o-mini-audio-preview-2024-12-17</span>, <span>gpt-4o-mini-search-preview</span>, <span>gpt-4o-mini-search-preview-2025-03-11</span>, <span>gpt-4o-search-preview</span>, <span>gpt-4o-search-preview-2025-03-11</span>, <span>gpt-5</span>, <span>gpt-5-2025-08-07</span>, <span>gpt-5-chat-latest</span>, <span>gpt-5-mini</span>, <span>gpt-5-mini-2025-08-07</span>, <span>gpt-5-nano</span>, <span>gpt-5-nano-2025-08-07</span>, <span>gpt-5.1</span>, <span>gpt-5.1-2025-11-13</span>, <span>gpt-5.1-chat-latest</span>, <span>gpt-5.1-codex</span>, <span>gpt-5.1-mini</span>, <span>gpt-5.2</span>, <span>gpt-5.2-2025-12-11</span>, <span>gpt-5.2-chat-latest</span>, <span>gpt-5.2-pro</span>, <span>gpt-5.2-pro-2025-12-11</span>, <span>gpt-5.3-chat-latest</span>, <span>gpt-5.4</span>, <span>gpt-5.4-mini</span>, <span>gpt-5.4-mini-2026-03-17</span>, <span>gpt-5.4-nano</span>, <span>gpt-5.4-nano-2026-03-17</span>, <span>o1</span>, <span>o1-2024-12-17</span>, <span>o1-mini</span>, <span>o1-mini-2024-09-12</span>, <span>o1-preview</span>, <span>o1-preview-2024-09-12</span>, <span>o3</span>, <span>o3-2025-04-16</span>, <span>o3-mini</span>, <span>o3-mini-2025-01-31</span>, <span>o4-mini</span>, <span>o4-mini-2025-04-16</span> </details> | ID of the model to use. | true |
+| format | Format | STRING <details> <summary> Options </summary> <span title="User prompt and optional system prompt.">SIMPLE</span>, <span title="Full control over the messages sent to the model.">ADVANCED</span> </details> | Format of providing the prompt to the model. | true |
+| userPrompt | Prompt | STRING | User prompt to the model. | true |
+| systemPrompt | System Prompt | STRING | System prompt to the model. | false |
+| attachments | Attachments | ARRAY <details> <summary> Items </summary> [FILE_ENTRY] </details> | Only text and image files are supported. Also, only certain models supports images. Please check the documentation. | false |
+| messages | Messages | ARRAY <details> <summary> Items </summary> [&#123;STRING\(role), STRING\(content), [FILE_ENTRY]\(attachments)&#125;] </details> | A list of messages comprising the conversation so far. | true |
+| response | Response | OBJECT <details> <summary> Properties </summary> &#123;STRING\(responseFormat), STRING\(responseSchema)&#125; </details> | The response from the API. | true |
+| maxTokens | Max Tokens | INTEGER | The maximum number of tokens to generate in the chat completion. | false |
+| maxCompletionTokens | Max Completion Tokens | INTEGER | An upper bound for the number of tokens that can be generated for a completion, including visible output tokens and reasoning tokens. Required instead of 'Max Tokens' by reasoning models such as gpt-5 and the o-series. | false |
+| n | Number of Chat Completion Choices | INTEGER | How many chat completion choices to generate for each input message. | false |
+| temperature | Temperature | NUMBER | Controls randomness:  Higher values will make the output more random, while lower values like will make it more focused and deterministic. | false |
+| topP | Top P | NUMBER | An alternative to sampling with temperature, called nucleus sampling,  where the model considers the results of the tokens with top_p probability mass. So 0.1 means only the tokens comprising the top 10% probability mass are considered. | false |
+| frequencyPenalty | Frequency Penalty | NUMBER | Number between -2.0 and 2.0. Positive values penalize new tokens based on their existing frequency in the text so far, decreasing the model's likelihood to repeat the same line verbatim. | false |
+| presencePenalty | Presence Penalty | NUMBER | Number between -2.0 and 2.0. Positive values penalize new tokens based on whether they appear in the text so far, increasing the model's likelihood to talk about new topics. | false |
+| logitBias | Logit Bias | OBJECT <details> <summary> Properties </summary> &#123;&#125; </details> | Modify the likelihood of specified tokens appearing in the completion. | false |
+| stop | Stop | ARRAY <details> <summary> Items </summary> [STRING] </details> | Up to 4 sequences where the API will stop generating further tokens. | false |
+| user | User | STRING | A unique identifier representing your end-user, which can help admins to monitor and detect abuse. | false |
+| reasoning | Reasoning effort | STRING <details> <summary> Options </summary> <span>none</span>, <span>minimal</span>, <span>low</span>, <span>medium</span>, <span>high</span>, <span>xhigh</span> </details> | Constrains effort on reasoning. Reducing reasoning effort can result in faster responses and fewer tokens used on reasoning in a response. For reasoning models for gpt-5 and o-series models only. | false |
+| verbosity | Verbosity | STRING <details> <summary> Options </summary> <span>low</span>, <span>medium</span>, <span>high</span> </details> | Adjusts response verbosity. Lower levels yield shorter answers. | false |
+| store | Store logs | BOOLEAN <details> <summary> Options </summary> <span>true</span>, <span>false</span> </details> | Whether to store the logs for later retrieval. Logs are visible to your organization. | false |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Ask (stream)",
+  "name" : "streamAsk",
+  "parameters" : {
+    "model" : "",
+    "format" : "",
+    "userPrompt" : "",
+    "systemPrompt" : "",
+    "attachments" : [ {
+      "extension" : "",
+      "mimeType" : "",
+      "name" : "",
+      "url" : ""
+    } ],
+    "messages" : [ {
+      "role" : "",
+      "content" : "",
+      "attachments" : [ {
+        "extension" : "",
+        "mimeType" : "",
+        "name" : "",
+        "url" : ""
+      } ]
+    } ],
+    "response" : {
+      "responseFormat" : "",
+      "responseSchema" : ""
+    },
+    "maxTokens" : 1,
+    "maxCompletionTokens" : 1,
+    "n" : 1,
+    "temperature" : 0.0,
+    "topP" : 0.0,
+    "frequencyPenalty" : 0.0,
+    "presencePenalty" : 0.0,
+    "logitBias" : { },
+    "stop" : [ "" ],
+    "user" : "",
+    "reasoning" : "",
+    "verbosity" : "",
+    "store" : false
+  },
+  "type" : "openAi/v1/streamAsk"
+}
+```
+
+#### Output
+
+
+___Sample Output:___
+
+```Sample stream```
+
+
+
+Type: STRING
+
+
+
+
+
+
+
+
+
+
+### Create Image
+Name: createImage
+
+`Create an image using text-to-image models`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| model | Model | STRING <details> <summary> Options </summary> <span>chatgpt-image-latest</span>, <span>dall-e-2</span>, <span>dall-e-3</span>, <span>gpt-image-1</span>, <span>gpt-image-1-5</span>, <span>gpt-image-1-mini</span>, <span>gpt-image-2</span>, <span>gpt-image-2-2026-04-21</span> </details> | The model to use for image generation. | true |
+| imageMessages | Messages | ARRAY <details> <summary> Items </summary> [&#123;STRING\(content), NUMBER\(weight)&#125;] </details> | A list of messages comprising the conversation so far. | true |
+| size | Size | STRING <details> <summary> Options </summary> <span>DALL_E_2_256x256</span>, <span>DALL_E_2_512x512</span>, <span>_1024x1024</span>, <span>DALL_E_3_1792x1024</span>, <span>DALL_E_3_1024x1792</span> </details> | The size of the generated images. | true |
+| n | Number of Responses | INTEGER | The number of images to generate. Must be between 1 and 10. For dall-e-3, only n=1 is supported.. | false |
+| responseFormat | Response format | STRING <details> <summary> Options </summary> <span>URL</span>, <span>B64_JSON</span> </details> | The format in which the generated images are returned. | false |
+| quality | Quality | STRING <details> <summary> Options </summary> <span>STANDARD</span>, <span>HD</span> </details> | The quality of the image that will be generated. | false |
+| style | Style | STRING <details> <summary> Options </summary> <span>VIVID</span>, <span>NATURAL</span> </details> | The style of the generated images. Must be one of vivid or natural. Vivid causes the model to lean towards generating hyper-real and dramatic images. Natural causes the model to produce more natural, less hyper-real looking images. This parameter is only supported for dall-e-3. | false |
+| user | User | STRING | A unique identifier representing your end-user, which can help admins to monitor and detect abuse. | false |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Create Image",
+  "name" : "createImage",
+  "parameters" : {
+    "model" : "",
+    "imageMessages" : [ {
+      "content" : "",
+      "weight" : 0.0
+    } ],
+    "size" : "",
+    "n" : 1,
+    "responseFormat" : "",
+    "quality" : "",
+    "style" : "",
+    "user" : ""
+  },
+  "type" : "openAi/v1/createImage"
+}
+```
+
+#### Output
+
+
+
+Type: OBJECT
+
+
+#### Properties
+
+|     Name     |     Type     |     Description     |
+|:------------:|:------------:|:-------------------:|
+| url | STRING | URL of the generated image. |
+| b64Json | STRING | Base64 encoded JSON of the generated image. |
+
+
+
+
+#### Output Example
+```json
+{
+  "url" : "",
+  "b64Json" : ""
+}
+```
+
+
+
+
+### Text-To-Speech
+Name: createSpeech
+
+`Generate an audio recording from the input text`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| model | Model | STRING <details> <summary> Options </summary> <span>gpt-4o-mini-tts</span>, <span>gpt-4o-mini-tts-2025-12-15</span>, <span>tts-1</span>, <span>tts-1-hd</span> </details> | Text-to-Speech model which will generate the audio. | true |
+| input | Input | STRING | The text to generate audio for. | true |
+| voice | Voice | STRING <details> <summary> Options </summary> <span>ALLOY</span>, <span>ASH</span>, <span>BALLAD</span>, <span>CORAL</span>, <span>ECHO</span>, <span>FABLE</span>, <span>NOVA</span>, <span>ONYX</span>, <span>SAGE</span>, <span>SHIMMER</span>, <span>VERSE</span> </details> | The voice to use when generating the audio. | true |
+| responseFormat | Response format | STRING <details> <summary> Options </summary> <span>AAC</span>, <span>FLAC</span>, <span>MP3</span>, <span>OPUS</span>, <span>PCM</span>, <span>WAV</span> </details> | The format to audio in. | false |
+| speed | Speed | NUMBER | The speed of the generated audio. | false |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Text-To-Speech",
+  "name" : "createSpeech",
+  "parameters" : {
+    "model" : "",
+    "input" : "",
+    "voice" : "",
+    "responseFormat" : "",
+    "speed" : 0.0
+  },
+  "type" : "openAi/v1/createSpeech"
+}
+```
+
+#### Output
+
+
+
+Type: FILE_ENTRY
+
+
+#### Properties
+
+|     Name     |     Type     |     Description     |
+|:------------:|:------------:|:-------------------:|
+| extension | STRING |  |
+| mimeType | STRING |  |
+| name | STRING |  |
+| url | STRING |  |
+
+
+
+
+#### Output Example
+```json
+{
+  "extension" : "",
+  "mimeType" : "",
+  "name" : "",
+  "url" : ""
+}
+```
+
+
+
+
+### Create Transcriptions
+Name: createTranscription
+
+`Transcribes audio into the input language.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| file | File Entry | FILE_ENTRY | The audio file object to transcribe, in one of these formats: flac, mp3, mp4, mpeg, mpga, m4a, ogg, wav, or webm. | true |
+| model | Model | STRING <details> <summary> Options </summary> <span>gpt-4o-mini-transcribe</span>, <span>gpt-4o-mini-transcribe-2025-12-15</span>, <span>gpt-4o-transcribe</span>, <span>gpt-4o-transcribe-diarize</span>, <span>whisper-1</span> </details> | ID of the model to use. | true |
+| language | Language | STRING <details> <summary> Options </summary> <span>AF</span>, <span>AR</span>, <span>HY</span>, <span>AZ</span>, <span>BE</span>, <span>BS</span>, <span>BG</span>, <span>CA</span>, <span>ZH</span>, <span>HR</span>, <span>CS</span>, <span>DA</span>, <span>NL</span>, <span>EL</span>, <span>ET</span>, <span>EN</span>, <span>FI</span>, <span>FR</span>, <span>GL</span>, <span>DE</span>, <span>HE</span>, <span>HI</span>, <span>HU</span>, <span>IS</span>, <span>ID</span>, <span>IT</span>, <span>JA</span>, <span>KK</span>, <span>KN</span>, <span>KO</span>, <span>LT</span>, <span>LV</span>, <span>MA</span>, <span>MK</span>, <span>MR</span>, <span>MS</span>, <span>NE</span>, <span>NO</span>, <span>FA</span>, <span>PL</span>, <span>PT</span>, <span>RO</span>, <span>RU</span>, <span>SK</span>, <span>SL</span>, <span>SR</span>, <span>ES</span>, <span>SV</span>, <span>SW</span>, <span>TA</span>, <span>TL</span>, <span>TH</span>, <span>TR</span>, <span>UK</span>, <span>UR</span>, <span>VI</span>, <span>CY</span> </details> | The language of the input audio. | false |
+| prompt | Prompt | STRING | An optional text to guide the model's style or continue a previous audio segment. The prompt should match the audio language. | false |
+| responseFormat | Response format | STRING <details> <summary> Options </summary> <span>json</span>, <span>text</span>, <span>srt</span>, <span>verbose_json</span>, <span>vtt</span> </details> | The format of the transcript output | true |
+| temperature | Temperature | NUMBER | The sampling temperature, between 0 and 1. Higher values like will make the output more random, while lower values will make it more focused and deterministic.  | false |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Create Transcriptions",
+  "name" : "createTranscription",
+  "parameters" : {
+    "file" : {
+      "extension" : "",
+      "mimeType" : "",
+      "name" : "",
+      "url" : ""
+    },
+    "model" : "",
+    "language" : "",
+    "prompt" : "",
+    "responseFormat" : "",
+    "temperature" : 0.0
+  },
+  "type" : "openAi/v1/createTranscription"
+}
+```
+
+#### Output
+
+The output for this action is dynamic and may vary depending on the input parameters. To determine the exact structure of the output, you need to execute the action.
+
+
+
+
+
+
+
+

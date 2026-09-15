@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,9 @@
 package com.bytechef.automation.configuration.repository;
 
 import com.bytechef.automation.configuration.domain.Project;
+import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import org.springframework.data.jdbc.repository.query.Query;
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.data.repository.ListPagingAndSortingRepository;
@@ -33,12 +35,16 @@ public interface ProjectRepository
 
     @Query("""
             SELECT project.* FROM project
-            JOIN project_instance ON project.id = project_instance.project_id
-            WHERE project_instance.id = :projectInstanceId
+            JOIN project_deployment ON project.id = project_deployment.project_id
+            WHERE project_deployment.id = :projectDeploymentId
         """)
-    Project findByProjectInstanceId(@Param("projectInstanceId") long projectInstanceId);
+    Optional<Project> findByProjectDeploymentId(@Param("projectDeploymentId") long projectDeploymentId);
 
     Optional<Project> findByNameIgnoreCase(String name);
+
+    Optional<Project> findByNameIgnoreCaseAndWorkspaceId(String name, long workspaceId);
+
+    Optional<Project> findByUuid(UUID uuid);
 
     @Query("""
             SELECT project.* FROM project
@@ -46,4 +52,10 @@ public interface ProjectRepository
             WHERE project_workflow.workflow_id = :workflowId
         """)
     Optional<Project> findByWorkflowId(@Param("workflowId") String workflowId);
+
+    @Query("""
+            SELECT project.id FROM project
+            WHERE project.workspace_id = :workspaceId
+        """)
+    List<Long> findProjectIdsByWorkspaceId(@Param("workspaceId") Long workspaceId);
 }

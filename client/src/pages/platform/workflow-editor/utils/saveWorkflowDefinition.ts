@@ -1,175 +1,396 @@
+import {Workflow, WorkflowTask, WorkflowTrigger} from '@/shared/middleware/platform/configuration';
 import {
-    ComponentDefinitionApi,
-    WorkflowConnectionModel,
-    WorkflowModel,
-    WorkflowTaskModel,
-    WorkflowTriggerModel,
-} from '@/shared/middleware/platform/configuration';
-import {ComponentDefinitionKeys} from '@/shared/queries/platform/componentDefinitions.queries';
-import {WorkflowDefinitionType} from '@/shared/types';
-import {QueryClient, UseMutationResult} from '@tanstack/react-query';
+    BranchCaseType,
+    NodeDataType,
+    TaskDispatcherContextType,
+    UpdateWorkflowMutationType,
+    WorkflowDefinitionType,
+} from '@/shared/types';
 
-const SPACE = 4;
+import useLayoutDirectionStore from '../stores/useLayoutDirectionStore';
+import useWorkflowDataStore, {setWorkflowWithoutHistory} from '../stores/useWorkflowDataStore';
+import {flattenDefinitionTasks} from './flattenDefinitionTasks';
+import getRecursivelyUpdatedTasks from './getRecursivelyUpdatedTasks';
+import {getTask} from './getTask';
+import insertTaskDispatcherSubtask from './insertTaskDispatcherSubtask';
+import stringifyWorkflowDefinition from './stringifyWorkflowDefinition';
+import {drainPendingSaves, enqueuePendingSave, isWorkflowMutating, setWorkflowMutating} from './workflowMutationGuard';
 
-type UpdateWorkflowRequestType = {
-    id: string;
-    workflowModel: WorkflowModel;
-};
+interface SaveWorkflowDefinitionProps {
+    decorative?: boolean;
+    nodeData?: NodeDataType;
+    nodeIndex?: number;
+    onError?: () => void;
+    onSuccess?: () => void;
+    placeholderId?: string;
+    taskDispatcherContext?: TaskDispatcherContextType;
+    updateWorkflowMutation: UpdateWorkflowMutationType;
+    updatedWorkflowTasks?: Array<WorkflowTask>;
+}
 
-type NodeDataType = {
-    componentName: string;
-    connections?: Array<WorkflowConnectionModel>;
-    description?: string;
-    icon?: JSX.Element | string;
-    label?: string;
-    metadata?: {
-        ui?: {
-            dynamicPropertyTypes?: {[key: string]: string};
-        };
-    };
-    name: string;
-    operationName?: string;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    parameters?: {[key: string]: any};
-    trigger?: boolean;
-    type?: string;
-};
+export default async function saveWorkflowDefinition(props: SaveWorkflowDefinitionProps) {
+    const {
+        decorative,
+        nodeData,
+        nodeIndex,
+        onError,
+        onSuccess,
+        placeholderId,
+        taskDispatcherContext,
+        updateWorkflowMutation,
+        updatedWorkflowTasks,
+    } = props;
 
-export default async function saveWorkflowDefinition(
-    nodeData: NodeDataType,
-    workflow: WorkflowModel,
-    updateWorkflowMutation: UseMutationResult<WorkflowModel, Error, UpdateWorkflowRequestType, unknown>,
-    index?: number,
-    onSuccess?: (workflow: WorkflowModel) => void
-) {
-    const workflowDefinition: WorkflowDefinitionType = JSON.parse(workflow.definition!);
+    const {workflow} = useWorkflowDataStore.getState();
 
-    if (nodeData.trigger) {
-        const newTrigger: WorkflowTriggerModel = {
-            connections: nodeData.connections,
-            description: nodeData.description,
-            label: nodeData.label,
-            name: nodeData.name,
-            parameters: nodeData.parameters,
-            type: nodeData.type ?? `${nodeData.componentName}/v1/${nodeData.operationName}`,
-        };
+    if (workflow.id && isWorkflowMutating(workflow.id)) {
+        if (updatedWorkflowTasks) {
+            console.warn('Dropped a workflow save with precomputed tasks while another save was in flight');
 
-        updateWorkflowMutation.mutate(
-            {
-                id: workflow.id!,
-                workflowModel: {
-                    definition: JSON.stringify(
-                        {
-                            ...workflowDefinition,
-                            triggers: [newTrigger],
-                        },
-                        null,
-                        SPACE
-                    ),
-                    version: workflow.version,
-                },
-            },
-            {
-                onSuccess,
-            }
-        );
+            return;
+        }
+
+        enqueuePendingSave(workflow.id, () => {
+            saveWorkflowDefinition(props);
+        });
 
         return;
     }
 
-    const {componentName, description, label, metadata, name, parameters} = nodeData;
+    let workflowDefinition: WorkflowDefinitionType;
 
-    let {operationName} = nodeData;
+    try {
+        workflowDefinition = JSON.parse(workflow.definition!);
+    } catch (error) {
+        console.error('Failed to parse workflow definition:', error);
 
-    const queryClient = new QueryClient();
-
-    if (!operationName) {
-        const newNodeComponentDefinition = await queryClient.fetchQuery({
-            queryFn: () => new ComponentDefinitionApi().getComponentDefinition({componentName}),
-            queryKey: ComponentDefinitionKeys.componentDefinition({componentName}),
-        });
-
-        if (!newNodeComponentDefinition) {
-            return;
-        }
-
-        operationName = newNodeComponentDefinition.actions?.[0].name;
+        return;
     }
 
-    const newTask: WorkflowTaskModel = {
+    const workflowTasks: Array<WorkflowTask> = workflow.tasks ?? [];
+    const workflowDefinitionTasks: Array<WorkflowTask> = workflowDefinition.tasks ?? [];
+
+    const {
+        clusterElements,
+        componentName,
         description,
         label,
+        maxRetries,
         metadata,
         name,
+        operationName,
         parameters,
-        type: `${componentName}/v1/${operationName}`,
+        taskDispatcher,
+        trigger,
+        version,
+    } = nodeData ?? {};
+
+    let {type} = nodeData ?? {};
+
+    if (trigger) {
+        if (!type) {
+            type = `${componentName}/v${version}/${operationName}`;
+        }
+
+        const newTrigger: WorkflowTrigger = {
+            description,
+            label,
+            name: name!,
+            parameters,
+            type,
+        };
+
+        executeWorkflowMutation({
+            definitionUpdate: {triggers: [newTrigger]},
+            onError,
+            onSuccess: () => {
+                if (onSuccess) {
+                    onSuccess();
+                }
+            },
+            updateWorkflowMutation,
+            workflow,
+            workflowDefinition,
+        });
+
+        return;
+    }
+
+    if (!type && !trigger) {
+        if (taskDispatcher) {
+            type = `${componentName}/v${version}`;
+        } else {
+            type = `${componentName}/v${version}/${operationName}`;
+        }
+    }
+
+    const newTask: WorkflowTask = {
+        clusterElements,
+        description,
+        label,
+        maxRetries,
+        metadata,
+        name: name!,
+        parameters,
+        type: type ?? `${componentName}/v${version}/${operationName}`,
     };
 
-    const existingWorkflowTask = workflowDefinition.tasks?.find((task) => task.name === newTask.name);
+    const existingWorkflowTask = workflowTasks?.find((task) => task.name === newTask.name);
+
+    const differenceInCaseCount =
+        existingWorkflowTask &&
+        componentName === 'branch' &&
+        (existingWorkflowTask?.parameters?.cases as BranchCaseType[])?.length !== newTask.parameters?.cases.length;
+
+    const differenceInCaseKeys =
+        existingWorkflowTask &&
+        componentName === 'branch' &&
+        (existingWorkflowTask?.parameters?.cases as BranchCaseType[])?.some((caseItem, index) => {
+            const newCaseItem = newTask.parameters?.cases?.[index];
+
+            return caseItem.key !== newCaseItem?.key;
+        });
+
+    const differenceInParameters =
+        existingWorkflowTask?.parameters &&
+        JSON.stringify(existingWorkflowTask.parameters) !== JSON.stringify(newTask.parameters);
+
+    const differenceInType = existingWorkflowTask?.type !== newTask.type;
+
+    const differenceInClusterElements =
+        JSON.stringify(existingWorkflowTask?.clusterElements) !== JSON.stringify(newTask.clusterElements);
 
     if (
         existingWorkflowTask &&
-        (!operationName ||
-            (existingWorkflowTask.parameters &&
-                JSON.stringify(existingWorkflowTask.parameters) === JSON.stringify(newTask.parameters)))
+        !decorative &&
+        !operationName &&
+        !differenceInParameters &&
+        !differenceInClusterElements &&
+        !differenceInType &&
+        !differenceInCaseCount &&
+        !differenceInCaseKeys
     ) {
         return;
     }
 
-    let tasks: WorkflowTaskModel[];
+    let updatedWorkflowDefinitionTasks = workflowDefinitionTasks;
 
-    if (existingWorkflowTask) {
-        const existingTaskIndex = workflowDefinition.tasks?.findIndex(
-            (task) => task.name === existingWorkflowTask.name
-        );
-
-        if (existingTaskIndex === undefined) {
-            return;
-        }
-
-        tasks = [...(workflowDefinition.tasks || [])];
-
-        const combinedParameters = {
-            ...existingWorkflowTask.parameters,
-            ...newTask.parameters,
-        };
-
-        const combinedTask: WorkflowTaskModel = {
-            ...existingWorkflowTask,
-            ...newTask,
-            parameters: combinedParameters,
-        };
-
-        tasks[existingTaskIndex] = combinedTask;
-
-        if (existingWorkflowTask.type !== newTask.type) {
-            delete tasks[existingTaskIndex].parameters;
-        }
-    } else if (index !== undefined && index > -1) {
-        tasks = [...(workflowDefinition.tasks || [])];
-
-        tasks.splice(index, 0, newTask);
+    if (updatedWorkflowTasks) {
+        updatedWorkflowDefinitionTasks = updatedWorkflowTasks;
     } else {
-        tasks = [...(workflowDefinition.tasks || []), newTask];
+        if (existingWorkflowTask) {
+            const existingTaskIndex = workflowDefinitionTasks?.findIndex(
+                (task) => task.name === existingWorkflowTask.name
+            );
+
+            let combinedParameters = {
+                ...existingWorkflowTask.parameters,
+                ...newTask.parameters,
+            };
+
+            if (existingWorkflowTask.type !== newTask.type) {
+                combinedParameters = newTask.parameters ?? {};
+            }
+
+            const existingDefinitionTask = getTask({
+                tasks: workflowDefinitionTasks,
+                workflowNodeName: newTask.name,
+            });
+
+            const taskToUpdate = existingWorkflowTask.clusterRoot
+                ? {
+                      ...newTask,
+                      clusterElements: {
+                          ...(newTask.clusterElements ?? existingDefinitionTask?.clusterElements ?? {}),
+                      },
+                  }
+                : {
+                      ...newTask,
+                      parameters: combinedParameters,
+                  };
+
+            if (existingTaskIndex !== undefined && existingTaskIndex !== -1) {
+                if (existingWorkflowTask.type !== newTask.type) {
+                    delete updatedWorkflowDefinitionTasks[existingTaskIndex].parameters;
+                }
+
+                updatedWorkflowDefinitionTasks = [
+                    ...updatedWorkflowDefinitionTasks.slice(0, existingTaskIndex),
+                    taskToUpdate,
+                    ...updatedWorkflowDefinitionTasks.slice(existingTaskIndex + 1),
+                ];
+            } else {
+                const nestedTask = getTask({
+                    tasks: workflowDefinitionTasks,
+                    workflowNodeName: existingWorkflowTask.name,
+                });
+
+                if (!nestedTask) {
+                    console.error(`Task ${existingWorkflowTask.name} not found in workflow definition`);
+
+                    return;
+                }
+
+                updatedWorkflowDefinitionTasks = getRecursivelyUpdatedTasks(
+                    updatedWorkflowDefinitionTasks,
+                    taskToUpdate
+                );
+            }
+        } else {
+            updatedWorkflowDefinitionTasks = [...(workflowDefinitionTasks || [])];
+
+            if (taskDispatcherContext?.taskDispatcherId) {
+                updatedWorkflowDefinitionTasks = insertTaskDispatcherSubtask({
+                    newTask,
+                    placeholderId,
+                    taskDispatcherContext,
+                    tasks: updatedWorkflowDefinitionTasks,
+                });
+            } else if (nodeIndex !== undefined && nodeIndex > -1) {
+                updatedWorkflowDefinitionTasks = [...updatedWorkflowDefinitionTasks];
+
+                updatedWorkflowDefinitionTasks.splice(nodeIndex, 0, newTask);
+
+                // Clear main-axis of saved positions for tasks after the insertion
+                // point so dagre can shift them, but preserve cross-axis customization.
+                const direction = useLayoutDirectionStore.getState().layoutDirection;
+                const mainAxis = direction === 'TB' ? 'y' : 'x';
+                const crossAxis = direction === 'TB' ? 'x' : 'y';
+
+                for (let taskIndex = nodeIndex + 1; taskIndex < updatedWorkflowDefinitionTasks.length; taskIndex++) {
+                    const task = updatedWorkflowDefinitionTasks[taskIndex];
+
+                    if (task.metadata?.ui?.nodePosition) {
+                        const savedCrossValue = task.metadata.ui.nodePosition[crossAxis];
+
+                        updatedWorkflowDefinitionTasks[taskIndex] = {
+                            ...task,
+                            metadata: {
+                                ...task.metadata,
+                                ui: {
+                                    ...task.metadata.ui,
+                                    nodePosition: {
+                                        [crossAxis]: savedCrossValue,
+                                        [mainAxis]: undefined,
+                                    } as {x: number; y: number},
+                                },
+                            },
+                        };
+                    }
+                }
+            } else {
+                updatedWorkflowDefinitionTasks.push(newTask);
+            }
+        }
     }
+
+    executeWorkflowMutation({
+        definitionUpdate: {tasks: updatedWorkflowDefinitionTasks},
+        newTask: existingWorkflowTask ? undefined : newTask,
+        onError,
+        onSuccess,
+        updateWorkflowMutation,
+        workflow,
+        workflowDefinition,
+    });
+}
+
+interface ExecuteWorkflowMutationProps {
+    definitionUpdate: {
+        tasks?: Array<WorkflowTask>;
+        triggers?: Array<WorkflowTrigger>;
+    };
+    newTask?: WorkflowTask;
+    onError?: () => void;
+    onSuccess?: () => void;
+    updateWorkflowMutation: UpdateWorkflowMutationType;
+    workflow: Workflow;
+    workflowDefinition: WorkflowDefinitionType;
+}
+
+function executeWorkflowMutation({
+    definitionUpdate,
+    newTask,
+    onError,
+    onSuccess,
+    updateWorkflowMutation,
+    workflow,
+    workflowDefinition,
+}: ExecuteWorkflowMutationProps) {
+    if (isWorkflowMutating(workflow.id!)) {
+        console.warn('Dropped a workflow save that raced another save for the guard');
+
+        return;
+    }
+
+    const updatedDefinition = stringifyWorkflowDefinition({
+        ...workflowDefinition,
+        ...definitionUpdate,
+    });
+
+    const previousWorkflow = workflow;
+
+    let optimisticTasks =
+        newTask && definitionUpdate.tasks ? flattenDefinitionTasks(definitionUpdate.tasks) : undefined;
+
+    // Preserve server-computed properties (clusterRoot) that exist in workflow.tasks
+    // but not in the JSON definition. Without this, cluster root nodes (DataStream, AI Agent)
+    // temporarily render as regular workflow nodes during the optimistic update.
+    if (optimisticTasks && workflow.tasks) {
+        const existingTasksByName = new Map(workflow.tasks.map((task) => [task.name, task]));
+
+        optimisticTasks = optimisticTasks.map((task) => {
+            const existingTask = existingTasksByName.get(task.name);
+
+            if (existingTask?.clusterRoot) {
+                return {...task, clusterRoot: existingTask.clusterRoot};
+            }
+
+            return task;
+        });
+    }
+
+    useWorkflowDataStore.getState().setWorkflow({
+        ...workflow,
+        definition: updatedDefinition,
+        ...(optimisticTasks ? {tasks: optimisticTasks} : {}),
+    });
+
+    setWorkflowMutating(workflow.id!, true);
 
     updateWorkflowMutation.mutate(
         {
             id: workflow.id!,
-            workflowModel: {
-                definition: JSON.stringify(
-                    {
-                        ...workflowDefinition,
-                        tasks,
-                    },
-                    null,
-                    SPACE
-                ),
+            workflow: {
+                definition: updatedDefinition,
                 version: workflow.version,
             },
         },
         {
-            onSuccess,
+            onError: (error) => {
+                console.error('Failed to save workflow definition:', error);
+
+                setWorkflowWithoutHistory(previousWorkflow);
+
+                if (onError) {
+                    onError();
+                }
+            },
+            onSettled: () => {
+                setWorkflowMutating(workflow.id!, false);
+
+                drainPendingSaves(workflow.id!);
+            },
+            onSuccess: (updatedWorkflow) => {
+                useWorkflowDataStore.getState().setWorkflow({
+                    ...updatedWorkflow,
+                    definition: updatedDefinition,
+                });
+
+                if (onSuccess) {
+                    onSuccess();
+                }
+            },
         }
     );
 }

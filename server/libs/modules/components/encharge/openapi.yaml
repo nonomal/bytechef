@@ -1,7 +1,7 @@
 ---
 openapi: "3.0.2"
 info:
-  title: "Encharge API"
+  title: "Encharge"
   description: "Encharge is a marketing automation platform that helps businesses automate their customer communication and marketing campaigns."
   version: "v1"
 servers:
@@ -11,16 +11,16 @@ paths:
     post:
       tags:
         - "Emails"
-      summary: "Create email template"
-      description: "Create email template"
-      operationId: "createEmail"
+      summary: "Create Email Template"
+      description: "Creates email template."
+      operationId: "createEmailTemplate"
       requestBody:
         description: "data of new email template"
         required: true
         content:
           application/json:
             schema:
-              title: "Email template"
+              title: "Email Template"
               type: "object"
               required:
                 - "name"
@@ -28,16 +28,20 @@ paths:
                 - "fromEmail"
               properties:
                 name:
-                  description: "Name of the email template"
+                  description: "Name of the email template."
                   type: "string"
                 subject:
-                  description: "Subject of the email"
+                  description: "Subject of the email."
                   type: "string"
                 fromEmail:
-                  description: "From address to send the email from"
+                  description: "From address to send the email from."
                   type: "string"
                 replyEmail:
                   description: "Address that recipients will reply to by default."
+                  type: "string"
+                html:
+                  title: "HTML Content"
+                  description: "HTML content of the email template."
                   type: "string"
       responses:
         200:
@@ -47,31 +51,53 @@ paths:
               schema:
                 type: "object"
                 properties:
-                  body:
+                  email:
                     type: "object"
                     properties:
-                      email:
-                        type: "object"
-                        properties:
-                          id:
-                            type: "integer"
-                          name:
-                            type: "string"
-                          subject:
-                            type: "string"
-                          fromEmail:
-                            type: "string"
-                          replyEmail:
-                            type: "string"
+                      id:
+                        type: "integer"
+                        description: "ID of the email template."
+                      isStandalone:
+                        type: "boolean"
+                        description: "Whether this email template is standalone or part of a broadcast."
+                      accountId:
+                        type: "integer"
+                        description: "ID of the account associated with the email template."
+                      name:
+                        type: "string"
+                        description: "Name of the email template."
+                      subject:
+                        type: "string"
+                        description: "Subject of the email."
+                      fromEmail:
+                        type: "string"
+                        description: "From address to send the email from."
+                      replyEmail:
+                        type: "string"
+                        description: "Address that recipients will reply to by default."
+                      type:
+                        type: "string"
+                        description: "Type of the email. HTML or plain-text. Currently only HTML is supported."
+                      archived:
+                        type: "boolean"
+                        description: "Indicates if the email template is archived."
+                      canSpamCompliance:
+                        type: "boolean"
+                        description: "Indicates if the email template complies with CAN-SPAM regulations."
+                      communicationCategoryId:
+                        type: "integer"
+                        description: "ID of the communication category of this email template."
+                      isDefaultTemplate:
+                        type: boolean
+                        description: "Indicates if the email template is the default template for the account."
   /people:
     post:
       tags:
         - "People"
-      summary: "Create people"
-      description: "Creates new People"
-      operationId: "createPeople"
+      summary: "Create Person"
+      description: "Creates a new person in Encharge."
+      operationId: "createPerson"
       requestBody:
-        description: "data of new People"
         required: true
         content:
           application/json:
@@ -97,10 +123,10 @@ paths:
                     description: "The person's website."
                   title:
                     type: "string"
-                    description: "Title of the person"
+                    description: "Title of the person."
                   phone:
                     type: "string"
-                    description: "The person's phone number"
+                    description: "The person's phone number."
       responses:
         200:
           description: "Creation confirmation. Returns created people"
@@ -109,33 +135,37 @@ paths:
               schema:
                 type: "object"
                 properties:
-                  body:
-                    type: "object"
-                    properties:
-                      users:
-                        type: "array"
-                        items:
-                          type: "object"
-                          properties:
-                            email:
-                              type: "string"
-                            firstName:
-                              type: "string"
-                            lastName:
-                              type: "string"
-                            website:
-                              type: "string"
-                            title:
-                              type: "string"
-                            id:
-                              type: "string"
-                            phone:
-                              type: "string"
+                  users:
+                    type: "array"
+                    items:
+                      type: "object"
+                      properties:
+                        email:
+                          type: "string"
+                          description: "Email address of the person."
+                        firstName:
+                          type: "string"
+                          description: "First name of the person."
+                        lastName:
+                          type: "string"
+                          description: "Last name of the person."
+                        website:
+                          type: "string"
+                          description: "Website of the person."
+                        title:
+                          type: "string"
+                          description: "Title of the person."
+                        id:
+                          type: "string"
+                          description: "ID of the person."
+                        phone:
+                          type: "string"
+                          description: "Phone number of the person."
   /tags:
     post:
       tags:
         - "Tags"
-      summary: "Add tag"
+      summary: "Add Tag"
       description: "Add tag(s) to an existing user."
       operationId: "addTag"
       requestBody:

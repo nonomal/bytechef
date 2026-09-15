@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,10 +17,12 @@
 package com.bytechef.component.hubspot.action;
 
 import static com.bytechef.component.OpenApiComponentHandler.PropertyType;
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.string;
 
-import com.bytechef.component.definition.ComponentDSL;
+import com.bytechef.component.definition.ActionDefinition;
+import com.bytechef.component.definition.ComponentDsl;
+import com.bytechef.component.hubspot.util.HubspotUtils;
 import java.util.Map;
 
 /**
@@ -29,7 +31,7 @@ import java.util.Map;
  * @generated
  */
 public class HubspotDeleteContactAction {
-    public static final ComponentDSL.ModifiableActionDefinition ACTION_DEFINITION = action("deleteContact")
+    public static final ComponentDsl.ModifiableActionDefinition ACTION_DEFINITION = action("deleteContact")
         .title("Delete Contact")
         .description("Move Contact to the recycling bin.")
         .metadata(
@@ -38,8 +40,9 @@ public class HubspotDeleteContactAction {
                 "path", "/crm/v3/objects/contacts/{contactId}"
 
             ))
-        .properties(string("contactId").label("Contact")
+        .properties(string("contactId").label("Contact ID")
             .required(true)
+            .options((ActionDefinition.OptionsFunction<String>) HubspotUtils::getContactIdOptions)
             .metadata(
                 Map.of(
                     "type", PropertyType.PATH)));

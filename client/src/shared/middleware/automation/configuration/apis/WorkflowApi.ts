@@ -12,19 +12,26 @@
  * Do not edit the class manually.
  */
 
-
 import * as runtime from '../runtime';
-import type {
-  WorkflowModel,
-} from '../models/index';
 import {
-    WorkflowModelFromJSON,
-    WorkflowModelToJSON,
-} from '../models/index';
+    type CreateProjectWorkflow200Response,
+    CreateProjectWorkflow200ResponseFromJSON,
+    CreateProjectWorkflow200ResponseToJSON,
+} from '../models/CreateProjectWorkflow200Response';
+import {
+    type DuplicateWorkflow200Response,
+    DuplicateWorkflow200ResponseFromJSON,
+    DuplicateWorkflow200ResponseToJSON,
+} from '../models/DuplicateWorkflow200Response';
+import {
+    type Workflow,
+    WorkflowFromJSON,
+    WorkflowToJSON,
+} from '../models/Workflow';
 
 export interface CreateProjectWorkflowRequest {
     id: number;
-    workflowModel: WorkflowModel;
+    workflow: Workflow;
 }
 
 export interface DeleteWorkflowRequest {
@@ -39,6 +46,7 @@ export interface DuplicateWorkflowRequest {
 export interface GetProjectVersionWorkflowsRequest {
     id: number;
     projectVersion: number;
+    includeAllFields?: boolean;
 }
 
 export interface GetProjectWorkflowRequest {
@@ -55,7 +63,7 @@ export interface GetWorkflowRequest {
 
 export interface UpdateWorkflowRequest {
     id: string;
-    workflowModel: WorkflowModel;
+    workflow: Workflow;
 }
 
 /**
@@ -64,10 +72,9 @@ export interface UpdateWorkflowRequest {
 export class WorkflowApi extends runtime.BaseAPI {
 
     /**
-     * Create new workflow and adds it to an existing project.
-     * Create new workflow and adds it to an existing project.
+     * Creates request options for createProjectWorkflow without sending the request
      */
-    async createProjectWorkflowRaw(requestParameters: CreateProjectWorkflowRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<WorkflowModel>> {
+    async createProjectWorkflowRequestOpts(requestParameters: CreateProjectWorkflowRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['id'] == null) {
             throw new runtime.RequiredError(
                 'id',
@@ -75,10 +82,10 @@ export class WorkflowApi extends runtime.BaseAPI {
             );
         }
 
-        if (requestParameters['workflowModel'] == null) {
+        if (requestParameters['workflow'] == null) {
             throw new runtime.RequiredError(
-                'workflowModel',
-                'Required parameter "workflowModel" was null or undefined when calling createProjectWorkflow().'
+                'workflow',
+                'Required parameter "workflow" was null or undefined when calling createProjectWorkflow().'
             );
         }
 
@@ -88,31 +95,43 @@ export class WorkflowApi extends runtime.BaseAPI {
 
         headerParameters['Content-Type'] = 'application/json';
 
-        const response = await this.request({
-            path: `/projects/{id}/workflows`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))),
+
+        let urlPath = `/projects/{id}/workflows`;
+        urlPath = urlPath.replace('{id}', encodeURIComponent(String(requestParameters['id'])));
+
+        return {
+            path: urlPath,
             method: 'POST',
             headers: headerParameters,
             query: queryParameters,
-            body: WorkflowModelToJSON(requestParameters['workflowModel']),
-        }, initOverrides);
-
-        return new runtime.JSONApiResponse(response, (jsonValue) => WorkflowModelFromJSON(jsonValue));
+            body: WorkflowToJSON(requestParameters['workflow']),
+        };
     }
 
     /**
      * Create new workflow and adds it to an existing project.
      * Create new workflow and adds it to an existing project.
      */
-    async createProjectWorkflow(requestParameters: CreateProjectWorkflowRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<WorkflowModel> {
+    async createProjectWorkflowRaw(requestParameters: CreateProjectWorkflowRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<CreateProjectWorkflow200Response>> {
+        const requestOptions = await this.createProjectWorkflowRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => CreateProjectWorkflow200ResponseFromJSON(jsonValue));
+    }
+
+    /**
+     * Create new workflow and adds it to an existing project.
+     * Create new workflow and adds it to an existing project.
+     */
+    async createProjectWorkflow(requestParameters: CreateProjectWorkflowRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<CreateProjectWorkflow200Response> {
         const response = await this.createProjectWorkflowRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
     /**
-     * Delete a workflow.
-     * Delete a workflow
+     * Creates request options for deleteWorkflow without sending the request
      */
-    async deleteWorkflowRaw(requestParameters: DeleteWorkflowRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+    async deleteWorkflowRequestOpts(requestParameters: DeleteWorkflowRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['id'] == null) {
             throw new runtime.RequiredError(
                 'id',
@@ -124,12 +143,25 @@ export class WorkflowApi extends runtime.BaseAPI {
 
         const headerParameters: runtime.HTTPHeaders = {};
 
-        const response = await this.request({
-            path: `/workflows/{id}`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))),
+
+        let urlPath = `/workflows/{id}`;
+        urlPath = urlPath.replace('{id}', encodeURIComponent(String(requestParameters['id'])));
+
+        return {
+            path: urlPath,
             method: 'DELETE',
             headers: headerParameters,
             query: queryParameters,
-        }, initOverrides);
+        };
+    }
+
+    /**
+     * Delete a workflow.
+     * Delete a workflow
+     */
+    async deleteWorkflowRaw(requestParameters: DeleteWorkflowRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        const requestOptions = await this.deleteWorkflowRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
 
         return new runtime.VoidApiResponse(response);
     }
@@ -143,10 +175,9 @@ export class WorkflowApi extends runtime.BaseAPI {
     }
 
     /**
-     * Duplicates existing workflow.
-     * Duplicates existing workflow.
+     * Creates request options for duplicateWorkflow without sending the request
      */
-    async duplicateWorkflowRaw(requestParameters: DuplicateWorkflowRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<string>> {
+    async duplicateWorkflowRequestOpts(requestParameters: DuplicateWorkflowRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['id'] == null) {
             throw new runtime.RequiredError(
                 'id',
@@ -165,34 +196,43 @@ export class WorkflowApi extends runtime.BaseAPI {
 
         const headerParameters: runtime.HTTPHeaders = {};
 
-        const response = await this.request({
-            path: `/projects/{id}/workflows/{workflowId}/duplicate`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))).replace(`{${"workflowId"}}`, encodeURIComponent(String(requestParameters['workflowId']))),
+
+        let urlPath = `/projects/{id}/workflows/{workflowId}/duplicate`;
+        urlPath = urlPath.replace('{id}', encodeURIComponent(String(requestParameters['id'])));
+        urlPath = urlPath.replace('{workflowId}', encodeURIComponent(String(requestParameters['workflowId'])));
+
+        return {
+            path: urlPath,
             method: 'POST',
             headers: headerParameters,
             query: queryParameters,
-        }, initOverrides);
-
-        if (this.isJsonMime(response.headers.get('content-type'))) {
-            return new runtime.JSONApiResponse<string>(response);
-        } else {
-            return new runtime.TextApiResponse(response) as any;
-        }
+        };
     }
 
     /**
      * Duplicates existing workflow.
      * Duplicates existing workflow.
      */
-    async duplicateWorkflow(requestParameters: DuplicateWorkflowRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<string> {
+    async duplicateWorkflowRaw(requestParameters: DuplicateWorkflowRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<DuplicateWorkflow200Response>> {
+        const requestOptions = await this.duplicateWorkflowRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => DuplicateWorkflow200ResponseFromJSON(jsonValue));
+    }
+
+    /**
+     * Duplicates existing workflow.
+     * Duplicates existing workflow.
+     */
+    async duplicateWorkflow(requestParameters: DuplicateWorkflowRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<DuplicateWorkflow200Response> {
         const response = await this.duplicateWorkflowRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
     /**
-     * Get workflows for particular project version.
-     * Get workflows for particular project version.
+     * Creates request options for getProjectVersionWorkflows without sending the request
      */
-    async getProjectVersionWorkflowsRaw(requestParameters: GetProjectVersionWorkflowsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<WorkflowModel>>> {
+    async getProjectVersionWorkflowsRequestOpts(requestParameters: GetProjectVersionWorkflowsRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['id'] == null) {
             throw new runtime.RequiredError(
                 'id',
@@ -209,32 +249,49 @@ export class WorkflowApi extends runtime.BaseAPI {
 
         const queryParameters: any = {};
 
+        if (requestParameters['includeAllFields'] != null) {
+            queryParameters['includeAllFields'] = requestParameters['includeAllFields'];
+        }
+
         const headerParameters: runtime.HTTPHeaders = {};
 
-        const response = await this.request({
-            path: `/projects/{id}/versions/{projectVersion}/workflows`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))).replace(`{${"projectVersion"}}`, encodeURIComponent(String(requestParameters['projectVersion']))),
+
+        let urlPath = `/projects/{id}/versions/{projectVersion}/workflows`;
+        urlPath = urlPath.replace('{id}', encodeURIComponent(String(requestParameters['id'])));
+        urlPath = urlPath.replace('{projectVersion}', encodeURIComponent(String(requestParameters['projectVersion'])));
+
+        return {
+            path: urlPath,
             method: 'GET',
             headers: headerParameters,
             query: queryParameters,
-        }, initOverrides);
-
-        return new runtime.JSONApiResponse(response, (jsonValue) => jsonValue.map(WorkflowModelFromJSON));
+        };
     }
 
     /**
      * Get workflows for particular project version.
      * Get workflows for particular project version.
      */
-    async getProjectVersionWorkflows(requestParameters: GetProjectVersionWorkflowsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<WorkflowModel>> {
+    async getProjectVersionWorkflowsRaw(requestParameters: GetProjectVersionWorkflowsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<Workflow>>> {
+        const requestOptions = await this.getProjectVersionWorkflowsRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => jsonValue.map(WorkflowFromJSON));
+    }
+
+    /**
+     * Get workflows for particular project version.
+     * Get workflows for particular project version.
+     */
+    async getProjectVersionWorkflows(requestParameters: GetProjectVersionWorkflowsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<Workflow>> {
         const response = await this.getProjectVersionWorkflowsRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
     /**
-     * Get workflow for particular project.
-     * Get workflow for particular project.
+     * Creates request options for getProjectWorkflow without sending the request
      */
-    async getProjectWorkflowRaw(requestParameters: GetProjectWorkflowRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<WorkflowModel>> {
+    async getProjectWorkflowRequestOpts(requestParameters: GetProjectWorkflowRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['projectWorkflowId'] == null) {
             throw new runtime.RequiredError(
                 'projectWorkflowId',
@@ -246,30 +303,42 @@ export class WorkflowApi extends runtime.BaseAPI {
 
         const headerParameters: runtime.HTTPHeaders = {};
 
-        const response = await this.request({
-            path: `/workflows/by-project-workflow-id/{projectWorkflowId}`.replace(`{${"projectWorkflowId"}}`, encodeURIComponent(String(requestParameters['projectWorkflowId']))),
+
+        let urlPath = `/workflows/by-project-workflow-id/{projectWorkflowId}`;
+        urlPath = urlPath.replace('{projectWorkflowId}', encodeURIComponent(String(requestParameters['projectWorkflowId'])));
+
+        return {
+            path: urlPath,
             method: 'GET',
             headers: headerParameters,
             query: queryParameters,
-        }, initOverrides);
-
-        return new runtime.JSONApiResponse(response, (jsonValue) => WorkflowModelFromJSON(jsonValue));
+        };
     }
 
     /**
      * Get workflow for particular project.
      * Get workflow for particular project.
      */
-    async getProjectWorkflow(requestParameters: GetProjectWorkflowRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<WorkflowModel> {
+    async getProjectWorkflowRaw(requestParameters: GetProjectWorkflowRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Workflow>> {
+        const requestOptions = await this.getProjectWorkflowRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => WorkflowFromJSON(jsonValue));
+    }
+
+    /**
+     * Get workflow for particular project.
+     * Get workflow for particular project.
+     */
+    async getProjectWorkflow(requestParameters: GetProjectWorkflowRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Workflow> {
         const response = await this.getProjectWorkflowRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
     /**
-     * Get workflows for particular project.
-     * Get workflows for particular project.
+     * Creates request options for getProjectWorkflows without sending the request
      */
-    async getProjectWorkflowsRaw(requestParameters: GetProjectWorkflowsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<WorkflowModel>>> {
+    async getProjectWorkflowsRequestOpts(requestParameters: GetProjectWorkflowsRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['id'] == null) {
             throw new runtime.RequiredError(
                 'id',
@@ -281,30 +350,42 @@ export class WorkflowApi extends runtime.BaseAPI {
 
         const headerParameters: runtime.HTTPHeaders = {};
 
-        const response = await this.request({
-            path: `/projects/{id}/workflows`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))),
+
+        let urlPath = `/projects/{id}/workflows`;
+        urlPath = urlPath.replace('{id}', encodeURIComponent(String(requestParameters['id'])));
+
+        return {
+            path: urlPath,
             method: 'GET',
             headers: headerParameters,
             query: queryParameters,
-        }, initOverrides);
-
-        return new runtime.JSONApiResponse(response, (jsonValue) => jsonValue.map(WorkflowModelFromJSON));
+        };
     }
 
     /**
      * Get workflows for particular project.
      * Get workflows for particular project.
      */
-    async getProjectWorkflows(requestParameters: GetProjectWorkflowsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<WorkflowModel>> {
+    async getProjectWorkflowsRaw(requestParameters: GetProjectWorkflowsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<Workflow>>> {
+        const requestOptions = await this.getProjectWorkflowsRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => jsonValue.map(WorkflowFromJSON));
+    }
+
+    /**
+     * Get workflows for particular project.
+     * Get workflows for particular project.
+     */
+    async getProjectWorkflows(requestParameters: GetProjectWorkflowsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<Workflow>> {
         const response = await this.getProjectWorkflowsRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
     /**
-     * Get a workflow by id.
-     * Get a workflow by id
+     * Creates request options for getWorkflow without sending the request
      */
-    async getWorkflowRaw(requestParameters: GetWorkflowRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<WorkflowModel>> {
+    async getWorkflowRequestOpts(requestParameters: GetWorkflowRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['id'] == null) {
             throw new runtime.RequiredError(
                 'id',
@@ -316,30 +397,81 @@ export class WorkflowApi extends runtime.BaseAPI {
 
         const headerParameters: runtime.HTTPHeaders = {};
 
-        const response = await this.request({
-            path: `/workflows/{id}`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))),
+
+        let urlPath = `/workflows/{id}`;
+        urlPath = urlPath.replace('{id}', encodeURIComponent(String(requestParameters['id'])));
+
+        return {
+            path: urlPath,
             method: 'GET',
             headers: headerParameters,
             query: queryParameters,
-        }, initOverrides);
-
-        return new runtime.JSONApiResponse(response, (jsonValue) => WorkflowModelFromJSON(jsonValue));
+        };
     }
 
     /**
      * Get a workflow by id.
      * Get a workflow by id
      */
-    async getWorkflow(requestParameters: GetWorkflowRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<WorkflowModel> {
+    async getWorkflowRaw(requestParameters: GetWorkflowRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Workflow>> {
+        const requestOptions = await this.getWorkflowRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => WorkflowFromJSON(jsonValue));
+    }
+
+    /**
+     * Get a workflow by id.
+     * Get a workflow by id
+     */
+    async getWorkflow(requestParameters: GetWorkflowRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Workflow> {
         const response = await this.getWorkflowRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
     /**
-     * Update an existing workflow.
-     * Update an existing workflow
+     * Creates request options for getWorkflows without sending the request
      */
-    async updateWorkflowRaw(requestParameters: UpdateWorkflowRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<WorkflowModel>> {
+    async getWorkflowsRequestOpts(): Promise<runtime.RequestOpts> {
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+
+        let urlPath = `/workflows`;
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Get all workflows.
+     * Get all workflows.
+     */
+    async getWorkflowsRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<Workflow>>> {
+        const requestOptions = await this.getWorkflowsRequestOpts();
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => jsonValue.map(WorkflowFromJSON));
+    }
+
+    /**
+     * Get all workflows.
+     * Get all workflows.
+     */
+    async getWorkflows(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<Workflow>> {
+        const response = await this.getWorkflowsRaw(initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for updateWorkflow without sending the request
+     */
+    async updateWorkflowRequestOpts(requestParameters: UpdateWorkflowRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['id'] == null) {
             throw new runtime.RequiredError(
                 'id',
@@ -347,10 +479,10 @@ export class WorkflowApi extends runtime.BaseAPI {
             );
         }
 
-        if (requestParameters['workflowModel'] == null) {
+        if (requestParameters['workflow'] == null) {
             throw new runtime.RequiredError(
-                'workflowModel',
-                'Required parameter "workflowModel" was null or undefined when calling updateWorkflow().'
+                'workflow',
+                'Required parameter "workflow" was null or undefined when calling updateWorkflow().'
             );
         }
 
@@ -360,22 +492,35 @@ export class WorkflowApi extends runtime.BaseAPI {
 
         headerParameters['Content-Type'] = 'application/json';
 
-        const response = await this.request({
-            path: `/workflows/{id}`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))),
+
+        let urlPath = `/workflows/{id}`;
+        urlPath = urlPath.replace('{id}', encodeURIComponent(String(requestParameters['id'])));
+
+        return {
+            path: urlPath,
             method: 'PUT',
             headers: headerParameters,
             query: queryParameters,
-            body: WorkflowModelToJSON(requestParameters['workflowModel']),
-        }, initOverrides);
-
-        return new runtime.JSONApiResponse(response, (jsonValue) => WorkflowModelFromJSON(jsonValue));
+            body: WorkflowToJSON(requestParameters['workflow']),
+        };
     }
 
     /**
      * Update an existing workflow.
      * Update an existing workflow
      */
-    async updateWorkflow(requestParameters: UpdateWorkflowRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<WorkflowModel> {
+    async updateWorkflowRaw(requestParameters: UpdateWorkflowRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Workflow>> {
+        const requestOptions = await this.updateWorkflowRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => WorkflowFromJSON(jsonValue));
+    }
+
+    /**
+     * Update an existing workflow.
+     * Update an existing workflow
+     */
+    async updateWorkflow(requestParameters: UpdateWorkflowRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Workflow> {
         const response = await this.updateWorkflowRaw(requestParameters, initOverrides);
         return await response.value();
     }

@@ -1,9 +1,9 @@
-import {createContext, useContext, useEffect, useState} from 'react';
+import {ReactNode, createContext, useContext, useEffect, useState} from 'react';
 
 type ThemeType = 'dark' | 'light' | 'system';
 
 interface ThemeProviderProps {
-    children: React.ReactNode;
+    children: ReactNode;
     defaultTheme?: ThemeType;
     storageKey?: string;
 }
@@ -23,7 +23,7 @@ const ThemeProviderContext = createContext<ThemeProviderStateI>(initialState);
 export function ThemeProvider({
     children,
     defaultTheme = 'system',
-    storageKey = 'bytechef-ui-theme',
+    storageKey = 'bytechef.ui-theme',
     ...props
 }: ThemeProviderProps) {
     const [theme, setTheme] = useState<ThemeType>(

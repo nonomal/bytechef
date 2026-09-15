@@ -1,0 +1,119 @@
+/*
+ * Copyright 2025 ByteChef
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.bytechef.component.ai.agent.chat.memory.redis.util;
+
+import static com.bytechef.component.ai.agent.chat.memory.redis.constant.RedisChatMemoryConstants.DEFAULT_KEY_PREFIX;
+import static com.bytechef.component.ai.agent.chat.memory.redis.constant.RedisChatMemoryConstants.HOST;
+import static com.bytechef.component.ai.agent.chat.memory.redis.constant.RedisChatMemoryConstants.KEY_PREFIX;
+import static com.bytechef.component.ai.agent.chat.memory.redis.constant.RedisChatMemoryConstants.PASSWORD;
+import static com.bytechef.component.ai.agent.chat.memory.redis.constant.RedisChatMemoryConstants.PORT;
+import static com.bytechef.component.ai.agent.chat.memory.redis.constant.RedisChatMemoryConstants.TIME_TO_LIVE;
+import static com.bytechef.component.ai.agent.chat.memory.redis.constant.RedisChatMemoryConstants.USERNAME;
+import static com.bytechef.component.definition.ComponentDsl.option;
+
+import com.bytechef.component.definition.ActionDefinition;
+import com.bytechef.component.definition.ComponentDsl;
+import com.bytechef.component.definition.Parameters;
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
+import org.apache.commons.lang3.StringUtils;
+import org.springframework.ai.chat.memory.ChatMemoryRepository;
+import org.springframework.ai.chat.memory.repository.redis.RedisChatMemoryRepository;
+import org.springframework.ai.chat.messages.Message;
+import redis.clients.jedis.RedisClient;
+
+/**
+ * @author Ivica Cardic
+ */
+public class RedisChatMemoryUtils {
+
+    private RedisChatMemoryUtils() {
+    }
+
+    public static ChatMemoryRepository getChatMemoryRepository(Parameters connectionParameters) {
+        RedisClient jedisClient = getJedisClient(connectionParameters);
+        String keyPrefix = connectionParameters.getString(KEY_PREFIX, DEFAULT_KEY_PREFIX);
+
+        RedisChatMemoryRepository.Builder builder = RedisChatMemoryRepository.builder()
+            .jedisClient(jedisClient)
+            .keyPrefix(keyPrefix);
+
+        String timeToLive = connectionParameters.getString(TIME_TO_LIVE);
+
+        if (timeToLive != null && !timeToLive.isBlank()) {
+            builder.timeToLive(parseDuration(timeToLive));
+        }
+
+        return new OrderedRedisChatMemoryRepository(builder.build(), jedisClient, "chat-memory-idx");
+    }
+
+    public static RedisClient getJedisClient(Parameters connectionParameters) {
+        String host = connectionParameters.getRequiredString(HOST);
+        int port = connectionParameters.getRequiredInteger(PORT);
+        String username = connectionParameters.getString(USERNAME);
+        String password = connectionParameters.getString(PASSWORD);
+
+        if (username != null && !username.isBlank()) {
+            if (password == null || password.isBlank()) {
+                throw new IllegalArgumentException("Password is required when username is provided");
+            }
+
+            return RedisClient.create(host, port, username, password);
+        } else if (password != null && !password.isBlank()) {
+            return RedisClient.create(host, port, null, password);
+        }
+
+        return RedisClient.create(host, port);
+    }
+
+    private static Duration parseDuration(String timeToLive) {
+        timeToLive = StringUtils.lowerCase(StringUtils.trim(timeToLive));
+
+        if (timeToLive.endsWith("d")) {
+            return Duration.ofDays(Long.parseLong(timeToLive.substring(0, timeToLive.length() - 1)));
+        } else if (timeToLive.endsWith("h")) {
+            return Duration.ofHours(Long.parseLong(timeToLive.substring(0, timeToLive.length() - 1)));
+        } else if (timeToLive.endsWith("m")) {
+            return Duration.ofMinutes(Long.parseLong(timeToLive.substring(0, timeToLive.length() - 1)));
+        } else if (timeToLive.endsWith("s")) {
+            return Duration.ofSeconds(Long.parseLong(timeToLive.substring(0, timeToLive.length() - 1)));
+        }
+
+        return Duration.parse(timeToLive);
+    }
+
+    public static ActionDefinition.OptionsFunction<String> getFirstMessages() {
+        return (inputParameters, connectionParameters, lookupDependsOnPaths, searchText, context) -> {
+            ChatMemoryRepository chatMemoryRepository = getChatMemoryRepository(connectionParameters);
+
+            List<ComponentDsl.ModifiableOption<String>> options = new ArrayList<>();
+
+            List<String> conversationIds = chatMemoryRepository.findConversationIds();
+
+            for (String conversationId : conversationIds) {
+                List<Message> messages = chatMemoryRepository.findByConversationId(conversationId);
+
+                Message message = messages.getFirst();
+
+                options.add(option(conversationId, conversationId, message.getText()));
+            }
+
+            return options;
+        };
+    }
+}

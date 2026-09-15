@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,11 +16,17 @@
 
 package com.bytechef.task.dispatcher.condition.config;
 
+import static com.bytechef.task.dispatcher.condition.constant.ConditionTaskDispatcherConstants.CASE_FALSE;
+import static com.bytechef.task.dispatcher.condition.constant.ConditionTaskDispatcherConstants.CASE_TRUE;
+import static com.bytechef.task.dispatcher.condition.constant.ConditionTaskDispatcherConstants.CONDITION;
+
+import com.bytechef.atlas.configuration.domain.DeferredEvaluationParameterKeys;
 import com.bytechef.atlas.coordinator.task.completion.TaskCompletionHandlerFactory;
 import com.bytechef.atlas.coordinator.task.dispatcher.TaskDispatcherResolverFactory;
 import com.bytechef.atlas.execution.service.ContextService;
 import com.bytechef.atlas.execution.service.TaskExecutionService;
 import com.bytechef.atlas.file.storage.TaskFileStorage;
+import com.bytechef.evaluator.Evaluator;
 import com.bytechef.task.dispatcher.condition.ConditionTaskDispatcher;
 import com.bytechef.task.dispatcher.condition.completion.ConditionTaskCompletionHandler;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,6 +39,13 @@ import org.springframework.context.annotation.Configuration;
  */
 @Configuration
 public class ConditionTaskDispatcherConfiguration {
+
+    static {
+        DeferredEvaluationParameterKeys.register(CONDITION + "/", CASE_TRUE, CASE_FALSE);
+    }
+
+    @Autowired
+    private Evaluator evaluator;
 
     @Autowired
     private ApplicationEventPublisher eventPublisher;
@@ -49,12 +62,12 @@ public class ConditionTaskDispatcherConfiguration {
     @Bean("conditionTaskCompletionHandlerFactory_v1")
     TaskCompletionHandlerFactory conditionTaskCompletionHandlerFactory() {
         return (taskCompletionHandler, taskDispatcher) -> new ConditionTaskCompletionHandler(
-            contextService, taskCompletionHandler, taskDispatcher, taskExecutionService, taskFileStorage);
+            contextService, evaluator, taskCompletionHandler, taskDispatcher, taskExecutionService, taskFileStorage);
     }
 
     @Bean("conditionTaskDispatcherResolverFactory_v1")
     TaskDispatcherResolverFactory conditionTaskDispatcherResolverFactory() {
         return (taskDispatcher) -> new ConditionTaskDispatcher(
-            eventPublisher, contextService, taskDispatcher, taskExecutionService, taskFileStorage);
+            contextService, evaluator, eventPublisher, taskDispatcher, taskExecutionService, taskFileStorage);
     }
 }

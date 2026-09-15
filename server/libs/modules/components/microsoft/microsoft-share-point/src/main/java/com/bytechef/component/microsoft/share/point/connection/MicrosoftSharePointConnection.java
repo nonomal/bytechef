@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,46 +16,38 @@
 
 package com.bytechef.component.microsoft.share.point.connection;
 
-import static com.bytechef.component.definition.Authorization.AuthorizationType;
-import static com.bytechef.component.definition.Authorization.CLIENT_ID;
-import static com.bytechef.component.definition.Authorization.CLIENT_SECRET;
-import static com.bytechef.component.definition.ComponentDSL.ModifiableConnectionDefinition;
-import static com.bytechef.component.definition.ComponentDSL.authorization;
-import static com.bytechef.component.definition.ComponentDSL.connection;
-import static com.bytechef.component.definition.ComponentDSL.string;
-import static com.bytechef.component.microsoft.share.point.constant.MicrosoftSharePointConstants.TENANT_ID;
+import static com.bytechef.component.definition.ComponentDsl.ModifiableConnectionDefinition;
 
-import java.util.List;
+import com.bytechef.microsoft.commons.MicrosoftConnection;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 /**
- * @author Monika Domiter
+ * @author Monika Kušter
  */
 public class MicrosoftSharePointConnection {
 
-    public static final ModifiableConnectionDefinition CONNECTION_DEFINITION = connection()
-        .authorizations(
-            authorization(AuthorizationType.OAUTH2_AUTHORIZATION_CODE)
-                .title("OAuth2 Authorization Code")
-                .properties(
-                    string(CLIENT_ID)
-                        .label("Client Id")
-                        .required(true),
-                    string(CLIENT_SECRET)
-                        .label("Client Secret")
-                        .required(true),
-                    string(TENANT_ID)
-                        .label("Tenant Id")
-                        .defaultValue("common")
-                        .required(true))
-                .authorizationUrl(
-                    (parameters, context) -> "https://login.microsoftonline.com/"
-                        + parameters.getRequiredString(TENANT_ID) +
-                        "/oauth2/v2.0/authorize")
-                .tokenUrl(
-                    (parameters, context) -> "https://login.microsoftonline.com/"
-                        + parameters.getRequiredString(TENANT_ID) +
-                        "/oauth2/v2.0/token")
-                .scopes((connection, context) -> List.of("Sites.Manage.All", "Sites.ReadWrite.All")));
+    public static final ModifiableConnectionDefinition CONNECTION_DEFINITION = MicrosoftConnection.createConnection(
+        1,
+        "https://docs.bytechef.io/reference/components/microsoft-share-point_v1#connection-setup",
+        (connection, context) -> {
+            Map<String, Boolean> map = new LinkedHashMap<>();
+
+            map.put("Files.Read", false);
+            map.put("Files.Read.All", false);
+            map.put("Files.ReadWrite", false);
+            map.put("Files.ReadWrite.All", false);
+            map.put("SharePointTenantSettings.Read.All", false);
+            map.put("SharePointTenantSettings.ReadWrite.All", false);
+            map.put("Sites.FullControl.All", false);
+            map.put("Sites.Manage.All", true);
+            map.put("Sites.Read.All", true);
+            map.put("Sites.ReadWrite.All", true);
+            map.put("Sites.Selected", false);
+            map.put("offline_access", true);
+
+            return map;
+        });
 
     private MicrosoftSharePointConnection() {
     }

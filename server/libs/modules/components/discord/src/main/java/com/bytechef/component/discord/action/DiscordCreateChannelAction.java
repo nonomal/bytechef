@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,15 +17,20 @@
 package com.bytechef.component.discord.action;
 
 import static com.bytechef.component.OpenApiComponentHandler.PropertyType;
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.integer;
-import static com.bytechef.component.definition.ComponentDSL.object;
-import static com.bytechef.component.definition.ComponentDSL.option;
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.array;
+import static com.bytechef.component.definition.ComponentDsl.bool;
+import static com.bytechef.component.definition.ComponentDsl.integer;
+import static com.bytechef.component.definition.ComponentDsl.object;
+import static com.bytechef.component.definition.ComponentDsl.option;
+import static com.bytechef.component.definition.ComponentDsl.outputSchema;
+import static com.bytechef.component.definition.ComponentDsl.string;
 import static com.bytechef.component.definition.Context.Http.BodyContentType;
 import static com.bytechef.component.definition.Context.Http.ResponseType;
 
-import com.bytechef.component.definition.ComponentDSL;
+import com.bytechef.component.definition.ActionDefinition;
+import com.bytechef.component.definition.ComponentDsl;
+import com.bytechef.component.discord.util.DiscordUtils;
 import java.util.Map;
 
 /**
@@ -34,8 +39,8 @@ import java.util.Map;
  * @generated
  */
 public class DiscordCreateChannelAction {
-    public static final ComponentDSL.ModifiableActionDefinition ACTION_DEFINITION = action("createChannel")
-        .title("Create channel")
+    public static final ComponentDsl.ModifiableActionDefinition ACTION_DEFINITION = action("createChannel")
+        .title("Create Channel")
         .description("Create a new channel")
         .metadata(
             Map.of(
@@ -44,31 +49,65 @@ public class DiscordCreateChannelAction {
                 "application/json"
 
             ))
-        .properties(string("guildId").label("Guild")
+        .properties(string("guildId").label("Guild ID")
             .required(true)
+            .options((ActionDefinition.OptionsFunction<String>) DiscordUtils::getGuildIdOptions)
             .metadata(
                 Map.of(
                     "type", PropertyType.PATH)),
-            object("__item").properties(string("name").minLength(1)
+            string("name").minLength(1)
                 .maxLength(100)
+                .metadata(
+                    Map.of(
+                        "type", PropertyType.BODY))
                 .label("Name")
                 .description("The name of the new channel")
                 .required(true),
-                integer("type").label("Type")
-                    .options(option("0", 0), option("2", 2), option("4", 4))
-                    .required(false))
-                .label("Channel")
-                .metadata(
-                    Map.of(
-                        "type", PropertyType.BODY)))
-        .outputSchema(object()
-            .properties(object("body")
-                .properties(string("id").required(false), integer("type").required(false),
-                    string("name").required(false))
+            integer("type").metadata(
+                Map.of(
+                    "type", PropertyType.BODY))
+                .label("Type")
+                .options(option("0", 0), option("2", 2), option("4", 4))
+                .required(false))
+        .output(outputSchema(object().properties(string("id").description("ID of the channel.")
+            .required(false),
+            integer("type").description("Type of the channel.")
+                .required(false),
+            string("last_message_id").description("ID of the last message sent in this channel.")
+                .required(false),
+            integer("flags").description("Channel flags combined as a bitfield.")
+                .required(false),
+            string("guild_id").description("ID of the guild to which the channel belongs.")
+                .required(false),
+            string("name").description("Name of the channel.")
+                .required(false),
+            string("parent_id").description("For guild channels: id of the parent category for a channel")
+                .required(false),
+            integer("rate_limit_per_user")
+                .description("Amount of seconds a user has to wait before sending another message")
+                .required(false),
+            string("topic").description("Topic of the channel.")
+                .required(false),
+            integer("position")
+                .description("Sorting position of the channel (channels with the same position are sorted by id)")
+                .required(false),
+            array("permission_overwrites")
+                .items(object().properties(string("id").description("ID of the role or user this overwrite applies to.")
+                    .required(false),
+                    integer("type").description("Type of overwrite, 0 for role, 1 for member.")
+                        .required(false),
+                    string("allow").description("Permissions allowed by this overwrite.")
+                        .required(false),
+                    string("deny").description("Permissions denied by this overwrite.")
+                        .required(false))
+                    .description("Explicit permission overwrites for members and roles."))
+                .description("Explicit permission overwrites for members and roles.")
+                .required(false),
+            bool("nsfw").description("Whether the channel is marked as NSFW (Not Safe For Work).")
                 .required(false))
             .metadata(
                 Map.of(
-                    "responseType", ResponseType.JSON)));
+                    "responseType", ResponseType.JSON))));
 
     private DiscordCreateChannelAction() {
     }

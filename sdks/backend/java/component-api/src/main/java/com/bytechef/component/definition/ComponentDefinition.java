@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,48 +25,19 @@ import java.util.Optional;
  *
  * @author Ivica Cardic
  */
-public interface ComponentDefinition {
-
-    /**
-     *
-     * @return
-     */
-    Optional<List<? extends ActionDefinition>> getActions();
+public interface ComponentDefinition
+    extends ClusterElementComponentDefinition, UnifiedApiComponentDefinition, WorkflowComponentDefinition {
 
     /**
      * @return
      */
-    Optional<List<ComponentCategory>> getCategories();
+    Optional<List<ComponentCategory>> getComponentCategories();
 
     /**
      *
      * @return
      */
     Optional<ConnectionDefinition> getConnection();
-
-    /**
-     *
-     * @return
-     */
-    Optional<Boolean> getCustomAction();
-
-    /**
-     *
-     * @return
-     */
-    Optional<Help> getCustomActionHelp();
-
-    /**
-     *
-     * @return
-     */
-    Optional<DataStreamItemReader> getDataStreamItemReader();
-
-    /**
-     *
-     * @return
-     */
-    Optional<DataStreamItemWriter> getDataStreamItemWriter();
 
     /**
      *
@@ -111,12 +82,6 @@ public interface ComponentDefinition {
      * @return
      */
     Optional<String> getTitle();
-
-    /**
-     *
-     * @return
-     */
-    Optional<List<? extends TriggerDefinition>> getTriggers();
 
     /**
      *

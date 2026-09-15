@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,13 +16,11 @@
 
 package com.bytechef.component.xero.util;
 
-import static com.bytechef.component.definition.ComponentDSL.option;
-import static com.bytechef.component.xero.constant.XeroConstants.BASE_URL;
+import static com.bytechef.component.definition.ComponentDsl.option;
 import static com.bytechef.component.xero.constant.XeroConstants.CODE;
 import static com.bytechef.component.xero.constant.XeroConstants.CONTACT;
 import static com.bytechef.component.xero.constant.XeroConstants.CONTACTS;
 import static com.bytechef.component.xero.constant.XeroConstants.CONTACT_ID;
-import static com.bytechef.component.xero.constant.XeroConstants.CREATE;
 import static com.bytechef.component.xero.constant.XeroConstants.CURRENCY_CODE;
 import static com.bytechef.component.xero.constant.XeroConstants.DATE;
 import static com.bytechef.component.xero.constant.XeroConstants.DUE_DATE;
@@ -39,7 +37,6 @@ import static com.bytechef.component.xero.constant.XeroConstants.WEBHOOK_KEY;
 import com.bytechef.component.definition.ActionContext;
 import com.bytechef.component.definition.Context.ContextFunction;
 import com.bytechef.component.definition.Context.Http;
-import com.bytechef.component.definition.Context.TypeReference;
 import com.bytechef.component.definition.Option;
 import com.bytechef.component.definition.Parameters;
 import com.bytechef.component.definition.TriggerContext;
@@ -48,6 +45,7 @@ import com.bytechef.component.definition.TriggerDefinition.HttpParameters;
 import com.bytechef.component.definition.TriggerDefinition.WebhookBody;
 import com.bytechef.component.definition.TriggerDefinition.WebhookMethod;
 import com.bytechef.component.definition.TriggerDefinition.WebhookValidateResponse;
+import com.bytechef.component.definition.TypeReference;
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
@@ -66,16 +64,16 @@ import javax.crypto.spec.SecretKeySpec;
 public class XeroUtils {
 
     protected static final ContextFunction<Http, Http.Executor> GET_ACCOUNTS_CONTEXT_FUNCTION =
-        http -> http.get(BASE_URL + "/Accounts");
+        http -> http.get("/Accounts");
 
     protected static final ContextFunction<Http, Http.Executor> GET_BRANDING_THEME_CONTEXT_FUNCTION =
-        http -> http.get(BASE_URL + "/BrandingTheme");
+        http -> http.get("/BrandingTheme");
 
     protected static final ContextFunction<Http, Http.Executor> GET_CONTACTS_CONTEXT_FUNCTION =
-        http -> http.get(BASE_URL + "/" + CONTACTS);
+        http -> http.get("/" + CONTACTS);
 
     protected static final ContextFunction<Http, Http.Executor> GET_CURRENCIES_CONTEXT_FUNCTION =
-        http -> http.get(BASE_URL + "/Currencies");
+        http -> http.get("/Currencies");
 
     private XeroUtils() {
     }
@@ -107,7 +105,7 @@ public class XeroUtils {
     }
 
     public static List<Option<String>> getAccountCodeOptions(
-        Parameters inputParameters, Parameters connectionParameters, Map<String, String> dependencyPaths,
+        Parameters inputParameters, Parameters connectionParameters, Map<String, String> lookupDependsOnPaths,
         String searchText, ActionContext context) {
 
         Map<String, Object> body = context
@@ -130,7 +128,7 @@ public class XeroUtils {
     }
 
     public static List<Option<String>> getBrandingThemeIdOptions(
-        Parameters inputParameters, Parameters connectionParameters, Map<String, String> dependencyPaths,
+        Parameters inputParameters, Parameters connectionParameters, Map<String, String> lookupDependsOnPaths,
         String searchText, ActionContext context) {
 
         Map<String, Object> body = context
@@ -153,7 +151,7 @@ public class XeroUtils {
     }
 
     public static List<Option<String>> getContactIdOptions(
-        Parameters inputParameters, Parameters connectionParameters, Map<String, String> dependencyPaths,
+        Parameters inputParameters, Parameters connectionParameters, Map<String, String> lookupDependsOnPaths,
         String searchText, ActionContext context) {
 
         Map<String, Object> body = context
@@ -176,7 +174,7 @@ public class XeroUtils {
     }
 
     public static List<Option<String>> getCurrencyCodeOptions(
-        Parameters inputParameters, Parameters connectionParameters, Map<String, String> dependencyPaths,
+        Parameters inputParameters, Parameters connectionParameters, Map<String, String> lookupDependsOnPaths,
         String searchText, ActionContext context) {
 
         Map<String, Object> body = context
@@ -208,12 +206,12 @@ public class XeroUtils {
                 String eventCategory = (String) eventMap.get("eventCategory");
                 String eventType = (String) eventMap.get("eventType");
 
-                if (eventCategory.equals(category) && eventType.equals(CREATE)) {
+                if (eventCategory.equals(category) && eventType.equals("CREATE")) {
                     String resourceId = (String) eventMap.get("resourceId");
                     String urlPart = category.equals(INVOICE) ? INVOICES : CONTACTS;
 
                     Map<String, Object> objectsBody = context
-                        .http(http -> http.get(BASE_URL + "/" + urlPart + "/" + resourceId))
+                        .http(http -> http.get("/" + urlPart + "/" + resourceId))
                         .configuration(Http.responseType(Http.ResponseType.JSON))
                         .execute()
                         .getBody(new TypeReference<>() {});

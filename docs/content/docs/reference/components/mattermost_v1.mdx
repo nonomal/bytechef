@@ -1,0 +1,215 @@
+---
+title: "Mattermost"
+description: "Mattermost is an open-source, self-hosted messaging platform designed for secure team collaboration and communication."
+---
+
+
+Categories: Communication
+
+
+Type: mattermost/v1
+
+<hr />
+
+
+
+
+## Connections
+
+Version: 1
+
+
+### Bearer Token
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| domain | Domain | STRING |  | true |
+| token | Token | STRING |  | true |
+
+
+
+## Connection Setup
+
+1. Go to **System Console**.
+2. Scroll to **INTEGRATIONS** and click on **Integration Management**.
+3. Scroll to **Enable Personal Access Tokens** and click true.
+4. In **System Console** find **USER MANAGEMENT** and click on **Users**.
+5. Identify the account you want to create a personal access token with. By default, only System Admins have permissions to create a personal access token. To create an access token with a non-admin account, you must first give it the appropriate permissions. Find the user account, then select **Manage Roles** from the dropdown.
+6. Select **Allow this account to generate personal access tokens** and **post:all** and then click **Save**.
+7. Go back to your profile and go to **Account Settings**.
+8. Go to **Security** and under Personal Access Token click **Edit**.
+9. Select **Create Token**.
+10. Enter a description for the token and then select **Save**.
+11. Copy the access token and use it in ByteChef.
+
+<div style={{ position: 'relative', height:0, width: '100%', overflow: 'hidden', zIndex: 49, boxSizing: 'border-box', paddingBottom: 'calc(50.05219207% + 32px)'}}>
+    <iframe src="https://www.guidejar.com/embed/5J2JFtQxMk4MRClIWEzL?type=1&controls=on" width="100%" height="100%" style={{height:'100%', position:'absolute', inset:0}} allowFullScreen frameBorder="0"></iframe>
+</div>
+
+
+
+<hr />
+
+
+## Actions
+
+
+### Send message
+Name: sendMessage
+
+`Send message to a channel.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| channel_id | Channel Id | STRING | The channel ID to send message to. | true |
+| message | Message | STRING | The message contents. | true |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Send message",
+  "name" : "sendMessage",
+  "parameters" : {
+    "channel_id" : "",
+    "message" : ""
+  },
+  "type" : "mattermost/v1/sendMessage"
+}
+```
+
+#### Output
+
+
+
+Type: OBJECT
+
+
+#### Properties
+
+|     Name     |     Type     |     Description     |
+|:------------:|:------------:|:-------------------:|
+| id | STRING | ID of the message. |
+| create_at | INTEGER | The time in milliseconds a post was created. |
+| update_at | INTEGER | The time in milliseconds a post was last updated. |
+| edit_at | INTEGER | The time in milliseconds a post was last edited. |
+| delete_at | INTEGER | The time in milliseconds a post was deleted. |
+| is_pinned | BOOLEAN <details> <summary> Options </summary> <span>true</span>, <span>false</span> </details> | True if post is pinned to the channel it is in. |
+| user_id | STRING | ID of the user. |
+| channel_id | STRING | ID of the channel. |
+| root_id | STRING | Post ID if post is created as a comment on another post. |
+| parent_id | STRING |  |
+| original_id | STRING |  |
+| message | STRING | The actual content of the message. |
+| type | STRING |  |
+| props | OBJECT <details> <summary> Properties </summary> &#123;&#125; </details> |  |
+| hashtags | STRING | Any hashtags included in the message content. |
+| pending_post_id | STRING |  |
+| reply_count | INTEGER | Number of replies to this message. |
+| last_reply_at | INTEGER | The time in milliseconds of the most recent reply. |
+| participants | OBJECT <details> <summary> Properties </summary> &#123;&#125; </details> |  |
+| is_following | BOOLEAN <details> <summary> Options </summary> <span>true</span>, <span>false</span> </details> |  |
+| metadata | OBJECT <details> <summary> Properties </summary> &#123;[&#123;STRING\(type), STRING\(url), &#123;&#125;\(data)&#125;]\(embeds), [&#123;STRING\(id), STRING\(creator_id), STRING\(name), INTEGER\(create_at), INTEGER\(update_at), INTEGER\(delete_at)&#125;]\(emojis), [&#123;STRING\(id), STRING\(user_id), STRING\(post_id), INTEGER\(create_at), INTEGER\(update_at), INTEGER\(delete_at), STRING\(name), STRING\(extension), INTEGER\(size), STRING\(mime_type), INTEGER\(width), INTEGER\(height), BOOLEAN\(has_preview_image)&#125;]\(files), [&#123;INTEGER\(height), INTEGER\(width)&#125;]\(images), [&#123;STRING\(user_id), STRING\(post_id), STRING\(emoji_name), INTEGER\(create_at)&#125;]\(reactions)&#125; </details> | Additional information used to display the post. |
+
+
+
+
+#### Output Example
+```json
+{
+  "id" : "",
+  "create_at" : 1,
+  "update_at" : 1,
+  "edit_at" : 1,
+  "delete_at" : 1,
+  "is_pinned" : false,
+  "user_id" : "",
+  "channel_id" : "",
+  "root_id" : "",
+  "parent_id" : "",
+  "original_id" : "",
+  "message" : "",
+  "type" : "",
+  "props" : { },
+  "hashtags" : "",
+  "pending_post_id" : "",
+  "reply_count" : 1,
+  "last_reply_at" : 1,
+  "participants" : { },
+  "is_following" : false,
+  "metadata" : {
+    "embeds" : [ {
+      "type" : "",
+      "url" : "",
+      "data" : { }
+    } ],
+    "emojis" : [ {
+      "id" : "",
+      "creator_id" : "",
+      "name" : "",
+      "create_at" : 1,
+      "update_at" : 1,
+      "delete_at" : 1
+    } ],
+    "files" : [ {
+      "id" : "",
+      "user_id" : "",
+      "post_id" : "",
+      "create_at" : 1,
+      "update_at" : 1,
+      "delete_at" : 1,
+      "name" : "",
+      "extension" : "",
+      "size" : 1,
+      "mime_type" : "",
+      "width" : 1,
+      "height" : 1,
+      "has_preview_image" : false
+    } ],
+    "images" : [ {
+      "height" : 1,
+      "width" : 1
+    } ],
+    "reactions" : [ {
+      "user_id" : "",
+      "post_id" : "",
+      "emoji_name" : "",
+      "create_at" : 1
+    } ]
+  }
+}
+```
+
+#### Find Channel ID
+
+To find the Channel ID, click [here](/reference/components/mattermost_v1#how-to-find-the-channel-id).
+
+
+
+
+
+## What to do if your action is not listed here?
+
+If this component doesn't have the action you need, you can use **Custom Action** to create your own. Custom Actions empower you to define HTTP requests tailored to your specific requirements, allowing for greater flexibility in integrating with external services or APIs.
+
+To create a Custom Action, simply specify the desired HTTP method, path, and any necessary parameters. This way, you can extend the functionality of your component beyond the predefined actions, ensuring that you can meet all your integration needs effectively.
+
+<hr />
+
+# Additional Instructions
+
+### How to find the Channel ID
+
+- **Method 1: Via API**
+
+Use the `GET /channels` endpoint to retrieve a list of all channels and their numeric IDs.
+
+- **Method 2: Via UI**
+
+Open the channel from left side bar. Select the channel name at the top. Click on View Info and there you have a Channel ID.
+
+The Channel ID can also be found in the output of the following actions:
+* **Send Message**

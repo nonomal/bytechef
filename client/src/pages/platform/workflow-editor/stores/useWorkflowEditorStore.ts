@@ -1,41 +1,122 @@
 /* eslint-disable sort-keys */
-import {WorkflowTestExecutionModel} from '@/shared/middleware/platform/workflow/test';
+import {ComponentDefinition} from '@/shared/middleware/platform/configuration';
+import {WorkflowTestExecution} from '@/shared/middleware/platform/workflow/test';
+import {NestedClusterRootComponentDefinitionType, NodeDataType} from '@/shared/types';
 import {create} from 'zustand';
 import {devtools} from 'zustand/middleware';
 
-interface WorkflowEditorI {
+export interface WorkflowEditorI {
+    clusterElementsCanvasOpen: boolean;
+    setClusterElementsCanvasOpen: (clusterElementsCanvasOpen: boolean) => void;
+
+    copiedNode: NodeDataType | undefined;
+    setCopiedNode: (copiedNode: NodeDataType | undefined) => void;
+
+    copiedWorkflowId: string | undefined;
+    setCopiedWorkflowId: (copiedWorkflowId: string | undefined) => void;
+
+    mainClusterRootComponentDefinition: ComponentDefinition | undefined;
+    setMainClusterRootComponentDefinition: (
+        mainClusterRootComponentDefinition: ComponentDefinition | undefined
+    ) => void;
+
+    nestedClusterRootsComponentDefinitions: Record<string, NestedClusterRootComponentDefinitionType>;
+    setNestedClusterRootsComponentDefinitions: (
+        setNestedClusterRootsComponentDefinitions: Record<string, NestedClusterRootComponentDefinitionType>
+    ) => void;
+
+    renamingNodeName: string | undefined;
+    setRenamingNodeName: (renamingNodeName: string | undefined) => void;
+
+    resetWorkflowLayout: boolean;
+    setResetWorkflowLayout: (resetWorkflowLayout: boolean) => void;
+
+    rootClusterElementNodeData: NodeDataType | undefined;
+    setRootClusterElementNodeData: (rootClusterElementNodeData: NodeDataType | undefined) => void;
+
     showBottomPanel: boolean;
     setShowBottomPanelOpen: (showBottomPanel: boolean) => void;
-
-    showPropertyCodeEditorSheet: boolean;
-    setShowPropertyCodeEditorSheet: (showPropertyCodeEditorSheet: boolean) => void;
 
     showEditWorkflowDialog: boolean;
     setShowEditWorkflowDialog: (showEditWorkflowDialog: boolean) => void;
 
     showWorkflowCodeEditorSheet: boolean;
+    setShowPropertyCodeEditorSheet: (showPropertyCodeEditorSheet: boolean) => void;
+
     setShowWorkflowCodeEditorSheet: (showWorkflowCodeEditorSheet: boolean) => void;
-
-    workflowTestExecution?: WorkflowTestExecutionModel;
-    setWorkflowTestExecution: (workflowTestExecution?: WorkflowTestExecutionModel) => void;
-
     workflowIsRunning: boolean;
+
+    showPropertyCodeEditorSheet: boolean;
     setWorkflowIsRunning: (workflowIsRunning: boolean) => void;
+
+    showWorkflowInputsSheet: boolean;
+    setShowWorkflowInputsSheet: (showWorkflowInputsSheet: boolean) => void;
+
+    showWorkflowOutputsSheet: boolean;
+    setShowWorkflowOutputsSheet: (showWorkflowOutputsSheet: boolean) => void;
+
+    parentWorkflowTestExecution?: WorkflowTestExecution;
+    setParentWorkflowTestExecution: (parentWorkflowTestExecution?: WorkflowTestExecution) => void;
+
+    workflowTestExecution?: WorkflowTestExecution;
+    setWorkflowTestExecution: (workflowTestExecution?: WorkflowTestExecution) => void;
 }
 
 const useWorkflowEditorStore = create<WorkflowEditorI>()(
     devtools(
         (set) => ({
+            clusterElementsCanvasOpen: false,
+            setClusterElementsCanvasOpen: (clusterElementsCanvasOpen) =>
+                set(() => ({
+                    clusterElementsCanvasOpen,
+                })),
+
+            copiedNode: undefined,
+            setCopiedNode: (copiedNode) =>
+                set(() => ({
+                    copiedNode,
+                })),
+
+            copiedWorkflowId: undefined,
+            setCopiedWorkflowId: (copiedWorkflowId) =>
+                set(() => ({
+                    copiedWorkflowId,
+                })),
+
+            mainClusterRootComponentDefinition: undefined,
+            setMainClusterRootComponentDefinition: (mainClusterRootComponentDefinition) =>
+                set(() => ({
+                    mainClusterRootComponentDefinition,
+                })),
+
+            nestedClusterRootsComponentDefinitions: {},
+            setNestedClusterRootsComponentDefinitions: (nestedClusterRootsComponentDefinitions) =>
+                set(() => ({
+                    nestedClusterRootsComponentDefinitions,
+                })),
+
+            renamingNodeName: undefined,
+            setRenamingNodeName: (renamingNodeName) =>
+                set(() => ({
+                    renamingNodeName,
+                })),
+
+            resetWorkflowLayout: false,
+            setResetWorkflowLayout: (resetWorkflowLayout) =>
+                set(() => ({
+                    resetWorkflowLayout,
+                })),
+
+            rootClusterElementNodeData: undefined,
+            setRootClusterElementNodeData: (rootClusterElementNodeData) =>
+                set(() => ({
+                    rootClusterElementNodeData,
+                })),
+
             showBottomPanel: false,
             setShowBottomPanelOpen: (showBottomPanel) =>
                 set(() => ({
                     showBottomPanel,
-                })),
-
-            showPropertyCodeEditorSheet: false,
-            setShowPropertyCodeEditorSheet: (showPropertyCodeEditorSheet) =>
-                set(() => ({
-                    showPropertyCodeEditorSheet,
                 })),
 
             showEditWorkflowDialog: false,
@@ -44,22 +125,46 @@ const useWorkflowEditorStore = create<WorkflowEditorI>()(
                     showEditWorkflowDialog: showEditWorkflowDialog,
                 })),
 
+            showPropertyCodeEditorSheet: false,
+            setShowPropertyCodeEditorSheet: (showPropertyCodeEditorSheet) =>
+                set(() => ({
+                    showPropertyCodeEditorSheet,
+                })),
+
             showWorkflowCodeEditorSheet: false,
             setShowWorkflowCodeEditorSheet: (showWorkflowCodeEditorSheet) =>
                 set(() => ({
                     showWorkflowCodeEditorSheet,
                 })),
 
-            workflowTestExecution: undefined,
-            setWorkflowTestExecution: (workflowTestExecution?: WorkflowTestExecutionModel) =>
+            showWorkflowInputsSheet: false,
+            setShowWorkflowInputsSheet: (showWorkflowInputsSheet) =>
                 set(() => ({
-                    workflowTestExecution: workflowTestExecution,
+                    showWorkflowInputsSheet: showWorkflowInputsSheet,
+                })),
+
+            showWorkflowOutputsSheet: false,
+            setShowWorkflowOutputsSheet: (showWorkflowOutputsSheet) =>
+                set(() => ({
+                    showWorkflowOutputsSheet: showWorkflowOutputsSheet,
                 })),
 
             workflowIsRunning: false,
             setWorkflowIsRunning: (workflowIsRunning) =>
                 set(() => ({
                     workflowIsRunning: workflowIsRunning,
+                })),
+
+            parentWorkflowTestExecution: undefined,
+            setParentWorkflowTestExecution: (parentWorkflowTestExecution?: WorkflowTestExecution) =>
+                set(() => ({
+                    parentWorkflowTestExecution,
+                })),
+
+            workflowTestExecution: undefined,
+            setWorkflowTestExecution: (workflowTestExecution?: WorkflowTestExecution) =>
+                set(() => ({
+                    workflowTestExecution: workflowTestExecution,
                 })),
         }),
         {

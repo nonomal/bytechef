@@ -1,0 +1,137 @@
+import {ButtonGroup} from '@/components/ui/button-group';
+import {Separator} from '@/components/ui/separator';
+import DeployButton from '@/pages/automation/project/components/project-header/components/DeployButton';
+import LeftSidebarButton from '@/pages/automation/project/components/project-header/components/LeftSidebarButton';
+import OutputPanelButton from '@/pages/automation/project/components/project-header/components/OutputButton';
+import ProjectBreadcrumb from '@/pages/automation/project/components/project-header/components/ProjectBreadcrumb';
+import ProjectSkeleton from '@/pages/automation/project/components/project-header/components/ProjectSkeleton';
+import PublishPopover from '@/pages/automation/project/components/project-header/components/PublishPopover';
+import WorkflowActionsButton from '@/pages/automation/project/components/project-header/components/WorkflowActionsButton';
+import SettingsMenu from '@/pages/automation/project/components/project-header/components/settings-menu/SettingsMenu';
+import {useProjectHeader} from '@/pages/automation/project/components/project-header/hooks/useProjectHeader';
+import useProjectsLeftSidebarStore from '@/pages/automation/project/stores/useProjectsLeftSidebarStore';
+import useWorkflowDataStore from '@/pages/platform/workflow-editor/stores/useWorkflowDataStore';
+import useWorkflowEditorStore from '@/pages/platform/workflow-editor/stores/useWorkflowEditorStore';
+import LoadingIndicator from '@/shared/components/LoadingIndicator';
+import useCopilotLayoutShifted from '@/shared/components/copilot/hooks/useCopilotLayoutShifted';
+import {UpdateWorkflowMutationType} from '@/shared/types';
+import {onlineManager, useIsFetching} from '@tanstack/react-query';
+import {RefObject} from 'react';
+import {PanelImperativeHandle} from 'react-resizable-panels';
+import {twMerge} from 'tailwind-merge';
+import {useShallow} from 'zustand/react/shallow';
+
+interface ProjectHeaderProps {
+    bottomResizablePanelRef: RefObject<PanelImperativeHandle | null>;
+    chatTrigger?: boolean;
+    embedded?: boolean;
+    projectId: number;
+    projectWorkflowId: number;
+    runDisabled: boolean;
+    updateWorkflowMutation: UpdateWorkflowMutationType;
+}
+
+const ProjectHeader = ({
+    bottomResizablePanelRef,
+    chatTrigger,
+    embedded,
+    projectId,
+    projectWorkflowId,
+    runDisabled,
+    updateWorkflowMutation,
+}: ProjectHeaderProps) => {
+    const copilotLayoutShifted = useCopilotLayoutShifted();
+    const {projectLeftSidebarOpen, setProjectLeftSidebarOpen} = useProjectsLeftSidebarStore(
+        useShallow((state) => ({
+            projectLeftSidebarOpen: state.projectLeftSidebarOpen,
+            setProjectLeftSidebarOpen: state.setProjectLeftSidebarOpen,
+        }))
+    );
+    const {workflowIsRunning} = useWorkflowEditorStore(
+        useShallow((state) => ({
+            workflowIsRunning: state.workflowIsRunning,
+        }))
+    );
+    const {workflow} = useWorkflowDataStore(
+        useShallow((state) => ({
+            workflow: state.workflow,
+        }))
+    );
+
+    const isFetching = useIsFetching();
+    const {
+        handleProjectWorkflowValueChange,
+        handlePublishProjectSubmit,
+        handleRunClick,
+        handleShowOutputClick,
+        handleStopClick,
+        hasUnpublishedChanges,
+        project,
+        projectWorkflows,
+        publishProjectMutationIsPending,
+    } = useProjectHeader({
+        bottomResizablePanelRef,
+        chatTrigger,
+        projectId,
+    });
+
+    const isOnline = onlineManager.isOnline();
+
+    if (!project) {
+        return <ProjectSkeleton />;
+    }
+
+    return (
+        <header
+            className={twMerge(
+                'flex items-center justify-between bg-surface-main px-3 py-2.5 transition-[padding] duration-300 ease-in-out',
+                !embedded && projectLeftSidebarOpen && 'pr-3 pl-0',
+                !embedded && copilotLayoutShifted && 'pr-0'
+            )}
+        >
+            <div className="flex items-center">
+                <LeftSidebarButton onLeftSidebarOpenClick={() => setProjectLeftSidebarOpen(!projectLeftSidebarOpen)} />
+
+                <Separator className="mr-4 ml-2 h-4" orientation="vertical" />
+
+                {projectWorkflows && (
+                    <ProjectBreadcrumb
+                        currentWorkflow={workflow}
+                        onProjectWorkflowValueChange={handleProjectWorkflowValueChange}
+                        project={project}
+                        projectWorkflowId={projectWorkflowId}
+                        projectWorkflows={projectWorkflows}
+                    />
+                )}
+            </div>
+
+            <div className="flex items-center">
+                <LoadingIndicator isFetching={isFetching} isOnline={isOnline} />
+
+                <SettingsMenu project={project} updateWorkflowMutation={updateWorkflowMutation} workflow={workflow} />
+
+                <OutputPanelButton onShowOutputClick={handleShowOutputClick} />
+
+                <WorkflowActionsButton
+                    chatTrigger={chatTrigger ?? false}
+                    onRunClick={handleRunClick}
+                    onStopClick={handleStopClick}
+                    runDisabled={runDisabled}
+                    workflowIsRunning={workflowIsRunning}
+                />
+
+                <ButtonGroup>
+                    <PublishPopover
+                        disabled={!hasUnpublishedChanges}
+                        isPending={publishProjectMutationIsPending}
+                        onPublishProjectSubmit={handlePublishProjectSubmit}
+                    />
+
+                    <DeployButton project={project} />
+                </ButtonGroup>
+            </div>
+        </header>
+    );
+};
+
+export default ProjectHeader;

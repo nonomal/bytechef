@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,39 +16,22 @@
 
 package com.bytechef.component.affinity;
 
-import static com.bytechef.component.affinity.connection.AffinityConnection.CONNECTION_DEFINITION;
-import static com.bytechef.component.affinity.constant.AffinityConstants.AFFINITY;
-import static com.bytechef.component.definition.ComponentDSL.component;
-
-import com.bytechef.component.ComponentHandler;
-import com.bytechef.component.affinity.action.AffinityCreateOpportunityAction;
-import com.bytechef.component.affinity.action.AffinityCreateOrganizationAction;
-import com.bytechef.component.affinity.action.AffinityCreatePersonAction;
+import com.bytechef.component.OpenApiComponentHandler;
 import com.bytechef.component.definition.ComponentCategory;
-import com.bytechef.component.definition.ComponentDefinition;
+import com.bytechef.component.definition.ComponentDsl.ModifiableComponentDefinition;
 import com.google.auto.service.AutoService;
 
 /**
- * @author Monika Domiter
+ * @author Monika Kušter
  */
-@AutoService(ComponentHandler.class)
-public class AffinityComponentHandler implements ComponentHandler {
-
-    private static final ComponentDefinition COMPONENT_DEFINITION = component(AFFINITY)
-        .title("Affinity")
-        .description(
-            "Affinity is a customer relationship management (CRM) platform that leverages relationship intelligence " +
-                "to help businesses strengthen connections and drive engagement with client and prospects.")
-        .icon("path:assets/affinity.svg")
-        .categories(ComponentCategory.CRM)
-        .connection(CONNECTION_DEFINITION)
-        .actions(
-            AffinityCreateOpportunityAction.ACTION_DEFINITION,
-            AffinityCreateOrganizationAction.ACTION_DEFINITION,
-            AffinityCreatePersonAction.ACTION_DEFINITION);
+@AutoService(OpenApiComponentHandler.class)
+public class AffinityComponentHandler extends AbstractAffinityComponentHandler {
 
     @Override
-    public ComponentDefinition getDefinition() {
-        return COMPONENT_DEFINITION;
+    public ModifiableComponentDefinition modifyComponent(ModifiableComponentDefinition modifiableComponentDefinition) {
+        return modifiableComponentDefinition
+            .customAction(true)
+            .icon("path:assets/affinity.svg")
+            .categories(ComponentCategory.CRM);
     }
 }

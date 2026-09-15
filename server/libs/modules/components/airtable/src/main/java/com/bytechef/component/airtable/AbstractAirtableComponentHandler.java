@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,10 +16,14 @@
 
 package com.bytechef.component.airtable;
 
-import static com.bytechef.component.definition.ComponentDSL.component;
+import static com.bytechef.component.definition.ComponentDsl.component;
+import static com.bytechef.component.definition.ComponentDsl.tool;
 
 import com.bytechef.component.OpenApiComponentHandler;
 import com.bytechef.component.airtable.action.AirtableCreateRecordAction;
+import com.bytechef.component.airtable.action.AirtableDeleteRecordAction;
+import com.bytechef.component.airtable.action.AirtableGetRecordAction;
+import com.bytechef.component.airtable.action.AirtableUpdateRecordAction;
 import com.bytechef.component.airtable.connection.AirtableConnection;
 import com.bytechef.component.definition.ComponentDefinition;
 
@@ -32,9 +36,15 @@ public abstract class AbstractAirtableComponentHandler implements OpenApiCompone
     private final ComponentDefinition componentDefinition = modifyComponent(
         component("airtable")
             .title("Airtable")
-            .description("Airtable is a user-friendly and flexible cloud-based database management tool."))
-                .actions(modifyActions(AirtableCreateRecordAction.ACTION_DEFINITION))
+            .description("Airtable is a user-friendly and flexible cloud-based database management tool.")
+            .version(1))
+                .actions(modifyActions(AirtableCreateRecordAction.ACTION_DEFINITION,
+                    AirtableDeleteRecordAction.ACTION_DEFINITION, AirtableGetRecordAction.ACTION_DEFINITION,
+                    AirtableUpdateRecordAction.ACTION_DEFINITION))
                 .connection(modifyConnection(AirtableConnection.CONNECTION_DEFINITION))
+                .clusterElements(modifyClusterElements(tool(AirtableCreateRecordAction.ACTION_DEFINITION),
+                    tool(AirtableDeleteRecordAction.ACTION_DEFINITION), tool(AirtableGetRecordAction.ACTION_DEFINITION),
+                    tool(AirtableUpdateRecordAction.ACTION_DEFINITION)))
                 .triggers(getTriggers());
 
     @Override

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,14 +16,20 @@
 
 package com.bytechef.component.webhook.trigger;
 
-import static com.bytechef.component.definition.ComponentDSL.integer;
-import static com.bytechef.component.definition.ComponentDSL.string;
-import static com.bytechef.component.definition.ComponentDSL.trigger;
+import static com.bytechef.component.definition.ComponentDsl.integer;
+import static com.bytechef.component.definition.ComponentDsl.placeholder;
+import static com.bytechef.component.definition.ComponentDsl.string;
+import static com.bytechef.component.definition.ComponentDsl.trigger;
+import static com.bytechef.component.webhook.constant.WebhookConstants.BODY;
 import static com.bytechef.component.webhook.constant.WebhookConstants.CSRF_TOKEN;
+import static com.bytechef.component.webhook.constant.WebhookConstants.HEADERS;
+import static com.bytechef.component.webhook.constant.WebhookConstants.METHOD;
+import static com.bytechef.component.webhook.constant.WebhookConstants.PARAMETERS;
 
-import com.bytechef.component.definition.ComponentDSL.ModifiableTriggerDefinition;
+import com.bytechef.component.definition.ComponentDsl.ModifiableTriggerDefinition;
 import com.bytechef.component.definition.TriggerDefinition.TriggerType;
 import com.bytechef.component.webhook.util.WebhookUtils;
+import java.util.Map;
 
 /**
  * @author Ivica Cardic
@@ -31,22 +37,25 @@ import com.bytechef.component.webhook.util.WebhookUtils;
 public class WebhookAwaitWorkflowAndRespondTrigger {
 
     public static final ModifiableTriggerDefinition TRIGGER_DEFINITION = trigger("awaitWorkflowAndRespond")
-        .title("Await workflow and respond")
+        .title("Await Workflow and Respond")
         .description(
-            "You have the flexibility to set up your preferred response. After a webhook request is received, the webhook trigger enters a waiting state for the workflow's response.")
+            "You have the flexibility to set up your preferred response. After a webhook request is received, the " +
+                "webhook trigger enters a waiting state for the workflow's response.")
         .type(TriggerType.STATIC_WEBHOOK)
         .workflowSyncExecution(true)
         .properties(
             string(CSRF_TOKEN)
                 .label("CSRF Token")
                 .description(
-                    "To trigger the workflow successfully, the security token must match the X-Csrf-Token HTTP header value passed by the client.")
+                    "To trigger the workflow successfully, the security token must match the X-Csrf-Token HTTP " +
+                        "header value passed by the client.")
                 .required(true),
             integer("timeout")
                 .label("Timeout (ms)")
                 .description(
-                    "The incoming request will time out after the specified number of milliseconds. The max wait time before a timeout is 5 minutes."))
-        .output(WebhookUtils::getOutput)
-        .staticWebhookRequest(WebhookUtils::getWebhookResult)
-        .webhookValidate(WebhookUtils.getWebhookValidateFunction());
+                    "The incoming request will time out after the specified number of milliseconds. The max wait " +
+                        "time before a timeout is 5 minutes."))
+        .output(placeholder(Map.of(METHOD, "POST", HEADERS, Map.of(), PARAMETERS, Map.of(), BODY, Map.of())))
+        .webhookRequest(WebhookUtils::getWebhookResult)
+        .webhookValidate(WebhookUtils::getWebhookValidate);
 }

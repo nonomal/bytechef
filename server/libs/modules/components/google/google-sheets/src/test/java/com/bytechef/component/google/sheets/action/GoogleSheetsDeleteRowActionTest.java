@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,65 +18,51 @@ package com.bytechef.component.google.sheets.action;
 
 import static com.bytechef.component.google.sheets.constant.GoogleSheetsConstants.ROW_NUMBER;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.mockito.ArgumentCaptor.forClass;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.mockStatic;
 
-import com.google.api.services.sheets.v4.Sheets;
-import com.google.api.services.sheets.v4.model.BatchUpdateSpreadsheetRequest;
-import com.google.api.services.sheets.v4.model.BatchUpdateSpreadsheetResponse;
-import com.google.api.services.sheets.v4.model.DeleteDimensionRequest;
-import com.google.api.services.sheets.v4.model.DimensionRange;
-import com.google.api.services.sheets.v4.model.Request;
+import com.bytechef.component.definition.ActionContext;
+import com.bytechef.component.definition.Parameters;
+import com.bytechef.component.google.sheets.util.GoogleSheetsUtils;
+import com.bytechef.component.test.definition.MockParametersFactory;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.MockedStatic;
+import org.mockito.stubbing.Answer;
 
 /**
- * @author Monika Domiter
+ * @author Monika Kušter
  */
-class GoogleSheetsDeleteRowActionTest extends AbstractGoogleSheetsActionTest {
+class GoogleSheetsDeleteRowActionTest {
 
-    private final ArgumentCaptor<BatchUpdateSpreadsheetRequest> batchUpdateSpreadsheetRequestArgumentCaptor =
-        ArgumentCaptor.forClass(BatchUpdateSpreadsheetRequest.class);
-    private final BatchUpdateSpreadsheetResponse mockedBatchUpdateSpreadsheetResponse =
-        mock(BatchUpdateSpreadsheetResponse.class);
-    private final Sheets.Spreadsheets.BatchUpdate mockedBatchUpdate = mock(Sheets.Spreadsheets.BatchUpdate.class);
-    private final Sheets.Spreadsheets mockedSpreadsheets = mock(Sheets.Spreadsheets.class);
+    private final ArgumentCaptor<Integer> integerArgumentCaptor = forClass(Integer.class);
+    private final ActionContext mockedActionContext = mock(ActionContext.class);
+    private final Parameters mockedParameters = MockParametersFactory.create(Map.of(ROW_NUMBER, 2));
+    private final ArgumentCaptor<Parameters> parametersArgumentCaptor = forClass(Parameters.class);
+    private final ArgumentCaptor<String> stringArgumentCaptor = forClass(String.class);
 
     @Test
     void perform() throws Exception {
+        try (MockedStatic<GoogleSheetsUtils> googleSheetsUtilsMockedStatic = mockStatic(GoogleSheetsUtils.class)) {
 
-        when(mockedParameters.getRequiredInteger(ROW_NUMBER))
-            .thenReturn(2);
+            googleSheetsUtilsMockedStatic
+                .when(() -> GoogleSheetsUtils.deleteDimension(
+                    parametersArgumentCaptor.capture(), parametersArgumentCaptor.capture(),
+                    integerArgumentCaptor.capture(), stringArgumentCaptor.capture()))
+                .thenAnswer((Answer<Void>) invocation -> null);
 
-        when(mockedSheets.spreadsheets())
-            .thenReturn(mockedSpreadsheets);
-        when(mockedSpreadsheets.batchUpdate(spreadsheetIdArgumentCaptor.capture(),
-            batchUpdateSpreadsheetRequestArgumentCaptor.capture()))
-            .thenReturn(mockedBatchUpdate);
-        when(mockedBatchUpdate.execute())
-            .thenReturn(mockedBatchUpdateSpreadsheetResponse);
+            Object result = GoogleSheetsDeleteRowAction.perform(
+                mockedParameters, mockedParameters, mockedActionContext);
 
-        GoogleSheetsDeleteRowAction.perform(mockedParameters, mockedParameters, mockedContext);
+            assertNull(result);
 
-        assertEquals("spreadsheetId", spreadsheetIdArgumentCaptor.getValue());
-
-        BatchUpdateSpreadsheetRequest batchUpdateSpreadsheetRequest =
-            batchUpdateSpreadsheetRequestArgumentCaptor.getValue();
-
-        List<Request> requests = batchUpdateSpreadsheetRequest.getRequests();
-
-        assertEquals(1, requests.size());
-
-        Request request = requests.getFirst();
-
-        DeleteDimensionRequest deleteDimensionRequest = request.getDeleteDimension();
-
-        DimensionRange dimensionRange = deleteDimensionRequest.getRange();
-
-        assertEquals(123, dimensionRange.getSheetId());
-        assertEquals("ROWS", dimensionRange.getDimension());
-        assertEquals(1, dimensionRange.getStartIndex());
-        assertEquals(2, dimensionRange.getEndIndex());
+            assertEquals("ROWS", stringArgumentCaptor.getValue());
+            assertEquals(2, integerArgumentCaptor.getValue());
+            assertEquals(List.of(mockedParameters, mockedParameters), parametersArgumentCaptor.getAllValues());
+        }
     }
 }

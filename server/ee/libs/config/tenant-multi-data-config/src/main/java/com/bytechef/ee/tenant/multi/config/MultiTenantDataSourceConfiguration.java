@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the ByteChef Enterprise license (the "Enterprise License");
  * you may not use this file except in compliance with the Enterprise License.
@@ -7,16 +7,18 @@
 
 package com.bytechef.ee.tenant.multi.config;
 
-import com.bytechef.edition.annotation.ConditionalOnEEVersion;
 import com.bytechef.ee.tenant.multi.liquibase.MultiTenantLiquibaseChangelogLoader;
 import com.bytechef.ee.tenant.multi.sql.MultiTenantDataSource;
+import com.bytechef.platform.annotation.ConditionalOnEEVersion;
 import com.bytechef.tenant.annotation.ConditionalOnMultiTenant;
 import com.bytechef.tenant.service.TenantService;
 import com.zaxxer.hikari.HikariDataSource;
 import javax.sql.DataSource;
-import org.springframework.boot.autoconfigure.jdbc.DataSourceProperties;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.jdbc.autoconfigure.DataSourceProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 
 /**
  * @version ee
@@ -29,6 +31,7 @@ import org.springframework.context.annotation.Configuration;
 public class MultiTenantDataSourceConfiguration {
 
     @Bean
+    @Primary
     public DataSource dataSource(DataSourceProperties properties) {
         final HikariDataSource dataSource = properties.initializeDataSourceBuilder()
             .type(HikariDataSource.class)
@@ -42,7 +45,8 @@ public class MultiTenantDataSourceConfiguration {
     }
 
     @Bean
-    MultiTenantLiquibaseChangelogLoader multiTenantLiquibaseCheck(TenantService tenantService) {
+    @ConditionalOnProperty(prefix = "spring.liquibase", name = "enabled", havingValue = "true", matchIfMissing = true)
+    MultiTenantLiquibaseChangelogLoader multiTenantLiquibaseChangelogLoader(TenantService tenantService) {
         return new MultiTenantLiquibaseChangelogLoader(tenantService);
     }
 }

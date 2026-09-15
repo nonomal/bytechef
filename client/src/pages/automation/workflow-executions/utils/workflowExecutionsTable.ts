@@ -1,0 +1,54 @@
+import {Job, WorkflowExecution} from '@/shared/middleware/automation/workflow/execution';
+
+export const MAX_SUBFLOW_DEPTH = 10;
+
+export const formatDateTime = (date: Date) => `${date.toLocaleDateString()} ${date.toLocaleTimeString()}`;
+
+export const getProjectVersion = (execution: WorkflowExecution): number | undefined => {
+    const metadataProjectVersion = execution.job?.metadata?.projectVersion;
+
+    if (metadataProjectVersion != null) {
+        return Number(metadataProjectVersion);
+    }
+
+    return execution.projectDeployment?.projectVersion;
+};
+
+export const wrapChildJob = (childJob: Job, parentExecution: WorkflowExecution): WorkflowExecution => ({
+    id: childJob.id != null ? Number(childJob.id) : parentExecution.id,
+    job: childJob,
+    project: parentExecution.project,
+    projectDeployment: parentExecution.projectDeployment,
+    workflow: parentExecution.workflow,
+});
+
+export const getSubflowChildJobs = ({job, seenJobIds}: {job: Job; seenJobIds: Set<string>}): Job[] => {
+    if (!job.taskExecutions) {
+        return [];
+    }
+
+    const executionSubflows = job.taskExecutions?.map((taskExecution) => taskExecution.childJob);
+
+    return executionSubflows.filter(
+        (childJob): childJob is Job => childJob != null && (childJob.id == null || !seenJobIds.has(childJob.id))
+    );
+};
+
+interface HasExpandedSubflowProps {
+    childJobs: Job[];
+    depth: number;
+    expandedJobIds: Set<string>;
+    seenJobIds: Set<string>;
+}
+
+export const hasExpandedSubflow = ({childJobs, depth, expandedJobIds, seenJobIds}: HasExpandedSubflowProps) =>
+    depth < MAX_SUBFLOW_DEPTH &&
+    childJobs.some((childJob) => {
+        const jobId = childJob.id;
+
+        if (jobId == null || !expandedJobIds.has(jobId)) {
+            return false;
+        }
+
+        return getSubflowChildJobs({job: childJob, seenJobIds: new Set(seenJobIds).add(jobId)}).length > 0;
+    });

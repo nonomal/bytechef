@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the ByteChef Enterprise license (the "Enterprise License");
  * you may not use this file except in compliance with the Enterprise License.
@@ -7,10 +7,12 @@
 
 package com.bytechef.ee.atlas.execution.remote.client.facade;
 
-import com.bytechef.atlas.execution.dto.JobParameters;
+import com.bytechef.atlas.execution.dto.JobParametersDTO;
 import com.bytechef.atlas.execution.facade.JobFacade;
 import com.bytechef.ee.remote.client.LoadBalancedRestClient;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import java.util.Map;
+import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Component;
 
 /**
@@ -29,13 +31,13 @@ public class RemoteJobFacadeClient implements JobFacade {
     }
 
     @Override
-    public long createJob(JobParameters jobParameters) {
+    public long createJob(JobParametersDTO jobParametersDTO) {
         return loadBalancedRestClient.post(
             uriBuilder -> uriBuilder
                 .host("execution-app")
                 .path("/remote/job-facade/create-async-job")
                 .build(),
-            jobParameters, Long.class);
+            jobParametersDTO, Long.class);
     }
 
     @Override
@@ -44,7 +46,17 @@ public class RemoteJobFacadeClient implements JobFacade {
     }
 
     @Override
-    public void restartJob(long id) {
+    public void resumeApproval(long jobId, String uuid, boolean approved) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void resumeJob(long id) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void resumeJob(long id, long taskExecutionId, @Nullable Map<String, ?> data) {
         throw new UnsupportedOperationException();
     }
 

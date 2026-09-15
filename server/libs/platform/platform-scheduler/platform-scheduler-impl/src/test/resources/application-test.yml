@@ -1,0 +1,5 @@
+bytechef:
+  scheduler:
+    provider: quartz
+  tenant:
+    mode: SINGLE

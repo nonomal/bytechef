@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,10 +21,9 @@ import static com.bytechef.component.xlsx.file.constant.XlsxFileConstants.FILE_E
 import com.bytechef.atlas.configuration.constant.WorkflowConstants;
 import com.bytechef.atlas.execution.domain.Job;
 import com.bytechef.atlas.file.storage.TaskFileStorage;
-import com.bytechef.file.storage.service.FileStorageService;
 import com.bytechef.platform.component.test.ComponentJobTestExecutor;
 import com.bytechef.platform.component.test.annotation.ComponentIntTest;
-import com.bytechef.platform.workflow.execution.constants.FileEntryConstants;
+import com.bytechef.platform.file.storage.TempFileStorage;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -49,7 +48,7 @@ public class XlsxFileComponentHandlerIntTest {
     private static final Base64.Encoder ENCODER = Base64.getEncoder();
 
     @Autowired
-    private FileStorageService fileStorageService;
+    private TempFileStorage tempFileStorage;
 
     @Autowired
     private ComponentJobTestExecutor componentJobTestExecutor;
@@ -66,8 +65,7 @@ public class XlsxFileComponentHandlerIntTest {
                 ENCODER.encodeToString("xlsx-file_v1_read".getBytes(StandardCharsets.UTF_8)),
                 Map.of(
                     FILE_ENTRY,
-                    fileStorageService.storeFileContent(
-                        FileEntryConstants.FILES_DIR, sampleFile.getAbsolutePath(), fileInputStream)));
+                    tempFileStorage.storeFileContent(sampleFile.getAbsolutePath(), fileInputStream)));
 
             Assertions.assertThat(job.getStatus())
                 .isEqualTo(Job.Status.COMPLETED);
@@ -104,8 +102,7 @@ public class XlsxFileComponentHandlerIntTest {
                 ENCODER.encodeToString("xlsx-file_v1_read".getBytes(StandardCharsets.UTF_8)),
                 Map.of(
                     FILE_ENTRY,
-                    fileStorageService.storeFileContent(
-                        FileEntryConstants.FILES_DIR, sampleFile.getName(), fileInputStream)));
+                    tempFileStorage.storeFileContent(sampleFile.getName(), fileInputStream)));
 
             outputs = taskFileStorage.readJobOutputs(job.getOutputs());
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,23 +16,28 @@
 
 package com.bytechef.async.config;
 
-import com.bytechef.tenant.TenantContext;
+import com.bytechef.tenant.concurrent.TenantTaskDecorator;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import java.util.concurrent.Callable;
 import java.util.concurrent.Executor;
-import java.util.concurrent.Future;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.jspecify.annotations.NonNull;
 import org.springframework.aop.interceptor.AsyncUncaughtExceptionHandler;
 import org.springframework.aop.interceptor.SimpleAsyncUncaughtExceptionHandler;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.task.TaskExecutionProperties;
+import org.springframework.boot.thread.Threading;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
+import org.springframework.core.env.Environment;
+import org.springframework.core.task.AsyncTaskExecutor;
+import org.springframework.core.task.SimpleAsyncTaskExecutor;
+import org.springframework.core.task.TaskDecorator;
+import org.springframework.core.task.support.ContextPropagatingTaskDecorator;
 import org.springframework.scheduling.annotation.AsyncConfigurer;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.EnableScheduling;
-import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
-import org.springframework.util.concurrent.ListenableFuture;
+import org.springframework.web.servlet.config.annotation.AsyncSupportConfigurer;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 /**
  * @author Ivica Cardic
@@ -42,30 +47,65 @@ import org.springframework.util.concurrent.ListenableFuture;
 @EnableScheduling
 public class AsyncConfiguration implements AsyncConfigurer {
 
-    private static final Logger log = LoggerFactory.getLogger(AsyncConfiguration.class);
+    public static final String MESSAGE_EVENT_EXECUTOR = "messageEventExecutor";
+    public static final String TASK_EXECUTOR = "taskExecutor";
+    public static final String WORKER_EXECUTOR = "workerExecutor";
+    public static final String SYNC_WORKER_EXECUTOR = "syncWorkerExecutor";
 
+    private static final int DEFAULT_SYNC_WORKER_CONCURRENCY = 5;
+    private static final int DEFAULT_WORKER_CONCURRENCY = 10;
+    private static final String SYNC_WORKER_CONCURRENCY_PROPERTY = "bytechef.worker.task.sync-concurrency-limit";
+    private static final String WORKER_CONCURRENCY_PROPERTY = "bytechef.worker.task.subscriptions.default";
+
+    private final Environment environment;
+    private final TaskDecorator taskDecorator;
     private final TaskExecutionProperties taskExecutionProperties;
 
     @SuppressFBWarnings("EI")
-    public AsyncConfiguration(TaskExecutionProperties taskExecutionProperties) {
+    public AsyncConfiguration(
+        ContextPropagatingTaskDecorator contextPropagatingTaskDecorator, Environment environment,
+        TaskExecutionProperties taskExecutionProperties) {
+
+        TenantTaskDecorator tenantTaskDecorator = new TenantTaskDecorator();
+
+        this.environment = environment;
+        this.taskDecorator = runnable -> tenantTaskDecorator.decorate(
+            contextPropagatingTaskDecorator.decorate(runnable));
         this.taskExecutionProperties = taskExecutionProperties;
     }
 
     @Override
-    @Bean(name = "taskExecutor")
-    public Executor getAsyncExecutor() {
-        log.debug("Creating Async Task Executor");
+    @Bean(name = TASK_EXECUTOR)
+    @Primary
+    public AsyncTaskExecutor getAsyncExecutor() {
+        TaskExecutionProperties.Simple simple = taskExecutionProperties.getSimple();
 
-        ThreadPoolTaskExecutor executor = new TenantThreadPoolTaskExecutor();
+        Integer concurrencyLimit = simple.getConcurrencyLimit();
 
-        TaskExecutionProperties.Pool pool = taskExecutionProperties.getPool();
+        return createExecutor(
+            taskExecutionProperties.getThreadNamePrefix(),
+            concurrencyLimit == null ? SimpleAsyncTaskExecutor.UNBOUNDED_CONCURRENCY : concurrencyLimit);
+    }
 
-        executor.setCorePoolSize(pool.getCoreSize());
-        executor.setMaxPoolSize(pool.getMaxSize());
-        executor.setQueueCapacity(pool.getQueueCapacity());
-        executor.setThreadNamePrefix(taskExecutionProperties.getThreadNamePrefix());
+    @Bean(name = MESSAGE_EVENT_EXECUTOR)
+    AsyncTaskExecutor messageEventExecutor() {
+        return createExecutor("message-event-", SimpleAsyncTaskExecutor.UNBOUNDED_CONCURRENCY);
+    }
 
-        return executor;
+    @Bean(name = SYNC_WORKER_EXECUTOR)
+    AsyncTaskExecutor syncWorkerExecutor() {
+        int concurrencyLimit = environment.getProperty(
+            SYNC_WORKER_CONCURRENCY_PROPERTY, Integer.class, DEFAULT_SYNC_WORKER_CONCURRENCY);
+
+        return createExecutor("sync-worker-", concurrencyLimit);
+    }
+
+    @Bean(name = WORKER_EXECUTOR)
+    AsyncTaskExecutor workerExecutor() {
+        int concurrencyLimit = environment.getProperty(
+            WORKER_CONCURRENCY_PROPERTY, Integer.class, DEFAULT_WORKER_CONCURRENCY);
+
+        return createExecutor("worker-", concurrencyLimit);
     }
 
     @Override
@@ -73,62 +113,24 @@ public class AsyncConfiguration implements AsyncConfigurer {
         return new SimpleAsyncUncaughtExceptionHandler();
     }
 
-    private static class TenantThreadPoolTaskExecutor extends ThreadPoolTaskExecutor {
-        @Override
-        public void execute(Runnable task) {
-            super.execute(getTenantRunnable(task));
-        }
+    @Bean
+    protected WebMvcConfigurer webMvcConfigurer(@Qualifier(TASK_EXECUTOR) Executor executor) {
+        return new WebMvcConfigurer() {
 
-        @Override
-        public Future<?> submit(Runnable task) {
-            return super.submit(getTenantRunnable(task));
-        }
+            @Override
+            public void configureAsyncSupport(@NonNull AsyncSupportConfigurer configurer) {
+                configurer.setTaskExecutor((AsyncTaskExecutor) executor);
+            }
+        };
+    }
 
-        @Override
-        public <T> Future<T> submit(Callable<T> task) {
-            return super.submit(getTenantCallable(task));
-        }
+    SimpleAsyncTaskExecutor createExecutor(String threadNamePrefix, int concurrencyLimit) {
+        SimpleAsyncTaskExecutor executor = new SimpleAsyncTaskExecutor(threadNamePrefix);
 
-        @Override
-        public ListenableFuture<?> submitListenable(Runnable task) {
-            return super.submitListenable(getTenantRunnable(task));
-        }
+        executor.setConcurrencyLimit(concurrencyLimit);
+        executor.setTaskDecorator(taskDecorator);
+        executor.setVirtualThreads(Threading.VIRTUAL.isActive(environment));
 
-        @Override
-        public <T> ListenableFuture<T> submitListenable(Callable<T> task) {
-            return super.submitListenable(getTenantCallable(task));
-        }
-
-        private Runnable getTenantRunnable(Runnable task) {
-            String tenantId = TenantContext.getCurrentTenantId();
-
-            return () -> {
-                String currentTenantId = TenantContext.getCurrentTenantId();
-
-                try {
-                    TenantContext.setCurrentTenantId(tenantId);
-
-                    task.run();
-                } finally {
-                    TenantContext.setCurrentTenantId(currentTenantId);
-                }
-            };
-        }
-
-        private <V> Callable<V> getTenantCallable(Callable<V> task) {
-            String tenantId = TenantContext.getCurrentTenantId();
-
-            return () -> {
-                String currentTenantId = TenantContext.getCurrentTenantId();
-
-                try {
-                    TenantContext.setCurrentTenantId(tenantId);
-
-                    return task.call();
-                } finally {
-                    TenantContext.setCurrentTenantId(currentTenantId);
-                }
-            };
-        }
+        return executor;
     }
 }

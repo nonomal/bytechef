@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,16 +16,16 @@
 
 package com.bytechef.component.microsoft.excel.util;
 
-import static com.bytechef.component.microsoft.excel.constant.MicrosoftExcelConstants.BASE_URL;
+import static com.bytechef.component.definition.Context.Http.responseType;
 import static com.bytechef.component.microsoft.excel.constant.MicrosoftExcelConstants.VALUES;
 import static com.bytechef.component.microsoft.excel.constant.MicrosoftExcelConstants.WORKBOOK_ID;
-import static com.bytechef.component.microsoft.excel.constant.MicrosoftExcelConstants.WORKBOOK_WORKSHEETS_PATH;
 import static com.bytechef.component.microsoft.excel.constant.MicrosoftExcelConstants.WORKSHEET_NAME;
 import static com.bytechef.component.microsoft.excel.util.MicrosoftExcelUtils.columnToLabel;
 import static com.bytechef.component.microsoft.excel.util.MicrosoftExcelUtils.getMapOfValuesForRow;
 
-import com.bytechef.component.definition.ActionContext;
-import com.bytechef.component.definition.Context.Http;
+import com.bytechef.component.definition.Context;
+import com.bytechef.component.definition.Context.Http.Body;
+import com.bytechef.component.definition.Context.Http.ResponseType;
 import com.bytechef.component.definition.Parameters;
 import java.util.List;
 import java.util.Map;
@@ -39,16 +39,17 @@ public class MicrosoftExcelUpdateWorksheetUtils {
     }
 
     public static Map<String, Object> updateRange(
-        Parameters inputParameters, ActionContext context, int rowNumber, List<Object> rowValues) {
+        Parameters inputParameters, Context context, int rowNumber, List<Object> rowValues) {
 
         String range = "A" + rowNumber + ":" + columnToLabel(rowValues.size(), false) + rowNumber;
 
         context
-            .http(http -> http.patch(BASE_URL + "/" + inputParameters.getRequiredString(WORKBOOK_ID) +
-                WORKBOOK_WORKSHEETS_PATH + inputParameters.getRequiredString(WORKSHEET_NAME) +
-                "/range(address='" + range + "')"))
-            .configuration(Http.responseType(Http.ResponseType.JSON))
-            .body(Http.Body.of(VALUES, List.of(rowValues)))
+            .http(http -> http.patch(
+                "/me/drive/items/%s/workbook/worksheets/%s/range(address='%s')"
+                    .formatted(inputParameters.getRequiredString(WORKBOOK_ID),
+                        inputParameters.getRequiredString(WORKSHEET_NAME), range)))
+            .configuration(responseType(ResponseType.JSON))
+            .body(Body.of(VALUES, List.of(rowValues)))
             .execute();
 
         return getMapOfValuesForRow(inputParameters, context, rowValues);

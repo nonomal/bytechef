@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,7 +22,6 @@ package com.bytechef.task.dispatcher.fork.join.constant;
 public class ForkJoinTaskDispatcherConstants {
 
     public static final String FORK_JOIN = "fork-join";
-    public static final String FORK = "fork";
     public static final String BRANCHES = "branches";
-    public static final String BRANCH = "branch";
+    public static final String BRANCH = "__branch";
 }

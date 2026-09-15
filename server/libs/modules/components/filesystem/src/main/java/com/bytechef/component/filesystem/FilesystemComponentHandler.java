@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,8 +16,8 @@
 
 package com.bytechef.component.filesystem;
 
-import static com.bytechef.component.definition.ComponentDSL.component;
-import static com.bytechef.component.filesystem.constant.FilesystemConstants.FILESYSTEM;
+import static com.bytechef.component.definition.ComponentDsl.component;
+import static com.bytechef.component.definition.ComponentDsl.tool;
 
 import com.bytechef.component.ComponentHandler;
 import com.bytechef.component.definition.ComponentCategory;
@@ -37,19 +37,27 @@ import com.google.auto.service.AutoService;
 @AutoService(ComponentHandler.class)
 public class FilesystemComponentHandler implements ComponentHandler {
 
-    private static final ComponentDefinition COMPONENT_DEFINITION = component(FILESYSTEM)
+    private static final ComponentDefinition COMPONENT_DEFINITION = component("filesystem")
         .title("Filesystem")
         .description("Allows multiple operations over files on the filesystem.")
         .icon("path:assets/filesystem.svg")
         .categories(ComponentCategory.HELPERS)
         .actions(
-            FilesystemReadFileAction.ACTION_DEFINITION,
-            FilesystemWriteFileAction.ACTION_DEFINITION,
             FilesystemCreateTempDirAction.ACTION_DEFINITION,
+            FilesystemMkdirAction.ACTION_DEFINITION,
             FilesystemGetParentFolderAction.ACTION_DEFINITION,
             FilesystemLsAction.ACTION_DEFINITION,
-            FilesystemMkdirAction.ACTION_DEFINITION,
-            FilesystemRmAction.ACTION_DEFINITION);
+            FilesystemReadFileAction.ACTION_DEFINITION,
+            FilesystemRmAction.ACTION_DEFINITION,
+            FilesystemWriteFileAction.ACTION_DEFINITION)
+        .clusterElements(
+            tool(FilesystemCreateTempDirAction.ACTION_DEFINITION),
+            tool(FilesystemMkdirAction.ACTION_DEFINITION),
+            tool(FilesystemGetParentFolderAction.ACTION_DEFINITION),
+            tool(FilesystemLsAction.ACTION_DEFINITION),
+            tool(FilesystemReadFileAction.ACTION_DEFINITION),
+            tool(FilesystemRmAction.ACTION_DEFINITION),
+            tool(FilesystemWriteFileAction.ACTION_DEFINITION));
 
     @Override
     public ComponentDefinition getDefinition() {

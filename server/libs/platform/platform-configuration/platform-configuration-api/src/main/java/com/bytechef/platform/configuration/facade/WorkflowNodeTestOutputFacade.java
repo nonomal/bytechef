@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,14 +16,32 @@
 
 package com.bytechef.platform.configuration.facade;
 
+import com.bytechef.platform.component.trigger.WebhookRequest;
 import com.bytechef.platform.configuration.domain.WorkflowNodeTestOutput;
+import com.bytechef.platform.workflow.WorkflowExecutionId;
+import java.util.Map;
 
 /**
  * @author Ivica Cardic
  */
 public interface WorkflowNodeTestOutputFacade {
 
-    WorkflowNodeTestOutput saveWorkflowNodeTestOutput(String workflowId, String workflowNodeName);
+    WorkflowNodeTestOutput saveClusterElementTestOutput(
+        String workflowId, String workflowNodeName, String clusterElementType,
+        String clusterElementWorkflowNodeName, long environmentId);
 
-    WorkflowNodeTestOutput saveWorkflowNodeTestOutput(String workflowId, String workflowNodeName, Object sampleOutput);
+    WorkflowNodeTestOutput saveClusterElementTestOutput(
+        String workflowId, String workflowNodeName, String clusterElementType,
+        String clusterElementWorkflowNodeName, Map<String, Object> inputParameters, long environmentId);
+
+    WorkflowNodeTestOutput saveWorkflowNodeSampleOutput(
+        String workflowId, String workflowNodeName, Object sampleOutput, long environmentId);
+
+    WorkflowNodeTestOutput saveWorkflowNodeTestOutput(String workflowId, String workflowNodeName, long environmentId);
+
+    WorkflowNodeTestOutput saveWorkflowNodeTestOutput(
+        String workflowId, String workflowNodeName, Map<String, Object> inputParameters, long environmentId);
+
+    void saveWorkflowNodeTestOutput(
+        WorkflowExecutionId workflowExecutionId, long environmentId, WebhookRequest webhookRequest);
 }

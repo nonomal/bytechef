@@ -1,0 +1,114 @@
+/*
+ * Copyright 2025 ByteChef
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.bytechef.component.ftp.action;
+
+import static com.bytechef.component.ftp.constant.FtpConstants.HOST;
+import static com.bytechef.component.ftp.constant.FtpConstants.PASSIVE_MODE;
+import static com.bytechef.component.ftp.constant.FtpConstants.PASSWORD;
+import static com.bytechef.component.ftp.constant.FtpConstants.PATH;
+import static com.bytechef.component.ftp.constant.FtpConstants.PORT;
+import static com.bytechef.component.ftp.constant.FtpConstants.SFTP;
+import static com.bytechef.component.ftp.constant.FtpConstants.USERNAME;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+import com.bytechef.component.definition.FileEntry;
+import com.bytechef.component.definition.Parameters;
+import com.bytechef.component.test.definition.MockParametersFactory;
+import java.nio.charset.StandardCharsets;
+import java.util.Map;
+import org.junit.jupiter.api.Test;
+
+/**
+ * @author Igor Beslic
+ */
+public class FtpDownloadFileActionIntTest extends BaseFtpActionIntTest {
+
+    @Test
+    void testDownloadFileViaFtp() throws Exception {
+        Parameters connectionParameters = MockParametersFactory.create(Map.of(
+            HOST, ftpHostIp,
+            PORT, ftpContainer.getMappedPort(21),
+            USERNAME, ftpUsername,
+            PASSWORD, ftpPassword,
+            PASSIVE_MODE, true,
+            SFTP, false));
+        Parameters inputParameters = MockParametersFactory.create(Map.of(PATH, FTP_REMOTE_PATH));
+
+        TestContextImpl context = new TestContextImpl();
+
+        FileEntry result = FtpDownloadFileAction.perform(inputParameters, connectionParameters, context);
+
+        assertEquals(TEST_FILE_NAME, result.getName());
+        assertArrayEquals(TEST_CONTENT.getBytes(StandardCharsets.UTF_8), context.getCapturedBytes(result));
+    }
+
+    @Test
+    void testDownloadLargeFileViaFtp() throws Exception {
+        Parameters connectionParameters = MockParametersFactory.create(Map.of(
+            HOST, ftpHostIp,
+            PORT, ftpContainer.getMappedPort(21),
+            USERNAME, ftpUsername,
+            PASSWORD, ftpPassword,
+            PASSIVE_MODE, true,
+            SFTP, false));
+        Parameters inputParameters = MockParametersFactory.create(Map.of(PATH, LARGE_TEST_FILE_NAME));
+
+        TestContextImpl context = new TestContextImpl();
+
+        FileEntry result = FtpDownloadFileAction.perform(inputParameters, connectionParameters, context);
+
+        assertEquals(LARGE_TEST_FILE_NAME, result.getName());
+        assertArrayEquals(LARGE_TEST_CONTENT.getBytes(StandardCharsets.UTF_8), context.getCapturedBytes(result));
+    }
+
+    @Test
+    void testDownloadLargeFileViaSftp() throws Exception {
+        Parameters connectionParameters = MockParametersFactory.create(Map.of(
+            HOST, ftpHostIp,
+            PORT, sftpContainer.getMappedPort(22),
+            USERNAME, ftpUsername,
+            PASSWORD, ftpPassword,
+            SFTP, true));
+        Parameters inputParameters = MockParametersFactory.create(Map.of(PATH, LARGE_SFTP_REMOTE_PATH));
+
+        TestContextImpl context = new TestContextImpl();
+
+        FileEntry result = FtpDownloadFileAction.perform(inputParameters, connectionParameters, context);
+
+        assertEquals(LARGE_TEST_FILE_NAME, result.getName());
+        assertArrayEquals(LARGE_TEST_CONTENT.getBytes(StandardCharsets.UTF_8), context.getCapturedBytes(result));
+    }
+
+    @Test
+    void testDownloadFileViaSftp() throws Exception {
+        Parameters connectionParameters = MockParametersFactory.create(Map.of(
+            HOST, ftpHostIp,
+            PORT, sftpContainer.getMappedPort(22),
+            USERNAME, ftpUsername,
+            PASSWORD, ftpPassword,
+            SFTP, true));
+        Parameters inputParameters = MockParametersFactory.create(Map.of(PATH, SFTP_REMOTE_PATH));
+
+        TestContextImpl context = new TestContextImpl();
+
+        FileEntry result = FtpDownloadFileAction.perform(inputParameters, connectionParameters, context);
+
+        assertEquals(TEST_FILE_NAME, result.getName());
+        assertArrayEquals(TEST_CONTENT.getBytes(StandardCharsets.UTF_8), context.getCapturedBytes(result));
+    }
+}

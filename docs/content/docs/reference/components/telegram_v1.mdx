@@ -1,0 +1,412 @@
+---
+title: "Telegram"
+description: "Telegram is a cloud-based messaging platform that enables users to send messages, media, and files, and supports automation and integrations through its API."
+---
+
+
+Categories: Communication
+
+
+Type: telegram/v1
+
+<hr />
+
+
+
+
+## Connections
+
+Version: 1
+
+
+### custom
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| botToken | Bot Token | STRING |  | true |
+| webhookSecretToken | Webhook Secret Token | STRING | Optional secret token set when registering this bot's webhook (setWebhook) at &lt;public-url&gt;/telegram/interactivity. When set, field-less approval requests use in-place Approve/Discard buttons resolved through that webhook, verified against this token. Use a bot dedicated to approvals, since a bot has a single webhook. Leave empty to deliver approval links to the hosted form. | false |
+
+
+
+## Connection Setup
+
+### Create a Telegram Bot and get the Bot Token
+
+1. In Telegram, start a chat with [`BotFather`](https://telegram.me/BotFather).
+2. Send the `/newbot` command and follow the prompts:
+   - Choose a display name (can be changed later).
+   - Choose a unique username that ends with `bot` (e.g., `my_bytechef_bot`).
+3. Copy the Bot Token provided by BotFather (format: `1234567890:AA...`). Keep it secret.
+
+Helpful links:
+- Telegram Bot API: https://core.telegram.org/bots/api
+
+<div style={{ position: 'relative', height:0, width: '100%', overflow: 'hidden', zIndex: 49, boxSizing: 'border-box', paddingBottom: 'calc(50.05219207% + 32px)'}}>
+    <iframe src="https://www.guidejar.com/embed/Xj4qVoAGKo5eL8kED2gw?type=1&controls=on" width="100%" height="100%" style={{height:'100%', position:'absolute', inset:0, border: 'none'}} allowFullScreen></iframe>
+</div>
+
+
+
+<hr />
+
+
+## Actions
+
+
+### Send Media
+Name: sendMedia
+
+`Sends a media message through a Telegram bot.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| chat_id | Chat ID | STRING | Unique identifier for the target chat or username of the target channel. Your bot has to be member of that chat or group. | true |
+| mediaType | null | STRING <details> <summary> Options </summary> <span>document</span>, <span>photo</span>, <span>video</span> </details> | Type of media to send. | true |
+| document | Document | FILE_ENTRY | Document to send. | true |
+| photo | Photo | FILE_ENTRY | Photo to send. | true |
+| video | Video | FILE_ENTRY | Video to send. | true |
+| direct_messages_topic_id | Direct Messages Topic ID | STRING | Identifier of the direct messages topic to which the message will be sent; required if the message is sent to a direct messages chat. | false |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Send Media",
+  "name" : "sendMedia",
+  "parameters" : {
+    "chat_id" : "",
+    "mediaType" : "",
+    "document" : {
+      "extension" : "",
+      "mimeType" : "",
+      "name" : "",
+      "url" : ""
+    },
+    "photo" : {
+      "extension" : "",
+      "mimeType" : "",
+      "name" : "",
+      "url" : ""
+    },
+    "video" : {
+      "extension" : "",
+      "mimeType" : "",
+      "name" : "",
+      "url" : ""
+    },
+    "direct_messages_topic_id" : ""
+  },
+  "type" : "telegram/v1/sendMedia"
+}
+```
+
+#### Output
+
+
+
+Type: OBJECT
+
+
+#### Properties
+
+|     Name     |     Type     |     Description     |
+|:------------:|:------------:|:-------------------:|
+| ok | BOOLEAN <details> <summary> Options </summary> <span>true</span>, <span>false</span> </details> |  |
+| result | OBJECT <details> <summary> Properties </summary> &#123;INTEGER\(message_id), INTEGER\(message_thread_id), &#123;INTEGER\(topic_id), &#123;INTEGER\(id), BOOLEAN\(is_bot), STRING\(first_name), STRING\(last_name), STRING\(username)&#125;\(user)&#125;\(direct_messages_topic), &#123;INTEGER\(id), BOOLEAN\(is_bot), STRING\(first_name), STRING\(last_name), STRING\(username)&#125;\(from), &#123;INTEGER\(id), STRING\(title), STRING\(username), STRING\(type), BOOLEAN\(is_direct_messages)&#125;\(sender_chat), INTEGER\(date), &#123;INTEGER\(id), STRING\(title), STRING\(username), STRING\(type), BOOLEAN\(is_direct_messages)&#125;\(chat), STRING\(text), &#123;INTEGER\(topic_id), &#123;INTEGER\(id), BOOLEAN\(is_bot), STRING\(first_name), STRING\(last_name), STRING\(username)&#125;\(user)&#125;\(direct_messages_topic), &#123;STRING\(file_id), STRING\(file_unique_id), &#123;STRING\(file_id), STRING\(file_unique_id), INTEGER\(width), INTEGER\(height), INTEGER\(file_size)&#125;\(thumbnail), STRING\(file_name), STRING\(mime_type), INTEGER\(file_size)&#125;\(document), [&#123;STRING\(file_id), STRING\(file_unique_id), INTEGER\(width), INTEGER\(height), INTEGER\(file_size)&#125;]\(photo), &#123;STRING\(file_id), STRING\(file_unique_id), STRING\(width), STRING\(height), INTEGER\(duration), STRING\(file_name), STRING\(mime_type), INTEGER\(file_size)&#125;\(video)&#125; </details> |  |
+
+
+
+
+#### Output Example
+```json
+{
+  "ok" : false,
+  "result" : {
+    "message_id" : 1,
+    "message_thread_id" : 1,
+    "direct_messages_topic" : {
+      "topic_id" : 1,
+      "user" : {
+        "id" : 1,
+        "is_bot" : false,
+        "first_name" : "",
+        "last_name" : "",
+        "username" : ""
+      }
+    },
+    "from" : {
+      "id" : 1,
+      "is_bot" : false,
+      "first_name" : "",
+      "last_name" : "",
+      "username" : ""
+    },
+    "sender_chat" : {
+      "id" : 1,
+      "title" : "",
+      "username" : "",
+      "type" : "",
+      "is_direct_messages" : false
+    },
+    "date" : 1,
+    "chat" : {
+      "id" : 1,
+      "title" : "",
+      "username" : "",
+      "type" : "",
+      "is_direct_messages" : false
+    },
+    "text" : "",
+    "document" : {
+      "file_id" : "",
+      "file_unique_id" : "",
+      "thumbnail" : {
+        "file_id" : "",
+        "file_unique_id" : "",
+        "width" : 1,
+        "height" : 1,
+        "file_size" : 1
+      },
+      "file_name" : "",
+      "mime_type" : "",
+      "file_size" : 1
+    },
+    "photo" : [ {
+      "file_id" : "",
+      "file_unique_id" : "",
+      "width" : 1,
+      "height" : 1,
+      "file_size" : 1
+    } ],
+    "video" : {
+      "file_id" : "",
+      "file_unique_id" : "",
+      "width" : "",
+      "height" : "",
+      "duration" : 1,
+      "file_name" : "",
+      "mime_type" : "",
+      "file_size" : 1
+    }
+  }
+}
+```
+
+#### Find Chat or Group ID
+
+To find the Chat or Group ID, click [here](/reference/components/telegram_v1#how-to-find-chat-or-group-id).
+
+#### Find Direct Message Topic ID
+
+To find the Direct Message Topic ID, click [here](/reference/components/telegram_v1#how-to-find-direct-message-topic-id).
+
+
+
+
+### Send Message
+Name: sendMessage
+
+`Sends a message through a Telegram bot.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| chat_id | Chat ID | STRING | Unique identifier for the target chat or username of the target channel. Your bot has to be member of that chat or group. | true |
+| text | Text | STRING | Text of the message to be sent. | true |
+| direct_messages_topic_id | Direct Messages Topic ID | STRING | Identifier of the direct messages topic to which the message will be sent; required if the message is sent to a direct messages chat. | false |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Send Message",
+  "name" : "sendMessage",
+  "parameters" : {
+    "chat_id" : "",
+    "text" : "",
+    "direct_messages_topic_id" : ""
+  },
+  "type" : "telegram/v1/sendMessage"
+}
+```
+
+#### Output
+
+
+
+Type: OBJECT
+
+
+#### Properties
+
+|     Name     |     Type     |     Description     |
+|:------------:|:------------:|:-------------------:|
+| ok | BOOLEAN <details> <summary> Options </summary> <span>true</span>, <span>false</span> </details> |  |
+| result | OBJECT <details> <summary> Properties </summary> &#123;INTEGER\(message_id), INTEGER\(message_thread_id), &#123;INTEGER\(topic_id), &#123;INTEGER\(id), BOOLEAN\(is_bot), STRING\(first_name), STRING\(last_name), STRING\(username)&#125;\(user)&#125;\(direct_messages_topic), &#123;INTEGER\(id), BOOLEAN\(is_bot), STRING\(first_name), STRING\(last_name), STRING\(username)&#125;\(from), &#123;INTEGER\(id), STRING\(title), STRING\(username), STRING\(type), BOOLEAN\(is_direct_messages)&#125;\(sender_chat), INTEGER\(date), &#123;INTEGER\(id), STRING\(title), STRING\(username), STRING\(type), BOOLEAN\(is_direct_messages)&#125;\(chat), STRING\(text), &#123;INTEGER\(topic_id), &#123;INTEGER\(id), BOOLEAN\(is_bot), STRING\(first_name), STRING\(last_name), STRING\(username)&#125;\(user)&#125;\(direct_messages_topic), &#123;STRING\(file_id), STRING\(file_unique_id), &#123;STRING\(file_id), STRING\(file_unique_id), INTEGER\(width), INTEGER\(height), INTEGER\(file_size)&#125;\(thumbnail), STRING\(file_name), STRING\(mime_type), INTEGER\(file_size)&#125;\(document), [&#123;STRING\(file_id), STRING\(file_unique_id), INTEGER\(width), INTEGER\(height), INTEGER\(file_size)&#125;]\(photo), &#123;STRING\(file_id), STRING\(file_unique_id), STRING\(width), STRING\(height), INTEGER\(duration), STRING\(file_name), STRING\(mime_type), INTEGER\(file_size)&#125;\(video)&#125; </details> |  |
+
+
+
+
+#### Output Example
+```json
+{
+  "ok" : false,
+  "result" : {
+    "message_id" : 1,
+    "message_thread_id" : 1,
+    "direct_messages_topic" : {
+      "topic_id" : 1,
+      "user" : {
+        "id" : 1,
+        "is_bot" : false,
+        "first_name" : "",
+        "last_name" : "",
+        "username" : ""
+      }
+    },
+    "from" : {
+      "id" : 1,
+      "is_bot" : false,
+      "first_name" : "",
+      "last_name" : "",
+      "username" : ""
+    },
+    "sender_chat" : {
+      "id" : 1,
+      "title" : "",
+      "username" : "",
+      "type" : "",
+      "is_direct_messages" : false
+    },
+    "date" : 1,
+    "chat" : {
+      "id" : 1,
+      "title" : "",
+      "username" : "",
+      "type" : "",
+      "is_direct_messages" : false
+    },
+    "text" : "",
+    "document" : {
+      "file_id" : "",
+      "file_unique_id" : "",
+      "thumbnail" : {
+        "file_id" : "",
+        "file_unique_id" : "",
+        "width" : 1,
+        "height" : 1,
+        "file_size" : 1
+      },
+      "file_name" : "",
+      "mime_type" : "",
+      "file_size" : 1
+    },
+    "photo" : [ {
+      "file_id" : "",
+      "file_unique_id" : "",
+      "width" : 1,
+      "height" : 1,
+      "file_size" : 1
+    } ],
+    "video" : {
+      "file_id" : "",
+      "file_unique_id" : "",
+      "width" : "",
+      "height" : "",
+      "duration" : 1,
+      "file_name" : "",
+      "mime_type" : "",
+      "file_size" : 1
+    }
+  }
+}
+```
+
+#### Find Chat or Group ID
+
+To find the Chat or Group ID, click [here](/reference/components/telegram_v1#how-to-find-chat-or-group-id).
+
+#### Find Direct Message Topic ID
+
+To find the Direct Message Topic ID, click [here](/reference/components/telegram_v1#how-to-find-direct-message-topic-id).
+
+
+
+
+## Triggers
+
+
+### New Message
+Name: newMessage
+
+`Trigger on new incoming message of any kind - text, photo, sticker, and so on. Incoming message has to be in a group that your bot is member of.`
+
+Type: DYNAMIC_WEBHOOK
+
+
+#### Output
+
+
+
+Type: OBJECT
+
+
+#### Properties
+
+|     Name     |     Type     |     Description     |
+|:------------:|:------------:|:-------------------:|
+| update_id | INTEGER |  |
+| message | OBJECT <details> <summary> Properties </summary> &#123;INTEGER\(message_id), INTEGER\(message_thread_id), &#123;INTEGER\(topic_id), &#123;INTEGER\(id), BOOLEAN\(is_bot), STRING\(first_name), STRING\(last_name), STRING\(username)&#125;\(user)&#125;\(direct_messages_topic), &#123;INTEGER\(id), BOOLEAN\(is_bot), STRING\(first_name), STRING\(last_name), STRING\(username)&#125;\(from), &#123;INTEGER\(id), STRING\(title), STRING\(username), STRING\(type), BOOLEAN\(is_direct_messages)&#125;\(sender_chat), INTEGER\(date), &#123;INTEGER\(id), STRING\(title), STRING\(username), STRING\(type), BOOLEAN\(is_direct_messages)&#125;\(chat), STRING\(text), &#123;INTEGER\(topic_id), &#123;INTEGER\(id), BOOLEAN\(is_bot), STRING\(first_name), STRING\(last_name), STRING\(username)&#125;\(user)&#125;\(direct_messages_topic), &#123;STRING\(file_id), STRING\(file_unique_id), &#123;STRING\(file_id), STRING\(file_unique_id), INTEGER\(width), INTEGER\(height), INTEGER\(file_size)&#125;\(thumbnail), STRING\(file_name), STRING\(mime_type), INTEGER\(file_size)&#125;\(document), [&#123;STRING\(file_id), STRING\(file_unique_id), INTEGER\(width), INTEGER\(height), INTEGER\(file_size)&#125;]\(photo), &#123;STRING\(file_id), STRING\(file_unique_id), STRING\(width), STRING\(height), INTEGER\(duration), STRING\(file_name), STRING\(mime_type), INTEGER\(file_size)&#125;\(video)&#125; </details> |  |
+
+
+
+
+#### JSON Example
+```json
+{
+  "label" : "New Message",
+  "name" : "newMessage",
+  "type" : "telegram/v1/newMessage"
+}
+```
+#### Find Chat or Group ID
+
+To find the Chat or Group ID, click [here](/reference/components/telegram_v1#how-to-find-chat-or-group-id).
+
+
+
+
+
+## What to do if your action is not listed here?
+
+If this component doesn't have the action you need, you can use **Custom Action** to create your own. Custom Actions empower you to define HTTP requests tailored to your specific requirements, allowing for greater flexibility in integrating with external services or APIs.
+
+To create a Custom Action, simply specify the desired HTTP method, path, and any necessary parameters. This way, you can extend the functionality of your component beyond the predefined actions, ensuring that you can meet all your integration needs effectively.
+
+<hr />
+
+# Additional Instructions
+
+### How to find Chat or Group ID
+
+- **Method 1: Telegram Web URL**
+
+1. Login to Telegram Web.
+2. Open chat or group you want to find ID of.
+3. URL will be in the format: `https://web.telegram.org/k/#-5291165340`
+4. Extract the number after `#-` to get the Chat ID or Group ID.
+
+- **Method 2: Using ByteChef Telegram Trigger Output**
+
+1. Create a ByteChef workflow that includes a Telegram trigger.
+2. Run the workflow and observe the output from the Telegram trigger.
+3. Look for the `id` in the `chat` object in the JSON response to get the Chat ID or Group ID.
+
+### How to find Direct Message Topic ID
+
+1. Create a ByteChef workflow that includes a Telegram trigger.
+2. Run the workflow and observe the output from the Telegram trigger.
+3. Look for the `topic_id` in the `direct_messages_topic` object in the JSON response to get the Chat ID or Group ID.

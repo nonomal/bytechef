@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,45 +16,43 @@
 
 package com.bytechef.component.microsoft.excel.action;
 
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.microsoft.excel.constant.MicrosoftExcelConstants.BASE_URL;
-import static com.bytechef.component.microsoft.excel.constant.MicrosoftExcelConstants.CLEAR_WORKSHEET;
+import static com.bytechef.component.definition.ComponentDsl.action;
 import static com.bytechef.component.microsoft.excel.constant.MicrosoftExcelConstants.IS_THE_FIRST_ROW_HEADER;
 import static com.bytechef.component.microsoft.excel.constant.MicrosoftExcelConstants.IS_THE_FIRST_ROW_HEADER_PROPERTY;
 import static com.bytechef.component.microsoft.excel.constant.MicrosoftExcelConstants.WORKBOOK_ID;
 import static com.bytechef.component.microsoft.excel.constant.MicrosoftExcelConstants.WORKBOOK_ID_PROPERTY;
-import static com.bytechef.component.microsoft.excel.constant.MicrosoftExcelConstants.WORKBOOK_WORKSHEETS_PATH;
 import static com.bytechef.component.microsoft.excel.constant.MicrosoftExcelConstants.WORKSHEET_NAME;
 import static com.bytechef.component.microsoft.excel.constant.MicrosoftExcelConstants.WORKSHEET_NAME_PROPERTY;
 import static com.bytechef.component.microsoft.excel.util.MicrosoftExcelUtils.getLastUsedColumnLabel;
 import static com.bytechef.component.microsoft.excel.util.MicrosoftExcelUtils.getLastUsedRowIndex;
 
-import com.bytechef.component.definition.ActionContext;
-import com.bytechef.component.definition.ComponentDSL.ModifiableActionDefinition;
-import com.bytechef.component.definition.Context.Http;
+import com.bytechef.component.definition.ComponentDsl.ModifiableActionDefinition;
+import com.bytechef.component.definition.Context;
+import com.bytechef.component.definition.Context.Http.Body;
 import com.bytechef.component.definition.Parameters;
-import java.util.List;
+import com.bytechef.microsoft.commons.MicrosoftUtils;
+import java.util.Map;
 
 /**
- * @author Monika Domiter
+ * @author Monika Kušter
  */
 public class MicrosoftExcelClearWorksheetAction {
 
-    public static final ModifiableActionDefinition ACTION_DEFINITION = action(CLEAR_WORKSHEET)
-        .title("Clear worksheet")
+    public static final ModifiableActionDefinition ACTION_DEFINITION = action("clearWorksheet")
+        .title("Clear Worksheet")
         .description("Clear a worksheet of all values.")
+        .help("", "https://docs.bytechef.io/reference/components/microsoft-excel_v1#clear-worksheet")
         .properties(
             WORKBOOK_ID_PROPERTY,
             WORKSHEET_NAME_PROPERTY,
             IS_THE_FIRST_ROW_HEADER_PROPERTY)
-        .perform(MicrosoftExcelClearWorksheetAction::perform);
+        .perform(MicrosoftExcelClearWorksheetAction::perform)
+        .processErrorResponse(MicrosoftUtils::processErrorResponse);
 
     private MicrosoftExcelClearWorksheetAction() {
     }
 
-    public static Object perform(
-        Parameters inputParameters, Parameters connectionParameters, ActionContext context) {
-
+    public static Object perform(Parameters inputParameters, Parameters connectionParameters, Context context) {
         String range = inputParameters.getRequiredBoolean(IS_THE_FIRST_ROW_HEADER)
             ? "range(address='A2:" + getLastUsedColumnLabel(inputParameters, context)
                 + getLastUsedRowIndex(inputParameters, context) + "')"
@@ -62,13 +60,11 @@ public class MicrosoftExcelClearWorksheetAction {
 
         context.http(http -> http
             .post(
-                BASE_URL + "/" + inputParameters.getRequiredString(WORKBOOK_ID) +
-                    WORKBOOK_WORKSHEETS_PATH + inputParameters.getRequiredString(WORKSHEET_NAME) + "/" + range +
-                    "/clear"))
-            .configuration(Http.responseType(Http.ResponseType.JSON))
-            .body(Http.Body.of(
-                List.of("applyTo", "Contents")
-                    .toArray()))
+                "/me/drive/items/%s/workbook/worksheets/%s/%s/clear"
+                    .formatted(
+                        inputParameters.getRequiredString(WORKBOOK_ID),
+                        inputParameters.getRequiredString(WORKSHEET_NAME), range)))
+            .body(Body.of(Map.of("applyTo", "Contents")))
             .execute();
 
         return null;

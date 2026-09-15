@@ -17,7 +17,10 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.annotation.JsonValue;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import org.springframework.lang.Nullable;
 import org.openapitools.jackson.nullable.JsonNullable;
 import java.time.OffsetDateTime;
 import jakarta.validation.Valid;
@@ -34,22 +37,24 @@ import jakarta.annotation.Generated;
 
 @Schema(name = "ObjectProperty", description = "An object property type.")
 
-@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2024-06-30T07:20:54.243996+02:00[Europe/Zagreb]", comments = "Generator version: 7.5.0")
+@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2026-07-03T17:58:15.504637+02:00[Europe/Zagreb]", comments = "Generator version: 7.22.0")
 public class ObjectPropertyModel extends ValuePropertyModel {
 
   @Valid
   private List<@Valid PropertyModel> additionalProperties = new ArrayList<>();
 
-  private Object defaultValue;
+  @Valid
+  private Map<String, Object> defaultValue = new HashMap<>();
 
-  private Object exampleValue;
+  @Valid
+  private Map<String, Object> exampleValue = new HashMap<>();
 
-  private Boolean multipleValues;
+  private @Nullable Boolean multipleValues;
 
   @Valid
   private List<@Valid OptionModel> options = new ArrayList<>();
 
-  private OptionsDataSourceModel optionsDataSource;
+  private @Nullable OptionsDataSourceModel optionsDataSource;
 
   @Valid
   private List<@Valid PropertyModel> properties = new ArrayList<>();
@@ -81,7 +86,7 @@ public class ObjectPropertyModel extends ValuePropertyModel {
   /**
    * Types of dynamically defined properties.
    * @return additionalProperties
-  */
+   */
   @Valid 
   @Schema(name = "additionalProperties", description = "Types of dynamically defined properties.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("additionalProperties")
@@ -89,51 +94,70 @@ public class ObjectPropertyModel extends ValuePropertyModel {
     return additionalProperties;
   }
 
+  @JsonProperty("additionalProperties")
   public void setAdditionalProperties(List<@Valid PropertyModel> additionalProperties) {
     this.additionalProperties = additionalProperties;
   }
 
-  public ObjectPropertyModel defaultValue(Object defaultValue) {
+  public ObjectPropertyModel defaultValue(Map<String, Object> defaultValue) {
     this.defaultValue = defaultValue;
+    return this;
+  }
+
+  public ObjectPropertyModel putDefaultValueItem(String key, Object defaultValueItem) {
+    if (this.defaultValue == null) {
+      this.defaultValue = new HashMap<>();
+    }
+    this.defaultValue.put(key, defaultValueItem);
     return this;
   }
 
   /**
    * The property default value.
    * @return defaultValue
-  */
+   */
   
   @Schema(name = "defaultValue", description = "The property default value.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("defaultValue")
-  public Object getDefaultValue() {
+  public Map<String, Object> getDefaultValue() {
     return defaultValue;
   }
 
-  public void setDefaultValue(Object defaultValue) {
+  @JsonProperty("defaultValue")
+  public void setDefaultValue(Map<String, Object> defaultValue) {
     this.defaultValue = defaultValue;
   }
 
-  public ObjectPropertyModel exampleValue(Object exampleValue) {
+  public ObjectPropertyModel exampleValue(Map<String, Object> exampleValue) {
     this.exampleValue = exampleValue;
+    return this;
+  }
+
+  public ObjectPropertyModel putExampleValueItem(String key, Object exampleValueItem) {
+    if (this.exampleValue == null) {
+      this.exampleValue = new HashMap<>();
+    }
+    this.exampleValue.put(key, exampleValueItem);
     return this;
   }
 
   /**
    * The property sample value.
    * @return exampleValue
-  */
+   */
   
   @Schema(name = "exampleValue", description = "The property sample value.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("exampleValue")
-  public Object getExampleValue() {
+  public Map<String, Object> getExampleValue() {
     return exampleValue;
   }
 
-  public void setExampleValue(Object exampleValue) {
+  @JsonProperty("exampleValue")
+  public void setExampleValue(Map<String, Object> exampleValue) {
     this.exampleValue = exampleValue;
   }
 
-  public ObjectPropertyModel multipleValues(Boolean multipleValues) {
+  public ObjectPropertyModel multipleValues(@Nullable Boolean multipleValues) {
     this.multipleValues = multipleValues;
     return this;
   }
@@ -141,15 +165,16 @@ public class ObjectPropertyModel extends ValuePropertyModel {
   /**
    * If the object can contain multiple additional properties.
    * @return multipleValues
-  */
+   */
   
   @Schema(name = "multipleValues", description = "If the object can contain multiple additional properties.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("multipleValues")
-  public Boolean getMultipleValues() {
+  public @Nullable Boolean getMultipleValues() {
     return multipleValues;
   }
 
-  public void setMultipleValues(Boolean multipleValues) {
+  @JsonProperty("multipleValues")
+  public void setMultipleValues(@Nullable Boolean multipleValues) {
     this.multipleValues = multipleValues;
   }
 
@@ -169,7 +194,7 @@ public class ObjectPropertyModel extends ValuePropertyModel {
   /**
    * The list of valid property options.
    * @return options
-  */
+   */
   @Valid 
   @Schema(name = "options", description = "The list of valid property options.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("options")
@@ -177,11 +202,12 @@ public class ObjectPropertyModel extends ValuePropertyModel {
     return options;
   }
 
+  @JsonProperty("options")
   public void setOptions(List<@Valid OptionModel> options) {
     this.options = options;
   }
 
-  public ObjectPropertyModel optionsDataSource(OptionsDataSourceModel optionsDataSource) {
+  public ObjectPropertyModel optionsDataSource(@Nullable OptionsDataSourceModel optionsDataSource) {
     this.optionsDataSource = optionsDataSource;
     return this;
   }
@@ -189,15 +215,16 @@ public class ObjectPropertyModel extends ValuePropertyModel {
   /**
    * Get optionsDataSource
    * @return optionsDataSource
-  */
+   */
   @Valid 
   @Schema(name = "optionsDataSource", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("optionsDataSource")
-  public OptionsDataSourceModel getOptionsDataSource() {
+  public @Nullable OptionsDataSourceModel getOptionsDataSource() {
     return optionsDataSource;
   }
 
-  public void setOptionsDataSource(OptionsDataSourceModel optionsDataSource) {
+  @JsonProperty("optionsDataSource")
+  public void setOptionsDataSource(@Nullable OptionsDataSourceModel optionsDataSource) {
     this.optionsDataSource = optionsDataSource;
   }
 
@@ -217,7 +244,7 @@ public class ObjectPropertyModel extends ValuePropertyModel {
   /**
    * The list of valid object property types.
    * @return properties
-  */
+   */
   @Valid 
   @Schema(name = "properties", description = "The list of valid object property types.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("properties")
@@ -225,6 +252,7 @@ public class ObjectPropertyModel extends ValuePropertyModel {
     return properties;
   }
 
+  @JsonProperty("properties")
   public void setProperties(List<@Valid PropertyModel> properties) {
     this.properties = properties;
   }
@@ -267,6 +295,16 @@ public class ObjectPropertyModel extends ValuePropertyModel {
 
   public ObjectPropertyModel hidden(Boolean hidden) {
     super.hidden(hidden);
+    return this;
+  }
+
+  public ObjectPropertyModel metadata(Map<String, Object> metadata) {
+    super.metadata(metadata);
+    return this;
+  }
+
+  public ObjectPropertyModel putMetadataItem(String key, Object metadataItem) {
+    super.putMetadataItem(key, metadataItem);
     return this;
   }
 
@@ -328,11 +366,8 @@ public class ObjectPropertyModel extends ValuePropertyModel {
    * Convert the given object to string with each line indented by 4 spaces
    * (except the first line).
    */
-  private String toIndentedString(Object o) {
-    if (o == null) {
-      return "null";
-    }
-    return o.toString().replace("\n", "\n    ");
+  private String toIndentedString(@Nullable Object o) {
+    return o == null ? "null" : o.toString().replace("\n", "\n    ");
   }
 }
 

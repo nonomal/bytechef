@@ -1,0 +1,151 @@
+import RequiredMark from '@/components/RequiredMark';
+import {Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue} from '@/components/Select/Select';
+import {Label} from '@/components/ui/label';
+import {Tooltip, TooltipContent, TooltipTrigger} from '@/components/ui/tooltip';
+import {SelectOptionType} from '@/shared/types';
+import {CheckIcon, CircleQuestionMarkIcon} from 'lucide-react';
+import {Select as SelectPrimitive} from 'radix-ui';
+import {ReactNode} from 'react';
+import {twMerge} from 'tailwind-merge';
+
+import PropertyInputTypeSwitch from './PropertyInputTypeSwitch';
+
+interface PropertySelectProps {
+    defaultValue?: string;
+    deletePropertyButton?: ReactNode;
+    description?: string;
+    handleInputTypeSwitchButtonClick?: () => void;
+    label?: string;
+    leadingIcon?: ReactNode;
+    name?: string;
+    onValueChange?: (value: string) => void;
+    options: Array<SelectOptionType>;
+    placeholder?: string;
+    required?: boolean;
+    showInputTypeSwitchButton?: boolean;
+    value?: string;
+}
+
+const PropertySelect = ({
+    defaultValue,
+    deletePropertyButton,
+    description,
+    handleInputTypeSwitchButtonClick,
+    label,
+    leadingIcon,
+    name,
+    onValueChange,
+    options,
+    placeholder = 'Select...',
+    required,
+    showInputTypeSwitchButton,
+    value,
+}: PropertySelectProps) => (
+    <fieldset className="w-full space-y-1">
+        {label && (
+            <div className="flex w-full items-center justify-between">
+                <div className="flex items-center">
+                    <Label className={twMerge(description && 'mr-1', 'gap-0 leading-normal')} htmlFor={name}>
+                        <span>{label}</span>
+
+                        {required && <RequiredMark />}
+                    </Label>
+
+                    {description && (
+                        <Tooltip>
+                            <TooltipTrigger>
+                                <CircleQuestionMarkIcon className="size-4 text-muted-foreground" />
+                            </TooltipTrigger>
+
+                            <TooltipContent>{description}</TooltipContent>
+                        </Tooltip>
+                    )}
+                </div>
+
+                <div className="flex items-center">
+                    {showInputTypeSwitchButton && handleInputTypeSwitchButtonClick && (
+                        <PropertyInputTypeSwitch handleClick={handleInputTypeSwitchButtonClick} mentionInput={false} />
+                    )}
+
+                    {deletePropertyButton}
+                </div>
+            </div>
+        )}
+
+        {options.length ? (
+            <Select defaultValue={defaultValue} name={name} onValueChange={onValueChange} value={value || defaultValue}>
+                <SelectTrigger
+                    aria-label="Select"
+                    className={twMerge('bg-background', leadingIcon && 'relative', 'pl-4')}
+                >
+                    <>
+                        {leadingIcon ? (
+                            <div>
+                                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center rounded-l-md bg-surface-neutral-secondary px-3">
+                                    {leadingIcon}
+                                </div>
+
+                                <div className="ml-9 text-foreground">
+                                    <SelectPrimitive.Value placeholder={placeholder} />
+                                </div>
+                            </div>
+                        ) : (
+                            <SelectValue placeholder={placeholder} />
+                        )}
+                    </>
+                </SelectTrigger>
+
+                <SelectContent
+                    align="start"
+                    aria-label="Select options"
+                    className="max-h-select-content-available-height min-w-select-trigger-width"
+                    sideOffset={5}
+                >
+                    <SelectGroup>
+                        <SelectItem value="null">Select...</SelectItem>
+
+                        {options.map((option) =>
+                            option.description ? (
+                                <SelectPrimitive.Item
+                                    className={twMerge(
+                                        'relative flex w-full cursor-default items-center rounded-sm py-1.5 pr-8 pl-2 text-sm outline-hidden select-none focus:bg-accent focus:text-accent-foreground data-disabled:pointer-events-none data-disabled:opacity-50',
+                                        option.value === value && 'px-2'
+                                    )}
+                                    key={`${option.value}_${option.label}`}
+                                    value={option.value}
+                                >
+                                    <span className="absolute right-2 flex size-3.5 items-center justify-center">
+                                        <SelectPrimitive.ItemIndicator>
+                                            <CheckIcon className="size-4" />
+                                        </SelectPrimitive.ItemIndicator>
+                                    </span>
+
+                                    <div className="flex flex-col">
+                                        <SelectPrimitive.ItemText>{option.label}</SelectPrimitive.ItemText>
+
+                                        {option.description && (
+                                            <span
+                                                className="mt-1 line-clamp-2 w-full text-xs text-content-neutral-secondary"
+                                                title={option.description}
+                                            >
+                                                {option.description}
+                                            </span>
+                                        )}
+                                    </div>
+                                </SelectPrimitive.Item>
+                            ) : (
+                                <SelectItem key={`${option.value}_${option.label}`} value={option.value}>
+                                    {option.label}
+                                </SelectItem>
+                            )
+                        )}
+                    </SelectGroup>
+                </SelectContent>
+            </Select>
+        ) : (
+            <div className="rounded-md border p-2 text-sm text-muted-foreground">No options available</div>
+        )}
+    </fieldset>
+);
+
+export default PropertySelect;

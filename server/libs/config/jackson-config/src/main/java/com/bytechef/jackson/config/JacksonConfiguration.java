@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,20 +16,14 @@
 
 package com.bytechef.jackson.config;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.dataformat.xml.XmlMapper;
-import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import org.openapitools.jackson.nullable.JsonNullableModule;
-import org.springframework.boot.jackson.JsonComponentModule;
-import org.springframework.context.annotation.Bean;
+import com.bytechef.commons.util.ConvertUtils;
+import com.bytechef.commons.util.JsonUtils;
+import com.bytechef.commons.util.MapUtils;
+import com.bytechef.commons.util.XmlUtils;
+import org.springframework.beans.factory.InitializingBean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Primary;
-import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.dataformat.xml.XmlMapper;
 
 /**
  * @author Ivica Cardic
@@ -37,31 +31,23 @@ import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
 @Configuration
 public class JacksonConfiguration {
 
-    private final JsonComponentModule jsonComponentModule;
+    @Configuration
+    static class JsonUtilsConfiguration implements InitializingBean {
 
-    @SuppressFBWarnings("EI")
-    public JacksonConfiguration(JsonComponentModule jsonComponentModule) {
-        this.jsonComponentModule = jsonComponentModule;
-    }
+        private final ObjectMapper objectMapper;
+        private final XmlMapper xmlMapper;
 
-    @Bean
-    @Primary
-    public ObjectMapper objectMapper() {
-        return buildMapper(Jackson2ObjectMapperBuilder.json());
-    }
+        JsonUtilsConfiguration(ObjectMapper objectMapper, XmlMapper xmlMapper) {
+            this.objectMapper = objectMapper;
+            this.xmlMapper = xmlMapper;
+        }
 
-    @Bean
-    XmlMapper xmlMapper() {
-        return buildMapper(Jackson2ObjectMapperBuilder.xml());
-    }
-
-    private <T extends ObjectMapper> T buildMapper(Jackson2ObjectMapperBuilder objectMapperBuilder) {
-        return objectMapperBuilder
-            .featuresToDisable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
-            .featuresToDisable(SerializationFeature.INDENT_OUTPUT)
-            .featuresToDisable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
-            .serializationInclusion(JsonInclude.Include.NON_NULL)
-            .modules(new JavaTimeModule(), new Jdk8Module(), new JsonNullableModule(), jsonComponentModule)
-            .build();
+        @Override
+        public void afterPropertiesSet() {
+            ConvertUtils.setObjectMapper(objectMapper);
+            JsonUtils.setObjectMapper(objectMapper);
+            MapUtils.setObjectMapper(objectMapper);
+            XmlUtils.setXmlMapper(xmlMapper);
+        }
     }
 }

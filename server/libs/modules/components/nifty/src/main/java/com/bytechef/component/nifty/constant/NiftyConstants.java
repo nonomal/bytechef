@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,19 +16,27 @@
 
 package com.bytechef.component.nifty.constant;
 
+import static com.bytechef.component.definition.ComponentDsl.string;
+
+import com.bytechef.component.definition.ActionDefinition.OptionsFunction;
+import com.bytechef.component.definition.ComponentDsl.ModifiableStringProperty;
+import com.bytechef.component.nifty.util.NiftyUtils;
+
 /**
  * @author Luka Ljubić
  */
-public final class NiftyConstants {
+public class NiftyConstants {
 
-    public static final String BASE_URL = "https://openapi.niftypm.com/api/v1.0";
-    public static final String CREATE_TASK = "createTask";
-    public static final String DESCRIPTION = "description";
-    public static final String DUE_DATE = "due_date";
+    public static final String APP_ID = "app_id";
+    public static final String ID = "id";
     public static final String NAME = "name";
     public static final String PROJECT = "project";
-    public static final String NIFTY = "nifty";
-    public static final String TASK_GROUP_ID = "task_group_id";
+
+    public static final ModifiableStringProperty PROJECT_PROPERTY = string(PROJECT)
+        .label("Project ID")
+        .description("ID of the project within which the task will be created.")
+        .options((OptionsFunction<String>) NiftyUtils::getProjectIdOptions)
+        .required(false);
 
     private NiftyConstants() {
     }

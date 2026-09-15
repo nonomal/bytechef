@@ -1,0 +1,7 @@
+description: "The environment of a project."
+type: "string"
+enum:
+  - "DEVELOPMENT"
+  - "STAGING"
+  - "PRODUCTION"
+readOnly: true

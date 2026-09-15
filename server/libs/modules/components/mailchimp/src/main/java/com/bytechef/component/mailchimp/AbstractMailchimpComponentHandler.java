@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,8 @@
 
 package com.bytechef.component.mailchimp;
 
-import static com.bytechef.component.definition.ComponentDSL.component;
+import static com.bytechef.component.definition.ComponentDsl.component;
+import static com.bytechef.component.definition.ComponentDsl.tool;
 
 import com.bytechef.component.OpenApiComponentHandler;
 import com.bytechef.component.definition.ComponentDefinition;
@@ -32,9 +33,11 @@ public abstract class AbstractMailchimpComponentHandler implements OpenApiCompon
     private final ComponentDefinition componentDefinition = modifyComponent(
         component("mailchimp")
             .title("Mailchimp")
-            .description("Mailchimp is a marketing automation and email marketing platform."))
+            .description("Mailchimp is a marketing automation and email marketing platform.")
+            .version(1))
                 .actions(modifyActions(MailchimpAddMemberToListAction.ACTION_DEFINITION))
                 .connection(modifyConnection(MailchimpConnection.CONNECTION_DEFINITION))
+                .clusterElements(modifyClusterElements(tool(MailchimpAddMemberToListAction.ACTION_DEFINITION)))
                 .triggers(getTriggers());
 
     @Override

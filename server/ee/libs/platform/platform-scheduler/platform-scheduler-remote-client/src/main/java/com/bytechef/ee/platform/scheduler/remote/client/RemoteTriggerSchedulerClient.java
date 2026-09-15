@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the ByteChef Enterprise license (the "Enterprise License");
  * you may not use this file except in compliance with the Enterprise License.
@@ -9,9 +9,9 @@ package com.bytechef.ee.platform.scheduler.remote.client;
 
 import com.bytechef.ee.remote.client.LoadBalancedRestClient;
 import com.bytechef.platform.scheduler.TriggerScheduler;
-import com.bytechef.platform.workflow.execution.WorkflowExecutionId;
+import com.bytechef.platform.workflow.WorkflowExecutionId;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Map;
 import org.springframework.stereotype.Component;
 
@@ -65,8 +65,8 @@ public class RemoteTriggerSchedulerClient implements TriggerScheduler {
 
     @Override
     public void scheduleDynamicWebhookTriggerRefresh(
-        LocalDateTime webhookExpirationDate, String componentName, int componentVersion,
-        WorkflowExecutionId workflowExecutionId) {
+        Instant webhookExpirationDate, String componentName, int componentVersion,
+        WorkflowExecutionId workflowExecutionId, Long connectionId) {
 
         loadBalancedRestClient.post(
             uriBuilder -> uriBuilder
@@ -74,7 +74,7 @@ public class RemoteTriggerSchedulerClient implements TriggerScheduler {
                 .path(TRIGGER_SCHEDULER + "/schedule-dynamic-webhook-trigger-refresh")
                 .build(),
             new DynamicWebhookRefreshTaskRequest(
-                workflowExecutionId, webhookExpirationDate, componentName, componentVersion));
+                workflowExecutionId, webhookExpirationDate, componentName, componentVersion, connectionId));
     }
 
     @Override
@@ -99,10 +99,24 @@ public class RemoteTriggerSchedulerClient implements TriggerScheduler {
             new TriggerWorkflowTaskRequest(workflowExecutionId, pattern, zoneId, output));
     }
 
+    @Override
+    public void scheduleOneTimeTask(Instant executeAt, Map<String, ?> output, long jobId) {
+        loadBalancedRestClient.post(
+            uriBuilder -> uriBuilder
+                .host(SCHEDULER_APP)
+                .path(TRIGGER_SCHEDULER + "/schedule-one-time-task-resume")
+                .build(),
+            new ResumeOneTimeTaskRequest(executeAt, jobId, output));
+    }
+
     @SuppressFBWarnings("EI")
     private record DynamicWebhookRefreshTaskRequest(
-        WorkflowExecutionId workflowExecutionId, LocalDateTime webhookExpirationDate, String componentName,
-        int componentVersion) {
+        WorkflowExecutionId workflowExecutionId, Instant webhookExpirationDate, String componentName,
+        int componentVersion, Long connectionId) {
+    }
+
+    @SuppressFBWarnings("EI")
+    private record ResumeOneTimeTaskRequest(Instant executeAt, long jobId, Map<String, ?> continueParameters) {
     }
 
     @SuppressFBWarnings("EI")

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,36 +16,50 @@
 
 package com.bytechef.component.schedule.util;
 
-import com.bytechef.component.definition.ComponentDSL;
+import static com.bytechef.component.definition.ComponentDsl.option;
+
 import com.bytechef.component.definition.Option;
-import java.time.LocalDateTime;
+import java.time.DayOfWeek;
+import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
-import java.time.ZonedDateTime;
+import java.time.format.TextStyle;
+import java.time.zone.ZoneRules;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * @author Ivica Cardic
  */
 public class ScheduleUtils {
 
+    public static List<Option<Long>> getDayOfWeekOptions() {
+        return Arrays.stream(DayOfWeek.values())
+            .map(dayOfWeek -> option(
+                dayOfWeek.getDisplayName(TextStyle.FULL, Locale.getDefault()),
+                dayOfWeek.getValue() == 7 ? 1 : dayOfWeek.getValue() + 1))
+            .collect(Collectors.toList());
+    }
+
     public static List<Option<String>> getTimeZoneOptions() {
         List<Option<String>> options = new ArrayList<>();
-        LocalDateTime now = LocalDateTime.now();
+        Instant now = Instant.now();
         Set<String> zoneIds = ZoneId.getAvailableZoneIds();
 
         for (String zoneId : zoneIds) {
-            if ((zoneId.startsWith("Etc/GMT+") || zoneId.startsWith("Etc/GMT-")) && !zoneId.equals("Etc/GMT-0")) {
-                ZonedDateTime zonedDateTime = now.atZone(ZoneId.of(zoneId));
+            ZoneId zone = ZoneId.of(zoneId);
 
-                ZoneOffset zoneOffset = zonedDateTime.getOffset();
+            ZoneRules zoneRules = zone.getRules();
 
-                String zoneOffsetId = zoneOffset.getId();
+            ZoneOffset zoneOffset = zoneRules.getStandardOffset(now);
 
-                options.add(ComponentDSL.option("GMT" + zoneOffsetId.replace("Z", "+00:00"), zoneId));
-            }
+            String zoneOffsetId = zoneOffset.getId();
+
+            options.add(option(zoneId + " (GMT" + zoneOffsetId.replace("Z", "+00:00") + ")", zoneId));
         }
 
         options.sort((o1, o2) -> {

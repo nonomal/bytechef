@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,82 +20,86 @@ import com.bytechef.atlas.coordinator.task.dispatcher.TaskDispatcherPreSendProce
 import com.bytechef.atlas.execution.domain.Job;
 import com.bytechef.atlas.execution.domain.TaskExecution;
 import com.bytechef.atlas.execution.service.JobService;
-import com.bytechef.automation.configuration.domain.ProjectInstanceWorkflow;
-import com.bytechef.automation.configuration.service.ProjectInstanceWorkflowService;
+import com.bytechef.automation.configuration.domain.ProjectDeploymentWorkflow;
+import com.bytechef.automation.configuration.service.ProjectDeploymentWorkflowService;
 import com.bytechef.automation.workflow.coordinator.AbstractDispatcherPreSendProcessor;
-import com.bytechef.commons.util.MapUtils;
-import com.bytechef.commons.util.OptionalUtils;
 import com.bytechef.platform.component.constant.MetadataConstants;
-import com.bytechef.platform.constant.AppType;
-import com.bytechef.platform.workflow.execution.service.InstanceJobService;
-import com.fasterxml.jackson.core.type.TypeReference;
+import com.bytechef.platform.constant.PlatformType;
+import com.bytechef.platform.workflow.execution.accessor.JobPrincipalAccessorRegistry;
+import com.bytechef.platform.workflow.execution.service.PrincipalJobService;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Map;
 import org.apache.commons.lang3.Validate;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 /**
  * @author Ivica Cardic
  */
 @Component
+@Order(2)
 public class ProjectTaskDispatcherPreSendProcessor extends AbstractDispatcherPreSendProcessor
     implements TaskDispatcherPreSendProcessor {
 
     private final JobService jobService;
-    private final InstanceJobService instanceJobService;
+    private final PrincipalJobService principalJobService;
+    private final JobPrincipalAccessorRegistry jobPrincipalAccessorRegistry;
 
     @SuppressFBWarnings("EI")
     public ProjectTaskDispatcherPreSendProcessor(
-        JobService jobService, ProjectInstanceWorkflowService projectInstanceWorkflowService,
-        InstanceJobService instanceJobService) {
+        JobService jobService, ProjectDeploymentWorkflowService projectDeploymentWorkflowService,
+        PrincipalJobService principalJobService, JobPrincipalAccessorRegistry jobPrincipalAccessorRegistry) {
 
-        super(projectInstanceWorkflowService);
+        super(projectDeploymentWorkflowService);
 
         this.jobService = jobService;
-        this.instanceJobService = instanceJobService;
+        this.principalJobService = principalJobService;
+        this.jobPrincipalAccessorRegistry = jobPrincipalAccessorRegistry;
     }
 
     @Override
     public TaskExecution process(TaskExecution taskExecution) {
         Job job = jobService.getJob(Validate.notNull(taskExecution.getJobId(), "jobId"));
 
-        Long projectInstanceId = OptionalUtils.orElse(
-            instanceJobService.fetchJobInstanceId(Validate.notNull(job.getId(), "id"), AppType.AUTOMATION),
-            null);
+        long projectDeploymentId = principalJobService.getJobPrincipalId(
+            Validate.notNull(job.getId(), "id"), PlatformType.AUTOMATION);
 
-        if (projectInstanceId != null) {
-            taskExecution.putMetadata(MetadataConstants.INSTANCE_ID, projectInstanceId);
-        }
+        taskExecution.putMetadata(MetadataConstants.JOB_PRINCIPAL_ID, projectDeploymentId);
 
-        Map<String, Long> connectionIdMap = Map.of();
-        Map<String, Map<String, Long>> connectionIdsMap = MapUtils.getMap(
-            job.getMetadata(), MetadataConstants.CONNECTION_IDS, new TypeReference<>() {}, Map.of());
-
-        if (connectionIdsMap.containsKey(taskExecution.getName())) {
-
-            // directly coming from .../jobs POST endpoint
-
-            connectionIdMap = connectionIdsMap.get(taskExecution.getName());
-        } else if (projectInstanceId != null) {
-            // check if stored in workflow connections or defined in the workflow definition
-
-            connectionIdMap = getConnectionIdMap(projectInstanceId, job.getWorkflowId(), taskExecution.getName());
-        }
+        Map<String, Long> connectionIdMap = getConnectionIdMap(
+            projectDeploymentId, job.getWorkflowId(), taskExecution.getName());
 
         if (!connectionIdMap.isEmpty()) {
             taskExecution.putMetadata(MetadataConstants.CONNECTION_IDS, connectionIdMap);
         }
 
-        taskExecution.putMetadata(MetadataConstants.TYPE, AppType.AUTOMATION);
+        ProjectDeploymentWorkflow projectDeploymentWorkflow =
+            projectDeploymentWorkflowService.getProjectDeploymentWorkflow(
+                projectDeploymentId, job.getWorkflowId());
+
+        taskExecution.putMetadata(MetadataConstants.JOB_PRINCIPAL_WORKFLOW_ID, projectDeploymentWorkflow.getId());
+
+        taskExecution.putMetadata(MetadataConstants.TYPE, PlatformType.AUTOMATION);
         taskExecution.putMetadata(MetadataConstants.WORKFLOW_ID, job.getWorkflowId());
 
-        if (projectInstanceId != null) {
-            ProjectInstanceWorkflow projectInstanceWorkflow = projectInstanceWorkflowService.getProjectInstanceWorkflow(
-                projectInstanceId, job.getWorkflowId());
-
-            taskExecution.putMetadata(MetadataConstants.INSTANCE_WORKFLOW_ID, projectInstanceWorkflow.getId());
-        }
+        // Derive and pass environment id for downstream components
+        int environmentId = (int) jobPrincipalAccessorRegistry
+            .getJobPrincipalAccessor(PlatformType.AUTOMATION)
+            .getEnvironmentId(projectDeploymentId);
+        taskExecution.putMetadata(MetadataConstants.ENVIRONMENT_ID, environmentId);
 
         return taskExecution;
+    }
+
+    @Override
+    public boolean canProcess(TaskExecution taskExecution) {
+        Job job = jobService.getJob(Validate.notNull(taskExecution.getJobId(), "jobId"));
+
+        Long projectDeploymentId =
+            principalJobService
+                .fetchJobPrincipalId(Validate.notNull(job.getId(), "id"), PlatformType.AUTOMATION)
+                .orElse(null);
+
+        return projectDeploymentId != null;
     }
 }

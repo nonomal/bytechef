@@ -1,0 +1,325 @@
+---
+title: "One Simple API"
+description: "A toolbox with all the things you need to get your project to success:  Image resize and CDN, PDF and Screenshots generation, Currency Exchange and Discounts, Email Validation, QR codes, and much more!"
+---
+
+
+Categories: Developer Tools
+
+
+Type: oneSimpleAPI/v1
+
+<hr />
+
+
+
+
+## Connections
+
+Version: 1
+
+
+### custom
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| token | API Token | STRING |  | true |
+
+
+
+## Connection Setup
+
+### Create API Token
+
+1. Navigate to [OneSimpleApi](https://onesimpleapi.com/) dashboard.
+2. Click on your account icon.
+3. Click on **API Tokens**.
+4. Enter name of your token.
+5. Click on **Create**.
+6. Here you can see your **API Token**.
+7. Done 🚀.
+
+<div style={{ position: 'relative', height:0, width: '100%', overflow: 'hidden', zIndex: 49, boxSizing: 'border-box', paddingBottom: 'calc(52.05219207% + 32px)'}}>
+    <iframe src="https://www.guidejar.com/embed/8a51616c-3b10-443b-8c38-f842ff4ca5e0?type=1&controls=on" width="100%" height="100%" style={{height:'100%', position:'absolute', inset:0}} allowFullScreen frameBorder="0"></iframe>
+</div>
+
+
+
+<hr />
+
+
+## Actions
+
+
+### Add Screenshot
+Name: addScreenshot
+
+`Turn a URL into a screenshot.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| source | Source | STRING <details> <summary> Options </summary> <span>URL</span>, <span>HTML</span> </details> | Provide either a URL to capture or raw HTML content. | true |
+| url | URL | STRING | Place the URL you want to turn into screenshot. | true |
+| html | HTML | STRING | Place the raw HTML to render. | true |
+| custom_css | Custom CSS | STRING | Custom CSS to inject into the page. | false |
+| wait | Wait | INTEGER | Time to wait before capturing (milliseconds). | false |
+| screen | Screen size | STRING <details> <summary> Options </summary> <span>default</span>, <span>phone</span>, <span>landscape-phone</span>, <span>tablet</span>, <span>landscape-tablet</span>, <span>retina</span>, <span>4k</span>, <span>8k</span>, <span>custom_size</span> </details> | Predefined screen size or custom dimensions. | false |
+| width | Width (px) | INTEGER |  | true |
+| height | Height (px) | INTEGER |  | true |
+| background | Transparent background | BOOLEAN <details> <summary> Options </summary> <span>true</span>, <span>false</span> </details> | Make the background transparent (PNG only). | false |
+| fullpage | Full Page Screenshot | BOOLEAN <details> <summary> Options </summary> <span>true</span>, <span>false</span> </details> | Capture the entire scrollable page. | false |
+| force | Force refresh | BOOLEAN <details> <summary> Options </summary> <span>true</span>, <span>false</span> </details> | Force a new screenshot even if cached. | false |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Add Screenshot",
+  "name" : "addScreenshot",
+  "parameters" : {
+    "source" : "",
+    "url" : "",
+    "html" : "",
+    "custom_css" : "",
+    "wait" : 1,
+    "screen" : "",
+    "width" : 1,
+    "height" : 1,
+    "background" : false,
+    "fullpage" : false,
+    "force" : false
+  },
+  "type" : "oneSimpleAPI/v1/addScreenshot"
+}
+```
+
+#### Output
+
+
+
+Type: OBJECT
+
+
+#### Properties
+
+|     Name     |     Type     |     Description     |
+|:------------:|:------------:|:-------------------:|
+| width | INTEGER | Screenshot width. |
+| height | INTEGER | Screenshot height. |
+| fullpage | STRING | Whether the screenshot was captured as full page. |
+| url | STRING | The URL that was captured. |
+| elapsed | INTEGER | The total time taken to generate the screenshot. |
+
+
+
+
+#### Output Example
+```json
+{
+  "width" : 1,
+  "height" : 1,
+  "fullpage" : "",
+  "url" : "",
+  "elapsed" : 1
+}
+```
+
+
+
+
+### Currency Converter
+Name: currencyConverter
+
+`Convert currency from one to another.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| from_currency | From Currency | STRING <details> <summary> Options </summary> <span>AED</span>, <span>AFN</span>, <span>ALL</span>, <span>AMD</span>, <span>ANG</span>, <span>AOA</span>, <span>ARS</span>, <span>AUD</span>, <span>AWG</span>, <span>AZN</span>, <span>BAM</span>, <span>BBD</span>, <span>BDT</span>, <span>BGN</span>, <span>BHD</span>, <span>BIF</span>, <span>BMD</span>, <span>BND</span>, <span>BOB</span>, <span>BRL</span>, <span>BSD</span>, <span>BTN</span>, <span>BWP</span>, <span>BYN</span>, <span>BZD</span>, <span>CAD</span>, <span>CDF</span>, <span>CHF</span>, <span>CLP</span>, <span>CNY</span>, <span>COP</span>, <span>CRC</span>, <span>CUC</span>, <span>CUP</span>, <span>CVE</span>, <span>CZK</span>, <span>DJF</span>, <span>DKK</span>, <span>DOP</span>, <span>DZD</span>, <span>EGP</span>, <span>ERN</span>, <span>ETB</span>, <span>EUR</span>, <span>FJD</span>, <span>FKP</span>, <span>FOK</span>, <span>GBP</span>, <span>GEL</span>, <span>GGP</span>, <span>GHS</span>, <span>GIP</span>, <span>GMD</span>, <span>GNF</span>, <span>GTQ</span>, <span>GYD</span>, <span>HKD</span>, <span>HNL</span>, <span>HRK</span>, <span>HTG</span>, <span>HUF</span>, <span>IDR</span>, <span>ILS</span>, <span>IMP</span>, <span>INR</span>, <span>IQD</span>, <span>IRR</span>, <span>ISK</span>, <span>JMD</span>, <span>JOD</span>, <span>JPY</span>, <span>KES</span>, <span>KGS</span>, <span>KHR</span>, <span>KID</span>, <span>KMF</span>, <span>KRW</span>, <span>KWD</span>, <span>KYD</span>, <span>KZT</span>, <span>LAK</span>, <span>LBP</span>, <span>LKR</span>, <span>LRD</span>, <span>LSL</span>, <span>LYD</span>, <span>MAD</span>, <span>MDL</span>, <span>MGA</span>, <span>MKD</span>, <span>MMK</span>, <span>MNT</span>, <span>MOP</span>, <span>MRU</span>, <span>MUR</span>, <span>MVR</span>, <span>MWK</span>, <span>MXN</span>, <span>MYR</span>, <span>MZN</span>, <span>NAD</span>, <span>NGN</span>, <span>NIO</span>, <span>NOK</span>, <span>NPR</span>, <span>NZD</span>, <span>OMR</span>, <span>PAB</span>, <span>PEN</span>, <span>PGK</span>, <span>PHP</span>, <span>PKR</span>, <span>PLN</span>, <span>PYG</span>, <span>QAR</span>, <span>RON</span>, <span>RSD</span>, <span>RUB</span>, <span>RWF</span>, <span>SAR</span>, <span>SBD</span>, <span>SCR</span>, <span>SDG</span>, <span>SEK</span>, <span>SGD</span>, <span>SHP</span>, <span>SLL</span>, <span>SOS</span>, <span>SRD</span>, <span>SSP</span>, <span>STN</span>, <span>SYP</span>, <span>SZL</span>, <span>THB</span>, <span>TJS</span>, <span>TMT</span>, <span>TND</span>, <span>TOP</span>, <span>TRY</span>, <span>TTD</span>, <span>TVD</span>, <span>TWD</span>, <span>TZS</span>, <span>UAH</span>, <span>UGX</span>, <span>USD</span>, <span>UYU</span>, <span>UZS</span>, <span>VES</span>, <span>VND</span>, <span>VUV</span>, <span>WST</span>, <span>XAF</span>, <span>XCD</span>, <span>XDR</span>, <span>XOF</span>, <span>XPF</span>, <span>YER</span>, <span>ZAR</span>, <span>ZMW</span> </details> | Currency from which you want to convert. | true |
+| to_currency | To Currency | STRING <details> <summary> Options </summary> <span>AED</span>, <span>AFN</span>, <span>ALL</span>, <span>AMD</span>, <span>ANG</span>, <span>AOA</span>, <span>ARS</span>, <span>AUD</span>, <span>AWG</span>, <span>AZN</span>, <span>BAM</span>, <span>BBD</span>, <span>BDT</span>, <span>BGN</span>, <span>BHD</span>, <span>BIF</span>, <span>BMD</span>, <span>BND</span>, <span>BOB</span>, <span>BRL</span>, <span>BSD</span>, <span>BTN</span>, <span>BWP</span>, <span>BYN</span>, <span>BZD</span>, <span>CAD</span>, <span>CDF</span>, <span>CHF</span>, <span>CLP</span>, <span>CNY</span>, <span>COP</span>, <span>CRC</span>, <span>CUC</span>, <span>CUP</span>, <span>CVE</span>, <span>CZK</span>, <span>DJF</span>, <span>DKK</span>, <span>DOP</span>, <span>DZD</span>, <span>EGP</span>, <span>ERN</span>, <span>ETB</span>, <span>EUR</span>, <span>FJD</span>, <span>FKP</span>, <span>FOK</span>, <span>GBP</span>, <span>GEL</span>, <span>GGP</span>, <span>GHS</span>, <span>GIP</span>, <span>GMD</span>, <span>GNF</span>, <span>GTQ</span>, <span>GYD</span>, <span>HKD</span>, <span>HNL</span>, <span>HRK</span>, <span>HTG</span>, <span>HUF</span>, <span>IDR</span>, <span>ILS</span>, <span>IMP</span>, <span>INR</span>, <span>IQD</span>, <span>IRR</span>, <span>ISK</span>, <span>JMD</span>, <span>JOD</span>, <span>JPY</span>, <span>KES</span>, <span>KGS</span>, <span>KHR</span>, <span>KID</span>, <span>KMF</span>, <span>KRW</span>, <span>KWD</span>, <span>KYD</span>, <span>KZT</span>, <span>LAK</span>, <span>LBP</span>, <span>LKR</span>, <span>LRD</span>, <span>LSL</span>, <span>LYD</span>, <span>MAD</span>, <span>MDL</span>, <span>MGA</span>, <span>MKD</span>, <span>MMK</span>, <span>MNT</span>, <span>MOP</span>, <span>MRU</span>, <span>MUR</span>, <span>MVR</span>, <span>MWK</span>, <span>MXN</span>, <span>MYR</span>, <span>MZN</span>, <span>NAD</span>, <span>NGN</span>, <span>NIO</span>, <span>NOK</span>, <span>NPR</span>, <span>NZD</span>, <span>OMR</span>, <span>PAB</span>, <span>PEN</span>, <span>PGK</span>, <span>PHP</span>, <span>PKR</span>, <span>PLN</span>, <span>PYG</span>, <span>QAR</span>, <span>RON</span>, <span>RSD</span>, <span>RUB</span>, <span>RWF</span>, <span>SAR</span>, <span>SBD</span>, <span>SCR</span>, <span>SDG</span>, <span>SEK</span>, <span>SGD</span>, <span>SHP</span>, <span>SLL</span>, <span>SOS</span>, <span>SRD</span>, <span>SSP</span>, <span>STN</span>, <span>SYP</span>, <span>SZL</span>, <span>THB</span>, <span>TJS</span>, <span>TMT</span>, <span>TND</span>, <span>TOP</span>, <span>TRY</span>, <span>TTD</span>, <span>TVD</span>, <span>TWD</span>, <span>TZS</span>, <span>UAH</span>, <span>UGX</span>, <span>USD</span>, <span>UYU</span>, <span>UZS</span>, <span>VES</span>, <span>VND</span>, <span>VUV</span>, <span>WST</span>, <span>XAF</span>, <span>XCD</span>, <span>XDR</span>, <span>XOF</span>, <span>XPF</span>, <span>YER</span>, <span>ZAR</span>, <span>ZMW</span> </details> | Currency to which you want to convert. | true |
+| from_value | Value | NUMBER | Value to convert. | true |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Currency Converter",
+  "name" : "currencyConverter",
+  "parameters" : {
+    "from_currency" : "",
+    "to_currency" : "",
+    "from_value" : 0.0
+  },
+  "type" : "oneSimpleAPI/v1/currencyConverter"
+}
+```
+
+#### Output
+
+
+
+Type: OBJECT
+
+
+#### Properties
+
+|     Name     |     Type     |     Description     |
+|:------------:|:------------:|:-------------------:|
+| from_currency | STRING |  |
+| from_value | STRING |  |
+| to_currency | STRING |  |
+| to_value | NUMBER |  |
+| to_exchange_rate | STRING |  |
+
+
+
+
+#### Output Example
+```json
+{
+  "from_currency" : "",
+  "from_value" : "",
+  "to_currency" : "",
+  "to_value" : 0.0,
+  "to_exchange_rate" : ""
+}
+```
+
+
+
+
+### URL Shortener
+Name: urlShortener
+
+`Shorten your desired URL`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| url | URL | STRING | Place the URL you want to shorten | true |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "URL Shortener",
+  "name" : "urlShortener",
+  "parameters" : {
+    "url" : ""
+  },
+  "type" : "oneSimpleAPI/v1/urlShortener"
+}
+```
+
+#### Output
+
+
+
+Type: OBJECT
+
+
+#### Properties
+
+|     Name     |     Type     |     Description     |
+|:------------:|:------------:|:-------------------:|
+| url | STRING |  |
+| single_use | STRING |  |
+| temporary_redirect | STRING |  |
+| forward_params | STRING |  |
+| short_url | STRING |  |
+
+
+
+
+#### Output Example
+```json
+{
+  "url" : "",
+  "single_use" : "",
+  "temporary_redirect" : "",
+  "forward_params" : "",
+  "short_url" : ""
+}
+```
+
+
+
+
+### Web Page Information
+Name: webInformation
+
+`Get information about a certain webpage`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| url | URL | STRING | Place the web page url you want to get info from | true |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Web Page Information",
+  "name" : "webInformation",
+  "parameters" : {
+    "url" : ""
+  },
+  "type" : "oneSimpleAPI/v1/webInformation"
+}
+```
+
+#### Output
+
+
+
+Type: OBJECT
+
+
+#### Properties
+
+|     Name     |     Type     |     Description     |
+|:------------:|:------------:|:-------------------:|
+| general | OBJECT <details> <summary> Properties </summary> &#123;STRING\(title), STRING\(description), STRING\(canonical)&#125; </details> |  |
+| twitter | OBJECT <details> <summary> Properties </summary> &#123;STRING\(site), STRING\(title), STRING\(description)&#125; </details> |  |
+| og | OBJECT <details> <summary> Properties </summary> &#123;STRING\(title), STRING\(url), STRING\(image), STRING\(description), STRING\(type)&#125; </details> |  |
+
+
+
+
+#### Output Example
+```json
+{
+  "general" : {
+    "title" : "",
+    "description" : "",
+    "canonical" : ""
+  },
+  "twitter" : {
+    "site" : "",
+    "title" : "",
+    "description" : ""
+  },
+  "og" : {
+    "title" : "",
+    "url" : "",
+    "image" : "",
+    "description" : "",
+    "type" : ""
+  }
+}
+```
+
+
+
+
+
+
+## What to do if your action is not listed here?
+
+If this component doesn't have the action you need, you can use **Custom Action** to create your own. Custom Actions empower you to define HTTP requests tailored to your specific requirements, allowing for greater flexibility in integrating with external services or APIs.
+
+To create a Custom Action, simply specify the desired HTTP method, path, and any necessary parameters. This way, you can extend the functionality of your component beyond the predefined actions, ensuring that you can meet all your integration needs effectively.
+

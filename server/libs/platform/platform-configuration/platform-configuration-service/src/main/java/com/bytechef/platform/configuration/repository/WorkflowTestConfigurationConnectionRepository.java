@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,14 +29,22 @@ import org.springframework.stereotype.Repository;
 public interface WorkflowTestConfigurationConnectionRepository
     extends org.springframework.data.repository.Repository<WorkflowTestConfigurationConnection, Long> {
 
-    List<WorkflowTestConfigurationConnection> findByConnectionId(long connectionId);
+    List<WorkflowTestConfigurationConnection> findAllByConnectionId(long connectionId);
 
     @Query("""
             SELECT workflow_test_configuration_connection.* FROM workflow_test_configuration_connection
             JOIN workflow_test_configuration ON workflow_test_configuration_connection.workflow_test_configuration_id = workflow_test_configuration.id
             WHERE workflow_test_configuration.workflow_id = :workflowId
             AND workflow_test_configuration_connection.workflow_node_name = :workflowNodeName
+            AND workflow_test_configuration.environment = :environmentId
         """)
-    List<WorkflowTestConfigurationConnection> findByWorkflowIdAndWorkflowNodeName(
-        @Param("workflowId") String workflowId, @Param("workflowNodeName") String workflowNodeName);
+    List<WorkflowTestConfigurationConnection> findByWorkflowIdAndWorkflowNodeNameAndEnvironmentId(
+        @Param("workflowId") String workflowId, @Param("workflowNodeName") String workflowNodeName,
+        @Param("environmentId") long environmentId);
+
+    @Query("""
+            SELECT DISTINCT workflow_test_configuration_id FROM workflow_test_configuration_connection
+            WHERE connection_id = :connectionId
+        """)
+    List<Long> findAllWorkflowTestConfigurationIdsByConnectionId(@Param("connectionId") long connectionId);
 }

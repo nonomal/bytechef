@@ -23,3 +23,15 @@ spring:
       enabled: false
     livereload:
       enabled: false
+
+bytechef:
+  analytics:
+    enabled: true
+    postHog:
+      apiKey: phc_oZ9XWAVf8xf6sI7IYBAbGldSbiud07ioZItD1XvhJ7S
+      host: https://eu.i.posthog.com
+  helpHub:
+    enabled: true
+    command-bar:
+      orgId: 3816ef6c
+  webhookUrl: ${bytechef.public-url}/webhooks/{id}

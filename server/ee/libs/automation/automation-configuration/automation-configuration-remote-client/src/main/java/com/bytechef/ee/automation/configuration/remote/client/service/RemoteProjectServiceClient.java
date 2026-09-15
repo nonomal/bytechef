@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the ByteChef Enterprise license (the "Enterprise License");
  * you may not use this file except in compliance with the Enterprise License.
@@ -12,9 +12,11 @@ import com.bytechef.automation.configuration.domain.ProjectVersion;
 import com.bytechef.automation.configuration.domain.ProjectVersion.Status;
 import com.bytechef.automation.configuration.service.ProjectService;
 import com.bytechef.ee.remote.client.LoadBalancedRestClient;
+import com.bytechef.platform.annotation.ConditionalOnEEVersion;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Component;
 
@@ -24,6 +26,7 @@ import org.springframework.stereotype.Component;
  * @author Ivica Cardic
  */
 @Component
+@ConditionalOnEEVersion
 public class RemoteProjectServiceClient implements ProjectService {
 
     private static final String CONFIGURATION_APP = "configuration-app";
@@ -34,11 +37,6 @@ public class RemoteProjectServiceClient implements ProjectService {
     @SuppressFBWarnings("EI")
     public RemoteProjectServiceClient(LoadBalancedRestClient loadBalancedRestClient) {
         this.loadBalancedRestClient = loadBalancedRestClient;
-    }
-
-    @Override
-    public int addVersion(long id) {
-        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -62,17 +60,17 @@ public class RemoteProjectServiceClient implements ProjectService {
     }
 
     @Override
-    public Optional<Project> fetchWorkflowProject(String workflowId) {
+    public Optional<Project> fetchProject(String name, long workspaceId) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public Project getProjectInstanceProject(long projectInstanceId) {
+    public Project getProjectDeploymentProject(long projectDeploymentId) {
         return loadBalancedRestClient.get(
             uriBuilder -> uriBuilder
                 .host(CONFIGURATION_APP)
-                .path(PROJECT_SERVICE + "/get-project-instance-project/{projectInstanceId}")
-                .build(projectInstanceId),
+                .path(PROJECT_SERVICE + "/get-project/deployment-project/{projectDeploymentId}")
+                .build(projectDeploymentId),
             Project.class);
     }
 
@@ -84,6 +82,11 @@ public class RemoteProjectServiceClient implements ProjectService {
                 .path(PROJECT_SERVICE + "/get-project/{id}")
                 .build(id),
             Project.class);
+    }
+
+    @Override
+    public Project getProject(UUID uuid) {
+        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -107,7 +110,10 @@ public class RemoteProjectServiceClient implements ProjectService {
     }
 
     @Override
-    public List<Project> getProjects(Long workspaceId, Long categoryId, List<Long> ids, Long tagId, Status status) {
+    public List<Project> getProjects(
+        Boolean apiCollections, Long categoryId, Boolean projectDeployments, Long tagId,
+        Status status, Long workspaceId) {
+
         throw new UnsupportedOperationException();
     }
 
@@ -122,7 +128,12 @@ public class RemoteProjectServiceClient implements ProjectService {
     }
 
     @Override
-    public Project publishProject(long id, String description) {
+    public List<Long> getWorkspaceProjectIds(long workspaceId) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public int publishProject(long id, String description, boolean syncWithGit) {
         throw new UnsupportedOperationException();
     }
 
@@ -133,6 +144,11 @@ public class RemoteProjectServiceClient implements ProjectService {
 
     @Override
     public Project update(Project project) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Project updatePermissionExpression(long id, String permissionExpression) {
         throw new UnsupportedOperationException();
     }
 }

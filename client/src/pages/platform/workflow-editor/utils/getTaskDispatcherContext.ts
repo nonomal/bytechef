@@ -1,0 +1,280 @@
+import {ON_ERROR_ERROR_BRANCH, ON_ERROR_MAIN_BRANCH, TASK_DISPATCHER_NAMES} from '@/shared/constants';
+import {NodeDataType, TaskDispatcherContextType} from '@/shared/types';
+import {Edge, Node} from '@xyflow/react';
+
+/**
+ * Creates context from a task node's dispatcher data
+ */
+function getContextFromTaskNodeData(
+    nodeData: NodeDataType,
+    indexIncrement: number = 0
+): TaskDispatcherContextType | undefined {
+    const context: TaskDispatcherContextType = {
+        taskDispatcherId: nodeData.taskDispatcherId as string,
+    };
+
+    if (!nodeData) {
+        return undefined;
+    }
+
+    if (nodeData.conditionData) {
+        context.conditionCase = nodeData.conditionData.conditionCase as 'caseTrue' | 'caseFalse';
+        context.conditionId = nodeData.conditionData.conditionId as string;
+        context.index = (nodeData.conditionData.index as number) + indexIncrement;
+        context.taskDispatcherId = nodeData.conditionData.conditionId as string;
+    } else if (nodeData.loopData) {
+        context.loopId = nodeData.loopData.loopId as string;
+        context.index = (nodeData.loopData.index as number) + indexIncrement;
+        context.taskDispatcherId = nodeData.loopData.loopId as string;
+    } else if (nodeData.mapData) {
+        context.mapId = nodeData.mapData.mapId as string;
+        context.index = (nodeData.mapData.index as number) + indexIncrement;
+        context.taskDispatcherId = nodeData.mapData.mapId as string;
+    } else if (nodeData.branchData) {
+        context.branchId = nodeData.branchData.branchId as string;
+        context.caseKey = nodeData.branchData.caseKey as string | number;
+        context.index = (nodeData.branchData.index as number) + indexIncrement;
+        context.taskDispatcherId = nodeData.branchData.branchId as string;
+    } else if (nodeData.parallelData) {
+        context.parallelId = nodeData.parallelData.parallelId as string;
+        context.index = (nodeData.parallelData.index as number) + indexIncrement;
+        context.taskDispatcherId = nodeData.parallelData.parallelId as string;
+    } else if (nodeData.eachData) {
+        context.eachId = nodeData.eachData.eachId as string;
+        context.index = (nodeData.eachData.index as number) + indexIncrement;
+        context.taskDispatcherId = nodeData.eachData.eachId as string;
+    } else if (nodeData.forkJoinData) {
+        context.branchIndex = nodeData.forkJoinData.branchIndex as number;
+        context.forkJoinId = nodeData.forkJoinData.forkJoinId as string;
+        context.index = (nodeData.forkJoinData.index as number) + indexIncrement;
+        context.taskDispatcherId = nodeData.forkJoinData.forkJoinId as string;
+    } else if (nodeData.onErrorData) {
+        context.index = (nodeData.onErrorData.index as number) + indexIncrement;
+        context.onErrorCase = nodeData.onErrorData.onErrorCase as
+            | typeof ON_ERROR_MAIN_BRANCH
+            | typeof ON_ERROR_ERROR_BRANCH;
+        context.onErrorId = nodeData.onErrorData.onErrorId as string;
+        context.taskDispatcherId = nodeData.onErrorData.onErrorId as string;
+    } else if (nodeData.terminateData) {
+        context.terminateId = nodeData.terminateData.terminateId as string;
+        context.taskDispatcherId = nodeData.terminateData.terminateId as string;
+    }
+
+    return context;
+}
+
+/**
+ * Creates context from a placeholder node
+ */
+function getContextFromPlaceholderNode(placeholderNode: Node): TaskDispatcherContextType | undefined {
+    const isPlaceholder = placeholderNode.type === 'placeholder';
+    const isLoopPlaceholder = placeholderNode.id.includes('loop') && isPlaceholder;
+    const isMapPlaceholder = placeholderNode.id.includes('map') && isPlaceholder;
+    const isConditionPlaceholder = placeholderNode.id.includes('condition') && isPlaceholder;
+    const isBranchPlaceholder = placeholderNode.id.includes('branch') && isPlaceholder;
+    const isParallelPlaceholder = placeholderNode.id.includes('parallel') && isPlaceholder;
+    const isEachPlaceholder = placeholderNode.id.includes('each') && isPlaceholder;
+    const isForkJoinPlaceholder = placeholderNode.id.includes('forkJoin') && isPlaceholder;
+    const isOnErrorPlaceholder = placeholderNode.id.includes('onError') && isPlaceholder;
+    const isTerminatePlaceholder = placeholderNode.id.includes('terminate') && isPlaceholder;
+
+    const context: TaskDispatcherContextType = {
+        taskDispatcherId: placeholderNode.data?.taskDispatcherId as string,
+    };
+
+    if (!placeholderNode) {
+        return undefined;
+    }
+
+    const placeholderIndex = parseInt(placeholderNode.id.split('-').pop() || '0');
+
+    context.index = placeholderIndex;
+
+    if (isLoopPlaceholder) {
+        const loopId = placeholderNode.data.loopId as string;
+
+        context.loopId = loopId;
+        context.taskDispatcherId = loopId;
+    } else if (isMapPlaceholder) {
+        const mapId = placeholderNode.data.mapId as string;
+
+        context.mapId = mapId;
+        context.taskDispatcherId = mapId;
+    } else if (isConditionPlaceholder) {
+        const conditionId = placeholderNode.data.conditionId as string;
+
+        context.conditionId = conditionId;
+        context.conditionCase = placeholderNode.data?.conditionCase as 'caseTrue' | 'caseFalse';
+        context.taskDispatcherId = conditionId;
+    } else if (isBranchPlaceholder) {
+        const branchId = placeholderNode.data.branchId as string;
+
+        context.branchId = branchId;
+        context.caseKey = placeholderNode.data?.caseKey as string | number;
+        context.taskDispatcherId = branchId;
+    } else if (isParallelPlaceholder) {
+        const parallelId = placeholderNode.data?.parallelId as string;
+
+        context.parallelId = parallelId;
+        context.taskDispatcherId = parallelId;
+    } else if (isEachPlaceholder) {
+        const eachId = placeholderNode.data?.eachId as string;
+
+        context.eachId = eachId;
+        context.taskDispatcherId = eachId;
+    } else if (isForkJoinPlaceholder) {
+        const forkJoinId = placeholderNode.data?.forkJoinId as string;
+
+        context.index = 0;
+        context.branchIndex = placeholderNode.data?.branchIndex as number;
+        context.forkJoinId = forkJoinId;
+        context.taskDispatcherId = forkJoinId;
+    } else if (isOnErrorPlaceholder) {
+        const onErrorId = placeholderNode.data.onErrorId as string;
+
+        context.onErrorCase = placeholderNode.data?.onErrorCase as
+            | typeof ON_ERROR_MAIN_BRANCH
+            | typeof ON_ERROR_ERROR_BRANCH;
+        context.onErrorId = onErrorId;
+        context.taskDispatcherId = onErrorId;
+    } else if (isTerminatePlaceholder) {
+        const terminateId = placeholderNode.data?.terminateId as string;
+
+        context.terminateId = terminateId;
+        context.taskDispatcherId = terminateId;
+    }
+
+    return context;
+}
+
+interface GetTaskDispatcherContextProps {
+    edge?: Edge;
+    node?: Node;
+    nodes?: Array<Node>;
+}
+
+export default function getTaskDispatcherContext({
+    edge,
+    node,
+    nodes,
+}: GetTaskDispatcherContextProps): TaskDispatcherContextType | undefined {
+    if (node) {
+        return getContextFromPlaceholderNode(node);
+    }
+
+    if (edge && !nodes) {
+        return undefined;
+    }
+
+    const {source, target} = edge!;
+
+    const sourceNode = nodes!.find((node) => node.id === source);
+    const targetNode = nodes!.find((node) => node.id === target);
+
+    const isSourceTaskDispatcher = TASK_DISPATCHER_NAMES.includes((sourceNode?.data as NodeDataType).componentName);
+    const isTargetTaskDispatcher = TASK_DISPATCHER_NAMES.includes((targetNode?.data as NodeDataType).componentName);
+
+    const isSourceTask =
+        (sourceNode?.type === 'workflow' || sourceNode?.type === 'clusterRoot') && !isSourceTaskDispatcher;
+    const isTargetTask =
+        (targetNode?.type === 'workflow' || targetNode?.type === 'clusterRoot') && !isTargetTaskDispatcher;
+
+    const isSourceGhost = source.includes('ghost');
+    const isTargetGhost = target.includes('ghost');
+
+    const isSourceTopGhost = sourceNode?.type === 'taskDispatcherTopGhostNode';
+    const isSourceBottomGhost = sourceNode?.type === 'taskDispatcherBottomGhostNode';
+
+    const isSourceNestedBottomGhost = sourceNode?.data.isNestedBottomGhost;
+
+    const taskDispatcherId = (sourceNode?.data?.taskDispatcherId || targetNode?.data.taskDispatcherId) as string;
+
+    const context: TaskDispatcherContextType = {
+        taskDispatcherId,
+    };
+
+    if (!sourceNode || !targetNode) {
+        return undefined;
+    }
+
+    if (isSourceGhost && isTargetGhost) {
+        const sourceTaskDispatcherNode = nodes!.find((node) => node.id === sourceNode.data.taskDispatcherId);
+
+        return getContextFromTaskNodeData(sourceTaskDispatcherNode?.data as NodeDataType, 1);
+    }
+
+    if (isSourceGhost && isTargetTaskDispatcher) {
+        if (!isSourceNestedBottomGhost) {
+            if (
+                targetNode.data.conditionData ||
+                targetNode.data.loopData ||
+                targetNode.data.mapData ||
+                targetNode.data.branchData ||
+                targetNode.data.parallelData ||
+                targetNode.data.eachData ||
+                targetNode.data.forkJoinData ||
+                targetNode.data.onErrorData ||
+                targetNode.data.terminateData
+            ) {
+                return getContextFromTaskNodeData(targetNode.data as NodeDataType, 0);
+            }
+
+            const targetData = targetNode.data as NodeDataType;
+
+            if (targetData?.componentName === 'map') {
+                context.mapId = taskDispatcherId;
+                context.index = 0;
+
+                return context;
+            }
+
+            return undefined;
+        }
+
+        return getContextFromTaskNodeData(targetNode.data as NodeDataType, 0);
+    }
+
+    if (isSourceTopGhost && isTargetTask) {
+        return getContextFromTaskNodeData(targetNode.data as NodeDataType, 0);
+    }
+
+    if (isSourceBottomGhost && isTargetTask) {
+        return getContextFromTaskNodeData(targetNode.data as NodeDataType, 0);
+    }
+
+    if (isSourceGhost && !isSourceNestedBottomGhost && isTargetTask) {
+        return getContextFromTaskNodeData(targetNode.data as NodeDataType, 1);
+    }
+
+    if (isSourceTaskDispatcher && isTargetTask) {
+        return getContextFromTaskNodeData(targetNode.data as NodeDataType, 0);
+    }
+
+    if (isSourceTask && isTargetGhost) {
+        return getContextFromTaskNodeData(sourceNode.data as NodeDataType, 1);
+    }
+
+    if (isSourceTask && isTargetTask) {
+        return getContextFromTaskNodeData(sourceNode.data as NodeDataType, 1);
+    }
+
+    if (isSourceTask && isTargetTaskDispatcher) {
+        if (
+            !sourceNode.data.conditionData &&
+            !sourceNode.data.loopData &&
+            !sourceNode.data.mapData &&
+            !sourceNode.data.branchData &&
+            !sourceNode.data.forkJoinData &&
+            !sourceNode.data.onErrorData &&
+            !sourceNode.data.terminateData
+        ) {
+            return undefined;
+        }
+
+        return getContextFromTaskNodeData(targetNode.data as NodeDataType, 0);
+    }
+
+    return context;
+}
+
+export {getContextFromTaskNodeData, getContextFromPlaceholderNode};

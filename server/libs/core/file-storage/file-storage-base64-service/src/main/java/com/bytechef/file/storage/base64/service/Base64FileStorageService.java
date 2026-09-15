@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@
 package com.bytechef.file.storage.base64.service;
 
 import com.bytechef.commons.util.EncodingUtils;
+import com.bytechef.config.ApplicationProperties;
 import com.bytechef.file.storage.domain.FileEntry;
 import com.bytechef.file.storage.exception.FileStorageException;
 import com.bytechef.file.storage.service.FileStorageService;
@@ -24,65 +25,134 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.util.Set;
 
 /**
  * @author Ivica Cardic
  */
 public class Base64FileStorageService implements FileStorageService {
 
-    private static final String BASE_64 = "base64://";
+    public static final String URL_PREFIX = "base64://";
 
     public Base64FileStorageService() {
     }
 
     @Override
-    public void deleteFile(String directoryPath, FileEntry fileEntry) {
+    public void deleteFile(String directory, FileEntry fileEntry) {
     }
 
     @Override
-    public boolean fileExists(String directoryPath, FileEntry fileEntry) throws FileStorageException {
+    public boolean fileExists(String directory, FileEntry fileEntry) throws FileStorageException {
         return true;
     }
 
     @Override
-    public InputStream getFileStream(String directoryPath, FileEntry fileEntry) {
-        String url = fileEntry.getUrl();
-
-        return new ByteArrayInputStream(EncodingUtils.decodeBase64(url.replace(BASE_64, "")));
+    public boolean fileExists(String directory, String filename) throws FileStorageException {
+        throw new UnsupportedOperationException();
     }
 
     @Override
-    public byte[] readFileToBytes(String directoryPath, FileEntry fileEntry) throws FileStorageException {
-        String url = fileEntry.getUrl();
+    public long getContentLength(String directory, FileEntry fileEntry) throws FileStorageException {
+        String string = EncodingUtils.base64DecodeToString(stripUrlPrefix(fileEntry.getUrl()));
 
-        return EncodingUtils.decodeBase64(url.replace(BASE_64, ""));
+        byte[] bytes = string.getBytes(StandardCharsets.UTF_8);
+
+        return bytes.length;
     }
 
     @Override
-    public String readFileToString(String directoryPath, FileEntry fileEntry) throws FileStorageException {
-        String url = fileEntry.getUrl();
-
-        return EncodingUtils.decodeBase64ToString(url.replace(BASE_64, ""));
+    public FileEntry getFileEntry(String directory, String filename) throws FileStorageException {
+        throw new UnsupportedOperationException();
     }
 
     @Override
-    public FileEntry storeFileContent(String directoryPath, String fileName, byte[] data) throws FileStorageException {
-        return new FileEntry(
-            fileName, BASE_64 + EncodingUtils.encodeBase64ToString(data));
+    public Set<FileEntry> getFileEntries(String directory) throws FileStorageException {
+        throw new UnsupportedOperationException();
     }
 
     @Override
-    public FileEntry storeFileContent(String directoryPath, String fileName, String data) throws FileStorageException {
-        return new FileEntry(fileName, BASE_64 + EncodingUtils.encodeBase64ToString(data));
+    public URL getFileEntryURL(String directory, FileEntry fileEntry) {
+        throw new UnsupportedOperationException();
     }
 
     @Override
-    public FileEntry storeFileContent(String directoryPath, String fileName, InputStream inputStream) {
+    public InputStream getInputStream(String directory, FileEntry fileEntry) {
+        return new ByteArrayInputStream(EncodingUtils.base64Decode(stripUrlPrefix(fileEntry.getUrl())));
+    }
+
+    @Override
+    public OutputStream getOutputStream(String directory, FileEntry fileEntry) throws FileStorageException {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public byte[] readFileToBytes(String directory, FileEntry fileEntry) throws FileStorageException {
+        return EncodingUtils.base64Decode(stripUrlPrefix(fileEntry.getUrl()));
+    }
+
+    @Override
+    public String readFileToString(String directory, FileEntry fileEntry) throws FileStorageException {
+        return EncodingUtils.base64DecodeToString(stripUrlPrefix(fileEntry.getUrl()));
+    }
+
+    @Override
+    public String getType() {
+        return ApplicationProperties.FileStorage.Provider.JDBC.name();
+    }
+
+    @Override
+    public FileEntry storeFileContent(String directory, String filename, byte[] data) throws FileStorageException {
+        return new FileEntry(filename, URL_PREFIX + EncodingUtils.base64EncodeToString(data));
+    }
+
+    @Override
+    public FileEntry storeFileContent(String directory, String filename, byte[] data, boolean generateFilename)
+        throws FileStorageException {
+
+        return storeFileContent(directory, filename, data);
+    }
+
+    @Override
+    public FileEntry storeFileContent(String directory, String filename, String data) throws FileStorageException {
+        return new FileEntry(filename, URL_PREFIX + EncodingUtils.base64EncodeToString(data));
+    }
+
+    @Override
+    public FileEntry storeFileContent(String directory, String filename, String data, boolean generateFilename)
+        throws FileStorageException {
+
+        return storeFileContent(directory, filename, data);
+    }
+
+    @Override
+    public FileEntry storeFileContent(String directory, String filename, InputStream inputStream) {
         try {
-            return new FileEntry(fileName, BASE_64 + EncodingUtils.encodeBase64ToString(toByteArray(inputStream)));
+            return new FileEntry(
+                filename, URL_PREFIX + EncodingUtils.base64EncodeToString(toByteArray(inputStream)));
         } catch (IOException ioe) {
             throw new FileStorageException("Failed to store file", ioe);
         }
+    }
+
+    @Override
+    public FileEntry storeFileContent(
+        String directory, String filename, InputStream inputStream, boolean generateFilename)
+        throws FileStorageException {
+
+        return storeFileContent(directory, filename, inputStream);
+    }
+
+    private static String stripUrlPrefix(String url) {
+        if (url == null || !url.startsWith(URL_PREFIX)) {
+            throw new FileStorageException(
+                "FileEntry URL '%s' does not use the expected '%s' scheme; it was likely stored with a different file-storage provider (check bytechef.workflow.output-storage.provider)."
+                    .formatted(url, URL_PREFIX));
+        }
+
+        return url.substring(URL_PREFIX.length());
     }
 
     private byte[] toByteArray(InputStream inputStream) throws FileStorageException, IOException {

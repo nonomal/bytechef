@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
 
 package com.bytechef.component.copper.action;
 
-import static com.bytechef.component.copper.action.CopperCreateCompanyAction.POST_COMPANIES_CONTEXT_FUNCTION;
 import static com.bytechef.component.copper.constant.CopperConstants.ADDRESS;
 import static com.bytechef.component.copper.constant.CopperConstants.ASSIGNEE_ID;
 import static com.bytechef.component.copper.constant.CopperConstants.CATEGORY;
@@ -33,76 +32,71 @@ import static com.bytechef.component.copper.constant.CopperConstants.TAGS;
 import static com.bytechef.component.copper.constant.CopperConstants.URL;
 import static com.bytechef.component.copper.constant.CopperConstants.WEBSITES;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.mockito.ArgumentCaptor.forClass;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.bytechef.component.definition.ActionContext;
+import com.bytechef.component.definition.Context;
 import com.bytechef.component.definition.Context.Http;
-import java.util.HashMap;
+import com.bytechef.component.definition.Context.Http.Body;
+import com.bytechef.component.definition.Context.Http.Configuration;
+import com.bytechef.component.definition.Context.Http.Configuration.ConfigurationBuilder;
+import com.bytechef.component.definition.Context.Http.ResponseType;
+import com.bytechef.component.definition.Parameters;
+import com.bytechef.component.test.definition.MockParametersFactory;
+import com.bytechef.component.test.definition.extension.MockContextSetupExtension;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 
 /**
- * @author Monika Domiter
+ * @author Monika Kušter
  */
-class CopperCreateCompanyActionTest extends AbstractCopperActionTest {
+@ExtendWith(MockContextSetupExtension.class)
+class CopperCreateCompanyActionTest {
 
-    private static final List<Map<String, String>> phoneNumbers = List.of(Map.of(NUMBER, "1234", CATEGORY, "work"));
-    private static final List<Map<String, String>> socials = List.of(Map.of(URL, "url", CATEGORY, "youtube"));
-    private static final List<Map<String, String>> websites = List.of(Map.of(URL, "url", CATEGORY, "personal"));
+    private final ArgumentCaptor<Body> bodyArgumentCaptor = forClass(Body.class);
+    private final Object mockedObject = mock(Object.class);
+    private final Parameters mockedParameters = MockParametersFactory.create(Map.of(
+        NAME, "name", ASSIGNEE_ID, "assigneeId", EMAIL_DOMAIN, "emailDomain", DETAILS, "details",
+        CONTACT_TYPE_ID, "contactType", PHONE_NUMBERS, List.of(Map.of(NUMBER, "1234", CATEGORY, "work")), SOCIALS,
+        List.of(Map.of(URL, "url", CATEGORY, "youtube")), WEBSITES, List.of(Map.of(URL, "url", CATEGORY, "personal")),
+        ADDRESS, Map.of(STREET, "street", CITY, "city"), TAGS, List.of("tag1", "tag2")));
+    private final ArgumentCaptor<String> stringArgumentCaptor = forClass(String.class);
 
     @Test
-    void testPerform() {
-        Map<String, Object> propertyStubsMap = createPropertyStubsMap();
+    void testPerform(
+        ActionContext mockedContext, Http.Executor mockedExecutor, Http mockedHttp, Http.Response mockedResponse,
+        ArgumentCaptor<Context.ContextFunction<Http, Http.Executor>> httpFunctionArgumentCaptor,
+        ArgumentCaptor<ConfigurationBuilder> configurationBuilderArgumentCaptor) {
 
-        when(mockedParameters.getString(NAME))
-            .thenReturn((String) propertyStubsMap.get(NAME));
-        when(mockedParameters.getString(ASSIGNEE_ID))
-            .thenReturn((String) propertyStubsMap.get(ASSIGNEE_ID));
-        when(mockedParameters.getString(EMAIL_DOMAIN))
-            .thenReturn((String) propertyStubsMap.get(EMAIL_DOMAIN));
-        when(mockedParameters.getString(CONTACT_TYPE_ID))
-            .thenReturn((String) propertyStubsMap.get(CONTACT_TYPE_ID));
-        when(mockedParameters.getString(DETAILS))
-            .thenReturn((String) propertyStubsMap.get(DETAILS));
-        when((List<Map<String, String>>) mockedParameters.getList(PHONE_NUMBERS))
-            .thenReturn(phoneNumbers);
-        when((List<Map<String, String>>) mockedParameters.getList(SOCIALS))
-            .thenReturn(socials);
-        when((List<Map<String, String>>) mockedParameters.getList(WEBSITES))
-            .thenReturn(websites);
-        when(mockedParameters.get(ADDRESS))
-            .thenReturn(propertyStubsMap.get(ADDRESS));
-        when(mockedParameters.getList(TAGS, String.class))
-            .thenReturn((List<String>) propertyStubsMap.get(TAGS));
+        when(mockedHttp.post(stringArgumentCaptor.capture()))
+            .thenReturn(mockedExecutor);
+        when(mockedExecutor.body(bodyArgumentCaptor.capture()))
+            .thenReturn(mockedExecutor);
+        when(mockedResponse.getBody())
+            .thenReturn(mockedObject);
 
         Object result = CopperCreateCompanyAction.perform(mockedParameters, mockedParameters, mockedContext);
 
-        assertEquals(responeseMap, result);
+        assertEquals(mockedObject, result);
+        assertEquals("/companies", stringArgumentCaptor.getValue());
+        assertNotNull(httpFunctionArgumentCaptor.getValue());
 
-        verify(mockedContext, times(1)).http(POST_COMPANIES_CONTEXT_FUNCTION);
+        ConfigurationBuilder configurationBuilder = configurationBuilderArgumentCaptor.getValue();
+        Configuration configuration = configurationBuilder.build();
 
-        Http.Body body = bodyArgumentCaptor.getValue();
-
-        assertEquals(propertyStubsMap, body.getContent());
-
-    }
-
-    private static Map<String, Object> createPropertyStubsMap() {
-        Map<String, Object> propertyStubsMap = new HashMap<>();
-
-        propertyStubsMap.put(NAME, "name");
-        propertyStubsMap.put(ASSIGNEE_ID, "assigneeId");
-        propertyStubsMap.put(EMAIL_DOMAIN, "emailDomain");
-        propertyStubsMap.put(DETAILS, "details");
-        propertyStubsMap.put(CONTACT_TYPE_ID, "contactType");
-        propertyStubsMap.put(PHONE_NUMBERS, phoneNumbers);
-        propertyStubsMap.put(SOCIALS, socials);
-        propertyStubsMap.put(WEBSITES, websites);
-        propertyStubsMap.put(ADDRESS, Map.of(STREET, "street", CITY, "city"));
-        propertyStubsMap.put(TAGS, List.of("tag1", "tag2"));
-
-        return propertyStubsMap;
+        assertEquals(ResponseType.JSON, configuration.getResponseType());
+        assertEquals(
+            Body.of(NAME, "name", ASSIGNEE_ID, "assigneeId", EMAIL_DOMAIN, "emailDomain", DETAILS, "details",
+                CONTACT_TYPE_ID, "contactType", PHONE_NUMBERS, List.of(Map.of(NUMBER, "1234", CATEGORY, "work")),
+                SOCIALS, List.of(Map.of(URL, "url", CATEGORY, "youtube")), WEBSITES,
+                List.of(Map.of(URL, "url", CATEGORY, "personal")),
+                ADDRESS, Map.of(STREET, "street", CITY, "city"), TAGS, List.of("tag1", "tag2")),
+            bodyArgumentCaptor.getValue());
     }
 }

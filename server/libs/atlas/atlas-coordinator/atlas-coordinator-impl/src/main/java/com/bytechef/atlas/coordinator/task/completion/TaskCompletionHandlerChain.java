@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * Modifications copyright (C) 2023 ByteChef Inc.
+ * Modifications copyright (C) 2025 ByteChef
  */
 
 package com.bytechef.atlas.coordinator.task.completion;
@@ -32,6 +32,10 @@ public class TaskCompletionHandlerChain implements TaskCompletionHandler {
     @Override
     public void handle(TaskExecution taskExecution) {
         for (TaskCompletionHandler taskCompletionHandler : taskCompletionHandlers) {
+            if (taskExecution.isHandled()) {
+                return;
+            }
+
             if (taskCompletionHandler.canHandle(taskExecution)) {
                 taskCompletionHandler.handle(taskExecution);
             }

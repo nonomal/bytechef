@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -52,14 +52,13 @@ public class ParallelTaskDispatcherConfiguration {
 
     @Bean("parallelTaskCompletionHandlerFactory_v1")
     TaskCompletionHandlerFactory parallelTaskCompletionHandlerFactory() {
-        return (taskCompletionHandler, taskDispatcher) -> new ParallelTaskCompletionHandler(counterService,
-            taskCompletionHandler, taskExecutionService);
+        return (taskCompletionHandler, taskDispatcher) -> new ParallelTaskCompletionHandler(
+            counterService, taskCompletionHandler, taskExecutionService);
     }
 
     @Bean("parallelTaskDispatcherResolverFactory_v1")
     TaskDispatcherResolverFactory parallelTaskDispatcherResolverFactory() {
         return (taskDispatcher) -> new ParallelTaskDispatcher(
-            eventPublisher, contextService, counterService, taskDispatcher, taskExecutionService,
-            taskFileStorage);
+            contextService, counterService, eventPublisher, taskDispatcher, taskExecutionService, taskFileStorage);
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,62 +16,60 @@
 
 package com.bytechef.component.shopify.trigger;
 
-import static com.bytechef.component.definition.ComponentDSL.ModifiableTriggerDefinition;
-import static com.bytechef.component.definition.ComponentDSL.object;
-import static com.bytechef.component.definition.ComponentDSL.trigger;
+import static com.bytechef.component.definition.ComponentDsl.trigger;
 import static com.bytechef.component.shopify.constant.ShopifyConstants.ID;
-import static com.bytechef.component.shopify.constant.ShopifyConstants.NEW_CANCELLED_ORDER;
+import static com.bytechef.component.shopify.util.ShopifyTriggerUtils.subscribeWebhook;
+import static com.bytechef.component.shopify.util.ShopifyTriggerUtils.unsubscribeWebhook;
 
+import com.bytechef.component.definition.ComponentDsl.ModifiableTriggerDefinition;
 import com.bytechef.component.definition.Parameters;
 import com.bytechef.component.definition.TriggerContext;
-import com.bytechef.component.definition.TriggerDefinition.DynamicWebhookEnableOutput;
 import com.bytechef.component.definition.TriggerDefinition.HttpHeaders;
 import com.bytechef.component.definition.TriggerDefinition.HttpParameters;
 import com.bytechef.component.definition.TriggerDefinition.TriggerType;
 import com.bytechef.component.definition.TriggerDefinition.WebhookBody;
+import com.bytechef.component.definition.TriggerDefinition.WebhookEnableOutput;
 import com.bytechef.component.definition.TriggerDefinition.WebhookMethod;
-import com.bytechef.component.shopify.property.ShopifyOrderProperties;
-import com.bytechef.component.shopify.util.ShopifyUtils;
 import java.util.Map;
 
 /**
  * @author Monika Domiter
+ * @author Nikolina Spehar
  */
 public class ShopifyNewCancelledOrderTrigger {
 
-    public static final ModifiableTriggerDefinition TRIGGER_DEFINITION = trigger(NEW_CANCELLED_ORDER)
+    public static final ModifiableTriggerDefinition TRIGGER_DEFINITION = trigger("newCancelledOrder")
         .title("New Cancelled Order")
         .description("Triggers when order is cancelled.")
         .type(TriggerType.DYNAMIC_WEBHOOK)
-        .outputSchema(object().properties(ShopifyOrderProperties.PROPERTIES))
-        .dynamicWebhookEnable(ShopifyNewCancelledOrderTrigger::dynamicWebhookEnable)
-        .dynamicWebhookDisable(ShopifyNewCancelledOrderTrigger::dynamicWebhookDisable)
-        .dynamicWebhookRequest(ShopifyNewCancelledOrderTrigger::dynamicWebhookRequest);
+        .help("", "https://docs.bytechef.io/reference/components/shopify_v1#new-cancelled-order")
+        .output()
+        .webhookEnable(ShopifyNewCancelledOrderTrigger::webhookEnable)
+        .webhookDisable(ShopifyNewCancelledOrderTrigger::webhookDisable)
+        .webhookRequest(ShopifyNewCancelledOrderTrigger::webhookRequest);
 
     private ShopifyNewCancelledOrderTrigger() {
     }
 
-    protected static DynamicWebhookEnableOutput dynamicWebhookEnable(
+    protected static WebhookEnableOutput webhookEnable(
         Parameters inputParameters, Parameters connectionParameters, String webhookUrl,
         String workflowExecutionId, TriggerContext context) {
 
-        return new DynamicWebhookEnableOutput(
-            Map.of(ID, ShopifyUtils.subscribeWebhook(connectionParameters, webhookUrl, context, "orders/cancelled")),
+        return new WebhookEnableOutput(Map.of(ID, subscribeWebhook(webhookUrl, "ORDERS_CANCELLED", context)),
             null);
     }
 
-    protected static void dynamicWebhookDisable(
+    protected static void webhookDisable(
         Parameters inputParameters, Parameters connectionParameters, Parameters outputParameters,
         String workflowExecutionId, TriggerContext context) {
 
-        ShopifyUtils.unsubscribeWebhook(connectionParameters, outputParameters, context);
+        unsubscribeWebhook(outputParameters, context);
     }
 
-    protected static Object dynamicWebhookRequest(
+    protected static Object webhookRequest(
         Parameters inputParameters, Parameters connectionParameters, HttpHeaders headers, HttpParameters parameters,
-        WebhookBody body, WebhookMethod method, DynamicWebhookEnableOutput output, TriggerContext context) {
+        WebhookBody body, WebhookMethod method, Parameters output, TriggerContext context) {
 
         return body.getContent();
     }
-
 }

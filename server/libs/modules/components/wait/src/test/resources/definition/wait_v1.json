@@ -1,0 +1,440 @@
+{
+  "actions": [ {
+    "batch": null,
+    "beforeResume": null,
+    "beforeSuspend": null,
+    "beforeTimeoutResume": null,
+    "deprecated": null,
+    "description": "Pauses the workflow execution for a specified amount of time.",
+    "help": null,
+    "metadata": null,
+    "name": "afterTimeInterval",
+    "outputDefinition": {
+      "output": { },
+      "outputResponse": null,
+      "outputSchema": null,
+      "sampleOutput": null
+    },
+    "perform": { },
+    "processErrorResponse": null,
+    "properties": [ {
+      "advancedOption": null,
+      "controlType": "INTEGER",
+      "defaultValue": 1,
+      "description": "The amount of time to wait.",
+      "displayCondition": null,
+      "exampleValue": null,
+      "expressionEnabled": null,
+      "hidden": null,
+      "label": "Amount",
+      "maxValue": null,
+      "metadata": { },
+      "minValue": null,
+      "name": "amount",
+      "options": null,
+      "optionsDataSource": null,
+      "placeholder": null,
+      "required": true,
+      "type": "INTEGER"
+    }, {
+      "advancedOption": null,
+      "controlType": "SELECT",
+      "defaultValue": "MINUTES",
+      "description": "The unit of time.",
+      "displayCondition": null,
+      "exampleValue": null,
+      "expressionEnabled": null,
+      "hidden": null,
+      "label": "Unit",
+      "languageId": null,
+      "maxLength": null,
+      "metadata": { },
+      "minLength": null,
+      "name": "unit",
+      "options": [ {
+        "description": null,
+        "label": "Seconds",
+        "value": "SECONDS"
+      }, {
+        "description": null,
+        "label": "Minutes",
+        "value": "MINUTES"
+      }, {
+        "description": null,
+        "label": "Hours",
+        "value": "HOURS"
+      }, {
+        "description": null,
+        "label": "Days",
+        "value": "DAYS"
+      } ],
+      "optionsDataSource": null,
+      "optionsLoadedDynamically": null,
+      "placeholder": null,
+      "regex": null,
+      "required": true,
+      "type": "STRING"
+    } ],
+    "resumePerform": { },
+    "title": "After Time Interval",
+    "workflowNodeDescription": null
+  }, {
+    "batch": null,
+    "beforeResume": null,
+    "beforeSuspend": null,
+    "beforeTimeoutResume": null,
+    "deprecated": null,
+    "description": "Pauses the workflow execution until a specified date and time.",
+    "help": null,
+    "metadata": null,
+    "name": "atSpecifiedTime",
+    "outputDefinition": {
+      "output": { },
+      "outputResponse": null,
+      "outputSchema": null,
+      "sampleOutput": null
+    },
+    "perform": { },
+    "processErrorResponse": null,
+    "properties": [ {
+      "additionalProperties": null,
+      "advancedOption": null,
+      "controlType": "OBJECT_BUILDER",
+      "defaultValue": null,
+      "description": null,
+      "displayCondition": null,
+      "exampleValue": null,
+      "expressionEnabled": null,
+      "hidden": null,
+      "label": null,
+      "metadata": { },
+      "multipleValues": null,
+      "name": "data",
+      "options": null,
+      "optionsDataSource": null,
+      "placeholder": null,
+      "properties": [ {
+        "advancedOption": null,
+        "controlType": "DATE_TIME",
+        "defaultValue": null,
+        "description": "The date and time to wait until before resuming workflow execution.",
+        "displayCondition": null,
+        "exampleValue": null,
+        "expressionEnabled": null,
+        "hidden": null,
+        "label": "Date and Time",
+        "metadata": { },
+        "name": "dateTime",
+        "options": null,
+        "optionsDataSource": null,
+        "placeholder": null,
+        "required": true,
+        "type": "DATE_TIME"
+      }, {
+        "advancedOption": null,
+        "controlType": "SELECT",
+        "defaultValue": null,
+        "description": "The timezone in which the specified date and time should be interpreted.",
+        "displayCondition": null,
+        "exampleValue": null,
+        "expressionEnabled": null,
+        "hidden": null,
+        "label": "Timezone",
+        "languageId": null,
+        "maxLength": null,
+        "metadata": { },
+        "minLength": null,
+        "name": "timezone",
+        "options": [ {
+          "description": null,
+          "label": "GMT+00:00",
+          "value": "Etc/GMT+0"
+        }, {
+          "description": null,
+          "label": "GMT+01:00",
+          "value": "Etc/GMT-1"
+        }, {
+          "description": null,
+          "label": "GMT+02:00",
+          "value": "Etc/GMT-2"
+        }, {
+          "description": null,
+          "label": "GMT+03:00",
+          "value": "Etc/GMT-3"
+        }, {
+          "description": null,
+          "label": "GMT+04:00",
+          "value": "Etc/GMT-4"
+        }, {
+          "description": null,
+          "label": "GMT+05:00",
+          "value": "Etc/GMT-5"
+        }, {
+          "description": null,
+          "label": "GMT+06:00",
+          "value": "Etc/GMT-6"
+        }, {
+          "description": null,
+          "label": "GMT+07:00",
+          "value": "Etc/GMT-7"
+        }, {
+          "description": null,
+          "label": "GMT+08:00",
+          "value": "Etc/GMT-8"
+        }, {
+          "description": null,
+          "label": "GMT+09:00",
+          "value": "Etc/GMT-9"
+        }, {
+          "description": null,
+          "label": "GMT+10:00",
+          "value": "Etc/GMT-10"
+        }, {
+          "description": null,
+          "label": "GMT+11:00",
+          "value": "Etc/GMT-11"
+        }, {
+          "description": null,
+          "label": "GMT+12:00",
+          "value": "Etc/GMT-12"
+        }, {
+          "description": null,
+          "label": "GMT+13:00",
+          "value": "Etc/GMT-13"
+        }, {
+          "description": null,
+          "label": "GMT+14:00",
+          "value": "Etc/GMT-14"
+        }, {
+          "description": null,
+          "label": "GMT-01:00",
+          "value": "Etc/GMT+1"
+        }, {
+          "description": null,
+          "label": "GMT-02:00",
+          "value": "Etc/GMT+2"
+        }, {
+          "description": null,
+          "label": "GMT-03:00",
+          "value": "Etc/GMT+3"
+        }, {
+          "description": null,
+          "label": "GMT-04:00",
+          "value": "Etc/GMT+4"
+        }, {
+          "description": null,
+          "label": "GMT-05:00",
+          "value": "Etc/GMT+5"
+        }, {
+          "description": null,
+          "label": "GMT-06:00",
+          "value": "Etc/GMT+6"
+        }, {
+          "description": null,
+          "label": "GMT-07:00",
+          "value": "Etc/GMT+7"
+        }, {
+          "description": null,
+          "label": "GMT-08:00",
+          "value": "Etc/GMT+8"
+        }, {
+          "description": null,
+          "label": "GMT-09:00",
+          "value": "Etc/GMT+9"
+        }, {
+          "description": null,
+          "label": "GMT-10:00",
+          "value": "Etc/GMT+10"
+        }, {
+          "description": null,
+          "label": "GMT-11:00",
+          "value": "Etc/GMT+11"
+        }, {
+          "description": null,
+          "label": "GMT-12:00",
+          "value": "Etc/GMT+12"
+        } ],
+        "optionsDataSource": null,
+        "optionsLoadedDynamically": null,
+        "placeholder": null,
+        "regex": null,
+        "required": true,
+        "type": "STRING"
+      } ],
+      "required": false,
+      "type": "OBJECT"
+    }, {
+      "advancedOption": null,
+      "controlType": "SELECT",
+      "defaultValue": null,
+      "description": "Whether the workflow was resumed by a webhook call.",
+      "displayCondition": null,
+      "exampleValue": null,
+      "expressionEnabled": null,
+      "hidden": null,
+      "label": null,
+      "metadata": { },
+      "name": "resumed",
+      "options": [ {
+        "description": null,
+        "label": "True",
+        "value": true
+      }, {
+        "description": null,
+        "label": "False",
+        "value": false
+      } ],
+      "placeholder": null,
+      "required": false,
+      "type": "BOOLEAN"
+    } ],
+    "resumePerform": { },
+    "title": "At Specified Time",
+    "workflowNodeDescription": null
+  }, {
+    "batch": null,
+    "beforeResume": null,
+    "beforeSuspend": { },
+    "beforeTimeoutResume": null,
+    "deprecated": null,
+    "description": "Suspends the workflow execution until a webhook call is received. An external service can resume the workflow by calling the webhook URL.",
+    "help": {
+      "body": "",
+      "learnMoreUrl": "https://docs.bytechef.io/reference/components/wait_v1#on-web-hook-call"
+    },
+    "metadata": null,
+    "name": "onWebhookCall",
+    "outputDefinition": {
+      "output": { },
+      "outputResponse": null,
+      "outputSchema": null,
+      "sampleOutput": null
+    },
+    "perform": { },
+    "processErrorResponse": null,
+    "properties": [ {
+      "advancedOption": null,
+      "controlType": "TEXT",
+      "defaultValue": null,
+      "description": "The URL of the external service to notify with the webhook resume URL when the workflow is suspended.",
+      "displayCondition": null,
+      "exampleValue": null,
+      "expressionEnabled": null,
+      "hidden": null,
+      "label": "Service URL",
+      "languageId": null,
+      "maxLength": null,
+      "metadata": { },
+      "minLength": null,
+      "name": "serviceUrl",
+      "options": null,
+      "optionsDataSource": null,
+      "optionsLoadedDynamically": null,
+      "placeholder": null,
+      "regex": null,
+      "required": true,
+      "type": "STRING"
+    }, {
+      "advancedOption": null,
+      "controlType": "JSON_SCHEMA_BUILDER",
+      "defaultValue": null,
+      "description": "JSON schema defining the structure of the body submitted by the external service when resuming the workflow via the webhook URL.",
+      "displayCondition": null,
+      "exampleValue": null,
+      "expressionEnabled": null,
+      "hidden": null,
+      "label": "Data Schema",
+      "languageId": null,
+      "maxLength": null,
+      "metadata": { },
+      "minLength": null,
+      "name": "data",
+      "options": null,
+      "optionsDataSource": null,
+      "optionsLoadedDynamically": null,
+      "placeholder": null,
+      "regex": null,
+      "required": false,
+      "type": "STRING"
+    }, {
+      "advancedOption": null,
+      "controlType": "INTEGER",
+      "defaultValue": 30,
+      "description": "The amount of time to wait for the webhook call before the workflow times out.",
+      "displayCondition": null,
+      "exampleValue": null,
+      "expressionEnabled": null,
+      "hidden": null,
+      "label": "Expires After Amount",
+      "maxValue": null,
+      "metadata": { },
+      "minValue": null,
+      "name": "amount",
+      "options": null,
+      "optionsDataSource": null,
+      "placeholder": null,
+      "required": true,
+      "type": "INTEGER"
+    }, {
+      "advancedOption": null,
+      "controlType": "SELECT",
+      "defaultValue": "DAYS",
+      "description": "The unit of time for the expiration.",
+      "displayCondition": null,
+      "exampleValue": null,
+      "expressionEnabled": null,
+      "hidden": null,
+      "label": "Expires After Unit",
+      "languageId": null,
+      "maxLength": null,
+      "metadata": { },
+      "minLength": null,
+      "name": "unit",
+      "options": [ {
+        "description": null,
+        "label": "Seconds",
+        "value": "SECONDS"
+      }, {
+        "description": null,
+        "label": "Minutes",
+        "value": "MINUTES"
+      }, {
+        "description": null,
+        "label": "Hours",
+        "value": "HOURS"
+      }, {
+        "description": null,
+        "label": "Days",
+        "value": "DAYS"
+      } ],
+      "optionsDataSource": null,
+      "optionsLoadedDynamically": null,
+      "placeholder": null,
+      "regex": null,
+      "required": true,
+      "type": "STRING"
+    } ],
+    "resumePerform": { },
+    "title": "On Webhook Call",
+    "workflowNodeDescription": null
+  } ],
+  "clusterElements": null,
+  "componentCategories": [ {
+    "name": "helpers",
+    "label": "Helpers"
+  } ],
+  "connection": null,
+  "customAction": null,
+  "customActionHelp": null,
+  "description": "Pauses the workflow execution for a specified amount of time or until a webhook call is received.",
+  "icon": "path:assets/wait.svg",
+  "inputs": null,
+  "metadata": null,
+  "name": "wait",
+  "resources": null,
+  "tags": null,
+  "title": "Wait",
+  "triggers": null,
+  "unifiedApi": null,
+  "version": 1
+}

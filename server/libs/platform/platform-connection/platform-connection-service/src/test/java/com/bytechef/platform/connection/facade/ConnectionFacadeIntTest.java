@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,30 +16,28 @@
 
 package com.bytechef.platform.connection.facade;
 
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
-import com.bytechef.atlas.configuration.service.WorkflowService;
 import com.bytechef.commons.util.CollectionUtils;
 import com.bytechef.commons.util.OptionalUtils;
 import com.bytechef.component.definition.Authorization;
+import com.bytechef.component.definition.Authorization.AuthorizationType;
+import com.bytechef.component.definition.Help;
 import com.bytechef.component.definition.Property;
-import com.bytechef.platform.component.registry.domain.ConnectionDefinition;
-import com.bytechef.platform.component.registry.facade.ConnectionDefinitionFacade;
-import com.bytechef.platform.component.registry.service.ConnectionDefinitionService;
-import com.bytechef.platform.configuration.facade.WorkflowConnectionFacade;
-import com.bytechef.platform.configuration.instance.accessor.InstanceAccessor;
-import com.bytechef.platform.configuration.service.WorkflowTestConfigurationService;
+import com.bytechef.platform.component.domain.ConnectionDefinition;
+import com.bytechef.platform.component.service.ConnectionDefinitionService;
+import com.bytechef.platform.configuration.domain.Environment;
 import com.bytechef.platform.connection.config.ConnectionIntTestConfiguration;
+import com.bytechef.platform.connection.config.ConnectionIntTestConfigurationSharedMocks;
 import com.bytechef.platform.connection.domain.Connection;
-import com.bytechef.platform.connection.domain.ConnectionEnvironment;
 import com.bytechef.platform.connection.dto.ConnectionDTO;
 import com.bytechef.platform.connection.repository.ConnectionRepository;
-import com.bytechef.platform.constant.AppType;
-import com.bytechef.platform.oauth2.service.OAuth2Service;
+import com.bytechef.platform.constant.PlatformType;
 import com.bytechef.platform.tag.domain.Tag;
 import com.bytechef.platform.tag.repository.TagRepository;
+import com.bytechef.platform.workflow.execution.accessor.JobPrincipalAccessor;
 import com.bytechef.test.config.testcontainers.PostgreSQLContainerConfiguration;
 import java.util.List;
 import java.util.Map;
@@ -53,7 +51,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Import;
@@ -67,6 +64,7 @@ import org.springframework.context.annotation.Import;
         "spring.application.name=server-app"
     })
 @Import(PostgreSQLContainerConfiguration.class)
+@ConnectionIntTestConfigurationSharedMocks
 public class ConnectionFacadeIntTest {
 
     @Autowired
@@ -89,60 +87,62 @@ public class ConnectionFacadeIntTest {
 
     @BeforeEach
     public void beforeEach() {
-        when(connectionDefinitionService.getConnectionDefinition(anyString(), anyInt()))
+        when(connectionDefinitionService.getConnectionConnectionDefinition(eq("componentName"), eq(1)))
             .thenReturn(new ConnectionDefinition(new MockConnectionDefinition(), "componentName", null, null));
     }
 
     @Test
     public void testCreate() {
         ConnectionDTO connectionDTO = ConnectionDTO.builder()
+            .authorizationType(AuthorizationType.BASIC_AUTH)
             .componentName("componentName")
-            .environment(ConnectionEnvironment.TEST)
+            .connectionVersion(1)
+            .environmentId(Environment.STAGING.ordinal())
             .name("name1")
             .tags(List.of(new Tag("tag1")))
             .build();
 
-        connectionDTO = connectionFacade.create(connectionDTO, AppType.AUTOMATION);
+        long connectionId = connectionFacade.create(connectionDTO, PlatformType.AUTOMATION);
 
-        Assertions.assertThat(connectionDTO.name())
-            .isEqualTo("name1");
-        Assertions.assertThat(connectionDTO.id())
-            .isNotNull();
-        Assertions.assertThat(connectionDTO.tags())
-            .hasSize(1);
+        Assertions.assertThat(connectionId)
+            .isEqualTo(1055L);
     }
 
     @Test
     public void testDelete() {
         ConnectionDTO connectionDTO1 = ConnectionDTO.builder()
+            .authorizationType(AuthorizationType.BASIC_AUTH)
             .componentName("componentName")
-            .environment(ConnectionEnvironment.TEST)
+            .connectionVersion(1)
+            .environmentId(Environment.STAGING.ordinal())
             .name("name1")
             .tags(List.of(new Tag("tag1")))
             .build();
 
-        connectionDTO1 = connectionFacade.create(connectionDTO1, AppType.AUTOMATION);
+        long connectionId1 = connectionFacade.create(connectionDTO1, PlatformType.AUTOMATION);
 
         ConnectionDTO connectionDTO2 = ConnectionDTO.builder()
+            .authorizationType(AuthorizationType.BASIC_AUTH)
             .componentName("componentName")
-            .environment(ConnectionEnvironment.TEST)
+            .connectionVersion(1)
+            .environmentId(Environment.STAGING.ordinal())
             .name("name2")
             .tags(List.of(new Tag("tag1")))
             .build();
 
-        connectionDTO2 = connectionFacade.create(connectionDTO2, AppType.AUTOMATION);
+        long connectionId2 = connectionFacade.create(connectionDTO2, PlatformType.AUTOMATION);
 
         Assertions.assertThat(connectionRepository.count())
             .isEqualTo(2);
         Assertions.assertThat(tagRepository.count())
             .isEqualTo(1);
 
-        connectionFacade.delete(connectionDTO1.id());
+        connectionFacade.delete(connectionId1);
 
         Assertions.assertThat(connectionRepository.count())
             .isEqualTo(1);
 
-        connectionFacade.delete(connectionDTO2.id());
+        connectionFacade.delete(connectionId2);
 
         Assertions.assertThat(connectionRepository.count())
             .isEqualTo(0);
@@ -156,7 +156,7 @@ public class ConnectionFacadeIntTest {
 
         connection.setComponentName("componentName");
         connection.setName("name");
-        connection.setType(AppType.AUTOMATION);
+        connection.setType(PlatformType.AUTOMATION);
 
         Tag tag1 = tagRepository.save(new Tag("tag1"));
         Tag tag2 = tagRepository.save(new Tag("tag2"));
@@ -165,10 +165,67 @@ public class ConnectionFacadeIntTest {
 
         connection = connectionRepository.save(connection);
 
+        when(connectionDefinitionService.executeBaseUri(eq("componentName"), any()))
+            .thenReturn(Optional.of("baseUri"));
+
         Assertions.assertThat(connectionFacade.getConnection(connection.getId()))
+            .hasFieldOrPropertyWithValue("baseUri", "baseUri")
             .hasFieldOrPropertyWithValue("componentName", "componentName")
             .hasFieldOrPropertyWithValue("name", "name")
             .hasFieldOrPropertyWithValue("tags", List.of(tag1, tag2));
+    }
+
+    @Test
+    public void testGetConnectionWhenExecuteBaseUriThrowsException() {
+        Connection connection = new Connection();
+
+        connection.setComponentName("componentName");
+        connection.setName("name");
+        connection.setType(PlatformType.AUTOMATION);
+
+        Tag tag1 = tagRepository.save(new Tag("tag1"));
+        Tag tag2 = tagRepository.save(new Tag("tag2"));
+
+        connection.setTags(List.of(tag1, tag2));
+
+        connection = connectionRepository.save(connection);
+
+        when(connectionDefinitionService.executeBaseUri(eq("componentName"), any()))
+            .thenThrow(new IllegalStateException("Connection failed"));
+
+        ConnectionDTO result = connectionFacade.getConnection(connection.getId());
+
+        Assertions.assertThat(result)
+            .isNotNull()
+            .hasFieldOrPropertyWithValue("baseUri", null)
+            .hasFieldOrPropertyWithValue("componentName", "componentName")
+            .hasFieldOrPropertyWithValue("name", "name")
+            .hasFieldOrPropertyWithValue("tags", List.of(tag1, tag2));
+    }
+
+    @Test
+    public void testGetConnectionWhenExecuteBaseUriThrowsNullPointerException() {
+        Connection connection = new Connection();
+
+        connection.setComponentName("componentName");
+        connection.setName("name");
+        connection.setType(PlatformType.AUTOMATION);
+
+        connection = connectionRepository.save(connection);
+
+        // Reproduces the OAuth2-without-token regression: the component's baseUri lambda calls
+        // getRequiredString(ACCESS_TOKEN) on a connection whose token hasn't been issued yet,
+        // and Validate.notNull throws NullPointerException — which must not crash the list view.
+        when(connectionDefinitionService.executeBaseUri(eq("componentName"), any()))
+            .thenThrow(new NullPointerException("Unknown value for : access_token"));
+
+        ConnectionDTO result = connectionFacade.getConnection(connection.getId());
+
+        Assertions.assertThat(result)
+            .isNotNull()
+            .hasFieldOrPropertyWithValue("baseUri", null)
+            .hasFieldOrPropertyWithValue("componentName", "componentName")
+            .hasFieldOrPropertyWithValue("name", "name");
     }
 
     @Test
@@ -177,7 +234,7 @@ public class ConnectionFacadeIntTest {
 
         connection.setComponentName("componentName");
         connection.setName("name");
-        connection.setType(AppType.AUTOMATION);
+        connection.setType(PlatformType.AUTOMATION);
 
         Tag tag1 = tagRepository.save(new Tag("tag1"));
         Tag tag2 = tagRepository.save(new Tag("tag2"));
@@ -186,18 +243,33 @@ public class ConnectionFacadeIntTest {
 
         connection = connectionRepository.save(connection);
 
-        List<ConnectionDTO> connectionDTOs =
-            connectionFacade.getConnections(null, null, null, null, AppType.AUTOMATION);
+        List<ConnectionDTO> connectionDTOs = connectionFacade.getConnections(
+            null, null, List.of(), null, null, PlatformType.AUTOMATION);
 
-        Assertions.assertThat(
-            CollectionUtils.map(connectionDTOs, ConnectionDTO::toConnection))
+        Assertions.assertThat(CollectionUtils.map(connectionDTOs, ConnectionDTO::toConnection))
             .isEqualTo(List.of(connection));
 
-        ConnectionDTO connectionDTO = connectionDTOs.get(0);
+        ConnectionDTO connectionDTO = connectionDTOs.getFirst();
 
         Assertions.assertThat(connectionFacade.getConnection(connection.getId()))
             .isEqualTo(connectionDTO)
             .hasFieldOrPropertyWithValue("tags", List.of(tag1, tag2));
+
+        when(connectionDefinitionService.getConnectionConnectionDefinition(eq("componentName2"), eq(1)))
+            .thenThrow(new IllegalArgumentException("componentName2 not found"));
+
+        Connection connection2 = new Connection();
+
+        connection2.setComponentName("componentName2");
+        connection2.setName("name");
+        connection2.setType(PlatformType.AUTOMATION);
+
+        connectionRepository.save(connection2);
+
+        connectionDTOs = connectionFacade.getConnections(null, null, List.of(), null, null, PlatformType.AUTOMATION);
+
+        Assertions.assertThat(CollectionUtils.map(connectionDTOs, ConnectionDTO::toConnection))
+            .isEqualTo(List.of(connection));
     }
 
     @Test
@@ -210,11 +282,11 @@ public class ConnectionFacadeIntTest {
         connection.setComponentName("componentName");
         connection.setName("name");
         connection.setTags(List.of(tag1, tag2));
-        connection.setType(AppType.AUTOMATION);
+        connection.setType(PlatformType.AUTOMATION);
 
         connectionRepository.save(connection);
 
-        Assertions.assertThat(connectionFacade.getConnectionTags(AppType.AUTOMATION)
+        Assertions.assertThat(connectionFacade.getConnectionTags(PlatformType.AUTOMATION)
             .stream()
             .map(Tag::getName)
             .collect(Collectors.toSet()))
@@ -224,7 +296,7 @@ public class ConnectionFacadeIntTest {
 
         connection.setComponentName("componentName");
         connection.setName("name2");
-        connection.setType(AppType.AUTOMATION);
+        connection.setType(PlatformType.AUTOMATION);
 
         tag1 = OptionalUtils.get(tagRepository.findById(Validate.notNull(tag1.getId(), "id")));
 
@@ -232,7 +304,7 @@ public class ConnectionFacadeIntTest {
 
         connectionRepository.save(connection);
 
-        Assertions.assertThat(connectionFacade.getConnectionTags(AppType.AUTOMATION)
+        Assertions.assertThat(connectionFacade.getConnectionTags(PlatformType.AUTOMATION)
             .stream()
             .map(Tag::getName)
             .collect(Collectors.toSet()))
@@ -240,7 +312,7 @@ public class ConnectionFacadeIntTest {
 
         connectionRepository.deleteById(Validate.notNull(connection.getId(), "id"));
 
-        Assertions.assertThat(connectionFacade.getConnectionTags(AppType.AUTOMATION)
+        Assertions.assertThat(connectionFacade.getConnectionTags(PlatformType.AUTOMATION)
             .stream()
             .map(Tag::getName)
             .collect(Collectors.toSet()))
@@ -252,59 +324,36 @@ public class ConnectionFacadeIntTest {
         Tag tag1 = new Tag("tag1");
 
         ConnectionDTO connectionDTO = ConnectionDTO.builder()
+            .authorizationType(AuthorizationType.BASIC_AUTH)
             .componentName("componentName")
-            .environment(ConnectionEnvironment.TEST)
+            .connectionVersion(1)
+            .environmentId(Environment.STAGING.ordinal())
             .name("name")
             .tags(List.of(tag1, tagRepository.save(new Tag("tag2"))))
             .build();
 
-        connectionDTO = connectionFacade.create(connectionDTO, AppType.AUTOMATION);
+        connectionDTO = connectionFacade.getConnection(connectionFacade.create(connectionDTO, PlatformType.AUTOMATION));
 
         Assertions.assertThat(connectionDTO.tags())
             .hasSize(2);
 
-        connectionDTO = ConnectionDTO.builder()
-            .componentName("componentName")
-            .environment(ConnectionEnvironment.TEST)
-            .id(connectionDTO.id())
-            .name("name")
-            .tags(List.of(tag1))
-            .version(connectionDTO.version())
-            .build();
+        connectionFacade.update(connectionDTO.id(), "name", List.of(tag1), connectionDTO.version());
 
-        connectionDTO = connectionFacade.update(connectionDTO);
+        connectionDTO = connectionFacade.getConnection(connectionDTO.id());
 
         Assertions.assertThat(connectionDTO.tags())
             .hasSize(1);
     }
 
     @ComponentScan(basePackages = {
-        "com.bytechef.platform.configuration.instance.accessor", "com.bytechef.platform.tag"
+        "com.bytechef.platform.configuration.accessor", "com.bytechef.platform.tag"
     })
     @TestConfiguration
     public static class ConnectionFacadeIntTestConfiguration {
 
-        @MockBean
-        ConnectionDefinitionFacade connectionDefinitionFacade;
-
-        @MockBean
-        ConnectionDefinitionService connectionDefinitionService;
-
-        @MockBean
-        private OAuth2Service oAuth2Service;
-
-        @MockBean
-        WorkflowService workflowService;
-
-        @MockBean
-        WorkflowConnectionFacade workflowConnectionFacade;
-
-        @MockBean
-        WorkflowTestConfigurationService workflowTestConfigurationService;
-
         @Bean
-        InstanceAccessor instanceAccessor() {
-            return new InstanceAccessor() {
+        JobPrincipalAccessor jobPrincipalAccessor() {
+            return new JobPrincipalAccessor() {
 
                 @Override
                 public boolean isConnectionUsed(long connectionId) {
@@ -312,22 +361,42 @@ public class ConnectionFacadeIntTest {
                 }
 
                 @Override
-                public boolean isWorkflowEnabled(long instanceId, String workflowReferenceCode) {
+                public boolean isWorkflowEnabled(long jobPrincipalId, String workflowUuid) {
                     return false;
                 }
 
                 @Override
-                public Map<String, ?> getInputMap(long instanceId, String workflowReferenceCode) {
+                public long getEnvironmentId(long jobPrincipalId) {
+                    return 0;
+                }
+
+                @Override
+                public Map<String, ?> getInputMap(long jobPrincipalId, String workflowUuid) {
                     return Map.of();
                 }
 
                 @Override
-                public AppType getType() {
-                    return AppType.AUTOMATION;
+                public Map<String, ?> getMetadataMap(long jobPrincipalId) {
+                    return Map.of();
                 }
 
                 @Override
-                public String getWorkflowId(long instanceId, String workflowReferenceCode) {
+                public PlatformType getType() {
+                    return PlatformType.AUTOMATION;
+                }
+
+                @Override
+                public String getWorkflowId(long jobPrincipalId, String workflowUuid) {
+                    return "";
+                }
+
+                @Override
+                public String getLastWorkflowId(String workflowUuid) {
+                    return "";
+                }
+
+                @Override
+                public String getWorkflowUuid(String workflowId) {
                     return "";
                 }
             };
@@ -348,6 +417,16 @@ public class ConnectionFacadeIntTest {
 
         @Override
         public Optional<BaseUriFunction> getBaseUri() {
+            return Optional.empty();
+        }
+
+        @Override
+        public Optional<Help> getHelp() {
+            return Optional.empty();
+        }
+
+        @Override
+        public Optional<ProcessErrorResponseFunction> getProcessErrorResponse() {
             return Optional.empty();
         }
 

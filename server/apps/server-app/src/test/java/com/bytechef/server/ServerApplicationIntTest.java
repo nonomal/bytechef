@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,13 +16,37 @@
 
 package com.bytechef.server;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
+
+import com.bytechef.ai.copilot.config.CopilotConfiguration;
+import com.bytechef.ai.copilot.config.CopilotPgVectorConfiguration;
+import com.bytechef.ai.copilot.service.CopilotVectorStoreService;
+import com.bytechef.automation.knowledgebase.facade.WorkspaceKnowledgeBaseFacade;
+import com.bytechef.automation.knowledgebase.service.WorkspaceKnowledgeBaseService;
+import com.bytechef.ee.ai.copilot.web.rest.CopilotApiController;
+import com.bytechef.platform.knowledgebase.facade.KnowledgeBaseDocumentChunkFacade;
+import com.bytechef.platform.knowledgebase.facade.KnowledgeBaseDocumentFacade;
+import com.bytechef.platform.knowledgebase.facade.KnowledgeBaseFacade;
+import com.bytechef.platform.knowledgebase.facade.KnowledgeBaseTagFacade;
+import com.bytechef.platform.knowledgebase.service.KnowledgeBaseDocumentChunkService;
+import com.bytechef.platform.knowledgebase.service.KnowledgeBaseDocumentService;
+import com.bytechef.platform.knowledgebase.service.KnowledgeBaseDocumentTagService;
+import com.bytechef.platform.knowledgebase.service.KnowledgeBaseService;
 import com.bytechef.test.config.testcontainers.PostgreSQLContainerConfiguration;
-import com.bytechef.test.config.testcontainers.RedisContainerConfiguration;
+import java.sql.Connection;
+import java.sql.DatabaseMetaData;
+import java.sql.ResultSet;
+import java.util.Locale;
+import javax.sql.DataSource;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
+import org.springframework.context.annotation.Primary;
 import org.springframework.mail.javamail.JavaMailSender;
 
 /**
@@ -30,18 +54,78 @@ import org.springframework.mail.javamail.JavaMailSender;
  */
 @SpringBootTest
 @Import({
-    PostgreSQLContainerConfiguration.class, RedisContainerConfiguration.class
+    PostgreSQLContainerConfiguration.class, ServerApplicationIntTest.ServerApplicationIntTestConfiguration.class
 })
 class ServerApplicationIntTest {
+
+    @Autowired
+    private ApplicationContext applicationContext;
+
+    @Autowired
+    private DataSource dataSource;
 
     @Test
     void testContextLoads() {
     }
 
+    @Test
+    void testCopilotBeansNotPresentWhenFeatureDisabled() {
+        // Verify that Copilot beans are not present when bytechef.ai.copilot.enabled is false
+        assertThat(applicationContext.getBeanNamesForType(CopilotConfiguration.class)).isEmpty();
+        assertThat(applicationContext.getBeanNamesForType(CopilotVectorStoreService.class)).isEmpty();
+        assertThat(applicationContext.getBeanNamesForType(CopilotPgVectorConfiguration.class)).isEmpty();
+        assertThat(applicationContext.getBeanNamesForType(CopilotApiController.class)).isEmpty();
+    }
+
+    @Test
+    void testKnowledgeBaseBeansNotPresentWhenFeatureDisabled() {
+        // Verify that knowledge base services are not present when the feature is disabled
+        assertThat(applicationContext.getBeanNamesForType(KnowledgeBaseService.class)).isEmpty();
+        assertThat(applicationContext.getBeanNamesForType(KnowledgeBaseDocumentService.class)).isEmpty();
+        assertThat(applicationContext.getBeanNamesForType(KnowledgeBaseDocumentChunkService.class)).isEmpty();
+        assertThat(applicationContext.getBeanNamesForType(KnowledgeBaseTagFacade.class)).isEmpty();
+        assertThat(applicationContext.getBeanNamesForType(KnowledgeBaseDocumentTagService.class)).isEmpty();
+        assertThat(applicationContext.getBeanNamesForType(WorkspaceKnowledgeBaseService.class)).isEmpty();
+
+        // Verify that knowledge base facades are not present
+        assertThat(applicationContext.getBeanNamesForType(KnowledgeBaseFacade.class)).isEmpty();
+        assertThat(applicationContext.getBeanNamesForType(KnowledgeBaseDocumentFacade.class)).isEmpty();
+        assertThat(applicationContext.getBeanNamesForType(KnowledgeBaseDocumentChunkFacade.class)).isEmpty();
+        assertThat(applicationContext.getBeanNamesForType(WorkspaceKnowledgeBaseFacade.class)).isEmpty();
+    }
+
+    @Test
+    void testSpringBatchTablesAreCreated() throws Exception {
+        try (Connection connection = dataSource.getConnection()) {
+            DatabaseMetaData databaseMetaData = connection.getMetaData();
+
+            assertThat(tableExists(databaseMetaData, "batch_job_instance")).isTrue();
+            assertThat(tableExists(databaseMetaData, "batch_job_execution")).isTrue();
+            assertThat(tableExists(databaseMetaData, "batch_step_execution")).isTrue();
+        }
+    }
+
+    private static boolean tableExists(DatabaseMetaData databaseMetaData, String tableName) throws Exception {
+        try (ResultSet resultSet = databaseMetaData.getTables(null, null, tableName, null)) {
+            if (resultSet.next()) {
+                return true;
+            }
+        }
+
+        try (ResultSet resultSet = databaseMetaData.getTables(
+            null, null, tableName.toUpperCase(Locale.ROOT), null)) {
+
+            return resultSet.next();
+        }
+    }
+
     @TestConfiguration
     static class ServerApplicationIntTestConfiguration {
 
-        @MockBean
-        private JavaMailSender javaMailSender;
+        @Bean
+        @Primary
+        JavaMailSender javaMailSender() {
+            return mock(JavaMailSender.class);
+        }
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,15 +17,15 @@
 package com.bytechef.component.insightly;
 
 import static com.bytechef.component.definition.Authorization.USERNAME;
-import static com.bytechef.component.definition.ComponentDSL.authorization;
-import static com.bytechef.component.definition.ComponentDSL.string;
-import static com.bytechef.component.insightly.constant.InsightlyConstants.POD;
+import static com.bytechef.component.definition.ComponentDsl.authorization;
+import static com.bytechef.component.definition.ComponentDsl.string;
+import static com.bytechef.component.insightly.constant.InsightlyConstants.URL;
 
 import com.bytechef.component.OpenApiComponentHandler;
 import com.bytechef.component.definition.Authorization.AuthorizationType;
 import com.bytechef.component.definition.ComponentCategory;
-import com.bytechef.component.definition.ComponentDSL.ModifiableComponentDefinition;
-import com.bytechef.component.definition.ComponentDSL.ModifiableConnectionDefinition;
+import com.bytechef.component.definition.ComponentDsl.ModifiableComponentDefinition;
+import com.bytechef.component.definition.ComponentDsl.ModifiableConnectionDefinition;
 import com.google.auto.service.AutoService;
 import java.util.List;
 
@@ -39,8 +39,10 @@ public class InsightlyComponentHandler extends AbstractInsightlyComponentHandler
     public ModifiableComponentDefinition modifyComponent(ModifiableComponentDefinition modifiableComponentDefinition) {
         return modifiableComponentDefinition
             .customAction(true)
+            .customActionHelp("", "https://api.na1.insightly.com/v3.1/#!/Overview/Introduction")
             .icon("path:assets/insightly.svg")
-            .categories(List.of(ComponentCategory.CRM));
+            .categories(List.of(ComponentCategory.CRM))
+            .version(1);
     }
 
     @Override
@@ -52,17 +54,18 @@ public class InsightlyComponentHandler extends AbstractInsightlyComponentHandler
                 authorization(AuthorizationType.BASIC_AUTH)
                     .title("Basic Auth")
                     .properties(
-                        string(POD)
-                            .label("Pod")
-                            .description(
-                                "Your instances pod can be found under your API URL, e.g. " +
-                                    "https://api.{pod}.insightly.com/v3.1")
+                        string(URL)
+                            .label("API URL")
                             .required(true),
                         string(USERNAME)
                             .label("API Key")
                             .required(true)))
-            .baseUri(
-                (connectionParameters, context) -> "https://api." + connectionParameters.getRequiredString(POD) +
-                    ".insightly.com/v3.1");
+            .baseUri((connectionParameters, context) -> {
+                String url = connectionParameters.getRequiredString(URL);
+
+                return url.endsWith("/") ? url.substring(0, url.length() - 1) : url;
+            })
+            .help("", "https://docs.bytechef.io/reference/components/insightly_v1#connection-setup")
+            .version(1);
     }
 }

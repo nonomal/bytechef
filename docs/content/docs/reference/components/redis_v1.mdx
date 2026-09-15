@@ -1,0 +1,441 @@
+---
+title: "Redis"
+description: "Redis is an open-source, in-memory data structure store used as a database, cache, message broker, and streaming engine."
+---
+
+
+Categories: Developer Tools
+
+
+Type: redis/v1
+
+<hr />
+
+
+
+
+## Connections
+
+Version: 1
+
+
+### custom
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| host | Host | STRING | The Redis server hostname or IP address. | true |
+| port | Port | INTEGER | The Redis server port. | true |
+| password | Password | STRING | The password for Redis authentication. Leave empty if no authentication. | false |
+| database | Database | INTEGER | The Redis database index (0-15). | false |
+
+
+
+
+
+
+<hr />
+
+
+## Actions
+
+
+### Delete
+Name: delete
+
+`Deletes a key from Redis.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| key | Key | STRING | The key to delete. | true |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Delete",
+  "name" : "delete",
+  "parameters" : {
+    "key" : ""
+  },
+  "type" : "redis/v1/delete"
+}
+```
+
+#### Output
+
+
+
+Type: BOOLEAN
+
+
+
+
+
+
+
+
+
+
+### Get
+Name: get
+
+`Gets the value of a key from Redis.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| key | Key | STRING | The key to retrieve. | true |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Get",
+  "name" : "get",
+  "parameters" : {
+    "key" : ""
+  },
+  "type" : "redis/v1/get"
+}
+```
+
+#### Output
+
+
+
+Type: STRING
+
+
+
+
+
+
+
+
+
+
+### Increment
+Name: increment
+
+`Atomically increments a key by 1. Creates the key with value 1 if it does not exist.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| key | Key | STRING | The key to increment. | true |
+| expire | Expire | BOOLEAN <details> <summary> Options </summary> <span>true</span>, <span>false</span> </details> | Whether to set an expiration time on the key. | false |
+| ttl | TTL (seconds) | INTEGER | Time to live in seconds. Only used when Expire is true. | false |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Increment",
+  "name" : "increment",
+  "parameters" : {
+    "key" : "",
+    "expire" : false,
+    "ttl" : 1
+  },
+  "type" : "redis/v1/increment"
+}
+```
+
+#### Output
+
+
+
+Type: INTEGER
+
+
+
+
+
+
+
+
+
+
+### Info
+Name: info
+
+`Returns information and statistics about the Redis server.`
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Info",
+  "name" : "info",
+  "type" : "redis/v1/info"
+}
+```
+
+#### Output
+
+
+
+Type: OBJECT
+
+
+
+
+
+
+
+
+
+
+### Keys
+Name: keys
+
+`Returns all keys matching a pattern.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| keyPattern | Key Pattern | STRING | The pattern to match keys against (e.g., 'user:*', '*session*'). | true |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Keys",
+  "name" : "keys",
+  "parameters" : {
+    "keyPattern" : ""
+  },
+  "type" : "redis/v1/keys"
+}
+```
+
+#### Output
+
+
+
+Type: ARRAY
+
+
+Items Type: STRING
+
+
+
+
+
+
+#### Output Example
+```json
+[ "" ]
+```
+
+
+
+
+### List Length
+Name: listLength
+
+`Returns the length of a Redis list.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| list | List | STRING | The name of the list. | true |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "List Length",
+  "name" : "listLength",
+  "parameters" : {
+    "list" : ""
+  },
+  "type" : "redis/v1/listLength"
+}
+```
+
+#### Output
+
+
+
+Type: INTEGER
+
+
+
+
+
+
+
+
+
+
+### Pop
+Name: pop
+
+`Pops data from a Redis list.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| list | List | STRING | The name of the list. | true |
+| fromTail | Pop from Tail | BOOLEAN <details> <summary> Options </summary> <span>true</span>, <span>false</span> </details> | If true, pops from the end of the list. If false, pops from the beginning. | false |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Pop",
+  "name" : "pop",
+  "parameters" : {
+    "list" : "",
+    "fromTail" : false
+  },
+  "type" : "redis/v1/pop"
+}
+```
+
+#### Output
+
+
+
+Type: STRING
+
+
+
+
+
+
+
+
+
+
+### Publish
+Name: publish
+
+`Publishes a message to a Redis channel.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| channel | Channel | STRING | The channel to publish the message to. | true |
+| message | Message | STRING | The message to publish. | true |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Publish",
+  "name" : "publish",
+  "parameters" : {
+    "channel" : "",
+    "message" : ""
+  },
+  "type" : "redis/v1/publish"
+}
+```
+
+#### Output
+
+
+
+Type: INTEGER
+
+
+
+
+
+
+
+
+
+
+### Push
+Name: push
+
+`Pushes data to a Redis list.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| list | List | STRING | The name of the list. | true |
+| value | Value | STRING | The value to push to the list. | true |
+| fromTail | Push to Tail | BOOLEAN <details> <summary> Options </summary> <span>true</span>, <span>false</span> </details> | If true, pushes to the end of the list. If false, pushes to the beginning. | false |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Push",
+  "name" : "push",
+  "parameters" : {
+    "list" : "",
+    "value" : "",
+    "fromTail" : false
+  },
+  "type" : "redis/v1/push"
+}
+```
+
+#### Output
+
+
+
+Type: INTEGER
+
+
+
+
+
+
+
+
+
+
+### Set
+Name: set
+
+`Sets the value of a key in Redis.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| key | Key | STRING | The key to set. | true |
+| value | Value | STRING | The value to store. | true |
+| expire | Expire | BOOLEAN <details> <summary> Options </summary> <span>true</span>, <span>false</span> </details> | Whether to set an expiration time on the key. | false |
+| ttl | TTL (seconds) | INTEGER | Time to live in seconds. Only used when Expire is true. | false |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Set",
+  "name" : "set",
+  "parameters" : {
+    "key" : "",
+    "value" : "",
+    "expire" : false,
+    "ttl" : 1
+  },
+  "type" : "redis/v1/set"
+}
+```
+
+#### Output
+
+
+
+Type: BOOLEAN
+
+
+
+
+
+
+
+
+
+
+
+

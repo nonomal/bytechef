@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,231 +16,278 @@
 
 package com.bytechef.component.aitable.util;
 
+import static com.bytechef.component.aitable.constant.AITableConstants.DATA;
 import static com.bytechef.component.aitable.constant.AITableConstants.DATASHEET_ID;
 import static com.bytechef.component.aitable.constant.AITableConstants.FIELDS;
-import static com.bytechef.component.aitable.constant.AITableConstants.MAX_RECORDS;
-import static com.bytechef.component.aitable.constant.AITableConstants.RECORD_IDS;
+import static com.bytechef.component.aitable.constant.AITableConstants.NAME;
 import static com.bytechef.component.aitable.constant.AITableConstants.SPACE_ID;
-import static com.bytechef.component.aitable.constant.FieldType.EMAIL;
-import static com.bytechef.component.definition.ComponentDSL.option;
+import static com.bytechef.component.aitable.constant.AITableConstants.TYPE;
+import static com.bytechef.component.aitable.util.AITableUtils.FieldType.CHECKBOX;
+import static com.bytechef.component.aitable.util.AITableUtils.FieldType.CURRENCY;
+import static com.bytechef.component.aitable.util.AITableUtils.FieldType.DATE_TIME;
+import static com.bytechef.component.aitable.util.AITableUtils.FieldType.EMAIL;
+import static com.bytechef.component.aitable.util.AITableUtils.FieldType.MEMBER;
+import static com.bytechef.component.aitable.util.AITableUtils.FieldType.MULTI_SELECT;
+import static com.bytechef.component.aitable.util.AITableUtils.FieldType.NUMBER;
+import static com.bytechef.component.aitable.util.AITableUtils.FieldType.PERCENT;
+import static com.bytechef.component.aitable.util.AITableUtils.FieldType.PHONE;
+import static com.bytechef.component.aitable.util.AITableUtils.FieldType.RATING;
+import static com.bytechef.component.aitable.util.AITableUtils.FieldType.SINGLE_SELECT;
+import static com.bytechef.component.aitable.util.AITableUtils.FieldType.SINGLE_TEXT;
+import static com.bytechef.component.aitable.util.AITableUtils.FieldType.TEXT;
+import static com.bytechef.component.aitable.util.AITableUtils.FieldType.TWO_WAY_LINK;
+import static com.bytechef.component.aitable.util.AITableUtils.FieldType.URL;
+import static com.bytechef.component.definition.ComponentDsl.array;
+import static com.bytechef.component.definition.ComponentDsl.bool;
+import static com.bytechef.component.definition.ComponentDsl.date;
+import static com.bytechef.component.definition.ComponentDsl.dateTime;
+import static com.bytechef.component.definition.ComponentDsl.integer;
+import static com.bytechef.component.definition.ComponentDsl.number;
+import static com.bytechef.component.definition.ComponentDsl.option;
+import static com.bytechef.component.definition.ComponentDsl.string;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.mockito.ArgumentCaptor.forClass;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.bytechef.component.definition.ActionContext;
+import com.bytechef.component.definition.Context.ContextFunction;
 import com.bytechef.component.definition.Context.Http;
-import com.bytechef.component.definition.Context.TypeReference;
+import com.bytechef.component.definition.Context.Http.Configuration;
+import com.bytechef.component.definition.Context.Http.Configuration.ConfigurationBuilder;
+import com.bytechef.component.definition.Context.Http.Executor;
+import com.bytechef.component.definition.Context.Http.Response;
+import com.bytechef.component.definition.Context.Http.ResponseType;
 import com.bytechef.component.definition.Option;
 import com.bytechef.component.definition.Parameters;
-import com.bytechef.component.definition.Property;
+import com.bytechef.component.definition.Property.ControlType;
+import com.bytechef.component.definition.Property.ValueProperty;
+import com.bytechef.component.definition.TypeReference;
+import com.bytechef.component.test.definition.MockParametersFactory;
+import com.bytechef.component.test.definition.extension.MockContextSetupExtension;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 
 /**
- * @author Monika Domiter
+ * @author Monika Kušter
  */
+@ExtendWith(MockContextSetupExtension.class)
 class AITableUtilsTest {
 
-    private final ActionContext mockedContext = mock(ActionContext.class);
-    private final Http.Executor mockedExecutor = mock(Http.Executor.class);
-    private final Parameters mockedParameters = mock(Parameters.class);
-    private final Http.Response mockedResponse = mock(Http.Response.class);
+    private final ArgumentCaptor<String> stringArgumentCaptor = forClass(String.class);
+    private final ArgumentCaptor<Object[]> objectsArgumentCaptor = forClass(Object[].class);
 
     @Test
-    void createPropertiesForRecord() {
-        Map<String, Object> map = new LinkedHashMap<>();
-        Map<String, Object> dataMap = new LinkedHashMap<>();
+    void testCreatePropertiesForRecord(
+        ActionContext mockedContext, Executor mockedExecutor, Response mockedResponse, Http mockedHttp,
+        ArgumentCaptor<ContextFunction<Http, Executor>> httpFunctionArgumentCaptor,
+        ArgumentCaptor<ConfigurationBuilder> configurationBuilderArgumentCaptor) {
+
+        Parameters mockedParameters = MockParametersFactory.create(Map.of(DATASHEET_ID, "abc"));
+
         List<Map<String, Object>> fields = new ArrayList<>();
-        Map<String, Object> fieldMap = new LinkedHashMap<>();
 
-        fieldMap.put("name", "name");
-        fieldMap.put("type", EMAIL.name());
-        fieldMap.put("property", Map.of("someProperty", "someValue"));
+        fields.add(createFieldMap("checkbox", CHECKBOX.getName(), Map.of()));
+        fields.add(createFieldMap("rating", RATING.getName(), Map.of("max", 6)));
+        fields.add(createFieldMap("longText", TEXT.getName(), Map.of()));
+        fields.add(
+            createFieldMap("singleSelect", SINGLE_SELECT.getName(),
+                Map.of("options", List.of(Map.of("name", "option1")))));
+        fields.add(createFieldMap("number", NUMBER.getName(), Map.of("precision", 2)));
+        fields.add(createFieldMap("singleText", SINGLE_TEXT.getName(), Map.of()));
+        fields.add(createFieldMap("url", URL.getName(), Map.of()));
+        fields.add(createFieldMap("phone", PHONE.getName(), Map.of()));
+        fields.add(createFieldMap("dateOnly", DATE_TIME.getName(), Map.of("includeTime", false)));
+        fields.add(createFieldMap("dateTime", DATE_TIME.getName(), Map.of("includeTime", true)));
+        fields.add(
+            createFieldMap("multiSelect", MULTI_SELECT.getName(),
+                Map.of("options", List.of(Map.of("name", "option1")))));
+        fields.add(createFieldMap("currency", CURRENCY.getName(), Map.of("symbol", "$", "precision", 2)));
+        fields.add(createFieldMap("percent", PERCENT.getName(), Map.of("precision", 2)));
+        fields.add(createFieldMap("email", EMAIL.getName(), Map.of()));
+        fields.add(createFieldMap("member", MEMBER.getName(),
+            Map.of("options", List.of(Map.of("name", "Alice", "id", "u1")))));
+        fields.add(createFieldMap("twoWayLink", TWO_WAY_LINK.getName(), Map.of()));
 
-        fields.add(fieldMap);
-        dataMap.put("fields", fields);
-        map.put("data", dataMap);
-
-        when(mockedParameters.getRequiredString(DATASHEET_ID))
-            .thenReturn("datasheetId");
-        when(mockedContext.http(any()))
+        when(mockedHttp.get(stringArgumentCaptor.capture()))
             .thenReturn(mockedExecutor);
-        when(mockedExecutor.configuration(any()))
-            .thenReturn(mockedExecutor);
-        when(mockedExecutor.execute())
-            .thenReturn(mockedResponse);
         when(mockedResponse.getBody(any(TypeReference.class)))
-            .thenReturn(map);
+            .thenReturn(Map.of(DATA, Map.of("fields", fields)));
 
-        List<? extends Property.ValueProperty<?>> result =
-            AITableUtils.createPropertiesForRecord(mockedParameters, mockedParameters, Map.of(), mockedContext);
+        List<? extends ValueProperty<?>> result = AITableUtils.createPropertiesForRecord(
+            mockedParameters, null, null, mockedContext);
 
-        assertEquals(1, result.size());
+        assertEquals(getExpectedProperties(), result);
+        assertNotNull(httpFunctionArgumentCaptor.getValue());
 
-        Property.ValueProperty<?> first = result.getFirst();
+        ConfigurationBuilder configurationBuilder = configurationBuilderArgumentCaptor.getValue();
+        Configuration configuration = configurationBuilder.build();
 
-        assertEquals("name", first.getName());
-        assertEquals("name", first.getLabel()
-            .get());
-        assertEquals(false, first.getRequired()
-            .get());
+        assertEquals(ResponseType.JSON, configuration.getResponseType());
+        assertEquals("/datasheets/abc/fields", stringArgumentCaptor.getValue());
+    }
+
+    private static List<? extends ValueProperty<?>> getExpectedProperties() {
+        return List.of(
+            bool("checkbox")
+                .label("checkbox")
+                .required(false),
+            integer("rating")
+                .label("rating")
+                .maxValue(6)
+                .required(false),
+            string("longText")
+                .label("longText")
+                .controlType(ControlType.TEXT_AREA)
+                .required(false),
+            string("singleSelect")
+                .label("singleSelect")
+                .options(option("option1", "option1"))
+                .required(false),
+            number("number")
+                .label("number")
+                .maxNumberPrecision(2)
+                .required(false),
+            string("singleText")
+                .label("singleText")
+                .required(false),
+            string("url")
+                .label("url")
+                .required(false),
+            string("phone")
+                .label("phone")
+                .controlType(ControlType.PHONE)
+                .required(false),
+            date("dateOnly")
+                .label("dateOnly")
+                .required(false),
+            dateTime("dateTime")
+                .label("dateTime")
+                .required(false),
+            array("multiSelect")
+                .label("multiSelect")
+                .items(string())
+                .options(List.of(option("option1", "option1")))
+                .required(false),
+            number("currency")
+                .label("currency")
+                .description("Currency symbol: $")
+                .maxNumberPrecision(2)
+                .required(false),
+            number("percent")
+                .label("percent")
+                .maxNumberPrecision(2)
+                .required(false),
+            string("email")
+                .label("email")
+                .required(false),
+            array("member")
+                .label("member")
+                .options(List.of(option("Alice", "u1")))
+                .items(string())
+                .required(false),
+            array("twoWayLink")
+                .label("twoWayLink")
+                .required(false));
+    }
+
+    private static Map<String, Object> createFieldMap(String name, String type, Map<String, Object> property) {
+        Map<String, Object> map = new HashMap<>();
+
+        map.put(NAME, name);
+        map.put(TYPE, type);
+        map.put("property", property);
+
+        return map;
     }
 
     @Test
-    void testCreateQuery() {
-        List<String> fields = List.of("Name", "Url", "Phone", "Rating");
-        List<String> recordIds = List.of("123", "234", "345");
+    void testGetDatasheetIdOptions(
+        ActionContext mockedContext, Executor mockedExecutor, Response mockedResponse, Http mockedHttp,
+        ArgumentCaptor<ContextFunction<Http, Executor>> httpFunctionArgumentCaptor,
+        ArgumentCaptor<ConfigurationBuilder> configurationBuilderArgumentCaptor) {
 
-        when(mockedParameters.getList(FIELDS, String.class, List.of()))
-            .thenReturn(fields);
-        when(mockedParameters.getList(RECORD_IDS, String.class, List.of()))
-            .thenReturn(recordIds);
-        when(mockedParameters.getInteger(MAX_RECORDS))
-            .thenReturn(2);
+        Parameters mockedParameters = MockParametersFactory.create(Map.of(SPACE_ID, "abc"));
 
-        String result = AITableUtils.createQuery(mockedParameters);
+        when(mockedHttp.get(stringArgumentCaptor.capture()))
+            .thenReturn(mockedExecutor);
+        when(mockedExecutor.queryParameters(objectsArgumentCaptor.capture()))
+            .thenReturn(mockedExecutor);
+        when(mockedResponse.getBody(any(TypeReference.class)))
+            .thenReturn(Map.of(DATA, Map.of("nodes", List.of(Map.of("name", "name", "id", "id")))));
 
-        String expectedQuery = "fields=Name,Url,Phone,Rating&recordIds=123,234,345&maxRecords=2";
+        List<Option<String>> result = AITableUtils.getDatasheetIdOptions(
+            mockedParameters, null, null, null, mockedContext);
 
-        assertEquals(expectedQuery, result);
+        assertEquals(List.of(option("name", "id")), result);
+        assertNotNull(httpFunctionArgumentCaptor.getValue());
+
+        ConfigurationBuilder configurationBuilder = configurationBuilderArgumentCaptor.getValue();
+        Configuration configuration = configurationBuilder.build();
+
+        assertEquals(ResponseType.JSON, configuration.getResponseType());
+        assertEquals("/spaces/abc/nodes", stringArgumentCaptor.getValue());
+
+        Object[] queryParameters = {
+            TYPE, "Datasheet"
+        };
+
+        assertArrayEquals(queryParameters, objectsArgumentCaptor.getValue());
     }
 
     @Test
-    void testGetDatasheetIdOptions() {
-        Map<String, Object> map = new LinkedHashMap<>();
-        Map<String, Object> dataMap = new LinkedHashMap<>();
-        List<Map<String, Object>> nodes = new ArrayList<>();
-        Map<String, Object> datasheetMap = new LinkedHashMap<>();
+    void testGetFieldNamesOptions(
+        ActionContext mockedContext, Executor mockedExecutor, Response mockedResponse, Http mockedHttp,
+        ArgumentCaptor<ContextFunction<Http, Executor>> httpFunctionArgumentCaptor,
+        ArgumentCaptor<ConfigurationBuilder> configurationBuilderArgumentCaptor) {
 
-        datasheetMap.put("name", "name");
-        datasheetMap.put("id", "id");
+        Parameters mockedParameters = MockParametersFactory.create(Map.of(DATASHEET_ID, "abc"));
 
-        nodes.add(datasheetMap);
-        dataMap.put("nodes", nodes);
-        map.put("data", dataMap);
-
-        when(mockedParameters.getRequiredString(SPACE_ID))
-            .thenReturn("spaceId");
-        when(mockedContext.http(any()))
+        when(mockedHttp.get(stringArgumentCaptor.capture()))
             .thenReturn(mockedExecutor);
-        when(mockedExecutor.configuration(any()))
-            .thenReturn(mockedExecutor);
-        when(mockedExecutor.execute())
-            .thenReturn(mockedResponse);
         when(mockedResponse.getBody(any(TypeReference.class)))
-            .thenReturn(map);
+            .thenReturn(Map.of(DATA, Map.of(FIELDS, List.of(Map.of("name", "name")))));
 
-        List<Option<String>> expectedOptions = new ArrayList<>();
+        List<Option<String>> result = AITableUtils.getFieldNamesOptions(
+            mockedParameters, null, null, null, mockedContext);
 
-        expectedOptions.add(option("name", "id"));
+        assertEquals(List.of(option("name", "name")), result);
+        assertNotNull(httpFunctionArgumentCaptor.getValue());
 
-        assertEquals(
-            expectedOptions,
-            AITableUtils.getDatasheetIdOptions(mockedParameters, mockedParameters, Map.of(), "", mockedContext));
+        ConfigurationBuilder configurationBuilder = configurationBuilderArgumentCaptor.getValue();
+        Configuration configuration = configurationBuilder.build();
+
+        assertEquals(ResponseType.JSON, configuration.getResponseType());
+        assertEquals("/datasheets/abc/fields", stringArgumentCaptor.getValue());
     }
 
     @Test
-    void testGetDatasheetRecordIdOptions() {
-        Map<String, Object> map = new LinkedHashMap<>();
-        Map<String, Object> dataMap = new LinkedHashMap<>();
-        List<Map<String, Object>> records = new ArrayList<>();
-        Map<String, Object> recordMap = new LinkedHashMap<>();
+    void testGetSpaceIdOptions(
+        ActionContext mockedContext, Executor mockedExecutor, Response mockedResponse, Http mockedHttp,
+        ArgumentCaptor<ContextFunction<Http, Executor>> httpFunctionArgumentCaptor,
+        ArgumentCaptor<ConfigurationBuilder> configurationBuilderArgumentCaptor) {
 
-        recordMap.put("recordId", "recordId");
-
-        records.add(recordMap);
-        dataMap.put("records", records);
-        map.put("data", dataMap);
-
-        when(mockedParameters.getRequiredString(DATASHEET_ID))
-            .thenReturn("datasheetId");
-        when(mockedContext.http(any()))
+        when(mockedHttp.get(stringArgumentCaptor.capture()))
             .thenReturn(mockedExecutor);
-        when(mockedExecutor.configuration(any()))
-            .thenReturn(mockedExecutor);
-        when(mockedExecutor.execute())
-            .thenReturn(mockedResponse);
         when(mockedResponse.getBody(any(TypeReference.class)))
-            .thenReturn(map);
+            .thenReturn(Map.of(DATA, Map.of("spaces", List.of(Map.of("name", "name", "id", "id")))));
 
-        List<Option<String>> expectedOptions = new ArrayList<>();
+        List<Option<String>> result = AITableUtils.getSpaceIdOptions(null, null, null, null, mockedContext);
 
-        expectedOptions.add(option("recordId", "recordId"));
+        assertEquals(List.of(option("name", "id")), result);
+        assertNotNull(httpFunctionArgumentCaptor.getValue());
 
-        assertEquals(
-            expectedOptions,
-            AITableUtils.getDatasheetRecordIdOptions(mockedParameters, mockedParameters, Map.of(), "", mockedContext));
-    }
+        ConfigurationBuilder configurationBuilder = configurationBuilderArgumentCaptor.getValue();
+        Configuration configuration = configurationBuilder.build();
 
-    @Test
-    void testGetFieldNamesOptions() {
-        Map<String, Object> map = new LinkedHashMap<>();
-        Map<String, Object> dataMap = new LinkedHashMap<>();
-        List<Map<String, Object>> fields = new ArrayList<>();
-        Map<String, Object> fieldMap = new LinkedHashMap<>();
-
-        fieldMap.put("name", "name");
-        fieldMap.put("type", "type");
-
-        fields.add(fieldMap);
-        dataMap.put("fields", fields);
-        map.put("data", dataMap);
-
-        when(mockedParameters.getRequiredString(DATASHEET_ID))
-            .thenReturn("datasheetId");
-        when(mockedContext.http(any()))
-            .thenReturn(mockedExecutor);
-        when(mockedExecutor.configuration(any()))
-            .thenReturn(mockedExecutor);
-        when(mockedExecutor.execute())
-            .thenReturn(mockedResponse);
-        when(mockedResponse.getBody(any(TypeReference.class)))
-            .thenReturn(map);
-
-        List<Option<String>> expectedOptions = new ArrayList<>();
-
-        expectedOptions.add(option("name", "type"));
-
-        assertEquals(
-            expectedOptions,
-            AITableUtils.getFieldNamesOptions(mockedParameters, mockedParameters, Map.of(), "", mockedContext));
-    }
-
-    @Test
-    void testGetSpaceIdOptions() {
-        Map<String, Object> map = new LinkedHashMap<>();
-        Map<String, Object> dataMap = new LinkedHashMap<>();
-        List<Map<String, Object>> spaces = new ArrayList<>();
-        Map<String, Object> spaceMap = new LinkedHashMap<>();
-
-        spaceMap.put("name", "name");
-        spaceMap.put("id", "id");
-
-        spaces.add(spaceMap);
-        dataMap.put("spaces", spaces);
-        map.put("data", dataMap);
-
-        when(mockedParameters.getRequiredString(DATASHEET_ID))
-            .thenReturn("datasheetId");
-        when(mockedContext.http(any()))
-            .thenReturn(mockedExecutor);
-        when(mockedExecutor.configuration(any()))
-            .thenReturn(mockedExecutor);
-        when(mockedExecutor.execute())
-            .thenReturn(mockedResponse);
-        when(mockedResponse.getBody(any(TypeReference.class)))
-            .thenReturn(map);
-
-        List<Option<String>> expectedOptions = new ArrayList<>();
-
-        expectedOptions.add(option("name", "id"));
-
-        assertEquals(
-            expectedOptions,
-            AITableUtils.getSpaceIdOptions(mockedParameters, mockedParameters, Map.of(), "", mockedContext));
+        assertEquals(ResponseType.JSON, configuration.getResponseType());
+        assertEquals("/spaces", stringArgumentCaptor.getValue());
     }
 }

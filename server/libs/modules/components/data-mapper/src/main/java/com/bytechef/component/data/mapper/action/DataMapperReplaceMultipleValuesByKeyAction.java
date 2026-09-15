@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,15 +21,15 @@ import static com.bytechef.component.data.mapper.constant.DataMapperConstants.IN
 import static com.bytechef.component.data.mapper.constant.DataMapperConstants.MAPPINGS;
 import static com.bytechef.component.data.mapper.constant.DataMapperConstants.OUTPUT;
 import static com.bytechef.component.data.mapper.constant.DataMapperConstants.TO;
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.array;
-import static com.bytechef.component.definition.ComponentDSL.object;
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.array;
+import static com.bytechef.component.definition.ComponentDsl.object;
+import static com.bytechef.component.definition.ComponentDsl.string;
 
 import com.bytechef.component.data.mapper.model.Mapping;
 import com.bytechef.component.data.mapper.model.StringMapping;
-import com.bytechef.component.definition.ActionContext;
-import com.bytechef.component.definition.ComponentDSL.ModifiableActionDefinition;
+import com.bytechef.component.definition.ComponentDsl.ModifiableActionDefinition;
+import com.bytechef.component.definition.Context;
 import com.bytechef.component.definition.Parameters;
 import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
@@ -44,9 +44,10 @@ import java.util.stream.Collectors;
 public class DataMapperReplaceMultipleValuesByKeyAction {
 
     public static final ModifiableActionDefinition ACTION_DEFINITION = action("replaceMultipleValuesByKey")
-        .title("Replace multiple values by key")
+        .title("Replace Multiple Values by Key")
         .description(
-            "Replaces all values specified by the keys in the input object with the values specified by keys in the output object.")
+            "Replaces all values specified by the keys in the input object with the values specified by keys in the " +
+                "output object.")
         .properties(
             object(INPUT)
                 .label("Input")
@@ -66,20 +67,23 @@ public class DataMapperReplaceMultipleValuesByKeyAction {
                             string(FROM)
                                 .label("From Path")
                                 .description(
-                                    "Defines the input path of property key of the value you want to change. Dot notation."),
+                                    "Defines the input path of property key of the value you want to change. Dot " +
+                                        "notation."),
                             string(TO)
                                 .label("To Path")
                                 .description(
-                                    "Defines the output path of property key of the value you want to change the input value to. Dot notation.")))
+                                    "Defines the output path of property key of the value you want to change the " +
+                                        "input value to. Dot notation.")))
                 .required(true))
         .output()
+        .help("", "https://docs.bytechef.io/reference/components/data-mapper_v1#replace-multiple-values-by-key")
         .perform(DataMapperReplaceMultipleValuesByKeyAction::perform);
 
     private DataMapperReplaceMultipleValuesByKeyAction() {
     }
 
-    protected static Map<String, Object> perform(
-        Parameters inputParameters, Parameters connectionParameters, ActionContext context) {
+    public static Map<String, Object> perform(
+        Parameters inputParameters, Parameters connectionParameters, Context context) {
 
         List<StringMapping> mappings = inputParameters.getList(MAPPINGS, StringMapping.class, List.of());
 

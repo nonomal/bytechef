@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ package com.bytechef.automation.configuration.repository;
 import com.bytechef.automation.configuration.domain.ProjectWorkflow;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import org.springframework.data.jdbc.repository.query.Query;
 import org.springframework.data.repository.ListCrudRepository;
 import org.springframework.data.repository.query.Param;
@@ -36,19 +37,81 @@ public interface ProjectWorkflowRepository extends ListCrudRepository<ProjectWor
 
     List<ProjectWorkflow> findAllByProjectIdAndProjectVersion(Long projectId, int projectVersion);
 
+    List<ProjectWorkflow> findAllByProjectIdAndUuid(Long projectId, UUID uuid);
+
+    List<ProjectWorkflow> findAllByProjectIdIn(List<Long> projectIds);
+
+    List<ProjectWorkflow> findAllByWorkflowIdIn(List<String> workflowIds);
+
+    @Query("""
+        SELECT pw.* FROM project_workflow pw
+        INNER JOIN (
+            SELECT uuid, MAX(project_version) AS max_version
+            FROM project_workflow
+            GROUP BY uuid
+        ) latest ON pw.uuid = latest.uuid AND pw.project_version = latest.max_version
+        """)
+    List<ProjectWorkflow> findAllLatestPerUuid();
+
     Optional<ProjectWorkflow> findByProjectIdAndProjectVersionAndWorkflowId(
         long projectId, int projectVersion, String workflowId);
 
     Optional<ProjectWorkflow> findByWorkflowId(String workflowId);
 
     @Query("""
-            SELECT * FROM project_workflow
-            JOIN project_instance ON project_instance.project_id = project_workflow.project_id
-            AND project_instance.project_version = project_workflow.project_version
-            WHERE project_workflow.workflow_reference_code = :workflowReferenceCode
-            AND project_instance.id = :projectInstanceId
+        SELECT project_workflow.* FROM project_workflow
+        JOIN project_deployment ON project_deployment.project_id = project_workflow.project_id
+        AND project_deployment.project_version = project_workflow.project_version
+        WHERE project_workflow.workflow_id = :workflowId
+        AND project_deployment.id = :projectDeploymentId
         """)
-    Optional<ProjectWorkflow> findByProjectInstanceIdAndWorkflowReferenceCode(
-        @Param("projectInstanceId") long projectInstanceId,
-        @Param("workflowReferenceCode") String workflowReferenceCode);
+    Optional<ProjectWorkflow> findByProjectDeploymentIdAndWorkflowId(
+        @Param("projectDeploymentId") long projectDeploymentId, @Param("workflowId") String workflowId);
+
+    @Query("""
+        SELECT project_workflow.* FROM project_workflow
+        JOIN project_deployment ON project_deployment.project_id = project_workflow.project_id
+        AND project_deployment.project_version = project_workflow.project_version
+        WHERE project_workflow.uuid = :uuid
+        AND project_deployment.id = :projectDeploymentId
+        """)
+    Optional<ProjectWorkflow> findByProjectDeploymentIdAndUuid(
+        @Param("projectDeploymentId") long projectDeploymentId, @Param("uuid") UUID uuid);
+
+    @Query("""
+        SELECT project_workflow.* FROM project_workflow
+        WHERE project_workflow.project_id = :projectId
+        AND project_workflow.project_version = :projectVersion
+        AND project_workflow.uuid = :uuid
+        """)
+    Optional<ProjectWorkflow> findByProjectIdAndProjectVersionAndUuid(
+        @Param("projectId") long projectId, @Param("projectVersion") int projectVersion, @Param("uuid") UUID uuid);
+
+    @Query("""
+        SELECT project_workflow.* FROM project_workflow
+        WHERE project_workflow.project_id = :projectId
+        AND project_workflow.uuid = :uuid
+        ORDER BY project_workflow.project_version DESC
+        LIMIT 1
+        """)
+    Optional<ProjectWorkflow> findLastByProjectIdAndUuid(@Param("projectId") long projectId, @Param("uuid") UUID uuid);
+
+    @Query("""
+        SELECT project_workflow.* FROM project_workflow
+        WHERE project_workflow.uuid = :uuid
+        ORDER BY project_workflow.project_version DESC
+        LIMIT 1
+        """)
+    Optional<ProjectWorkflow> findLastByUuid(@Param("uuid") UUID uuid);
+
+    @Query("""
+        SELECT project_workflow.* FROM project_workflow
+        JOIN project_version ON project_version.project_id = project_workflow.project_id
+        AND project_version.version = project_workflow.project_version
+        WHERE project_workflow.uuid = :uuid
+        AND project_version.status = 1
+        ORDER BY project_workflow.project_version DESC
+        LIMIT 1
+        """)
+    Optional<ProjectWorkflow> findLastPublishedByUuid(@Param("uuid") UUID uuid);
 }

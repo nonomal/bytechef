@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,42 +16,70 @@
 
 package com.bytechef.component.google.drive.action;
 
+import static com.bytechef.component.google.drive.constant.GoogleDriveConstants.APPLICATION_VND_GOOGLE_APPS_FOLDER;
 import static com.bytechef.component.google.drive.constant.GoogleDriveConstants.FOLDER_NAME;
-import static com.bytechef.component.google.drive.constant.GoogleDriveConstants.PARENT_FOLDER;
+import static com.bytechef.google.commons.constant.GoogleCommonsContants.FOLDER_ID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentCaptor.forClass;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 
+import com.bytechef.component.definition.ActionContext;
+import com.bytechef.component.definition.Parameters;
+import com.bytechef.component.test.definition.MockParametersFactory;
+import com.bytechef.google.commons.GoogleServices;
+import com.google.api.services.drive.Drive;
+import com.google.api.services.drive.Drive.Files;
+import com.google.api.services.drive.Drive.Files.Create;
 import com.google.api.services.drive.model.File;
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
+import org.mockito.MockedStatic;
 
 /**
  * @author Mario Cvjetojevic
- * @author Monika Domiter
+ * @author Monika Kušter
  */
-class GoogleDriveCreateNewFolderActionTest extends AbstractGoogleDriveActionTest {
+class GoogleDriveCreateNewFolderActionTest {
+
+    private final ArgumentCaptor<File> fileArgumentCaptor = forClass(File.class);
+    private final Create mockedCreate = mock(Create.class);
+    private final Drive mockedDrive = mock(Drive.class);
+    private final Files mockedFiles = mock(Files.class);
+    private final File mockedGoogleFile = mock(File.class);
+    private final Parameters mockedParameters = MockParametersFactory.create(
+        Map.of(FOLDER_NAME, "folderName", FOLDER_ID, "parentFolder"));
+    private final ArgumentCaptor<Parameters> parametersArgumentCaptor = forClass(Parameters.class);
 
     @Test
     void testPerform() throws IOException {
-        when(mockedParameters.getRequiredString(FOLDER_NAME))
-            .thenReturn("folderName");
-        when(mockedParameters.getString(PARENT_FOLDER))
-            .thenReturn("parentFolder");
+        try (MockedStatic<GoogleServices> googleServicesMockedStatic = mockStatic(GoogleServices.class)) {
+            googleServicesMockedStatic
+                .when(() -> GoogleServices.getDrive(parametersArgumentCaptor.capture()))
+                .thenReturn(mockedDrive);
+            when(mockedDrive.files())
+                .thenReturn(mockedFiles);
+            when(mockedFiles.create(fileArgumentCaptor.capture()))
+                .thenReturn(mockedCreate);
+            when(mockedCreate.execute())
+                .thenReturn(mockedGoogleFile);
 
-        when(mockedFiles.create(fileArgumentCaptor.capture()))
-            .thenReturn(mockedCreate);
-        when(mockedCreate.execute())
-            .thenReturn(mockedGoogleFile);
+            File result = GoogleDriveCreateNewFolderAction.perform(
+                mockedParameters, mockedParameters, mock(ActionContext.class));
 
-        File result = GoogleDriveCreateNewFolderAction.perform(mockedParameters, mockedParameters, mockedContext);
+            assertEquals(mockedGoogleFile, result);
+            assertEquals(mockedParameters, parametersArgumentCaptor.getValue());
 
-        assertEquals(mockedGoogleFile, result);
+            File expectedFile = new File()
+                .setName("folderName")
+                .setMimeType(APPLICATION_VND_GOOGLE_APPS_FOLDER)
+                .setParents(List.of("parentFolder"));
 
-        File file = fileArgumentCaptor.getValue();
-
-        assertEquals("folderName", file.getName());
-        assertEquals("application/vnd.google-apps.folder", file.getMimeType());
-        assertEquals(List.of("parentFolder"), file.getParents());
+            assertEquals(expectedFile, fileArgumentCaptor.getValue());
+        }
     }
 }

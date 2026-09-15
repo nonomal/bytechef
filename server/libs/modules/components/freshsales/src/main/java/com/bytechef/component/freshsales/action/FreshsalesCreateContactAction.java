@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,17 +16,18 @@
 
 package com.bytechef.component.freshsales.action;
 
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.number;
-import static com.bytechef.component.definition.ComponentDSL.object;
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.number;
+import static com.bytechef.component.definition.ComponentDsl.object;
+import static com.bytechef.component.definition.ComponentDsl.outputSchema;
+import static com.bytechef.component.definition.ComponentDsl.string;
 import static com.bytechef.component.freshsales.constant.FreshsalesConstants.ADDRESS;
 import static com.bytechef.component.freshsales.constant.FreshsalesConstants.CITY;
 import static com.bytechef.component.freshsales.constant.FreshsalesConstants.COUNTRY;
-import static com.bytechef.component.freshsales.constant.FreshsalesConstants.CREATE_CONTACT;
 import static com.bytechef.component.freshsales.constant.FreshsalesConstants.EMAIL;
 import static com.bytechef.component.freshsales.constant.FreshsalesConstants.FACEBOOK;
 import static com.bytechef.component.freshsales.constant.FreshsalesConstants.FIRST_NAME;
+import static com.bytechef.component.freshsales.constant.FreshsalesConstants.ID;
 import static com.bytechef.component.freshsales.constant.FreshsalesConstants.JOB_TITLE;
 import static com.bytechef.component.freshsales.constant.FreshsalesConstants.LAST_NAME;
 import static com.bytechef.component.freshsales.constant.FreshsalesConstants.LINKEDIN;
@@ -36,12 +37,10 @@ import static com.bytechef.component.freshsales.constant.FreshsalesConstants.STA
 import static com.bytechef.component.freshsales.constant.FreshsalesConstants.TWITTER;
 import static com.bytechef.component.freshsales.constant.FreshsalesConstants.WORK_NUMBER;
 import static com.bytechef.component.freshsales.constant.FreshsalesConstants.ZIPCODE;
-import static com.bytechef.component.freshsales.util.FreshsalesUtils.getUrl;
 
 import com.bytechef.component.definition.ActionContext;
-import com.bytechef.component.definition.ComponentDSL.ModifiableActionDefinition;
+import com.bytechef.component.definition.ComponentDsl.ModifiableActionDefinition;
 import com.bytechef.component.definition.Context.Http;
-import com.bytechef.component.definition.Context.TypeReference;
 import com.bytechef.component.definition.Parameters;
 import com.bytechef.component.definition.Property.ControlType;
 
@@ -50,91 +49,111 @@ import com.bytechef.component.definition.Property.ControlType;
  */
 public class FreshsalesCreateContactAction {
 
-    public static final ModifiableActionDefinition ACTION_DEFINITION = action(CREATE_CONTACT)
-        .title("Create contact")
-        .description("Add new contact in Freshsales CRM")
+    public static final ModifiableActionDefinition ACTION_DEFINITION = action("createContact")
+        .title("Create Contact")
+        .description("Add new contact in Freshsales CRM.")
+        .help("", "https://docs.bytechef.io/reference/components/freshsales_v1#create-contact")
         .properties(
             string(FIRST_NAME)
-                .label("First name")
-                .description("First name of the contact")
+                .label("First Name")
+                .description("First name of the contact.")
                 .required(false),
             string(LAST_NAME)
-                .label("Last name")
-                .description("Last name of the contact")
+                .label("Last Name")
+                .description("Last name of the contact.")
                 .required(false),
             string(JOB_TITLE)
-                .label("Job title")
-                .description("Designation of the contact in the account they belong to")
+                .label("Job Title")
+                .description("Designation of the contact in the account they belong to.")
                 .required(false),
             string(EMAIL)
                 .label("Email")
-                .description("Primary email address of the contact")
+                .description("Primary email address of the contact.")
                 .controlType(ControlType.EMAIL)
                 .required(true),
             string(WORK_NUMBER)
-                .label("Work number")
-                .description("Work phone number of the contact")
+                .label("Work Number")
+                .description("Work phone number of the contact.")
                 .controlType(ControlType.PHONE)
                 .required(false),
             string(MOBILE_NUMBER)
-                .label("Mobile number")
-                .description("Mobile phone number of the contact")
+                .label("Mobile Number")
+                .description("Mobile phone number of the contact.")
                 .required(false),
             string(ADDRESS)
                 .label("Address")
-                .description("Address of the contact")
+                .description("Address of the contact.")
                 .required(false),
             string(CITY)
                 .label("City")
-                .description("City that the contact belongs to")
+                .description("City that the contact belongs to.")
                 .required(false),
             string(STATE)
                 .label("State")
-                .description("State that the contact belongs to")
+                .description("State that the contact belongs to.")
                 .required(false),
             string(ZIPCODE)
-                .label("Zip code")
-                .description("Zipcode of the region that the contact belongs to")
+                .label("Zip Code")
+                .description("Zipcode of the region that the contact belongs to.")
                 .required(false),
             string(COUNTRY)
                 .label("Country")
-                .description("Country that the contact belongs to")
+                .description("Country that the contact belongs to.")
                 .required(false),
             string(MEDIUM)
                 .label("Medium")
-                .description("The medium that led your contact to your website/web app")
+                .description("The medium that led your contact to your website/web ap.p")
                 .required(false),
             string(FACEBOOK)
                 .label("Facebook")
-                .description("Facebook username of the contact")
+                .description("Facebook username of the contact.")
                 .required(false),
             string(TWITTER)
                 .label("Twitter")
-                .description("Twitter username of the contact")
+                .description("Twitter username of the contact.")
                 .required(false),
             string(LINKEDIN)
                 .label("LinkedIn")
-                .description("LinkedIn account of the contact")
+                .description("LinkedIn account of the contact.")
                 .required(false))
-        .outputSchema(
-            object()
-                .properties(
-                    number("id"),
-                    string(FIRST_NAME),
-                    string(LAST_NAME),
-                    string(JOB_TITLE),
-                    string(CITY),
-                    string(STATE),
-                    string(ZIPCODE),
-                    string(COUNTRY),
-                    string(EMAIL),
-                    string(WORK_NUMBER),
-                    string(MOBILE_NUMBER),
-                    string(ADDRESS),
-                    string(MEDIUM),
-                    string(FACEBOOK),
-                    string(TWITTER),
-                    string(LINKEDIN)))
+        .output(
+            outputSchema(
+                object()
+                    .properties(
+                        object("contact")
+                            .properties(
+                                number(ID)
+                                    .description("ID of the contact."),
+                                string(FIRST_NAME)
+                                    .description("First name of the contact."),
+                                string(LAST_NAME)
+                                    .description("Last name of the contact."),
+                                string(JOB_TITLE)
+                                    .description("Designation of the contact in the account he belongs to."),
+                                string(CITY)
+                                    .description("City that the contact belongs to."),
+                                string(STATE)
+                                    .description("State that the contact belongs to."),
+                                string(ZIPCODE)
+                                    .description("Zipcode of the region that the contact belongs to."),
+                                string(COUNTRY)
+                                    .description("Country that the contact belongs to."),
+                                string(EMAIL)
+                                    .description("Primary email address of the contact."),
+                                string(WORK_NUMBER)
+                                    .description("Work phone number of the contact."),
+                                string(MOBILE_NUMBER)
+                                    .description("Mobile phone number of the contact."),
+                                string(ADDRESS)
+                                    .description("Address of the contact."),
+                                string(MEDIUM)
+                                    .description("The medium that led your contact to your website/ web app."),
+                                string(FACEBOOK)
+                                    .description("Facebook username of the contact."),
+                                string(TWITTER)
+                                    .description("Twitter username of the contact."),
+                                string(LINKEDIN)
+                                    .description("LinkedIn account of the contact.")))))
         .perform(FreshsalesCreateContactAction::perform);
 
     private FreshsalesCreateContactAction() {
@@ -143,7 +162,7 @@ public class FreshsalesCreateContactAction {
     public static Object perform(
         Parameters inputParameters, Parameters connectionParameters, ActionContext actionContext) {
 
-        return actionContext.http(http -> http.post(getUrl(connectionParameters, "contacts")))
+        return actionContext.http(http -> http.post("/contacts"))
             .body(
                 Http.Body.of(
                     FIRST_NAME, inputParameters.getString(FIRST_NAME),
@@ -163,7 +182,6 @@ public class FreshsalesCreateContactAction {
                     LINKEDIN, inputParameters.getString(LINKEDIN)))
             .configuration(Http.responseType(Http.ResponseType.JSON))
             .execute()
-            .getBody(new TypeReference<>() {});
+            .getBody();
     }
-
 }

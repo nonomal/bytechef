@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the ByteChef Enterprise license (the "Enterprise License");
  * you may not use this file except in compliance with the Enterprise License.
@@ -8,10 +8,10 @@
 package com.bytechef.ee.platform.scheduler.remote.web.rest;
 
 import com.bytechef.platform.scheduler.TriggerScheduler;
-import com.bytechef.platform.workflow.execution.WorkflowExecutionId;
+import com.bytechef.platform.workflow.WorkflowExecutionId;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import jakarta.validation.Valid;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Map;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -74,7 +74,8 @@ public class RemoteTriggerSchedulerController {
 
         triggerScheduler.scheduleDynamicWebhookTriggerRefresh(
             dynamicWebhookRefreshTaskRequest.webhookExpirationDate, dynamicWebhookRefreshTaskRequest.componentName,
-            dynamicWebhookRefreshTaskRequest.componentVersion, dynamicWebhookRefreshTaskRequest.workflowExecutionId);
+            dynamicWebhookRefreshTaskRequest.componentVersion, dynamicWebhookRefreshTaskRequest.workflowExecutionId,
+            dynamicWebhookRefreshTaskRequest.connectionId);
     }
 
     @RequestMapping(
@@ -101,8 +102,8 @@ public class RemoteTriggerSchedulerController {
 
     @SuppressFBWarnings("EI")
     private record DynamicWebhookRefreshTaskRequest(
-        LocalDateTime webhookExpirationDate, String componentName, int componentVersion,
-        WorkflowExecutionId workflowExecutionId) {
+        Instant webhookExpirationDate, String componentName, int componentVersion,
+        WorkflowExecutionId workflowExecutionId, Long connectionId) {
     }
 
     @SuppressFBWarnings("EI")

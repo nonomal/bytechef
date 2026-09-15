@@ -1,0 +1,22 @@
+query workspaceMcpServers($workspaceId: ID!) {
+    workspaceMcpServers(workspaceId: $workspaceId) {
+        id
+        name
+        type
+        environmentId
+        enabled
+        url
+        mcpComponents {
+            id
+            mcpServerId
+            componentName
+            componentVersion
+            title
+        }
+        tags {
+            id
+            name
+        }
+        lastModifiedDate
+    }
+}

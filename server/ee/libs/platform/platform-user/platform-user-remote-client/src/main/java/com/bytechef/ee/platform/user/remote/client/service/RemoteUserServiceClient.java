@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the ByteChef Enterprise license (the "Enterprise License");
  * you may not use this file except in compliance with the Enterprise License.
@@ -44,12 +44,22 @@ public class RemoteUserServiceClient implements UserService {
     }
 
     @Override
-    public User createUser(AdminUserDTO userDTO) {
+    public User create(AdminUserDTO userDTO) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public void deleteUser(String login) {
+    public void delete(String login) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void disableTotp(String login) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void enableTotp(String login) {
         throw new UnsupportedOperationException();
     }
 
@@ -65,6 +75,11 @@ public class RemoteUserServiceClient implements UserService {
 
     @Override
     public Optional<User> fetchUser(long id) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Optional<User> fetchUserByAuthProviderAndProviderId(String authProvider, String providerId) {
         throw new UnsupportedOperationException();
     }
 
@@ -94,7 +109,20 @@ public class RemoteUserServiceClient implements UserService {
     }
 
     @Override
-    public void saveUser(User user) {
+    public User getUser(String login) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public User findOrCreateSocialUser(
+        String email, String firstName, String lastName, String imageUrl, String authProvider, String providerId,
+        boolean autoProvision, String defaultAuthority) {
+
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public String generateTotpSecret(String login) {
         throw new UnsupportedOperationException();
     }
 
@@ -119,12 +147,27 @@ public class RemoteUserServiceClient implements UserService {
     }
 
     @Override
-    public Optional<User> updateUser(AdminUserDTO userDTO) {
+    public void save(User user) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public void updateUser(String firstName, String lastName, String email, String langKey, String imageUrl) {
+    public void unlinkProvider(String login) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Optional<User> update(AdminUserDTO userDTO) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void update(String firstName, String lastName, String email, String langKey, String imageUrl) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public boolean verifyTotpCode(String login, String code) {
         throw new UnsupportedOperationException();
     }
 }

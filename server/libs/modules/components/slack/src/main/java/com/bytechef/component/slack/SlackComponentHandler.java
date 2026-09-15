@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,15 +16,23 @@
 
 package com.bytechef.component.slack;
 
-import static com.bytechef.component.definition.ComponentDSL.component;
-import static com.bytechef.component.slack.constant.SlackConstants.SLACK;
+import static com.bytechef.component.definition.ComponentDsl.component;
+import static com.bytechef.component.definition.ComponentDsl.string;
+import static com.bytechef.component.definition.ComponentDsl.tool;
+import static com.bytechef.component.slack.constant.SlackConstants.CHANNEL;
 
 import com.bytechef.component.ComponentHandler;
+import com.bytechef.component.definition.ActionDefinition.OptionsFunction;
 import com.bytechef.component.definition.ComponentCategory;
 import com.bytechef.component.definition.ComponentDefinition;
+import com.bytechef.component.slack.action.SlackAddReactionAction;
+import com.bytechef.component.slack.action.SlackSendApprovalMessageAction;
+import com.bytechef.component.slack.action.SlackSendChannelMessageAction;
 import com.bytechef.component.slack.action.SlackSendDirectMessageAction;
-import com.bytechef.component.slack.action.SlackSendMessageAction;
+import com.bytechef.component.slack.cluster.SlackApprovalChannel;
 import com.bytechef.component.slack.connection.SlackConnection;
+import com.bytechef.component.slack.trigger.SlackAnyEventTrigger;
+import com.bytechef.component.slack.util.SlackUtils;
 import com.google.auto.service.AutoService;
 
 /**
@@ -33,15 +41,33 @@ import com.google.auto.service.AutoService;
 @AutoService(ComponentHandler.class)
 public final class SlackComponentHandler implements ComponentHandler {
 
-    private static final ComponentDefinition COMPONENT_DEFINITION = component(SLACK)
+    private static final ComponentDefinition COMPONENT_DEFINITION = component("slack")
         .title("Slack")
         .description("Slack is a messaging platform for teams to communicate and collaborate.")
+        .customAction(true)
+        .customActionHelp("Slack API documentation", "https://docs.slack.dev/")
         .icon("path:assets/slack.svg")
         .categories(ComponentCategory.COMMUNICATION, ComponentCategory.DEVELOPER_TOOLS)
         .connection(SlackConnection.CONNECTION_DEFINITION)
+        .inputs(
+            string(CHANNEL)
+                .label("Channel")
+                .description("Channel, private group, or IM channel to use.")
+                .options((OptionsFunction<String>) SlackUtils::getChannelIdOptions)
+                .required(true))
         .actions(
-            SlackSendMessageAction.ACTION_DEFINITION,
-            SlackSendDirectMessageAction.ACTION_DEFINITION);
+            SlackAddReactionAction.ACTION_DEFINITION,
+            SlackSendApprovalMessageAction.ACTION_DEFINITION,
+            SlackSendChannelMessageAction.ACTION_DEFINITION,
+            SlackSendDirectMessageAction.ACTION_DEFINITION)
+        .clusterElements(
+            SlackApprovalChannel.CLUSTER_ELEMENT_DEFINITION,
+            tool(SlackAddReactionAction.ACTION_DEFINITION),
+            tool(SlackSendApprovalMessageAction.ACTION_DEFINITION),
+            tool(SlackSendChannelMessageAction.ACTION_DEFINITION),
+            tool(SlackSendDirectMessageAction.ACTION_DEFINITION))
+        .triggers(SlackAnyEventTrigger.TRIGGER_DEFINITION)
+        .version(1);
 
     @Override
     public ComponentDefinition getDefinition() {

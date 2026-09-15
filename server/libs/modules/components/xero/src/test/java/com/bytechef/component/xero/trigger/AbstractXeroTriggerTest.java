@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,10 +42,11 @@ public abstract class AbstractXeroTriggerTest {
     protected Object mockedObject = mock(Object.class);
     protected Parameters mockedParameters = mock(Parameters.class);
     protected TriggerContext mockedTriggerContext = mock(TriggerContext.class);
+    protected Parameters mockedWebhookEnableOutput = mock(Parameters.class);
     protected MockedStatic<XeroUtils> xeroUtilsMockedStatic;
 
     @BeforeEach
-    public void beforeEach() {
+    void beforeEach() {
         xeroUtilsMockedStatic = mockStatic(XeroUtils.class);
     }
 

@@ -1,0 +1,54 @@
+import Button from '@/components/Button/Button';
+import {SPACE} from '@/shared/constants';
+import {useCopyToClipboard} from '@uidotdev/usehooks';
+import {CheckIcon, ClipboardCopyIcon} from 'lucide-react';
+import {useEffect, useState} from 'react';
+import {toast} from 'sonner';
+const RESET_DELAY = 2000;
+
+/* eslint-disable  @typescript-eslint/no-explicit-any */
+const WorkflowExecutionContentClipboardButton = ({value}: {value: any}) => {
+    const [lastCopiedValue, setLastCopiedValue] = useState<string | null>(null);
+
+    const [, copyToClipboard] = useCopyToClipboard();
+
+    const valueToCopy = typeof value === 'object' ? JSON.stringify(value, null, SPACE) : value;
+    const isCurrentlyCopied = lastCopiedValue === valueToCopy;
+
+    const handleCopyText = async () => {
+        try {
+            await copyToClipboard(valueToCopy);
+
+            setLastCopiedValue(valueToCopy);
+        } catch {
+            toast.error('Copy failed', {description: 'Failed to copy to clipboard. Please try again.'});
+        }
+    };
+
+    useEffect(() => {
+        if (lastCopiedValue !== null) {
+            toast('Copied to clipboard', {description: 'The value has been copied to your clipboard.'});
+
+            const timer = setTimeout(() => {
+                setLastCopiedValue(null);
+            }, RESET_DELAY);
+
+            return () => clearTimeout(timer);
+        }
+    }, [lastCopiedValue]);
+
+    return (
+        value &&
+        (typeof value !== 'object' || Object.keys(value).length > 0) && (
+            <Button
+                disabled={isCurrentlyCopied}
+                icon={isCurrentlyCopied ? <CheckIcon className="text-success" /> : <ClipboardCopyIcon />}
+                onClick={handleCopyText}
+                size="iconXs"
+                variant="ghost"
+            />
+        )
+    );
+};
+
+export default WorkflowExecutionContentClipboardButton;

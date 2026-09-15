@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,81 +16,83 @@
 
 package com.bytechef.component.microsoft.teams.action;
 
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.object;
-import static com.bytechef.component.definition.ComponentDSL.string;
-import static com.bytechef.component.microsoft.teams.constant.MicrosoftTeamsConstants.BASE_URL;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.outputSchema;
+import static com.bytechef.component.definition.ComponentDsl.string;
+import static com.bytechef.component.microsoft.teams.constant.MicrosoftTeamsConstants.ATTACHMENTS;
+import static com.bytechef.component.microsoft.teams.constant.MicrosoftTeamsConstants.ATTACHMENTS_PROPERTY;
 import static com.bytechef.component.microsoft.teams.constant.MicrosoftTeamsConstants.BODY;
 import static com.bytechef.component.microsoft.teams.constant.MicrosoftTeamsConstants.CHANNEL_ID;
 import static com.bytechef.component.microsoft.teams.constant.MicrosoftTeamsConstants.CONTENT;
 import static com.bytechef.component.microsoft.teams.constant.MicrosoftTeamsConstants.CONTENT_PROPERTY;
 import static com.bytechef.component.microsoft.teams.constant.MicrosoftTeamsConstants.CONTENT_TYPE;
 import static com.bytechef.component.microsoft.teams.constant.MicrosoftTeamsConstants.CONTENT_TYPE_PROPERTY;
-import static com.bytechef.component.microsoft.teams.constant.MicrosoftTeamsConstants.ID;
-import static com.bytechef.component.microsoft.teams.constant.MicrosoftTeamsConstants.SEND_CHANNEL_MESSAGE;
+import static com.bytechef.component.microsoft.teams.constant.MicrosoftTeamsConstants.MESSAGE_OUTPUT_PROPERTY;
 import static com.bytechef.component.microsoft.teams.constant.MicrosoftTeamsConstants.TEAM_ID;
 
-import com.bytechef.component.definition.ActionContext;
-import com.bytechef.component.definition.ComponentDSL.ModifiableActionDefinition;
+import com.bytechef.component.definition.ActionDefinition.OptionsFunction;
+import com.bytechef.component.definition.ComponentDsl.ModifiableActionDefinition;
+import com.bytechef.component.definition.Context;
 import com.bytechef.component.definition.Context.Http;
-import com.bytechef.component.definition.Context.TypeReference;
-import com.bytechef.component.definition.OptionsDataSource.ActionOptionsFunction;
 import com.bytechef.component.definition.Parameters;
-import com.bytechef.component.microsoft.teams.util.MicrosoftTeamsOptionUtils;
+import com.bytechef.component.definition.TypeReference;
+import com.bytechef.component.microsoft.teams.util.MicrosoftTeamsUtils;
+import com.bytechef.microsoft.commons.MicrosoftUtils;
+import java.util.List;
+import java.util.Map;
 
 /**
  * @author Monika Domiter
  */
 public class MicrosoftTeamsSendChannelMessageAction {
 
-    public static final ModifiableActionDefinition ACTION_DEFINITION = action(SEND_CHANNEL_MESSAGE)
-        .title("Send channel message")
-        .description("Sends a message to a channel.")
+    public static final ModifiableActionDefinition ACTION_DEFINITION = action("sendChannelMessage")
+        .title("Send Channel Message")
+        .description(
+            "Sends a message to a channel. Sending attachments is supported with Message Text Format is set to " +
+                "\"html\".")
         .properties(
             string(TEAM_ID)
-                .label("Team")
-                .description("Team where the channel is located.")
-                .options((ActionOptionsFunction<String>) MicrosoftTeamsOptionUtils::getTeamIdOptions)
+                .label("Team ID")
+                .description("ID of the team where the channel is located.")
+                .options((OptionsFunction<String>) MicrosoftTeamsUtils::getTeamIdOptions)
                 .required(true),
             string(CHANNEL_ID)
-                .label("Channel to send message to.")
+                .label("Channel ID")
+                .description("Channel to send message to.")
                 .optionsLookupDependsOn(TEAM_ID)
-                .options((ActionOptionsFunction<String>) MicrosoftTeamsOptionUtils::getChannelIdOptions)
+                .options((OptionsFunction<String>) MicrosoftTeamsUtils::getChannelIdOptions)
                 .required(true),
             CONTENT_TYPE_PROPERTY,
-            CONTENT_PROPERTY)
-        .outputSchema(
-            object()
-                .properties(
-                    string(ID),
-                    object(BODY)
-                        .properties(
-                            string(CONTENT_TYPE),
-                            string(CONTENT)),
-                    object("channelIdentity")
-                        .properties(
-                            string(TEAM_ID),
-                            string(CHANNEL_ID))))
-        .perform(MicrosoftTeamsSendChannelMessageAction::perform);
+            CONTENT_PROPERTY,
+            ATTACHMENTS_PROPERTY)
+        .output(outputSchema(MESSAGE_OUTPUT_PROPERTY))
+        .perform(MicrosoftTeamsSendChannelMessageAction::perform)
+        .help(
+            "",
+            "https://docs.bytechef.io/reference/components/microsoft-teams_v1#send-channel-message")
+        .processErrorResponse(MicrosoftUtils::processErrorResponse);
 
     private MicrosoftTeamsSendChannelMessageAction() {
     }
 
-    public static Object perform(
-        Parameters inputParameters, Parameters connectionParameters, ActionContext context) {
+    public static Object perform(Parameters inputParameters, Parameters connectionParameters, Context context) {
+        List<String> fileIds = inputParameters.getList(ATTACHMENTS, String.class, List.of());
+        List<Map<String, String>> attachments = MicrosoftTeamsUtils.getAttachmentsList(fileIds, context);
+
+        String htmlAttachmentsTag = MicrosoftTeamsUtils.getHtmlAttachmentsTag(attachments);
 
         return context
             .http(http -> http.post(
-                BASE_URL + "/teams/" + inputParameters.getRequiredString(TEAM_ID) + "/channels/"
+                "/teams/" + inputParameters.getRequiredString(TEAM_ID) + "/channels/"
                     + inputParameters.getRequiredString(CHANNEL_ID) + "/messages"))
             .configuration(Http.responseType(Http.ResponseType.JSON))
             .body(
                 Http.Body.of(
-                    BODY,
-                    new Object[] {
-                        CONTENT, inputParameters.getRequiredString(CONTENT),
-                        CONTENT_TYPE, inputParameters.getRequiredString(CONTENT_TYPE)
-                    }))
+                    BODY, Map.of(
+                        CONTENT, inputParameters.getRequiredString(CONTENT) + htmlAttachmentsTag,
+                        CONTENT_TYPE, inputParameters.getRequiredString(CONTENT_TYPE)),
+                    ATTACHMENTS, attachments))
             .execute()
             .getBody(new TypeReference<>() {});
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,13 +29,14 @@ import org.junit.jupiter.api.Test;
 class XeroNewBillTriggerTest extends AbstractXeroTriggerTest {
 
     @Test
-    void testStaticWebhookRequest() {
+    void testWebhookRequest() {
         xeroUtilsMockedStatic
             .when(() -> XeroUtils.getCreatedObject(mockedBody, mockedTriggerContext, INVOICE, ACCPAY))
             .thenReturn(mockedObject);
 
-        Object result = XeroNewBillTrigger.staticWebhookRequest(mockedParameters, mockedHttpHeaders,
-            mockedHttpParameters, mockedBody, mockedMethod, mockedTriggerContext);
+        Object result = XeroNewBillTrigger.webhookRequest(
+            mockedParameters, mockedParameters, mockedHttpHeaders, mockedHttpParameters, mockedBody, mockedMethod,
+            mockedWebhookEnableOutput, mockedTriggerContext);
 
         assertEquals(mockedObject, result);
     }

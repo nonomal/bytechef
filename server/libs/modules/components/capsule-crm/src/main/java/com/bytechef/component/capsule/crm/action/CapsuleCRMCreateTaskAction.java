@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,25 +16,24 @@
 
 package com.bytechef.component.capsule.crm.action;
 
-import static com.bytechef.component.capsule.crm.constant.CapsuleCRMConstants.BASE_URL;
 import static com.bytechef.component.capsule.crm.constant.CapsuleCRMConstants.CATEGORY;
 import static com.bytechef.component.capsule.crm.constant.CapsuleCRMConstants.COLOUR;
-import static com.bytechef.component.capsule.crm.constant.CapsuleCRMConstants.CREATE_TASK;
 import static com.bytechef.component.capsule.crm.constant.CapsuleCRMConstants.DESCRIPTION;
 import static com.bytechef.component.capsule.crm.constant.CapsuleCRMConstants.DETAIL;
 import static com.bytechef.component.capsule.crm.constant.CapsuleCRMConstants.DUE_ON;
+import static com.bytechef.component.capsule.crm.constant.CapsuleCRMConstants.ID;
 import static com.bytechef.component.capsule.crm.constant.CapsuleCRMConstants.NAME;
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.date;
-import static com.bytechef.component.definition.ComponentDSL.integer;
-import static com.bytechef.component.definition.ComponentDSL.object;
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.date;
+import static com.bytechef.component.definition.ComponentDsl.integer;
+import static com.bytechef.component.definition.ComponentDsl.object;
+import static com.bytechef.component.definition.ComponentDsl.outputSchema;
+import static com.bytechef.component.definition.ComponentDsl.string;
 
 import com.bytechef.component.definition.ActionContext;
-import com.bytechef.component.definition.ComponentDSL.ModifiableActionDefinition;
-import com.bytechef.component.definition.Context.ContextFunction;
+import com.bytechef.component.definition.ComponentDsl.ModifiableActionDefinition;
 import com.bytechef.component.definition.Context.Http;
-import com.bytechef.component.definition.Context.TypeReference;
+import com.bytechef.component.definition.Context.Http.Body;
 import com.bytechef.component.definition.Parameters;
 
 /**
@@ -42,16 +41,17 @@ import com.bytechef.component.definition.Parameters;
  */
 public class CapsuleCRMCreateTaskAction {
 
-    public static final ModifiableActionDefinition ACTION_DEFINITION = action(CREATE_TASK)
+    public static final ModifiableActionDefinition ACTION_DEFINITION = action("createTask")
         .title("Create Task")
-        .description("Creates a new Task")
+        .description("Creates a new task.")
+        .help("", "https://docs.bytechef.io/reference/components/capsule-crm_v1#create-task")
         .properties(
             string(DESCRIPTION)
                 .label("Description")
                 .description("A short description of the task.")
                 .required(true),
             date(DUE_ON)
-                .label("Due date")
+                .label("Due Date")
                 .description("The date when this task is due.")
                 .required(true),
             string(DETAIL)
@@ -73,21 +73,27 @@ public class CapsuleCRMCreateTaskAction {
                                 "(e.g. #ffffff).")
                         .required(false))
                 .required(false))
-        .outputSchema(
+        .output(outputSchema(
             object()
                 .properties(
-                    integer("id"),
-                    string(DESCRIPTION),
-                    date(DUE_ON),
-                    string(DETAIL),
+                    integer(ID)
+                        .description("The ID of the new task."),
+                    string(DESCRIPTION)
+                        .description("The description of the task."),
+                    date(DUE_ON)
+                        .description("The due date of the task."),
+                    string(DETAIL)
+                        .description("Details of the new task."),
                     object(CATEGORY)
+                        .description("The category of the new task.")
                         .properties(
-                            string(NAME),
-                            string(COLOUR))))
+                            string(ID)
+                                .description("ID of the category."),
+                            string(NAME)
+                                .description("Name of the category."),
+                            string(COLOUR)
+                                .description("The hex colour code of the category.")))))
         .perform(CapsuleCRMCreateTaskAction::perform);
-
-    protected static final ContextFunction<Http, Http.Executor> POST_TASKS_CONTEXT_FUNCTION =
-        http -> http.post(BASE_URL + "/tasks");
 
     private CapsuleCRMCreateTaskAction() {
     }
@@ -95,9 +101,9 @@ public class CapsuleCRMCreateTaskAction {
     public static Object perform(
         Parameters inputParameters, Parameters connectionParameters, ActionContext actionContext) {
 
-        return actionContext.http(POST_TASKS_CONTEXT_FUNCTION)
+        return actionContext.http(http -> http.post("/tasks"))
             .body(
-                Http.Body.of(
+                Body.of(
                     "task",
                     new Object[] {
                         DESCRIPTION, inputParameters.getRequiredString(DESCRIPTION),
@@ -107,6 +113,6 @@ public class CapsuleCRMCreateTaskAction {
                     }))
             .configuration(Http.responseType(Http.ResponseType.JSON))
             .execute()
-            .getBody(new TypeReference<>() {});
+            .getBody();
     }
 }

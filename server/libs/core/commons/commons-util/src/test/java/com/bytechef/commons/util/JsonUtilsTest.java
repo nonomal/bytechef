@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,12 +16,12 @@
 
 package com.bytechef.commons.util;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
 import java.util.Map;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * @author Ivica Cardic
@@ -29,8 +29,10 @@ import org.junit.jupiter.api.Test;
 public class JsonUtilsTest {
 
     @BeforeAll
-    public static void beforeAll() {
-        new JsonUtils().setObjectMapper(new ObjectMapper());
+    public static void setUp() {
+        JsonUtils.setObjectMapper(
+            JsonMapper.builder()
+                .build());
     }
 
     @Test
@@ -256,6 +258,20 @@ public class JsonUtilsTest {
 
         Assertions.assertThat(JsonUtils.write(List.of(Map.of("key", "value"))))
             .isEqualTo("[{\"key\":\"value\"}]");
+    }
+
+    @Test
+    public void testWriteWithDefaultPrettyPrinter() {
+        Map<String, ?> map = Map.of("key", "value", "array", List.of(1, 2));
+
+        String json = JsonUtils.writeWithDefaultPrettyPrinter(map);
+
+        Assertions.assertThat(json)
+            .contains("\n    \"key\" : \"value\"")
+            .contains("\n    \"array\" : [")
+            .contains("\n        1,")
+            .contains("\n        2")
+            .contains("\n    ]");
     }
 
     private record Row(String key) {

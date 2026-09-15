@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,31 +19,36 @@ package com.bytechef.component.dropbox.connection;
 import static com.bytechef.component.definition.Authorization.AuthorizationType.OAUTH2_AUTHORIZATION_CODE;
 import static com.bytechef.component.definition.Authorization.CLIENT_ID;
 import static com.bytechef.component.definition.Authorization.CLIENT_SECRET;
-import static com.bytechef.component.definition.ComponentDSL.authorization;
-import static com.bytechef.component.definition.ComponentDSL.connection;
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.definition.ComponentDsl.authorization;
+import static com.bytechef.component.definition.ComponentDsl.connection;
+import static com.bytechef.component.definition.ComponentDsl.string;
 
-import com.bytechef.component.definition.ComponentDSL.ModifiableConnectionDefinition;
+import com.bytechef.component.definition.ComponentDsl.ModifiableConnectionDefinition;
+import java.util.Map;
 
 /**
- * Provides the component connection definition.
  *
  * @author Mario Cvjetojevic
  */
 public final class DropboxConnection {
+
     public static final ModifiableConnectionDefinition CONNECTION_DEFINITION = connection()
+        .help("", "https://docs.bytechef.io/reference/components/dropbox_v1#connection-setup")
         .authorizations(
             authorization(OAUTH2_AUTHORIZATION_CODE)
                 .title("OAuth2 Authorization Code")
                 .properties(
                     string(CLIENT_ID)
-                        .label("Client Id")
+                        .label("App Key")
                         .required(true),
                     string(CLIENT_SECRET)
-                        .label("Client Secret")
+                        .label("App Secret")
                         .required(true))
                 .authorizationUrl((connection, context) -> "https://www.dropbox.com/oauth2/authorize")
-                .tokenUrl((connection, context) -> "https://api.dropboxapi.com/oauth2/token"));
+                .oAuth2AuthorizationExtraQueryParameters(Map.of("token_access_type", "offline"))
+                .tokenUrl((connection, context) -> "https://api.dropboxapi.com/oauth2/token")
+                .refreshUrl((connection, context) -> "https://api.dropboxapi.com/oauth2/token"))
+        .version(1);
 
     private DropboxConnection() {
     }

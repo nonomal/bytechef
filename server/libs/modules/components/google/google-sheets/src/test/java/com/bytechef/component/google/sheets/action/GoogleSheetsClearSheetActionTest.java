@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,66 +17,85 @@
 package com.bytechef.component.google.sheets.action;
 
 import static com.bytechef.component.google.sheets.constant.GoogleSheetsConstants.IS_THE_FIRST_ROW_HEADER;
+import static com.bytechef.component.google.sheets.constant.GoogleSheetsConstants.SHEET_ID;
+import static com.bytechef.component.google.sheets.constant.GoogleSheetsConstants.SPREADSHEET_ID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.mockito.ArgumentCaptor.forClass;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 
+import com.bytechef.component.definition.ActionContext;
+import com.bytechef.component.definition.Parameters;
+import com.bytechef.component.test.definition.MockParametersFactory;
+import com.bytechef.google.commons.GoogleServices;
 import com.google.api.services.sheets.v4.Sheets;
+import com.google.api.services.sheets.v4.Sheets.Spreadsheets;
+import com.google.api.services.sheets.v4.Sheets.Spreadsheets.BatchUpdate;
 import com.google.api.services.sheets.v4.model.BatchUpdateSpreadsheetRequest;
 import com.google.api.services.sheets.v4.model.BatchUpdateSpreadsheetResponse;
 import com.google.api.services.sheets.v4.model.GridRange;
 import com.google.api.services.sheets.v4.model.Request;
 import com.google.api.services.sheets.v4.model.UpdateCellsRequest;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.MockedStatic;
 
 /**
- * @author Monika Domiter
+ * @author Monika Kušter
  */
-class GoogleSheetsClearSheetActionTest extends AbstractGoogleSheetsActionTest {
+class GoogleSheetsClearSheetActionTest {
 
     private final ArgumentCaptor<BatchUpdateSpreadsheetRequest> batchUpdateSpreadsheetRequestArgumentCaptor =
-        ArgumentCaptor.forClass(BatchUpdateSpreadsheetRequest.class);
+        forClass(BatchUpdateSpreadsheetRequest.class);
     private final BatchUpdateSpreadsheetResponse mockedBatchUpdateSpreadsheetResponse =
         mock(BatchUpdateSpreadsheetResponse.class);
-    private final Sheets.Spreadsheets.BatchUpdate mockedBatchUpdate = mock(Sheets.Spreadsheets.BatchUpdate.class);
-    private final Sheets.Spreadsheets mockedSpreadsheets = mock(Sheets.Spreadsheets.class);
+    private final BatchUpdate mockedBatchUpdate = mock(BatchUpdate.class);
+    private final ActionContext mockedActionContext = mock(ActionContext.class);
+    private final Sheets mockedSheets = mock(Sheets.class);
+    private final Spreadsheets mockedSpreadsheets = mock(Spreadsheets.class);
+    private final Parameters mockedParameters = MockParametersFactory.create(
+        Map.of(SPREADSHEET_ID, "spreadsheetId", SHEET_ID, 123, IS_THE_FIRST_ROW_HEADER, true));
+    private final ArgumentCaptor<Parameters> parametersArgumentCaptor = forClass(Parameters.class);
+    private final ArgumentCaptor<String> stringArgumentCaptor = forClass(String.class);
 
     @Test
     void perform() throws Exception {
+        try (MockedStatic<GoogleServices> googleServicesMockedStatic = mockStatic(GoogleServices.class)) {
+            googleServicesMockedStatic
+                .when(() -> GoogleServices.getSheets(parametersArgumentCaptor.capture()))
+                .thenReturn(mockedSheets);
 
-        when(mockedParameters.getRequiredBoolean(IS_THE_FIRST_ROW_HEADER))
-            .thenReturn(true);
+            when(mockedSheets.spreadsheets())
+                .thenReturn(mockedSpreadsheets);
+            when(mockedSpreadsheets.batchUpdate(
+                stringArgumentCaptor.capture(), batchUpdateSpreadsheetRequestArgumentCaptor.capture()))
+                    .thenReturn(mockedBatchUpdate);
+            when(mockedBatchUpdate.execute())
+                .thenReturn(mockedBatchUpdateSpreadsheetResponse);
 
-        when(mockedSheets.spreadsheets())
-            .thenReturn(mockedSpreadsheets);
-        when(mockedSpreadsheets.batchUpdate(spreadsheetIdArgumentCaptor.capture(),
-            batchUpdateSpreadsheetRequestArgumentCaptor.capture()))
-            .thenReturn(mockedBatchUpdate);
-        when(mockedBatchUpdate.execute())
-            .thenReturn(mockedBatchUpdateSpreadsheetResponse);
+            Object result = GoogleSheetsClearSheetAction.perform(
+                mockedParameters, mockedParameters, mockedActionContext);
 
-        GoogleSheetsClearSheetAction.perform(mockedParameters, mockedParameters, mockedContext);
+            assertNull(result);
+            assertEquals(mockedParameters, parametersArgumentCaptor.getValue());
+            assertEquals("spreadsheetId", stringArgumentCaptor.getValue());
 
-        assertEquals("spreadsheetId", spreadsheetIdArgumentCaptor.getValue());
+            BatchUpdateSpreadsheetRequest expectedBatchUpdateSpreadsheetRequest = new BatchUpdateSpreadsheetRequest()
+                .setRequests(List.of(
+                    new Request()
+                        .setUpdateCells(
+                            new UpdateCellsRequest()
+                                .setFields("userEnteredValue")
+                                .setRange(
+                                    new GridRange()
+                                        .setSheetId(123)
+                                        .setStartRowIndex(1)))));
 
-        BatchUpdateSpreadsheetRequest batchUpdateSpreadsheetRequest =
-            batchUpdateSpreadsheetRequestArgumentCaptor.getValue();
-
-        List<Request> requests = batchUpdateSpreadsheetRequest.getRequests();
-
-        assertEquals(1, requests.size());
-
-        Request request = requests.getFirst();
-
-        UpdateCellsRequest updateCellsRequest = request.getUpdateCells();
-
-        assertEquals("userEnteredValue", updateCellsRequest.getFields());
-
-        GridRange gridRange = updateCellsRequest.getRange();
-
-        assertEquals(123, gridRange.getSheetId());
-        assertEquals(1, gridRange.getStartRowIndex());
+            assertEquals(expectedBatchUpdateSpreadsheetRequest, batchUpdateSpreadsheetRequestArgumentCaptor.getValue());
+        }
     }
 }

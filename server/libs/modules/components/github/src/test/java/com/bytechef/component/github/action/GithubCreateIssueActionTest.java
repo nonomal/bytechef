@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,45 +16,71 @@
 
 package com.bytechef.component.github.action;
 
-import static com.bytechef.component.definition.Context.Http.Body;
+import static com.bytechef.component.definition.HttpStatus.OK;
 import static com.bytechef.component.github.constant.GithubConstants.BODY;
+import static com.bytechef.component.github.constant.GithubConstants.OWNER;
+import static com.bytechef.component.github.constant.GithubConstants.REPOSITORY;
 import static com.bytechef.component.github.constant.GithubConstants.TITLE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.mockito.ArgumentCaptor.forClass;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
-import java.util.HashMap;
+import com.bytechef.component.definition.Context;
+import com.bytechef.component.definition.Context.ContextFunction;
+import com.bytechef.component.definition.Context.Http;
+import com.bytechef.component.definition.Context.Http.Body;
+import com.bytechef.component.definition.Context.Http.Configuration;
+import com.bytechef.component.definition.Context.Http.Configuration.ConfigurationBuilder;
+import com.bytechef.component.definition.Context.Http.Executor;
+import com.bytechef.component.definition.Context.Http.Response;
+import com.bytechef.component.definition.Parameters;
+import com.bytechef.component.definition.TypeReference;
+import com.bytechef.component.test.definition.MockParametersFactory;
+import com.bytechef.component.test.definition.extension.MockContextSetupExtension;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 
 /**
  * @author Luka Ljubić
+ * @author Monika Kušter
  */
-class GithubCreateIssueActionTest extends AbstractGithubActionTest {
+@ExtendWith(MockContextSetupExtension.class)
+class GithubCreateIssueActionTest {
+
+    private final ArgumentCaptor<Http.Body> bodyArgumentCaptor = forClass(Http.Body.class);
+    private final Parameters mockedParameters = MockParametersFactory.create(
+        Map.of(OWNER, "testOwner", REPOSITORY, "testRepo", TITLE, "name", BODY, "description"));
+    private final ArgumentCaptor<String> stringArgumentCaptor = forClass(String.class);
 
     @Test
-    void testPerform() {
-        Map<String, Object> propertyStubsMap = createPropertyStubsMap();
+    void testPerform(
+        Context mockedContext, Response mockedResponse, Executor mockedExecutor, Http mockedHttp,
+        ArgumentCaptor<ContextFunction<Http, Executor>> httpFunctionArgumentCaptor,
+        ArgumentCaptor<ConfigurationBuilder> configurationBuilderArgumentCaptor) {
 
-        when(mockedParameters.getRequiredString(TITLE))
-            .thenReturn((String) propertyStubsMap.get(TITLE));
-        when(mockedParameters.getString(BODY))
-            .thenReturn((String) propertyStubsMap.get(BODY));
+        when(mockedHttp.post(stringArgumentCaptor.capture()))
+            .thenReturn(mockedExecutor);
+        when(mockedExecutor.body(bodyArgumentCaptor.capture()))
+            .thenReturn(mockedExecutor);
+        when(mockedResponse.getBody(any(TypeReference.class)))
+            .thenReturn(Map.of(OK, true));
 
-        Map<String, Object> result = GithubCreateIssueAction.perform(mockedParameters, mockedParameters, mockedContext);
+        Object result = GithubCreateIssueAction.perform(mockedParameters, null, mockedContext);
 
-        assertEquals(responseMap, result);
+        assertEquals(Map.of(OK, true), result);
+        assertNotNull(httpFunctionArgumentCaptor.getValue());
 
-        Body body = bodyArgumentCaptor.getValue();
+        ConfigurationBuilder configurationBuilder = configurationBuilderArgumentCaptor.getValue();
+        Configuration configuration = configurationBuilder.build();
 
-        assertEquals(propertyStubsMap, body.getContent());
-    }
-
-    private static Map<String, Object> createPropertyStubsMap() {
-        Map<String, Object> propertyStubsMap = new HashMap<>();
-
-        propertyStubsMap.put(TITLE, "name");
-        propertyStubsMap.put(BODY, "description");
-
-        return propertyStubsMap;
+        assertEquals(Http.ResponseType.JSON, configuration.getResponseType());
+        assertEquals("/repos/testOwner/testRepo/issues", stringArgumentCaptor.getValue());
+        assertEquals(
+            Body.of(Map.of(TITLE, "name", BODY, "description"), Http.BodyContentType.JSON),
+            bodyArgumentCaptor.getValue());
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,26 +17,21 @@
 package com.bytechef.component.freshdesk;
 
 import static com.bytechef.component.definition.Authorization.USERNAME;
-import static com.bytechef.component.definition.ComponentDSL.authorization;
-import static com.bytechef.component.definition.ComponentDSL.option;
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.definition.ComponentDsl.authorization;
+import static com.bytechef.component.definition.ComponentDsl.option;
+import static com.bytechef.component.definition.ComponentDsl.string;
 import static com.bytechef.component.freshdesk.constant.FreshdeskConstants.DOMAIN;
 
 import com.bytechef.component.OpenApiComponentHandler;
 import com.bytechef.component.definition.ActionDefinition;
 import com.bytechef.component.definition.Authorization.AuthorizationType;
 import com.bytechef.component.definition.ComponentCategory;
-import com.bytechef.component.definition.ComponentDSL.ModifiableComponentDefinition;
-import com.bytechef.component.definition.ComponentDSL.ModifiableConnectionDefinition;
-import com.bytechef.component.definition.ComponentDSL.ModifiableIntegerProperty;
-import com.bytechef.component.definition.ComponentDSL.ModifiableObjectProperty;
-import com.bytechef.component.definition.ComponentDSL.ModifiableProperty;
-import com.bytechef.component.definition.Property;
-import com.bytechef.definition.BaseProperty;
+import com.bytechef.component.definition.ComponentDsl.ModifiableComponentDefinition;
+import com.bytechef.component.definition.ComponentDsl.ModifiableConnectionDefinition;
+import com.bytechef.component.definition.ComponentDsl.ModifiableIntegerProperty;
+import com.bytechef.component.definition.ComponentDsl.ModifiableProperty;
 import com.google.auto.service.AutoService;
-import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 
 /**
  * @author Monika Domiter
@@ -48,6 +43,7 @@ public class FreshdeskComponentHandler extends AbstractFreshdeskComponentHandler
     public ModifiableComponentDefinition modifyComponent(ModifiableComponentDefinition modifiableComponentDefinition) {
         return modifiableComponentDefinition
             .customAction(true)
+            .customActionHelp("", "https://developers.freshdesk.com/api/#introduction")
             .icon("path:assets/freshdesk.svg")
             .categories(ComponentCategory.CUSTOMER_SUPPORT);
     }
@@ -57,6 +53,8 @@ public class FreshdeskComponentHandler extends AbstractFreshdeskComponentHandler
         ModifiableConnectionDefinition modifiableConnectionDefinition) {
 
         return modifiableConnectionDefinition
+            .version(1)
+            .help("", "https://docs.bytechef.io/reference/components/freshdesk_v1#connection-setup")
             .authorizations(
                 authorization(AuthorizationType.BASIC_AUTH)
                     .title("Basic Auth")
@@ -77,29 +75,22 @@ public class FreshdeskComponentHandler extends AbstractFreshdeskComponentHandler
     public ModifiableProperty<?> modifyProperty(
         ActionDefinition actionDefinition, ModifiableProperty<?> modifiableProperty) {
 
-        if (Objects.equals(actionDefinition.getName(), "createTicket")) {
-            Optional<List<? extends Property.ValueProperty<?>>> propertiesOptional =
-                ((ModifiableObjectProperty) modifiableProperty).getProperties();
-
-            for (BaseProperty baseProperty : propertiesOptional.get()) {
-                if (Objects.equals(baseProperty.getName(), "priority")) {
-                    ((ModifiableIntegerProperty) baseProperty)
-                        .options(
-                            option("Low", 1),
-                            option("Medium", 2),
-                            option("High", 3),
-                            option("Urgent", 4))
-                        .defaultValue(1);
-                } else if (Objects.equals(baseProperty.getName(), "status")) {
-                    ((ModifiableIntegerProperty) baseProperty)
-                        .options(
-                            option("Open", 2),
-                            option("Pending", 3),
-                            option("Resolved", 4),
-                            option("Closed", 5))
-                        .defaultValue(2);
-                }
-            }
+        if (Objects.equals(modifiableProperty.getName(), "priority")) {
+            ((ModifiableIntegerProperty) modifiableProperty)
+                .options(
+                    option("Low", 1),
+                    option("Medium", 2),
+                    option("High", 3),
+                    option("Urgent", 4))
+                .defaultValue(1);
+        } else if (Objects.equals(modifiableProperty.getName(), "status")) {
+            ((ModifiableIntegerProperty) modifiableProperty)
+                .options(
+                    option("Open", 2),
+                    option("Pending", 3),
+                    option("Resolved", 4),
+                    option("Closed", 5))
+                .defaultValue(2);
         }
 
         return modifiableProperty;

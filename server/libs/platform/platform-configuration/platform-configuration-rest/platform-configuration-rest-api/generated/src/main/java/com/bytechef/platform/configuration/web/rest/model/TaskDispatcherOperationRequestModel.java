@@ -7,6 +7,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import java.util.HashMap;
 import java.util.Map;
+import org.springframework.lang.Nullable;
 import org.openapitools.jackson.nullable.JsonNullable;
 import java.time.OffsetDateTime;
 import jakarta.validation.Valid;
@@ -22,7 +23,7 @@ import jakarta.annotation.Generated;
  */
 
 @JsonTypeName("TaskDispatcherOperationRequest")
-@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2024-06-30T07:20:54.243996+02:00[Europe/Zagreb]", comments = "Generator version: 7.5.0")
+@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2026-07-03T17:58:15.504637+02:00[Europe/Zagreb]", comments = "Generator version: 7.22.0")
 public class TaskDispatcherOperationRequestModel {
 
   @Valid
@@ -55,7 +56,7 @@ public class TaskDispatcherOperationRequestModel {
   /**
    * The parameters of an action.
    * @return parameters
-  */
+   */
   @NotNull 
   @Schema(name = "parameters", description = "The parameters of an action.", requiredMode = Schema.RequiredMode.REQUIRED)
   @JsonProperty("parameters")
@@ -63,6 +64,7 @@ public class TaskDispatcherOperationRequestModel {
     return parameters;
   }
 
+  @JsonProperty("parameters")
   public void setParameters(Map<String, Object> parameters) {
     this.parameters = parameters;
   }
@@ -97,11 +99,8 @@ public class TaskDispatcherOperationRequestModel {
    * Convert the given object to string with each line indented by 4 spaces
    * (except the first line).
    */
-  private String toIndentedString(Object o) {
-    if (o == null) {
-      return "null";
-    }
-    return o.toString().replace("\n", "\n    ");
+  private String toIndentedString(@Nullable Object o) {
+    return o == null ? "null" : o.toString().replace("\n", "\n    ");
   }
 }
 

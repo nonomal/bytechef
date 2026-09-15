@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,59 +16,71 @@
 
 package com.bytechef.component.google.mail.action;
 
-import static com.bytechef.component.google.mail.constant.GoogleMailConstants.BODY;
-import static com.bytechef.component.google.mail.constant.GoogleMailConstants.FROM;
-import static com.bytechef.component.google.mail.constant.GoogleMailConstants.SUBJECT;
-import static com.bytechef.component.google.mail.constant.GoogleMailConstants.TO;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentCaptor.forClass;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.mockStatic;
 
+import com.bytechef.component.definition.ActionContext;
+import com.bytechef.component.definition.Parameters;
+import com.bytechef.component.google.mail.util.GoogleMailUtils;
+import com.bytechef.google.commons.GoogleServices;
 import com.google.api.services.gmail.Gmail;
 import com.google.api.services.gmail.model.Message;
 import jakarta.mail.MessagingException;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.MockedStatic;
 
 /**
- * @author Monika Domiter
+ * @author Monika Kušter
  */
-class GoogleMailSendEmailActionTest extends AbstractGoogleMailActionTest {
+class GoogleMailSendEmailActionTest {
 
-    private final ArgumentCaptor<Message> messageArgumentCaptor = ArgumentCaptor.forClass(Message.class);
+    private final ArgumentCaptor<ActionContext> actionContextArgumentCaptor = forClass(ActionContext.class);
+    private final ArgumentCaptor<Gmail> gmailArgumentCaptor = forClass(Gmail.class);
+    private final ArgumentCaptor<Message> messageArgumentCaptor = forClass(Message.class);
+    private final ActionContext mockedActionContext = mock(ActionContext.class);
+    private final Gmail mockedGmail = mock(Gmail.class);
     private final Message mockedMessage = mock(Message.class);
-    private final Gmail.Users.Messages mockedMessages = mock(Gmail.Users.Messages.class);
-    private final Gmail.Users.Messages.Send mockedSend = mock(Gmail.Users.Messages.Send.class);
-    private final Gmail.Users mockedUsers = mock(Gmail.Users.class);
-    private final ArgumentCaptor<String> userIdArgumentCaptor = ArgumentCaptor.forClass(String.class);
+    private final Parameters mockedParameters = mock(Parameters.class);
+    private final ArgumentCaptor<Parameters> parametersArgumentCaptor = forClass(Parameters.class);
 
     @Test
     void testPerform() throws IOException, MessagingException {
-        List<String> toList = List.of("to@mail.com");
+        try (MockedStatic<GoogleServices> googleServicesMockedStatic = mockStatic(GoogleServices.class);
+            MockedStatic<GoogleMailUtils> googleMailUtilsMockedStatic = mockStatic(GoogleMailUtils.class)) {
+            googleServicesMockedStatic
+                .when(() -> GoogleServices.getMail(parametersArgumentCaptor.capture()))
+                .thenReturn(mockedGmail);
+            googleMailUtilsMockedStatic
+                .when(() -> GoogleMailUtils.getEncodedEmail(
+                    parametersArgumentCaptor.capture(), actionContextArgumentCaptor.capture(),
+                    messageArgumentCaptor.capture()))
+                .thenReturn("encodedMail");
+            googleMailUtilsMockedStatic
+                .when(() -> GoogleMailUtils.sendMail(gmailArgumentCaptor.capture(), messageArgumentCaptor.capture()))
+                .thenReturn(mockedMessage);
 
-        when(mockedParameters.getRequiredString(FROM))
-            .thenReturn("from@mail.com");
-        when(mockedParameters.getRequiredList(TO, String.class))
-            .thenReturn(toList);
-        when(mockedParameters.getRequiredString(SUBJECT))
-            .thenReturn("subject");
-        when(mockedParameters.getRequiredString(BODY))
-            .thenReturn("body");
+            Message result = GoogleMailSendEmailAction.perform(mockedParameters, mockedParameters, mockedActionContext);
 
-        when(mockedGmail.users())
-            .thenReturn(mockedUsers);
-        when(mockedUsers.messages())
-            .thenReturn(mockedMessages);
-        when(mockedMessages.send(userIdArgumentCaptor.capture(), messageArgumentCaptor.capture()))
-            .thenReturn(mockedSend);
-        when(mockedSend.execute())
-            .thenReturn(mockedMessage);
+            assertEquals(mockedMessage, result);
 
-        Message message = GoogleMailSendEmailAction.perform(mockedParameters, mockedParameters, mockedContext);
+            assertEquals(List.of(mockedParameters, mockedParameters), parametersArgumentCaptor.getAllValues());
+            assertEquals(mockedGmail, gmailArgumentCaptor.getValue());
+            assertEquals(mockedActionContext, actionContextArgumentCaptor.getValue());
 
-        assertEquals(mockedMessage, message);
-        assertEquals("me", userIdArgumentCaptor.getValue());
+            Message expecteMessage = new Message().setRaw("encodedMail");
+
+            ArrayList<Object> messages = new ArrayList<>();
+
+            messages.add(null);
+            messages.add(expecteMessage);
+
+            assertEquals(messages, messageArgumentCaptor.getAllValues());
+        }
     }
 }

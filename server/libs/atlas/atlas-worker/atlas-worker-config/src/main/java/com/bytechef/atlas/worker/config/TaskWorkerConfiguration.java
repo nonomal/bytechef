@@ -13,24 +13,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * Modifications copyright (C) 2023 ByteChef Inc.
+ * Modifications copyright (C) 2025 ByteChef
  */
 
 package com.bytechef.atlas.worker.config;
 
 import com.bytechef.atlas.file.storage.TaskFileStorage;
 import com.bytechef.atlas.worker.TaskWorker;
-import com.bytechef.atlas.worker.task.factory.TaskDispatcherAdapterFactory;
+import com.bytechef.atlas.worker.annotation.ConditionalOnWorker;
 import com.bytechef.atlas.worker.task.handler.DefaultTaskHandlerResolver;
+import com.bytechef.atlas.worker.task.handler.TaskDispatcherAdapterFactory;
 import com.bytechef.atlas.worker.task.handler.TaskDispatcherAdapterTaskHandlerResolver;
+import com.bytechef.atlas.worker.task.handler.TaskExecutionPostOutputProcessor;
 import com.bytechef.atlas.worker.task.handler.TaskHandlerRegistry;
 import com.bytechef.atlas.worker.task.handler.TaskHandlerResolver;
 import com.bytechef.atlas.worker.task.handler.TaskHandlerResolverChain;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import com.bytechef.config.ApplicationProperties;
+import com.bytechef.evaluator.Evaluator;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.Executor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -42,27 +45,16 @@ import org.springframework.core.task.AsyncTaskExecutor;
  * @author Ivica Cardic
  */
 @Configuration
+@ConditionalOnWorker
 public class TaskWorkerConfiguration {
 
     private final List<TaskDispatcherAdapterFactory> taskDispatcherAdapterTaskHandlerFactories;
 
-    @SuppressFBWarnings("EI")
     public TaskWorkerConfiguration(
         @Autowired(required = false) List<TaskDispatcherAdapterFactory> taskDispatcherAdapterTaskHandlerFactories) {
 
         this.taskDispatcherAdapterTaskHandlerFactories = taskDispatcherAdapterTaskHandlerFactories == null
             ? Collections.emptyList() : taskDispatcherAdapterTaskHandlerFactories;
-    }
-
-    @Bean
-    TaskHandlerResolver defaultTaskHandlerResolver(TaskHandlerRegistry taskHandlerRegistry) {
-        return new DefaultTaskHandlerResolver(taskHandlerRegistry);
-    }
-
-    @Bean
-    TaskHandlerResolver taskDispatcherAdapterTaskHandlerResolver(TaskHandlerResolver taskHandlerResolver) {
-        return new TaskDispatcherAdapterTaskHandlerResolver(
-            taskDispatcherAdapterTaskHandlerFactories, taskHandlerResolver);
     }
 
     @Bean
@@ -72,17 +64,25 @@ public class TaskWorkerConfiguration {
 
         taskHandlerResolverChain.setTaskHandlerResolvers(
             List.of(
-                taskDispatcherAdapterTaskHandlerResolver(taskHandlerResolverChain),
-                defaultTaskHandlerResolver(taskHandlerRegistry)));
+                new TaskDispatcherAdapterTaskHandlerResolver(
+                    taskDispatcherAdapterTaskHandlerFactories, taskHandlerResolverChain),
+                new DefaultTaskHandlerResolver(taskHandlerRegistry)));
 
         return taskHandlerResolverChain;
     }
 
     @Bean
     TaskWorker taskWorker(
-        ApplicationEventPublisher eventPublisher, Executor taskExecutor, TaskFileStorage taskFileStorage,
-        TaskHandlerResolver taskHandlerResolver) {
+        ApplicationProperties applicationProperties, Evaluator evaluator, ApplicationEventPublisher eventPublisher,
+        @Qualifier("workerExecutor") AsyncTaskExecutor workerExecutor, TaskFileStorage taskFileStorage,
+        TaskHandlerResolver taskHandlerResolver,
+        List<TaskExecutionPostOutputProcessor> taskExecutionPostOutputProcessors) {
 
-        return new TaskWorker(eventPublisher, (AsyncTaskExecutor) taskExecutor, taskHandlerResolver, taskFileStorage);
+        ApplicationProperties.Worker.Task task = applicationProperties.getWorker()
+            .getTask();
+
+        return new TaskWorker(
+            task.getDefaultTimeout(), evaluator, eventPublisher, workerExecutor, taskHandlerResolver,
+            taskFileStorage, taskExecutionPostOutputProcessors);
     }
 }

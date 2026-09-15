@@ -1,0 +1,206 @@
+---
+title: "Teamwork"
+description: "Teamwork is a project management software that helps teams collaborate, organize tasks, and track progress efficiently."
+---
+
+
+Categories: CRM, Project Management
+
+
+Type: teamwork/v1
+
+<hr />
+
+
+
+
+## Connections
+
+Version: 1
+
+
+### Basic Auth
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| siteName | Your site name | STRING | e.g. https://&#123;yourSiteName&#125;.teamwork.com | true |
+| username | API Key | STRING |  | true |
+
+
+
+## Connection Setup
+
+### Find API Token
+
+1. Navigate to your [Teamwork](https://www.teamwork.com/) dashboard.
+2. Click on your account icon.
+3. Click on **Edit my details**.
+4. Click on **API & Mobile**.
+5. Click on **Show your Token**.
+6. Now you can copy your **API Token**.
+7. Exit pop up window.
+8. Click on your account icon.
+9. Click on **Settings**.
+10. Here you can see yore site name.
+11. Done 🚀.
+
+<div style={{ position: 'relative', height:0, width: '100%', overflow: 'hidden', zIndex: 49, boxSizing: 'border-box', paddingBottom: 'calc(50.05219207% + 32px)'}}>
+    <iframe src="https://www.guidejar.com/embed/0d42d307-936b-4df5-82ee-d5271d666055?type=1&controls=on" width="100%" height="100%" style={{height:'100%', position:'absolute', inset:0, border: 'none'}} allowFullScreen></iframe>
+</div>
+
+
+
+<hr />
+
+
+## Actions
+
+
+### Create Company
+Name: createCompany
+
+`Creates a new company.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| company | Company | OBJECT <details> <summary> Properties </summary> &#123;STRING\(name), STRING\(emailOne), STRING\(phone), STRING\(website)&#125; </details> |  | false |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Create Company",
+  "name" : "createCompany",
+  "parameters" : {
+    "company" : {
+      "name" : "",
+      "emailOne" : "",
+      "phone" : "",
+      "website" : ""
+    }
+  },
+  "type" : "teamwork/v1/createCompany"
+}
+```
+
+#### Output
+
+
+
+Type: OBJECT
+
+
+#### Properties
+
+|     Name     |     Type     |     Description     |
+|:------------:|:------------:|:-------------------:|
+| name | STRING | The name of the company. |
+| emailOne | STRING | Email address of the company. |
+| phone | STRING | Phone number for the company. |
+| website | STRING | The company's website. |
+
+
+
+
+#### Output Example
+```json
+{
+  "name" : "",
+  "emailOne" : "",
+  "phone" : "",
+  "website" : ""
+}
+```
+
+
+
+
+### Create Task
+Name: createTask
+
+`Create a new task.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| tasklistId | Task List ID | INTEGER | Task list where new task is added. | true |
+| task | Task | OBJECT <details> <summary> Properties </summary> &#123;STRING\(name), STRING\(description), DATE\(dueAt)&#125; </details> |  | false |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Create Task",
+  "name" : "createTask",
+  "parameters" : {
+    "tasklistId" : 1,
+    "task" : {
+      "name" : "",
+      "description" : "",
+      "dueAt" : "2021-01-01"
+    }
+  },
+  "type" : "teamwork/v1/createTask"
+}
+```
+
+#### Output
+
+
+
+Type: OBJECT
+
+
+#### Properties
+
+|     Name     |     Type     |     Description     |
+|:------------:|:------------:|:-------------------:|
+| name | STRING | Name of the task. |
+| description | STRING | Description of the task. |
+| dueAt | STRING | Due date of the task. |
+
+
+
+
+#### Output Example
+```json
+{
+  "name" : "",
+  "description" : "",
+  "dueAt" : ""
+}
+```
+
+#### Find Task List ID
+
+To find the Task List ID, click [here](/reference/components/teamwork_v1#how-to-find-task-list-id).
+
+
+
+
+
+## What to do if your action is not listed here?
+
+If this component doesn't have the action you need, you can use **Custom Action** to create your own. Custom Actions empower you to define HTTP requests tailored to your specific requirements, allowing for greater flexibility in integrating with external services or APIs.
+
+To create a Custom Action, simply specify the desired HTTP method, path, and any necessary parameters. This way, you can extend the functionality of your component beyond the predefined actions, ensuring that you can meet all your integration needs effectively.
+
+<hr />
+
+# Additional Instructions
+
+### How to find Task List ID
+
+- **Method 1: Via API**
+
+Use the `GET /tasklists` endpoint to retrieve a list of all task lists and their IDs.
+
+- **Method 2: Via UI**
+
+Open your Teamwork dashboard and navigate to the project you want to use. In the left-hand menu, you’ll see a list of task lists and select the one you need. Once opened, check the URL in your browser. The Task List ID is the number shown in the URL.
+
+For example, in the URL `https://bytechef.teamwork.com/app/tasklists/3369352/list`, the Task List ID is `3369352`.
+

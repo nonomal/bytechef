@@ -4,71 +4,198 @@ info:
   title: "The Platform Configuration Internal API"
   version: "1"
 servers:
-- url: "/api/platform/internal"
+  - url: "/api/platform/internal"
 tags:
-- name: "action-definition"
-  description: "The Platform Action Definition Internal API"
-- name: "component-definition"
-  description: "The Platform Component Definition Internal API"
-- name: "connection-definition"
-  description: "The Platform Connection Definition Internal API"
-- name: "task-dispatcher-definition"
-  description: "The Platform Task Dispatcher Definition Internal API"
-- name: "trigger-definition"
-  description: "The Platform Trigger Definition Internal API"
-- name: "workflow"
-  description: "The Platform Workflow Internal API"
-- name: "workflow-node-description"
-  description: "The Platform Workflow Node Description Internal API"
-- name: "workflow-node-dynamic-properties"
-  description: "The Platform Workflow Node Dynamic Properties Internal API"
-- name: "workflow-node-option"
-  description: "The Platform Workflow Node Option Internal API"
-- name: "workflow-node-output"
-  description: "The Platform Workflow Node Output Internal API"
-- name: "workflow-node-parameter"
-  description: "The Platform Workflow Node Parameter Internal API"
-- name: "workflow-node-script"
-  description: "The Platform Workflow Node Script Internal API"
-- name: "workflow-node-test-output"
-  description: "The Platform Workflow Node Test Output Internal API"
-- name: "workflow-test-configuration"
-  description: "The Platform Workflow Test Configuration Internal API"
+  - name: "action-definition"
+    description: "The Platform Action Definition Internal API"
+  - name: "ai-provider"
+    description: "The Platform AI Provider Internal API"
+  - name: "cluster-element-definition"
+    description: "The Platform Cluster Element Definition Internal API"
+  - name: "component-definition"
+    description: "The Platform Component Definition Internal API"
+  - name: "connection-definition"
+    description: "The Platform Connection Definition Internal API"
+  - name: "environment"
+    description: "The Platform Environment Internal API"
+  - name: "task-dispatcher-definition"
+    description: "The Platform Task Dispatcher Definition Internal API"
+  - name: "trigger-definition"
+    description: "The Platform Trigger Definition Internal API"
+  - name: "workflow"
+    description: "The Platform Workflow Internal API"
+  - name: "workflow-node-description"
+    description: "The Platform Workflow Node Description Internal API"
+  - name: "workflow-node-dynamic-properties"
+    description: "The Platform Workflow Node Dynamic Properties Internal API"
+  - name: "workflow-node-option"
+    description: "The Platform Workflow Node Option Internal API"
+  - name: "workflow-node-output"
+    description: "The Platform Workflow Node Output Internal API"
+  - name: "workflow-node-parameter"
+    description: "The Platform Workflow Node Parameter Internal API"
+  - name: "workflow-node-test-output"
+    description: "The Platform Workflow Node Test Output Internal API"
+  - name: "workflow-test-configuration"
+    description: "The Platform Workflow Test Configuration Internal API"
 paths:
-  /component-definitions:
+  /ai-providers:
     get:
-      description: "Get all component definitions."
-      summary: "Get all component definitions"
+      description: "Get AI providers."
+      summary: "Get AI providers"
       tags:
-      - "component-definition"
-      operationId: "getComponentDefinitions"
+        - "ai-provider"
+      operationId: "getAiProviders"
       parameters:
-      - name: "actionDefinitions"
-        description: "Use for filtering components which define action definitions."
-        in: "query"
-        required: false
-        schema:
-          type: "boolean"
-      - name: "connectionDefinitions"
-        description: "Use for filtering components which define connection definitions."
-        in: "query"
-        required: false
-        schema:
-          type: "boolean"
-      - name: "triggerDefinitions"
-        description: "Use for filtering components which define trigger definitions."
-        in: "query"
-        required: false
-        schema:
-          type: "boolean"
-      - name: "include"
-        description: "The list of component names to include in the result."
-        in: "query"
-        required: false
-        schema:
-          type: "array"
-          items:
+        - name: "environment"
+          description: "The environment of an AI provider."
+          in: "query"
+          required: true
+          schema:
+            type: "integer"
+      responses:
+        "200":
+          description: "The list of AI providers."
+          content:
+            application/json:
+              schema:
+                type: "array"
+                items:
+                  $ref: "#/components/schemas/AiProvider"
+  /ai-providers/{id}:
+    delete:
+      description: "Delete an AI provider."
+      summary: "Delete an AI provider"
+      tags:
+        - "ai-provider"
+      operationId: "deleteAiProvider"
+      parameters:
+        - name: "id"
+          description: "The id of an AI provider."
+          in: "path"
+          required: true
+          schema:
+            type: "integer"
+        - name: "environment"
+          description: "The environment of an AI provider."
+          in: "query"
+          required: true
+          schema:
+            type: "integer"
+      responses:
+        "204":
+          description: "Successful operation."
+    patch:
+      description: "Update an existing AI provider."
+      summary: "Update an existing AI provider"
+      tags:
+        - "ai-provider"
+      operationId: "updateAiProvider"
+      parameters:
+        - name: "id"
+          description: "The id of an AI provider."
+          in: "path"
+          required: true
+          schema:
+            type: "integer"
+        - name: "environment"
+          description: "The environment of an AI provider."
+          in: "query"
+          required: true
+          schema:
+            type: "integer"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                apiKey:
+                  type: string
+                  description: "The API key of an AI provider."
+                url:
+                  type: string
+                  description: "The base URL of an AI provider (used by Ollama; blank defaults to localhost)."
+        required: true
+      responses:
+        "204":
+          description: "Successful operation."
+  /ai-providers/{id}/enable/{enable}:
+    patch:
+      description: "Enable/disable an AI provider."
+      summary: "e"
+      tags:
+        - "ai-provider"
+      operationId: "enableAiProvider"
+      parameters:
+        - name: "id"
+          description: "The id of an AI provider."
+          in: "path"
+          required: true
+          schema:
+            type: "integer"
+        - name: "enable"
+          description: "The enable status of an AI provider."
+          in: "path"
+          required: true
+          schema:
+            type: "boolean"
+        - name: "environment"
+          description: "The environment of an AI provider."
+          in: "query"
+          required: true
+          schema:
+            type: "integer"
+      responses:
+        "204":
+          description: "Successful operation."
+  /component-definitions/{componentName}/connection-definition:
+    get:
+      description: "Get connection definition for a component."
+      summary: "Get connection definition for a component"
+      tags:
+        - "connection-definition"
+      operationId: "getComponentConnectionDefinition"
+      parameters:
+        - name: "componentName"
+          description: "The name of a component."
+          required: true
+          in: "path"
+          schema:
             type: "string"
+        - name: "componentVersion"
+          description: "The version of a component."
+          required: false
+          in: "query"
+          schema:
+            type: "integer"
+      responses:
+        "200":
+          description: "Successful operation."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConnectionDefinition"
+  /component-definitions/{componentName}/connection-definitions:
+    get:
+      description: "Get all compatible connection definitions for a component."
+      summary: "Get all compatible connection definitions for a component"
+      tags:
+        - "connection-definition"
+      operationId: "getComponentConnectionDefinitions"
+      parameters:
+        - name: "componentName"
+          description: "The name of a component."
+          required: true
+          in: "path"
+          schema:
+            type: "string"
+        - name: "componentVersion"
+          description: "The version of a component."
+          required: false
+          in: "query"
+          schema:
+            type: "integer"
       responses:
         "200":
           description: "Successful operation."
@@ -77,14 +204,14 @@ paths:
               schema:
                 type: "array"
                 items:
-                  $ref: "#/components/schemas/ComponentDefinitionBasic"
-  /component-definitions/{componentName}:
+                  $ref: "#/components/schemas/ConnectionDefinitionBasic"
+  /component-definitions/{componentName}/connection-versions/{connectionVersion}:
     get:
-      description: "Get a component definition."
-      summary: "Get a component definition"
+      description: "Get a connection component definition."
+      summary: "Get a connection component definition"
       tags:
         - "component-definition"
-      operationId: "getComponentDefinition"
+      operationId: "getConnectionComponentDefinition"
       parameters:
         - name: "componentName"
           description: "The name of a component to get."
@@ -92,11 +219,10 @@ paths:
           in: "path"
           schema:
             type: "string"
-        - name: "componentVersion"
-          description: "The version of a component to get. If not set, teh latest version\
-          \ is returned."
-          required: false
-          in: "query"
+        - name: "connectionVersion"
+          description: "The version of a component connection to get."
+          required: true
+          in: "path"
           schema:
             type: "integer"
       responses:
@@ -129,6 +255,33 @@ paths:
                 type: "array"
                 items:
                   $ref: "#/components/schemas/ComponentDefinitionBasic"
+  /component-definitions/{componentName}/versions/{componentVersion}:
+    get:
+      description: "Get a component definition."
+      summary: "Get a component definition"
+      tags:
+        - "component-definition"
+      operationId: "getComponentDefinition"
+      parameters:
+        - name: "componentName"
+          description: "The name of a component to get."
+          required: true
+          in: "path"
+          schema:
+            type: "string"
+        - name: "componentVersion"
+          description: "The version of a component to get."
+          required: true
+          in: "path"
+          schema:
+            type: "integer"
+      responses:
+        "200":
+          description: "Successful operation."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ComponentDefinition"
   /component-definitions/{componentName}/versions/{componentVersion}/action-definitions:
     get:
       description: "Get a list of action definitions for a component."
@@ -191,66 +344,84 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ActionDefinition"
-  /component-definitions/{componentName}/versions/{componentVersion}/connection-definition:
+  /component-definitions/{componentName}/versions/{componentVersion}/cluster-element-definition/{clusterElementName}:
     get:
-      description: "Get connection definition for a component."
-      summary: "Get connection definition for a component"
+      description: "Get a cluster element definition of a component."
+      summary: "Get a cluster element definition of a component"
       tags:
-      - "connection-definition"
-      operationId: "getComponentConnectionDefinition"
+        - "cluster-element-definition"
+      operationId: "getComponentClusterElementDefinition"
       parameters:
-      - name: "componentName"
-        description: "The name of a component."
-        required: true
-        in: "path"
-        schema:
-          type: "string"
-      - name: "componentVersion"
-        description: "The version of a component."
-        required: true
-        in: "path"
-        schema:
-          type: "integer"
+        - name: "componentName"
+          description: "The name of a component."
+          required: true
+          in: "path"
+          schema:
+            type: "string"
+        - name: "componentVersion"
+          description: "The version of a component."
+          required: true
+          in: "path"
+          schema:
+            type: "integer"
+        - name: "clusterElementName"
+          description: "The name of a cluster element to get."
+          required: true
+          in: "path"
+          schema:
+            type: "string"
+        - name: "clusterElementType"
+          description: "The type of the cluster element (e.g. PROCESSOR, TOOLS, SOURCE, DESTINATION)."
+          required: false
+          in: "query"
+          schema:
+            type: "string"
       responses:
         "200":
           description: "Successful operation."
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ConnectionDefinition"
-  /component-definitions/{componentName}/versions/{componentVersion}/connection-definitions:
+                $ref: "#/components/schemas/ClusterElementDefinition"
+  /component-definitions/{rootComponentName}/versions/{rootComponentVersion}/cluster-element-definitions/{clusterElementType}:
     get:
-      description: "Get all compatible connection definitions for a component."
-      summary: "Get all compatible connection definitions for a component"
+      description: "Get a cluster element definitions of a root component."
+      summary: "Get a cluster element definitions of a root component."
       tags:
-      - "connection-definition"
-      operationId: "getComponentConnectionDefinitions"
+        - "cluster-element-definition"
+      operationId: "getRootComponentClusterElementDefinitions"
       parameters:
-      - name: "componentName"
-        description: "The name of a component."
-        required: true
-        in: "path"
-        schema:
-          type: "string"
-      - name: "componentVersion"
-        description: "The version of a component."
-        required: true
-        in: "path"
-        schema:
-          type: "integer"
+        - name: "rootComponentName"
+          description: "The name of a root component."
+          required: true
+          in: "path"
+          schema:
+            type: "string"
+        - name: "rootComponentVersion"
+          description: "The version of a root component."
+          required: true
+          in: "path"
+          schema:
+            type: "integer"
+        - name: "clusterElementType"
+          description: "The name of a cluster elements to get."
+          required: true
+          in: "path"
+          schema:
+            type: "string"
       responses:
         "200":
           description: "Successful operation."
           content:
             application/json:
               schema:
-                type: "array"
+                type: array
                 items:
-                  $ref: "#/components/schemas/ConnectionDefinitionBasic"
+                  $ref: "#/components/schemas/ClusterElementDefinitionBasic"
   /component-definitions/{componentName}/versions/{componentVersion}/trigger-definitions:
     get:
-      description: "Get a list of trigger definitionss for a component."
-      summary: "Get a list of trigger definitionss for a component"
+      description: "Get a list of trigger definitions for a component."
+      summary: "Get a list of trigger definitions for a component"
       tags:
       - "trigger-definition"
       operationId: "getComponentTriggerDefinitions"
@@ -309,32 +480,22 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/TriggerDefinition"
-  /data-streams/{componentType}/component-definitions:
+  /environments:
     get:
-      description: "Get all compatible component definitions for a data stream component type."
-      summary: "Get all compatible component definitions for a data stream component type"
+      description: "Retrieves environments."
+      summary: "Retrieves oauth2 authorization parameters"
       tags:
-        - "component-definition"
-      operationId: "getDataStreamComponentDefinitions"
-      parameters:
-        - name: "componentType"
-          description: "The name of a component type."
-          required: true
-          in: "path"
-          schema:
-            type: "string"
-            enum:
-              - "SOURCE"
-              - "DESTINATION"
+        - "environment"
+      operationId: "getEnvironments"
       responses:
         "200":
-          description: "Successful operation."
+          description: "The list of Environment objects."
           content:
             application/json:
               schema:
-                type: "array"
+                type: array
                 items:
-                  $ref: "#/components/schemas/ComponentDefinitionBasic"
+                  $ref: "#/components/schemas/Environment"
   /oauth2/authorization-parameters:
     post:
       description: "Retrieves oauth2 authorization parameters."
@@ -350,15 +511,14 @@ paths:
                 \ to a service defined by componentName parameter."
               type: "object"
               required:
+              - "authorizationType"
               - "name"
               - "componentName"
               - "componentVersion"
               - "parameters"
               properties:
-                authorizationName:
-                  description: "The name of an authorization used by this connection.\
-                    \ Used for HTTP based services."
-                  type: "string"
+                authorizationType:
+                  $ref: "#/components/schemas/AuthorizationType"
                 componentName:
                   description: "The name of a component that uses this connection."
                   type: "string"
@@ -457,6 +617,29 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/TaskDispatcherDefinition"
+  /unified-api/{category}/component-definitions:
+    get:
+      description: "Get all compatible component definitions for a unified API category."
+      summary: "Get all compatible component definitions for a unified API category"
+      tags:
+        - "component-definition"
+      operationId: "getUnifiedApiComponentDefinitions"
+      parameters:
+        - name: "category"
+          description: "The name of a unified API category."
+          required: true
+          in: "path"
+          schema:
+            $ref: "#/components/schemas/UnifiedApiCategory"
+      responses:
+        "200":
+          description: "Successful operation."
+          content:
+            application/json:
+              schema:
+                type: "array"
+                items:
+                  $ref: "#/components/schemas/ComponentDefinitionBasic"
   /workflow-test-configurations/{workflowId}:
     get:
       description: "Get a workflow test configuration."
@@ -471,6 +654,13 @@ paths:
           required: true
           schema:
             type: "string"
+        - name: "environmentId"
+          description: "The id of an environment."
+          required: true
+          in: "query"
+          schema:
+            type: "integer"
+            format: "int64"
       responses:
         "200":
           description: "Successful operation."
@@ -504,35 +694,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/WorkflowTestConfiguration"
-  /workflow-test-configurations/{workflowId}/connections/{workflowNodeName}:
-    get:
-      description: "Get a workflow test configuration connections."
-      summary: "Get a workflow test configuration connections"
-      tags:
-        - "workflow-test-configuration"
-      operationId: "getWorkflowTestConfigurationConnections"
-      parameters:
-        - name: "workflowId"
-          description: "The id of a testing workflow."
-          in: "path"
-          required: true
-          schema:
-            type: "string"
-        - name: "workflowNodeName"
-          description: "The action/trigger name defined in the workflow."
-          in: "path"
-          required: true
-          schema:
-            type: "string"
-      responses:
-        "200":
-          description: "Successful operation."
-          content:
-            application/json:
-              schema:
-                type: "array"
-                items:
-                  $ref: "#/components/schemas/WorkflowTestConfigurationConnection"
   /workflow-test-configurations/{workflowId}/inputs:
     put:
       description: "Save a workflow test configuration inputs."
@@ -547,29 +708,35 @@ paths:
           required: true
           schema:
             type: "string"
+        - name: "environmentId"
+          description: "The id of an environment."
+          required: true
+          in: "query"
+          schema:
+            type: "integer"
+            format: "int64"
       requestBody:
         content:
           application/json:
             schema:
               type: "object"
               properties:
-                inputs:
-                  description: "The input parameters used as workflow\
-                    \ input values."
-                  type: "object"
-                  additionalProperties:
-                    type: "string"
+                key:
+                  type: "string"
+                value:
+                  description: "The input value; a primitive for primitive inputs, or a nested\
+                    \ object for component-property inputs."
         required: true
       responses:
-        "200":
+        "204":
           description: "Successful operation."
-  /workflow-test-configurations/{workflowId}/connections/{workflowNodeName}/{workflowConnectionKey}:
-    put:
-      description: "Save a workflow test configuration connection."
-      summary: "Save a workflow test configuration connection"
+  /workflow-test-configurations/{workflowId}/workflow-nodes/{workflowNodeName}/{workflowConnectionKey}/connections:
+    delete:
+      description: "Delete a workflow test configuration connection."
+      summary: "Delete a workflow test configuration connection"
       tags:
         - "workflow-test-configuration"
-      operationId: "saveWorkflowTestConfigurationConnection"
+      operationId: "deleteWorkflowTestConfigurationConnection"
       parameters:
         - name: "workflowId"
           description: "The id of a testing workflow."
@@ -589,20 +756,503 @@ paths:
           required: true
           schema:
             type: "string"
+        - name: "environmentId"
+          description: "The id of an environment."
+          required: true
+          in: "query"
+          schema:
+            type: "integer"
+            format: "int64"
       requestBody:
         content:
           application/json:
             schema:
               type: "object"
+              required:
+                - "connectionId"
               properties:
                 connectionId:
                   type: "integer"
                   format: "int64"
         required: true
       responses:
+        "204":
+          description: "Successful operation."
+  /workflow-test-configurations/{workflowId}/workflow-nodes/{workflowNodeName}/connections:
+    get:
+      description: "Get a workflow test configuration connections."
+      summary: "Get a workflow test configuration connections"
+      tags:
+        - "workflow-test-configuration"
+      operationId: "getWorkflowTestConfigurationConnections"
+      parameters:
+        - name: "workflowId"
+          description: "The id of a testing workflow."
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+        - name: "workflowNodeName"
+          description: "The action/trigger name defined in the workflow."
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+        - name: "environmentId"
+          description: "The id of an environment."
+          required: true
+          in: "query"
+          schema:
+            type: "integer"
+            format: "int64"
+      responses:
         "200":
           description: "Successful operation."
-  /workflows/{id}/descriptions/{workflowNodeName}:
+          content:
+            application/json:
+              schema:
+                type: "array"
+                items:
+                  $ref: "#/components/schemas/WorkflowTestConfigurationConnection"
+  /workflows/{id}/outputs:
+    get:
+      description: "Get all workflow node outputs used in a workflow."
+      summary: "Get all dynamic workflow node outputs used in a workflow"
+      tags:
+        - "workflow-node-output"
+      operationId: "getPreviousWorkflowNodeOutputs"
+      parameters:
+        - name: "id"
+          description: "The workflow id for which to return all used action definitions"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+        - name: "lastWorkflowNodeName"
+          description: "The name of the last workflow node (action task or trigger) up to which include the output schema (E.g. mailchimp_1, airtable_3)"
+          in: "query"
+          required: false
+          schema:
+            type: "string"
+        - name: "environmentId"
+          description: "The id of an environment."
+          required: true
+          in: "query"
+          schema:
+            type: "integer"
+            format: "int64"
+      responses:
+        "200":
+          description: "Successful operation."
+          content:
+            application/json:
+              schema:
+                type: "array"
+                items:
+                  $ref: "#/components/schemas/WorkflowNodeOutput"
+  /workflows/{id}/workflow-nodes/{workflowNodeName}/cluster-elements/{clusterElementType}/{clusterElementWorkflowNodeName}/display-conditions:
+    get:
+      description: "Get cluster element options shown in the editor."
+      summary: "Get cluster element property options shown in the editor"
+      tags:
+        - "workflow-node-parameter"
+      operationId: "getClusterElementParameterDisplayConditions"
+      parameters:
+        - name: "id"
+          description: "The workflow id"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+        - name: "workflowNodeName"
+          description: "The name of a workflow's action task or trigger (E.g. mailchimp_1)"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+        - name: "clusterElementType"
+          description: "The name of a cluster element type."
+          required: true
+          in: "path"
+          schema:
+            type: "string"
+        - name: "clusterElementWorkflowNodeName"
+          description: "The name of a cluster element workflow node name."
+          required: true
+          in: "path"
+          schema:
+            type: "string"
+        - name: "environmentId"
+          description: "The id of an environment."
+          required: true
+          in: "query"
+          schema:
+            type: "integer"
+            format: "int64"
+      responses:
+        "200":
+          description: "The workflow node parameter display conditions."
+          content:
+            application/json:
+              schema:
+                type: "object"
+                properties:
+                  displayConditions:
+                    type: "object"
+                    additionalProperties:
+                      type: "boolean"
+                  missingRequiredProperties:
+                    type: "array"
+                    items:
+                      type: "string"
+  /workflows/{id}/workflow-nodes/{workflowNodeName}/cluster-elements/{clusterElementType}/{clusterElementWorkflowNodeName}/dynamic-properties/{propertyName}:
+    get:
+      description: "Get dynamic properties for an action or trigger property shown in the editor."
+      summary: "Get dynamic properties for an action or trigger property shown in the editor"
+      tags:
+        - "workflow-node-dynamic-properties"
+      operationId: "getClusterElementNodeDynamicProperties"
+      parameters:
+        - name: "id"
+          description: "The workflow id"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+        - name: "workflowNodeName"
+          description: "The name of a workflow's action task or trigger (E.g. mailchimp_1)"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+        - name: "clusterElementType"
+          description: "The name of a cluster element type."
+          required: true
+          in: "path"
+          schema:
+            type: "string"
+        - name: "clusterElementWorkflowNodeName"
+          description: "The name of a cluster element workflow node name."
+          required: true
+          in: "path"
+          schema:
+            type: "string"
+        - name: "propertyName"
+          description: "The name of a property."
+          required: true
+          in: "path"
+          schema:
+            type: "string"
+        - name: "lookupDependsOnPaths"
+          description: "The list of dependency paths."
+          required: false
+          in: "query"
+          schema:
+            type: "array"
+            items:
+              type: "string"
+        - name: "environmentId"
+          description: "The id of an environment."
+          required: true
+          in: "query"
+          schema:
+            type: "integer"
+            format: "int64"
+      responses:
+        "200":
+          description: "The list of options."
+          content:
+            application/json:
+              schema:
+                type: "array"
+                items:
+                  $ref: "#/components/schemas/Property"
+  /workflows/{id}/workflow-nodes/{workflowNodeName}/cluster-elements/{clusterElementType}/{clusterElementWorkflowNodeName}/options/{propertyName}:
+    get:
+      description: "Get a cluster element property options shown in the editor."
+      summary: "Get a cluster element property options shown in the editor"
+      tags:
+        - "workflow-node-option"
+      operationId: "getClusterElementNodeOptions"
+      parameters:
+        - name: "id"
+          description: "The workflow id"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+        - name: "workflowNodeName"
+          description: "The name of a workflow's cluster root action task (E.g. mailchimp_1)"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+        - name: "clusterElementType"
+          description: "The name of a cluster element type."
+          required: true
+          in: "path"
+          schema:
+            type: "string"
+        - name: "clusterElementWorkflowNodeName"
+          description: "The name of a cluster element workflow node."
+          required: true
+          in: "path"
+          schema:
+            type: "string"
+        - name: "propertyName"
+          description: "The name of a property."
+          required: true
+          in: "path"
+          schema:
+            type: "string"
+        - name: "lookupDependsOnPaths"
+          description: "The list of dependency paths."
+          required: false
+          in: "query"
+          schema:
+            type: "array"
+            items:
+              type: "string"
+        - name: "searchText"
+          description: "Optional search text used to filter option items"
+          in: "query"
+          schema:
+            type: "string"
+        - name: "environmentId"
+          description: "The id of an environment."
+          required: true
+          in: "query"
+          schema:
+            type: "integer"
+            format: "int64"
+      responses:
+        "200":
+          description: "The list of options."
+          content:
+            application/json:
+              schema:
+                type: "array"
+                items:
+                  $ref: "#/components/schemas/Option"
+  /workflows/{id}/workflow-nodes/{workflowNodeName}/cluster-elements/{clusterElementType}/{clusterElementWorkflowNodeName}/outputs:
+    get:
+      description: "Get cluster element node output used in a workflow."
+      summary: "Get cluster element node output used in a workflow"
+      tags:
+        - "workflow-node-output"
+      operationId: "getClusterElementOutput"
+      parameters:
+        - name: "id"
+          description: "The workflow id"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+        - name: "workflowNodeName"
+          description: "The name of a workflow's action task or trigger (E.g. mailchimp_1)"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+        - name: "clusterElementType"
+          description: "The name of a cluster element type."
+          required: true
+          in: "path"
+          schema:
+            type: "string"
+        - name: "clusterElementWorkflowNodeName"
+          description: "The name of a cluster element workflow node."
+          required: true
+          in: "path"
+          schema:
+            type: "string"
+        - name: "environmentId"
+          description: "The id of an environment."
+          required: true
+          in: "query"
+          schema:
+            type: "integer"
+            format: "int64"
+      responses:
+        "200":
+          description: "Successful operation."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkflowNodeOutput"
+  /workflows/{id}/workflow-nodes/{workflowNodeName}/cluster-elements/{clusterElementType}/{clusterElementWorkflowNodeName}/parameters:
+    delete:
+      description: "Deletes a cluster element parameter."
+      summary: "Deletes a cluster element parameter"
+      tags:
+        - "workflow-node-parameter"
+      operationId: "deleteClusterElementParameter"
+      parameters:
+        - name: "id"
+          description: "The workflow id"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+        - name: "workflowNodeName"
+          description: "The name of a workflow's action task or trigger (E.g. mailchimp_1)"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+        - name: "clusterElementType"
+          description: "The name of a cluster element type."
+          required: true
+          in: "path"
+          schema:
+            type: "string"
+        - name: "clusterElementWorkflowNodeName"
+          description: "The name of a cluster element workflow node name."
+          required: true
+          in: "path"
+          schema:
+            type: "string"
+        - name: "environmentId"
+          description: "The id of an environment."
+          required: true
+          in: "query"
+          schema:
+            type: "integer"
+            format: "int64"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: "object"
+              required:
+                - "path"
+              properties:
+                path:
+                  description: "The workflow node parameter path."
+                  type: "string"
+        required: true
+      responses:
+        "200":
+          description: "The updated workflow node parameters."
+          content:
+            application/json:
+              schema:
+                type: "object"
+                properties:
+                  metadata:
+                    description: "Key-value map of metadata."
+                    type: "object"
+                    additionalProperties: true
+                  parameters:
+                    description: "Key-value map of parameters."
+                    type: "object"
+                    additionalProperties: true
+                  displayConditions:
+                    description: "Key-value map of display condition rules."
+                    type: "object"
+                    additionalProperties:
+                      type: "boolean"
+                  missingRequiredProperties:
+                    type: "array"
+                    items:
+                      type: "string"
+                  version:
+                    description: "The updated workflow version."
+                    type: "integer"
+    patch:
+      description: "Updates a cluster element parameter."
+      summary: "Updates a cluster element parameter"
+      tags:
+        - "workflow-node-parameter"
+      operationId: "updateClusterElementParameter"
+      parameters:
+        - name: "id"
+          description: "The workflow id"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+        - name: "workflowNodeName"
+          description: "The name of a workflow's action task or trigger (E.g. mailchimp_1)"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+        - name: "clusterElementType"
+          description: "The name of a cluster element type."
+          required: true
+          in: "path"
+          schema:
+            type: "string"
+        - name: "clusterElementWorkflowNodeName"
+          description: "The name of a cluster element workflow node name."
+          required: true
+          in: "path"
+          schema:
+            type: "string"
+        - name: "environmentId"
+          description: "The id of an environment."
+          required: true
+          in: "query"
+          schema:
+            type: "integer"
+            format: "int64"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: "object"
+              required:
+                - "path"
+                - "type"
+              properties:
+                fromAiInMetadata:
+                  description: "If fromAi should be included in metadata."
+                  type: "boolean"
+                  default: false
+                includeInMetadata:
+                  description: "If path and value type should be included in metadata."
+                  type: "boolean"
+                  default: false
+                path:
+                  description: "The workflow node parameter path."
+                  type: "string"
+                type:
+                  description: "The type of a property."
+                  type: "string"
+                value:
+                  description: "The value."
+                  type: "object"
+        required: true
+      responses:
+        "200":
+          description: "The updated workflow node parameters."
+          content:
+            application/json:
+              schema:
+                type: "object"
+                properties:
+                  metadata:
+                    description: "Key-value map of metadata."
+                    type: "object"
+                    additionalProperties: true
+                  parameters:
+                    description: "Key-value map of parameters."
+                    type: "object"
+                    additionalProperties: true
+                  displayConditions:
+                    description: "Key-value map of display condition rules."
+                    type: "object"
+                    additionalProperties:
+                      type: "boolean"
+                  missingRequiredProperties:
+                    type: "array"
+                    items:
+                      type: "string"
+                  version:
+                    description: "The updated workflow version."
+                    type: "integer"
+  /workflows/{id}/workflow-nodes/{workflowNodeName}/descriptions:
     get:
       description: "Get an action description shown in the editor."
       summary: "Get an action description shown in the editor"
@@ -622,6 +1272,13 @@ paths:
           in: "path"
           schema:
             type: "string"
+        - name: "environmentId"
+          description: "The id of an environment."
+          required: true
+          in: "query"
+          schema:
+            type: "integer"
+            format: "int64"
       responses:
         "200":
           description: "The editor description."
@@ -632,7 +1289,93 @@ paths:
                 properties:
                   description:
                     type: string
-  /workflows/{id}/dynamic-properties/{workflowNodeName}/properties/{propertyName}:
+  /workflows/{id}/workflow-nodes/{workflowNodeName}/cluster-element-definition/{clusterElementName}/descriptions:
+    get:
+      description: "Get an action description shown in the editor."
+      summary: "Get an action description shown in the editor"
+      tags:
+        - "workflow-node-description"
+      operationId: "getClusterElementWorkflowNodeDescription"
+      parameters:
+        - name: "id"
+          description: "The workflow id"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+        - name: "workflowNodeName"
+          description: "The name of an workflow's action task or trigger (E.g. mailchimp_1)"
+          required: true
+          in: "path"
+          schema:
+            type: "string"
+        - name: "clusterElementName"
+          description: "The name of a cluster element to get."
+          required: true
+          in: "path"
+          schema:
+            type: "string"
+        - name: "environmentId"
+          description: "The id of an environment."
+          required: true
+          in: "query"
+          schema:
+            type: "integer"
+            format: "int64"
+      responses:
+        "200":
+          description: "The editor description."
+          content:
+            application/json:
+              schema:
+                type: "object"
+                properties:
+                  description:
+                    type: string
+  /workflows/{id}/workflow-nodes/{workflowNodeName}/display-conditions:
+    get:
+      description: "Get action or trigger display conditions shown in the editor."
+      summary: "Get action or trigger display conditions shown in the editor"
+      tags:
+        - "workflow-node-parameter"
+      operationId: "getWorkflowNodeParameterDisplayConditions"
+      parameters:
+        - name: "id"
+          description: "The workflow id"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+        - name: "workflowNodeName"
+          description: "The name of a workflow's action task or trigger (E.g. mailchimp_1)"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+        - name: "environmentId"
+          description: "The id of an environment."
+          required: true
+          in: "query"
+          schema:
+            type: "integer"
+            format: "int64"
+      responses:
+        "200":
+          description: "The workflow node parameter display conditions."
+          content:
+            application/json:
+              schema:
+                type: "object"
+                properties:
+                  displayConditions:
+                    type: "object"
+                    additionalProperties:
+                      type: "boolean"
+                  missingRequiredProperties:
+                    type: "array"
+                    items:
+                      type: "string"
+  /workflows/{id}/workflow-nodes/{workflowNodeName}/dynamic-properties/{propertyName}:
     get:
       description: "Get dynamic properties for an action or trigger property shown in the editor."
       summary: "Get dynamic properties for an action or trigger property shown in the editor"
@@ -666,6 +1409,13 @@ paths:
             type: "array"
             items:
               type: "string"
+        - name: "environmentId"
+          description: "The id of an environment."
+          required: true
+          in: "query"
+          schema:
+            type: "integer"
+            format: "int64"
       responses:
         "200":
           description: "The list of options."
@@ -675,195 +1425,7 @@ paths:
                 type: "array"
                 items:
                   $ref: "#/components/schemas/Property"
-  /workflows/{id}/outputs:
-    get:
-      description: "Get all workflow node outputs used in a workflow."
-      summary: "Get all dynamic workflow node outputs used in a workflow"
-      tags:
-        - "workflow-node-output"
-      operationId: "getPreviousWorkflowNodeOutputs"
-      parameters:
-        - name: "id"
-          description: "The workflow id for which to return all used action definitions"
-          in: "path"
-          required: true
-          schema:
-            type: "string"
-        - name: "lastWorkflowNodeName"
-          description: "The name of the last workflow node (action task or trigger) up to which include the output schema (E.g. mailchimp_1, airtable_3)"
-          in: "query"
-          required: false
-          schema:
-            type: "string"
-      responses:
-        "200":
-          description: "Successful operation."
-          content:
-            application/json:
-              schema:
-                type: "array"
-                items:
-                  $ref: "#/components/schemas/WorkflowNodeOutput"
-  /workflows/{id}/outputs/{workflowNodeName}:
-    get:
-      description: "Get workflow node output of an action task or trigger used in a workflow."
-      summary: "Get workflow node output of an action task or trigger used in a workflow"
-      tags:
-        - "workflow-node-output"
-      operationId: "getWorkflowNodeOutput"
-      parameters:
-        - name: "id"
-          description: "The workflow id"
-          in: "path"
-          required: true
-          schema:
-            type: "string"
-        - name: "workflowNodeName"
-          description: "The name of a workflow's action task or trigger (E.g. mailchimp_1)"
-          in: "path"
-          required: true
-          schema:
-            type: "string"
-      responses:
-        "200":
-          description: "Successful operation."
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/WorkflowNodeOutput"
-  /workflows/{id}/parameters:
-    delete:
-      description: "Deletes a workflow node parameter."
-      summary: "Deletes a workflow node parameter"
-      tags:
-        - "workflow-node-parameter"
-      operationId: "deleteWorkflowNodeParameter"
-      parameters:
-        - name: "id"
-          description: "The workflow id"
-          in: "path"
-          required: true
-          schema:
-            type: "string"
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: "object"
-              required:
-                - "path"
-                - "workflowNodeName"
-              properties:
-                path:
-                  description: "The workflow node parameter path."
-                  type: "string"
-                workflowNodeName:
-                  description: "The workflow node name."
-                  type: "string"
-      responses:
-        "200":
-          description: "The updated workflow node parameters."
-          content:
-            application/json:
-              schema:
-                type: "object"
-                properties:
-                  parameters:
-                    type: "object"
-                    additionalProperties: true
-    patch:
-      description: "Updates a workflow node parameter."
-      summary: "Updates a workflow node parameter"
-      tags:
-        - "workflow-node-parameter"
-      operationId: "updateWorkflowNodeParameter"
-      parameters:
-        - name: "id"
-          description: "The workflow id"
-          in: "path"
-          required: true
-          schema:
-            type: "string"
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: "object"
-              required:
-                - "path"
-                - "type"
-                - "workflowNodeName"
-              properties:
-                includeInMetadata:
-                  description: "If path and value type should be included in metadata "
-                  type: "boolean"
-                  default: false
-                path:
-                  description: "The workflow node parameter path."
-                  type: "string"
-                type:
-                  description: "The type of a property."
-                  type: "string"
-                value:
-                  description: "The value."
-                  type: "object"
-                workflowNodeName:
-                  description: "The workflow node name."
-                  type: "string"
-      responses:
-        "200":
-          description: "The updated workflow node parameters."
-          content:
-            application/json:
-              schema:
-                type: "object"
-                properties:
-                  metadata:
-                    description: "Key-value map of metadata."
-                    type: "object"
-                    additionalProperties: true
-                  parameters:
-                    description: "Key-value map of parameters."
-                    type: "object"
-                    additionalProperties: true
-                  displayConditions:
-                    description: "Key-value map of display condition rules."
-                    type: "object"
-                    additionalProperties:
-                      type: "boolean"
-  /workflows/{id}/parameters/{workflowNodeName}/display-conditions:
-    get:
-      description: "Get an action or trigger property options shown in the editor."
-      summary: "Get an action or trigger property options shown in the editor"
-      tags:
-        - "workflow-node-parameter"
-      operationId: "getWorkflowNodeParameterDisplayConditions"
-      parameters:
-        - name: "id"
-          description: "The workflow id"
-          in: "path"
-          required: true
-          schema:
-            type: "string"
-        - name: "workflowNodeName"
-          description: "The name of a workflow's action task or trigger (E.g. mailchimp_1)"
-          in: "path"
-          required: true
-          schema:
-            type: "string"
-      responses:
-        "200":
-          description: "The workflow node parameter display conditions."
-          content:
-            application/json:
-              schema:
-                type: "object"
-                properties:
-                  displayConditions:
-                    type: "object"
-                    additionalProperties:
-                      type: "boolean"
-  /workflows/{id}/properties/{workflowNodeName}/options/{propertyName}:
+  /workflows/{id}/workflow-nodes/{workflowNodeName}/options/{propertyName}:
     get:
       description: "Get an action or trigger property options shown in the editor."
       summary: "Get an action or trigger property options shown in the editor"
@@ -902,6 +1464,13 @@ paths:
           in: "query"
           schema:
             type: "string"
+        - name: "environmentId"
+          description: "The id of an environment."
+          required: true
+          in: "query"
+          schema:
+            type: "integer"
+            format: "int64"
       responses:
         "200":
           description: "The list of options."
@@ -911,34 +1480,185 @@ paths:
                 type: "array"
                 items:
                   $ref: "#/components/schemas/Option"
-  /workflows/{id}/scripts/{workflowNodeName}:
-    post:
-      description: "Execute a script for testing purposes."
-      summary: "Execute a script for testing purposes"
+  /workflows/{id}/workflow-nodes/{workflowNodeName}/outputs:
+    get:
+      description: "Get workflow node output of an action task or trigger used in a workflow."
+      summary: "Get workflow node output of an action task or trigger used in a workflow"
       tags:
-        - "workflow-node-script"
-      operationId: "testWorkflowNodeScript"
+        - "workflow-node-output"
+      operationId: "getWorkflowNodeOutput"
       parameters:
         - name: "id"
-          description: "The id of a workflow."
+          description: "The workflow id"
           in: "path"
           required: true
           schema:
             type: "string"
         - name: "workflowNodeName"
-          description: "The name of a workflow node which uses the script component."
+          description: "The name of a workflow's action task or trigger (E.g. mailchimp_1)"
           in: "path"
           required: true
           schema:
             type: "string"
+        - name: "environmentId"
+          description: "The id of an environment."
+          required: true
+          in: "query"
+          schema:
+            type: "integer"
+            format: "int64"
       responses:
         "200":
-          description: "The script test execution object."
+          description: "Successful operation."
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ScriptTestExecution"
-  /workflows/{id}/test-outputs/{workflowNodeName}:
+                $ref: "#/components/schemas/WorkflowNodeOutput"
+  /workflows/{id}/workflow-nodes/{workflowNodeName}/parameters:
+    delete:
+      description: "Deletes a workflow node parameter."
+      summary: "Deletes a workflow node parameter"
+      tags:
+        - "workflow-node-parameter"
+      operationId: "deleteWorkflowNodeParameter"
+      parameters:
+        - name: "id"
+          description: "The workflow id"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+        - name: "workflowNodeName"
+          description: "The name of a workflow's action task or trigger (E.g. mailchimp_1)"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+        - name: "environmentId"
+          description: "The id of an environment."
+          required: true
+          in: "query"
+          schema:
+            type: "integer"
+            format: "int64"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: "object"
+              required:
+                - "path"
+              properties:
+                path:
+                  description: "The workflow node parameter path."
+                  type: "string"
+        required: true
+      responses:
+        "200":
+          description: "The updated workflow node parameters."
+          content:
+            application/json:
+              schema:
+                type: "object"
+                properties:
+                  metadata:
+                    description: "Key-value map of metadata."
+                    type: "object"
+                    additionalProperties: true
+                  parameters:
+                    description: "Key-value map of parameters."
+                    type: "object"
+                    additionalProperties: true
+                  displayConditions:
+                    description: "Key-value map of display condition rules."
+                    type: "object"
+                    additionalProperties:
+                      type: "boolean"
+                  missingRequiredProperties:
+                    type: "array"
+                    items:
+                      type: "string"
+                  version:
+                    description: "The updated workflow version."
+                    type: "integer"
+    patch:
+      description: "Updates a workflow node parameter."
+      summary: "Updates a workflow node parameter"
+      tags:
+        - "workflow-node-parameter"
+      operationId: "updateWorkflowNodeParameter"
+      parameters:
+        - name: "id"
+          description: "The workflow id"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+        - name: "workflowNodeName"
+          description: "The name of a workflow's action task or trigger (E.g. mailchimp_1)"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+        - name: "environmentId"
+          description: "The id of an environment."
+          required: true
+          in: "query"
+          schema:
+            type: "integer"
+            format: "int64"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: "object"
+              required:
+                - "path"
+                - "type"
+              properties:
+                includeInMetadata:
+                  description: "If path and value type should be included in metadata."
+                  type: "boolean"
+                  default: false
+                path:
+                  description: "The workflow node parameter path."
+                  type: "string"
+                type:
+                  description: "The type of a property."
+                  type: "string"
+                value:
+                  description: "The value."
+                  type: "object"
+        required: true
+      responses:
+        "200":
+          description: "The updated workflow node parameters."
+          content:
+            application/json:
+              schema:
+                type: "object"
+                properties:
+                  metadata:
+                    description: "Key-value map of metadata."
+                    type: "object"
+                    additionalProperties: true
+                  parameters:
+                    description: "Key-value map of parameters."
+                    type: "object"
+                    additionalProperties: true
+                  displayConditions:
+                    description: "Key-value map of display condition rules."
+                    type: "object"
+                    additionalProperties:
+                      type: "boolean"
+                  missingRequiredProperties:
+                    type: "array"
+                    items:
+                      type: "string"
+                  version:
+                    description: "The updated workflow version."
+                    type: "integer"
+  /workflows/{id}/workflow-nodes/{workflowNodeName}/test-outputs:
     delete:
       description: "Delete existing workflow node test output."
       summary: "Delete existing workflow node test output"
@@ -958,8 +1678,15 @@ paths:
           required: true
           schema:
             type: "string"
+        - name: "environmentId"
+          description: "The id of an environment."
+          required: true
+          in: "query"
+          schema:
+            type: "integer"
+            format: "int64"
       responses:
-        "200":
+        "204":
           description: "Successful operation."
     put:
       description: "Create a new or update existing workflow node test output."
@@ -980,6 +1707,13 @@ paths:
           required: true
           schema:
             type: "string"
+        - name: "environmentId"
+          description: "The id of an environment."
+          required: true
+          in: "query"
+          schema:
+            type: "integer"
+            format: "int64"
       responses:
         "200":
           description: "The workflow node test output object."
@@ -987,7 +1721,53 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/WorkflowNodeTestOutput"
-  /workflows/{id}/test-outputs/{workflowNodeName}/sample-output:
+  /workflows/{id}/workflow-nodes/{workflowNodeName}/test-outputs/exists:
+    get:
+      description: "Check if a workflow node test output exists."
+      summary: "Check if a workflow node test output exists"
+      tags:
+        - "workflow-node-test-output"
+      operationId: "checkWorkflowNodeTestOutputExists"
+      parameters:
+        - name: "id"
+          description: "The id of a workflow."
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+        - name: "workflowNodeName"
+          description: "The name of a workflow node for which to create test output objects."
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+        - name: "createdDate"
+          description: "Check if a test output exists after a specific date."
+          in: "query"
+          required: false
+          schema:
+            type: "string"
+            format: "date-time"
+        - name: "environmentId"
+          description: "The id of an environment."
+          required: true
+          in: "query"
+          schema:
+            type: "integer"
+            format: "int64"
+      responses:
+        "200":
+          description: "Successful operation."
+          content:
+            application/json:
+              schema:
+                type: "object"
+                required:
+                  - "exists"
+                properties:
+                  exists:
+                    type: "boolean"
+  /workflows/{id}/workflow-nodes/{workflowNodeName}/test-outputs/sample-output:
     put:
       description: "Upload a sample output to create a new or update existing workflow node test output."
       summary: "Upload a sample output to create a new or update existing workflow node test output"
@@ -1007,6 +1787,13 @@ paths:
           required: true
           schema:
             type: "string"
+        - name: "environmentId"
+          description: "The id of an environment."
+          required: true
+          in: "query"
+          schema:
+            type: "integer"
+            format: "int64"
       requestBody:
         content:
           application/json:
@@ -1022,6 +1809,13 @@ paths:
                 $ref: "#/components/schemas/WorkflowNodeTestOutput"
 components:
   schemas:
+    FieldOption:
+      type: "object"
+      properties:
+        label:
+          type: "string"
+        value:
+          type: "string"
     ActionDefinition:
       description: "An action is a portion of reusable code that accomplish a specific\
         \ task. When building a workflow, each action is represented as a task inside\
@@ -1030,9 +1824,11 @@ components:
         \ the task inside the workflow."
       type: "object"
       required:
-      - "dynamicOutput"
+      - "componentName"
+      - "componentVersion"
       - "name"
       - "outputDefined"
+      - "outputFunctionDefined"
       properties:
         componentName:
           description: "The component name."
@@ -1040,9 +1836,6 @@ components:
         componentVersion:
           description: "The component version."
           type: "integer"
-        dynamicOutput:
-          description: "Does action define dynamic output schema."
-          type: "boolean"
         description:
           description: "The description."
           type: "string"
@@ -1052,13 +1845,25 @@ components:
           description: "The action name."
           type: "string"
         outputDefined:
-          description: "Does action define output schema."
+          description: "Does action defines output."
+          type: "boolean"
+        outputFunctionDefined:
+          description: "Does action defines output function."
+          type: "boolean"
+        outputSchemaDefined:
+          description: "Does action defines output schema."
           type: "boolean"
         properties:
           description: "The list of action properties."
           type: "array"
           items:
             $ref: "#/components/schemas/Property"
+        resumePerformFunctionDefined:
+          description: "Does action define resume perform function."
+          type: "boolean"
+        sseStreamResponse:
+          description: "Does action support SSE streaming."
+          type: "boolean"
         title:
           description: "The title"
           type: "string"
@@ -1073,8 +1878,18 @@ components:
         \ the task inside the workflow."
       type: "object"
       required:
+      - "componentName"
+      - "componentVersion"
       - "name"
+      - "outputDefined"
+      - "outputFunctionDefined"
       properties:
+        componentName:
+          description: "The component name."
+          type: "string"
+        componentVersion:
+          description: "The component version."
+          type: "integer"
         description:
           description: "The description."
           type: "string"
@@ -1083,9 +1898,76 @@ components:
         name:
           description: "The action name."
           type: "string"
+        outputDefined:
+          description: "Does action defines output."
+          type: "boolean"
+        outputFunctionDefined:
+          description: "Does action defines output function."
+          type: "boolean"
+        outputSchemaDefined:
+          description: "Does action defines output schema."
+          type: "boolean"
+        resumePerformFunctionDefined:
+          description: "Does action define resume perform function."
+          type: "boolean"
+        sseStreamResponse:
+          description: "Does action support SSE streaming."
+          type: "boolean"
         title:
           description: "The title"
           type: "string"
+    AiProvider:
+      description: "An AI provider."
+      type: "object"
+      required:
+        - name
+        - secretKey
+      properties:
+        id:
+          description: "The id of an AI provider."
+          type: "integer"
+          readOnly: true
+        name:
+          description: "The name of an AI provider."
+          type: "string"
+          readOnly: true
+        icon:
+          description: "The icon of an AI provider."
+          type: "string"
+          readOnly: true
+        apiKey:
+          description: "The API key of an AI provider."
+          type: "string"
+        url:
+          description: "The base URL of an AI provider (used by Ollama; blank defaults to localhost)."
+          type: "string"
+        enabled:
+          description: "The enabled status of an AI provider."
+          type: "boolean"
+        requiresApiKey:
+          description: "Whether this AI provider requires an API key."
+          type: "boolean"
+          readOnly: true
+        requiresEndpoint:
+          description: "Whether this AI provider requires a per-deployment endpoint URL."
+          type: "boolean"
+          readOnly: true
+        supportsText:
+          description: "Whether this AI provider can be used for text (chat) generation."
+          type: "boolean"
+          readOnly: true
+        supportsImage:
+          description: "Whether this AI provider can be used for image generation."
+          type: "boolean"
+          readOnly: true
+        supportsEmbeddings:
+          description: "Whether this AI provider can be used for embeddings."
+          type: "boolean"
+          readOnly: true
+        copilotDocsProvider:
+          description: "Whether this AI provider is the one used to embed the shared Copilot documentation."
+          type: "boolean"
+          readOnly: true
     AnyValue:
       description: "Can be anything: string, number, array, object, etc. (except `null`)"
     ArrayProperty:
@@ -1147,20 +2029,19 @@ components:
         type:
           $ref: "#/components/schemas/AuthorizationType"
     AuthorizationType:
-      description: "Authorization type."
+      description: "The authorization type."
       type: "string"
       enum:
-      - "API_KEY"
-      - "BASIC_AUTH"
-      - "BEARER_TOKEN"
-      - "CUSTOM"
-      - "DIGEST_AUTH"
-      - "NONE"
-      - "OAUTH2_AUTHORIZATION_CODE"
-      - "OAUTH2_AUTHORIZATION_CODE_PKCE"
-      - "OAUTH2_CLIENT_CREDENTIALS"
-      - "OAUTH2_IMPLICIT_CODE"
-      - "OAUTH2_RESOURCE_OWNER_PASSWORD"
+        - "API_KEY"
+        - "BASIC_AUTH"
+        - "BEARER_TOKEN"
+        - "CUSTOM"
+        - "DIGEST_AUTH"
+        - "OAUTH2_AUTHORIZATION_CODE"
+        - "OAUTH2_AUTHORIZATION_CODE_PKCE"
+        - "OAUTH2_CLIENT_CREDENTIALS"
+        - "OAUTH2_IMPLICIT_CODE"
+        - "OAUTH2_RESOURCE_OWNER_PASSWORD"
     BooleanProperty:
       description: "A boolean property type."
       type: "object"
@@ -1179,22 +2060,130 @@ components:
             type: "array"
             items:
               $ref: "#/components/schemas/Option"
+    ClusterElementDefinition:
+      description: "A cluster element definition."
+      type: "object"
+      allOf:
+        - $ref: "#/components/schemas/ClusterElementDefinitionBasic"
+        - type: "object"
+          required:
+            - "componentName"
+            - "componentVersion"
+            - "name"
+            - "type"
+            - "outputDefined"
+          properties:
+            properties:
+              description: "The list of action properties."
+              type: "array"
+              items:
+                $ref: "#/components/schemas/Property"
+    ClusterElementDefinitionBasic:
+      description: "A cluster element basic definition."
+      type: "object"
+      required:
+        - "componentName"
+        - "componentVersion"
+        - "name"
+        - "type"
+        - "outputDefined"
+      properties:
+        componentName:
+          description: "The component name."
+          type: "string"
+        componentVersion:
+          description: "The component version."
+          type: "integer"
+        description:
+          description: "The cluster element description."
+          type: "string"
+        help:
+          $ref: "#/components/schemas/Help"
+        name:
+          description: "The cluster element name."
+          type: "string"
+        icon:
+          description: "The component icon."
+          type: "string"
+        outputDefined:
+          description: "Does action defines output."
+          type: "boolean"
+        outputFunctionDefined:
+          description: "Does action defines output function."
+          type: "boolean"
+        outputSchemaDefined:
+          description: "Does action defines output schema."
+          type: "boolean"
+        title:
+          description: "The cluster element title."
+          type: "string"
+        type:
+          description: "The cluster element type."
+          type: "string"
+    ClusterElementType:
+      description: "A type of a cluster element."
+      type: "object"
+      properties:
+        name:
+          description: "The name of a cluster element type."
+          type: "string"
+        label:
+          description: "The label of a cluster element type."
+          type: "string"
+        required:
+          description: "If the cluster element type is required."
+          type: "boolean"
+        multipleElements:
+          description: "If multiple elements can be added."
+          type: "boolean"
     ComponentDefinition:
       description: "A component contains a set of reusable code(actions) that accomplish\
         \ specific tasks, triggers and connections if there is a need for a connection\
         \ to an outside service."
       type: "object"
       required:
+      - "clusterElement"
+      - "clusterRoot"
       - "name"
       - "version"
       - "connectionRequired"
       properties:
+        actionClusterElementTypes:
+          description: "The list of cluster element types per action."
+          type: "object"
+          additionalProperties:
+            type: "array"
+            items:
+              type: "string"
         actions:
           description: "The list of all available actions the component can perform."
           type: "array"
           items:
             $ref: "#/components/schemas/ActionDefinitionBasic"
-        categories:
+        clusterElement:
+          description: "Is the component cluster element."
+          type: "boolean"
+        clusterElementClusterElementTypes:
+          description: "The list of cluster element types per root cluster element."
+          type: "object"
+          additionalProperties:
+            type: "array"
+            items:
+              type: "string"
+        clusterElements:
+          description: "The list of all available cluster elements the component can perform."
+          type: "array"
+          items:
+            $ref: "#/components/schemas/ClusterElementDefinitionBasic"
+        clusterElementTypes:
+          description: "The list of cluster element types."
+          type: "array"
+          items:
+            $ref: "#/components/schemas/ClusterElementType"
+        clusterRoot:
+          description: "Is the component cluster root."
+          type: "boolean"
+        componentCategories:
           description: "The list of categories the component belongs to."
           type: "array"
           items:
@@ -1228,9 +2217,32 @@ components:
           type: "array"
           items:
             $ref: "#/components/schemas/TriggerDefinitionBasic"
+        unifiedApiCategory:
+          $ref: "#/components/schemas/UnifiedApiCategory"
         version:
           description: "The version of a component."
           type: "integer"
+        inputs:
+          type: "array"
+          description: "The component's selectable workflow inputs, each a property group (a lone\
+            \ property is a group with one property)."
+          items:
+            $ref: "#/components/schemas/PropertyGroup"
+    PropertyGroup:
+      title: "Property group"
+      description: "A named group of component input properties rendered as one compound input."
+      type: "object"
+      required:
+        - "name"
+      properties:
+        name:
+          type: "string"
+        label:
+          type: "string"
+        properties:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/Property"
     ComponentDefinitionBasic:
       description: "A component contains a set of reusable code(actions) that accomplish\
         \ specific tasks, triggers and connections if there is a need for a connection\
@@ -1241,14 +2253,30 @@ components:
       - "version"
       properties:
         actionsCount:
-          default: "The number of actions a component has"
+          description: "The number of actions a component has"
           type: "integer"
+        clusterElementsCount:
+          description: "The number of cluster elements a component has"
+          type: "object"
+          additionalProperties:
+            type: "integer"
+        clusterRoot:
+          description: "Is the component cluster root."
+          type: "boolean"
+        componentCategories:
+          description: "The list of categories the component belongs to."
+          type: "array"
+          items:
+            $ref: "#/components/schemas/ComponentCategory"
         description:
           description: "The description."
           type: "string"
         icon:
           description: "The icon."
           type: "string"
+        inputsCount:
+          description: "The number of selectable workflow inputs a component declares"
+          type: "integer"
         name:
           description: "The name of a component."
           type: "string"
@@ -1256,19 +2284,9 @@ components:
           description: "The title"
           type: "string"
         triggersCount:
-          default: "The number of triggers a component has"
+          description: "The number of triggers a component has"
           type: "integer"
         version:
-          description: "The version of a component."
-          type: "integer"
-    DataStreamComponent:
-      description: "The source/destination data stream component."
-      type: "object"
-      properties:
-        componentName:
-          description: "The name of a component."
-          type: "string"
-        componentVersion:
           description: "The version of a component."
           type: "integer"
     ConnectionDefinition:
@@ -1296,6 +2314,13 @@ components:
         componentName:
           description: "The component name used from the connection's component."
           type: "string"
+        help:
+          type: "object"
+          properties:
+            body:
+              type: "string"
+            learnMoreUrl:
+              type: "string"
         properties:
           description: "The properties of the connection."
           type: "array"
@@ -1309,28 +2334,16 @@ components:
           type: "integer"
     ComponentCategory:
       description: "A category of component."
-      type: "string"
-      enum:
-        - "accounting"
-        - "advertising"
-        - "analytics"
-        - "artificial-intelligence"
-        - "ats"
-        - "calendars-and-scheduling"
-        - "communication"
-        - "crm"
-        - "customer-support"
-        - "developer-tools"
-        - "e-commerce"
-        - "file-storage"
-        - "helpers"
-        - "hris"
-        - "marketing-automation"
-        - "payment-processing"
-        - "productivity-and-collaboration"
-        - "project-management"
-        - "social-media"
-        - "surveys-and-feedback"
+      type: "object"
+      required:
+        - "name"
+      properties:
+        name:
+          description: "The name of a category."
+          type: "string"
+        label:
+          description: "The label of a category."
+          type: "string"
     ConnectionDefinitionBasic:
       description: "Definition of a connection to an outside service."
       type: "object"
@@ -1359,19 +2372,24 @@ components:
       - "DATE"
       - "DATE_TIME"
       - "EMAIL"
+      - "FORMULA_MODE"
       - "INTEGER"
+      - "JSON_SCHEMA_BUILDER"
       - "FILE_ENTRY"
-      - "OBJECT_BUILDER"
       - "MULTI_SELECT"
       - "NUMBER"
       - "NULL"
+      - "OBJECT_BUILDER"
       - "PASSWORD"
       - "PHONE"
+      - "RICH_TEXT"
       - "SELECT"
       - "TEXT"
       - "TEXT_AREA"
       - "TIME"
       - "URL"
+    CredentialStatus:
+      $ref: "../../../platform-connection/platform-connection-rest/openapi/components/schemas/objects/credential_status.yaml"
     DateProperty:
       description: "A date property type."
       type: "object"
@@ -1428,6 +2446,19 @@ components:
             type: "string"
           propertiesDataSource:
             $ref: "#/components/schemas/PropertiesDataSource"
+    Environment:
+      description: "The environment."
+      type: "object"
+      required:
+        - "name"
+      properties:
+        id:
+          description: "The environment id."
+          type: "integer"
+          format: "int64"
+        name:
+          description: "The environment name."
+          type: "string"
     ExecutionError:
       description: "Contains information about an error that happened during execution."
       type: "object"
@@ -1553,9 +2584,9 @@ components:
         clientId:
           type: "string"
         scopes:
-          type: "array"
-          items:
-            type: "string"
+          type: "object"
+          additionalProperties:
+            type: "boolean"
     OAuth2Properties:
       properties:
         redirectUri:
@@ -1583,9 +2614,11 @@ components:
           defaultValue:
             description: "The property default value."
             type: "object"
+            additionalProperties: true
           exampleValue:
             description: "The property sample value."
             type: "object"
+            additionalProperties: true
           multipleValues:
             description: "If the object can contain multiple additional properties."
             type: "boolean"
@@ -1624,6 +2657,18 @@ components:
           type: "array"
           items:
             type: "string"
+    OutputResponse:
+      description: "The output response"
+      type: "object"
+      properties:
+        outputSchema:
+          $ref: "#/components/schemas/Property"
+        placeholder:
+          description: "The placeholder of an output."
+          type: "object"
+        sampleOutput:
+          description: "The sample value of an output."
+          type: "object"
     PropertiesDataSource:
       description: "Defines function that should load properties."
       type: "object"
@@ -1659,6 +2704,10 @@ components:
           description: "If the property should be visible or not."
           type: "boolean"
           default: false
+        metadata:
+          description: "Key-value map of metadata."
+          type: "object"
+          additionalProperties: true
         name:
           description: "The property name."
           type: "string"
@@ -1732,6 +2781,9 @@ components:
             description: "The minimum string length."
             type: "integer"
             format: "int32"
+          regex:
+            description: "The regular expression pattern for validation."
+            type: "string"
           options:
             description: "The list of valid property options."
             type: "array"
@@ -1739,19 +2791,20 @@ components:
               $ref: "#/components/schemas/Option"
           optionsDataSource:
             $ref: "#/components/schemas/OptionsDataSource"
+          optionsLoadedDynamically:
+            description: "If the property options should be loaded dynamically."
+            type: "boolean"
+    Tag:
+      $ref: "../../../platform-tag/platform-tag-rest/openapi/components/schemas/objects/tag.yaml"
     TaskDispatcherDefinition:
       description: "A task dispatcher defines a strategy for dispatching tasks to\
         \ be executed."
       type: "object"
       required:
-      - "dynamicOutput"
       - "name"
       - "outputDefined"
       - "version"
       properties:
-        dynamicOutput:
-          description: "Does task dispatcher define dynamic output schema."
-          type: "boolean"
         description:
           description: "The description."
           type: "string"
@@ -1762,7 +2815,13 @@ components:
           description: "The task dispatcher name.."
           type: "string"
         outputDefined:
-          description: "Does task dispatcher define output schema."
+          description: "Does task dispatcher defines output."
+          type: "boolean"
+        outputFunctionDefined:
+          description: "Does task dispatcher defines output function."
+          type: "boolean"
+        outputSchemaDefined:
+          description: "Does task dispatcher defines output schema."
           type: "boolean"
         properties:
           description: "The list of task dispatcher properties."
@@ -1791,6 +2850,8 @@ components:
       type: "object"
       required:
       - "name"
+      - "outputDefined"
+      - "version"
       properties:
         description:
           description: "The description."
@@ -1799,13 +2860,28 @@ components:
           description: "The icon."
           type: "string"
         name:
-          description: "The task dispatcher name.."
+          description: "The task dispatcher name."
           type: "string"
+        outputDefined:
+          description: "Does task dispatcher defines output."
+          type: "boolean"
+        outputFunctionDefined:
+          description: "Does task dispatcher defines output function."
+          type: "boolean"
+        outputSchemaDefined:
+          description: "Does task dispatcher defines output schema."
+          type: "boolean"
         resources:
           $ref: "#/components/schemas/Resources"
         title:
           description: "The title"
           type: "string"
+        variablePropertiesDefined:
+          description: "Does task dispatcher define dynamic variable properties."
+          type: "boolean"
+        version:
+          description: "The version of a task dispatcher."
+          type: "integer"
     TaskDispatcherOperationRequest:
       type: "object"
       required:
@@ -1852,9 +2928,9 @@ components:
         \ outside services."
       type: "object"
       required:
-      - "dynamicOutput"
       - "name"
       - "outputDefined"
+      - "outputFunctionDefined"
       - "type"
       properties:
         componentName:
@@ -1863,9 +2939,6 @@ components:
         componentVersion:
           description: "The component version."
           type: "integer"
-        dynamicOutput:
-          description: "Does trigger define dynamic output schema."
-          type: "boolean"
         description:
           description: "The description."
           type: "string"
@@ -1875,7 +2948,13 @@ components:
           description: "The action name."
           type: "string"
         outputDefined:
-          description: "Does trigger define output schema."
+          description: "Does trigger defines output."
+          type: "boolean"
+        outputFunctionDefined:
+          description: "Does trigger defines output function."
+          type: "boolean"
+        outputSchemaDefined:
+          description: "Does trigger defines output schema."
           type: "boolean"
         properties:
           description: "The list of action properties."
@@ -1895,9 +2974,19 @@ components:
         \ outside services."
       type: "object"
       required:
+      - "componentName"
+      - "componentVersion"
       - "name"
+      - "outputDefined"
+      - "outputFunctionDefined"
       - "type"
       properties:
+        componentName:
+          description: "The component name."
+          type: "string"
+        componentVersion:
+          description: "The component version."
+          type: "integer"
         description:
           description: "The description."
           type: "string"
@@ -1906,6 +2995,15 @@ components:
         name:
           description: "The action name."
           type: "string"
+        outputDefined:
+          description: "Does trigger defines output."
+          type: "boolean"
+        outputFunctionDefined:
+          description: "Does trigger defines output function."
+          type: "boolean"
+        outputSchemaDefined:
+          description: "Does trigger defines output schema."
+          type: "boolean"
         title:
           description: "The title"
           type: "string"
@@ -1914,11 +3012,24 @@ components:
     TriggerType:
       type: "string"
       enum:
+      - "CALLABLE"
       - "STATIC_WEBHOOK"
       - "HYBRID"
       - "LISTENER"
       - "POLLING"
       - "DYNAMIC_WEBHOOK"
+    UnifiedApiCategory:
+      description: "A category of unified API."
+      type: "string"
+      enum:
+        - "ACCOUNTING"
+        - "ATS"
+        - "CRM"
+        - "E_COMMERCE"
+        - "HRIS"
+        - "FILE_STORAGE"
+        - "MARKETING_AUTOMATION"
+        - "TICKETING"
     ValueProperty:
       description: "A base property for all value based properties."
       type: "object"
@@ -2010,10 +3121,6 @@ components:
           type: "integer"
           format: "int32"
           readOnly: true
-#        manualTrigger:
-#          description: "Does this workflow have a manual trigger or not"
-#          type: "boolean"
-#          readOnly: true
         workflowTaskComponentNames:
           type: "array"
           items:
@@ -2074,7 +3181,7 @@ components:
           readOnly: true
         __version:
           type: "integer"
-    WorkflowConnection:
+    ComponentConnection:
       type: "object"
       required:
         - "componentName"
@@ -2108,11 +3215,18 @@ components:
         - "name"
         - "value"
       properties:
+        internalOnly:
+          description: "If true, the input is configured in the admin integration instance configuration; if false (default), it is rendered in the end-user connect dialog."
+          type: "boolean"
+          default: false
         label:
           description: "The descriptive name of an input"
           type: "string"
         name:
           description: "The name of an input"
+          type: "string"
+        objectName:
+          description: "For field_mapping inputs, the name of the object whose fields are being mapped."
           type: "string"
         required:
           description: "If an input is required, or not"
@@ -2122,6 +3236,28 @@ components:
           description: "The type of an input, for example \\\"string\\\""
           type: "string"
           default: "string"
+        componentReference:
+          $ref: "#/components/schemas/ComponentInputReference"
+    ComponentInputReference:
+      title: "Component input reference"
+      description: "An all-or-nothing reference from a workflow input to a component-defined input\
+        \ group."
+      type: "object"
+      required:
+        - "componentName"
+        - "componentVersion"
+        - "groupName"
+      properties:
+        componentName:
+          description: "The name of the referenced component."
+          type: "string"
+        componentVersion:
+          description: "The version of the referenced component."
+          type: "integer"
+          format: "int32"
+        groupName:
+          description: "The name of the referenced component input group."
+          type: "string"
     WorkflowOutput:
       type: "object"
       required:
@@ -2142,16 +3278,21 @@ components:
         - workflowNodeName
       properties:
         actionDefinition:
-          $ref: '#/components/schemas/ActionDefinition'
-        outputSchema:
-          $ref: "#/components/schemas/Property"
-        sampleOutput:
-          description: "The sample value of an output."
-          type: "object"
+          $ref: '#/components/schemas/ActionDefinitionBasic'
+        clusterElementDefinition:
+          $ref: '#/components/schemas/ClusterElementDefinitionBasic'
+        outputResponse:
+          $ref: "#/components/schemas/OutputResponse"
         taskDispatcherDefinition:
-          $ref: '#/components/schemas/TaskDispatcherDefinition'
+          $ref: '#/components/schemas/TaskDispatcherDefinitionBasic'
+        testOutputResponse:
+          description: "If the output response is a sample or the real one"
+          type: "boolean"
+          default: false
         triggerDefinition:
-          $ref: '#/components/schemas/TriggerDefinition'
+          $ref: '#/components/schemas/TriggerDefinitionBasic'
+        variableOutputResponse:
+          $ref: "#/components/schemas/OutputResponse"
         workflowNodeName:
           description: The workflow node name
           type: "string"
@@ -2185,8 +3326,14 @@ components:
       description: "Contains configuration and connections required for the test execution of a particular workflow."
       type: "object"
       required:
+        - "environmentId"
         - "name"
       properties:
+        connections:
+          description: "The connections used by workflow test."
+          type: "array"
+          items:
+            $ref: "#/components/schemas/WorkflowTestConfigurationConnection"
         createdBy:
           description: "The created by."
           type: "string"
@@ -2196,17 +3343,15 @@ components:
           type: "string"
           format: "date-time"
           readOnly: true
+        environmentId:
+          description: "The id of an environment."
+          type: "integer"
+          format: "int64"
         inputs:
           description: "The input parameters used as workflow\
             \ input values."
           type: "object"
-          additionalProperties:
-            type: "string"
-        connections:
-          description: "The connections used by workflow test."
-          type: "array"
-          items:
-            $ref: "#/components/schemas/WorkflowTestConfigurationConnection"
+          additionalProperties: true
         lastModifiedBy:
           description: "The last modified by."
           type: "string"
@@ -2248,16 +3393,22 @@ components:
         - "name"
         - "type"
       properties:
+        clusterRoot:
+          type: boolean
+          default: false
+          readOnly: true
+        clusterElements:
+          type: object
+          additionalProperties: true
+          readOnly: true
         connections:
           type: "array"
           items:
-            $ref: "#/components/schemas/WorkflowConnection"
+            $ref: "#/components/schemas/ComponentConnection"
           readOnly: true
         description:
           description: "The description of the task."
           type: "string"
-        destination:
-          $ref: '#/components/schemas/DataStreamComponent'
         finalize:
           description: "The (optional) list of tasks that are to be executed after\
             \ execution of a task -- regardless of whether it had failed or not."
@@ -2267,6 +3418,10 @@ components:
         label:
           description: "The human-readable description of the task."
           type: "string"
+        maxRetries:
+          description: "The maximum number of times a task may retry."
+          type: "integer"
+          format: "int32"
         metadata:
           description: "Key-value map of metadata."
           type: "object"
@@ -2297,8 +3452,6 @@ components:
           type: "array"
           items:
             $ref: "#/components/schemas/WorkflowTask"
-        source:
-          $ref: '#/components/schemas/DataStreamComponent'
         timeout:
           description: "The timeout expression which describes when a task should\
             \ be deemed as timed-out."
@@ -2316,7 +3469,7 @@ components:
         connections:
           type: "array"
           items:
-            $ref: "#/components/schemas/WorkflowConnection"
+            $ref: "#/components/schemas/ComponentConnection"
           readOnly: true
         description:
           description: "The description of the task."

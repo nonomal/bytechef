@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ import static com.bytechef.task.dispatcher.condition.constant.ConditionTaskDispa
 import com.bytechef.atlas.configuration.domain.Task;
 import com.bytechef.atlas.configuration.domain.WorkflowTask;
 import com.bytechef.atlas.coordinator.event.TaskExecutionCompleteEvent;
+import com.bytechef.atlas.coordinator.task.dispatcher.ErrorHandlingTaskDispatcher;
 import com.bytechef.atlas.coordinator.task.dispatcher.TaskDispatcher;
 import com.bytechef.atlas.coordinator.task.dispatcher.TaskDispatcherResolver;
 import com.bytechef.atlas.execution.domain.Context;
@@ -31,44 +32,49 @@ import com.bytechef.atlas.execution.service.ContextService;
 import com.bytechef.atlas.execution.service.TaskExecutionService;
 import com.bytechef.atlas.file.storage.TaskFileStorage;
 import com.bytechef.commons.util.MapUtils;
+import com.bytechef.evaluator.Evaluator;
 import com.bytechef.task.dispatcher.condition.util.ConditionTaskUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import java.time.LocalDateTime;
-import java.util.Collections;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import org.apache.commons.lang3.Validate;
 import org.springframework.context.ApplicationEventPublisher;
+import tools.jackson.core.type.TypeReference;
 
 /**
  * @author Ivica Cardic
  * @author Matija Petanjek
  */
-public class ConditionTaskDispatcher implements TaskDispatcher<TaskExecution>, TaskDispatcherResolver {
+public class ConditionTaskDispatcher extends ErrorHandlingTaskDispatcher implements TaskDispatcherResolver {
 
-    private final ApplicationEventPublisher eventPublisher;
     private final ContextService contextService;
+    private final Evaluator evaluator;
+    private final ApplicationEventPublisher eventPublisher;
     private final TaskDispatcher<? super Task> taskDispatcher;
     private final TaskExecutionService taskExecutionService;
     private final TaskFileStorage taskFileStorage;
 
     @SuppressFBWarnings("EI")
     public ConditionTaskDispatcher(
-        ApplicationEventPublisher eventPublisher, ContextService contextService,
+        ContextService contextService, Evaluator evaluator, ApplicationEventPublisher eventPublisher,
         TaskDispatcher<? super Task> taskDispatcher, TaskExecutionService taskExecutionService,
         TaskFileStorage taskFileStorage) {
 
-        this.eventPublisher = eventPublisher;
+        super(eventPublisher);
+
         this.contextService = contextService;
+        this.evaluator = evaluator;
+        this.eventPublisher = eventPublisher;
         this.taskDispatcher = taskDispatcher;
         this.taskExecutionService = taskExecutionService;
         this.taskFileStorage = taskFileStorage;
     }
 
     @Override
-    public void dispatch(TaskExecution taskExecution) {
-        taskExecution.setStartDate(LocalDateTime.now());
+    public void doDispatch(TaskExecution taskExecution) {
+        taskExecution.setStartDate(Instant.now());
         taskExecution.setStatus(TaskExecution.Status.STARTED);
 
         taskExecution = taskExecutionService.update(taskExecution);
@@ -76,18 +82,17 @@ public class ConditionTaskDispatcher implements TaskDispatcher<TaskExecution>, T
         List<WorkflowTask> subWorkflowTasks;
 
         if (ConditionTaskUtils.resolveCase(taskExecution)) {
-            subWorkflowTasks = MapUtils.getList(
-                taskExecution.getParameters(), CASE_TRUE, WorkflowTask.class, Collections.emptyList());
+            subWorkflowTasks = getSubWorkflowTasks(taskExecution, CASE_TRUE);
         } else {
-            subWorkflowTasks = MapUtils.getList(
-                taskExecution.getParameters(), CASE_FALSE, WorkflowTask.class, Collections.emptyList());
+            subWorkflowTasks = getSubWorkflowTasks(taskExecution, CASE_FALSE);
         }
 
         if (!subWorkflowTasks.isEmpty()) {
-            WorkflowTask subWorkflowTask = subWorkflowTasks.get(0);
+            WorkflowTask subWorkflowTask = subWorkflowTasks.getFirst();
 
             TaskExecution subTaskExecution = TaskExecution.builder()
                 .jobId(taskExecution.getJobId())
+                .maxRetries(subWorkflowTask.getMaxRetries())
                 .parentId(taskExecution.getId())
                 .priority(taskExecution.getPriority())
                 .taskNumber(1)
@@ -95,9 +100,10 @@ public class ConditionTaskDispatcher implements TaskDispatcher<TaskExecution>, T
                 .build();
 
             Map<String, ?> context = taskFileStorage.readContextValue(
-                contextService.peek(Validate.notNull(taskExecution.getId(), "id"), Context.Classname.TASK_EXECUTION));
+                contextService.peek(Validate.notNull(taskExecution.getId(), "id"),
+                    Context.Classname.TASK_EXECUTION));
 
-            subTaskExecution.evaluate(context);
+            subTaskExecution.evaluate(context, evaluator);
 
             subTaskExecution = taskExecutionService.create(subTaskExecution);
 
@@ -108,12 +114,22 @@ public class ConditionTaskDispatcher implements TaskDispatcher<TaskExecution>, T
 
             taskDispatcher.dispatch(subTaskExecution);
         } else {
-            taskExecution.setStartDate(LocalDateTime.now());
-            taskExecution.setEndDate(LocalDateTime.now());
+            taskExecution.setStartDate(Instant.now());
+            taskExecution.setEndDate(Instant.now());
             taskExecution.setExecutionTime(0);
 
             eventPublisher.publishEvent(new TaskExecutionCompleteEvent(taskExecution));
         }
+
+    }
+
+    private static List<WorkflowTask> getSubWorkflowTasks(TaskExecution conditionTaskExecution, String caseTrue) {
+        return MapUtils
+            .getList(
+                conditionTaskExecution.getParameters(), caseTrue, new TypeReference<Map<String, ?>>() {}, List.of())
+            .stream()
+            .map(WorkflowTask::new)
+            .toList();
     }
 
     @Override

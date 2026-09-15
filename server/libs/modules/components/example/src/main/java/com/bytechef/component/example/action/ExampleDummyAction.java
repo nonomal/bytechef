@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,31 +16,27 @@
 
 package com.bytechef.component.example.action;
 
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.string;
-import static com.bytechef.component.example.constant.ExampleConstants.DUMMY;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.outputSchema;
+import static com.bytechef.component.definition.ComponentDsl.string;
 
-import com.bytechef.component.definition.ActionContext;
-import com.bytechef.component.definition.ComponentDSL.ModifiableActionDefinition;
+import com.bytechef.component.definition.ComponentDsl.ModifiableActionDefinition;
+import com.bytechef.component.definition.Context;
 import com.bytechef.component.definition.Parameters;
 
-/**
- * @author Mario Cvjetojevic
- */
-public final class ExampleDummyAction {
+public class ExampleDummyAction {
 
-    public static final ModifiableActionDefinition ACTION_DEFINITION = action(DUMMY)
+    public static final ModifiableActionDefinition ACTION_DEFINITION = action("dummyAction")
         .title("Title")
         .description("Description")
         .properties()
-        .outputSchema(string())
+        .output(outputSchema(string()))
         .perform(ExampleDummyAction::perform);
 
     private ExampleDummyAction() {
     }
 
-    public static String perform(
-        Parameters inputParameters, Parameters connectionParameters, ActionContext actionContext) {
+    public static String perform(Parameters inputParameters, Parameters connectionParameters, Context context) {
         // TODO
 
         return null;

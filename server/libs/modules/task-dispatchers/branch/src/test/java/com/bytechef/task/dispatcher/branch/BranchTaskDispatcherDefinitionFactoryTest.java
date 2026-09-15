@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * Modifications copyright (C) 2023 ByteChef Inc.
+ * Modifications copyright (C) 2025 ByteChef
  */
 
 package com.bytechef.task.dispatcher.branch;
@@ -29,7 +29,7 @@ public class BranchTaskDispatcherDefinitionFactoryTest {
 
     @Test
     public void testGetTaskDispatcherDefinition() {
-        JsonFileAssert.assertEquals("definition/branch_v1.json",
-            new BranchTaskDispatcherDefinitionFactory().getDefinition());
+        JsonFileAssert.assertEquals(
+            "definition/branch_v1.json", new BranchTaskDispatcherDefinitionFactory().getDefinition());
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the ByteChef Enterprise license (the "Enterprise License");
  * you may not use this file except in compliance with the Enterprise License.
@@ -7,8 +7,8 @@
 
 package com.bytechef.ee.embedded.configuration.remote.web.rest.service;
 
-import com.bytechef.embedded.configuration.domain.Integration;
-import com.bytechef.embedded.configuration.service.IntegrationService;
+import com.bytechef.ee.embedded.configuration.domain.Integration;
+import com.bytechef.ee.embedded.configuration.service.IntegrationService;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.swagger.v3.oas.annotations.Hidden;
 import java.util.List;

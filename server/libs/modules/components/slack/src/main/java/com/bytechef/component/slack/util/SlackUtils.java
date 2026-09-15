@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,18 +16,20 @@
 
 package com.bytechef.component.slack.util;
 
-import static com.bytechef.component.definition.ComponentDSL.option;
-import static com.bytechef.component.slack.constant.SlackConstants.CHANNEL;
+import static com.bytechef.component.definition.ComponentDsl.option;
+import static com.bytechef.component.slack.constant.SlackConstants.ERROR;
 import static com.bytechef.component.slack.constant.SlackConstants.ID;
 import static com.bytechef.component.slack.constant.SlackConstants.NAME;
-import static com.bytechef.component.slack.constant.SlackConstants.TEXT;
+import static com.bytechef.component.slack.constant.SlackConstants.OK;
 
-import com.bytechef.component.definition.ActionContext;
+import com.bytechef.component.definition.Context;
 import com.bytechef.component.definition.Context.Http;
-import com.bytechef.component.definition.Context.TypeReference;
 import com.bytechef.component.definition.Option;
 import com.bytechef.component.definition.Parameters;
+import com.bytechef.component.definition.TypeReference;
+import com.bytechef.component.exception.ProviderException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -40,61 +42,94 @@ public class SlackUtils {
     private SlackUtils() {
     }
 
-    public static Object sendMessage(Parameters inputParameters, ActionContext actionContext) {
-        return actionContext
-            .http(http -> http.post("/chat.postMessage"))
-            .body(
-                Http.Body.of(
-                    CHANNEL, inputParameters.getRequiredString(CHANNEL),
-                    TEXT, inputParameters.getRequiredString(TEXT)))
-            .configuration(Http.responseType(Http.ResponseType.JSON))
-            .execute()
-            .getBody(new TypeReference<>() {});
+    public static List<Option<String>> getChannelIdOptions(
+        Parameters inputParameters, Parameters connectionParameters, Map<String, String> lookupDependsOnPaths,
+        String searchText, Context context) {
+
+        List<Object> channels = getAll(
+            context, "/conversations.list", "channels",
+            "types", "public_channel,private_channel", "exclude_archived", true, "limit", 1000);
+
+        return getOptions(channels);
     }
 
-    public static List<Option<String>> getChannelOptions(
-        Parameters inputParameters, Parameters connectionParameters, Map<String, String> dependencyPaths,
-        String searchText, ActionContext context) {
+    public static List<Option<String>> getUserIdOptions(
+        Parameters inputParameters, Parameters connectionParameters, Map<String, String> lookupDependsOnPaths,
+        String searchText, Context context) {
 
-        Map<String, Object> body = context
-            .http(http -> http.get("/conversations.list"))
-            .configuration(Http.responseType(Http.ResponseType.JSON))
-            .execute()
-            .getBody(new TypeReference<>() {});
+        List<Object> users = getAll(context, "/users.list", "members", "limit", 1000);
 
-        List<Option<String>> options = new ArrayList<>();
+        return getOptions(users);
+    }
 
-        if (body.get("channels") instanceof List<?> list) {
-            for (Object o : list) {
-                if (o instanceof Map<?, ?> map) {
-                    options.add(option((String) map.get(NAME), (String) map.get(ID)));
+    private static List<Object> getAll(
+        Context context, String endpoint, String listKey, Object... baseQueryParameters) {
+
+        String cursor = null;
+        List<Object> items = new ArrayList<>();
+
+        do {
+            List<Object> queryParameters = new ArrayList<>(Arrays.asList(baseQueryParameters));
+
+            queryParameters.add("cursor");
+            queryParameters.add(cursor);
+
+            Map<String, Object> body = context
+                .http(http -> http.get(endpoint))
+                .queryParameters(queryParameters.toArray())
+                .configuration(Http.responseType(Http.ResponseType.JSON))
+                .execute()
+                .getBody(new TypeReference<>() {});
+
+            if ((boolean) body.get(OK)) {
+                if (body.get(listKey) instanceof List<?> list) {
+                    items.addAll(list);
                 }
+
+                if (body.get("response_metadata") instanceof Map<?, ?> map) {
+                    cursor = (String) map.get("next_cursor");
+                }
+            } else {
+                throw new ProviderException((String) body.get(ERROR));
+            }
+        } while (cursor != null && !cursor.isEmpty());
+
+        return items;
+    }
+
+    private static List<Option<String>> getOptions(List<Object> items) {
+        List<Option<String>> options = new ArrayList<>(items.size());
+
+        for (Object item : items) {
+            if (item instanceof Map<?, ?> map) {
+                options.add(option((String) map.get(NAME), (String) map.get(ID)));
             }
         }
 
         return options;
     }
 
-    public static List<Option<String>> getUserOptions(
-        Parameters inputParameters, Parameters connectionParameters, Map<String, String> dependencyPaths,
-        String searchText, ActionContext context) {
+    public static String getSlackTimeZone(Context context) {
+        String userID = getUserId(context);
 
-        Map<String, Object> body = context
-            .http(http -> http.get("/users.list"))
+        Map<String, Object> body = context.http(http -> http.get("/users.info"))
+            .queryParameters("user", userID)
             .configuration(Http.responseType(Http.ResponseType.JSON))
             .execute()
             .getBody(new TypeReference<>() {});
 
-        List<Option<String>> options = new ArrayList<>();
+        Map<String, Object> user = (Map<String, Object>) body.get("user");
 
-        if (body.get("members") instanceof List<?> list) {
-            for (Object o : list) {
-                if (o instanceof Map<?, ?> map) {
-                    options.add(option((String) map.get(NAME), (String) map.get(ID)));
-                }
-            }
-        }
+        return (String) user.get("tz");
+    }
 
-        return options;
+    public static String getUserId(Context context) {
+        Map<String, Object> body = context.http(http -> http
+            .get("/auth.test"))
+            .configuration(Http.responseType(Http.ResponseType.JSON))
+            .execute()
+            .getBody(new TypeReference<>() {});
+
+        return (String) body.get("user_id");
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,9 +18,11 @@ package com.bytechef.platform.connection.repository;
 
 import com.bytechef.commons.util.CollectionUtils;
 import com.bytechef.commons.util.OptionalUtils;
+import com.bytechef.component.definition.Authorization.AuthorizationType;
 import com.bytechef.platform.connection.config.ConnectionIntTestConfiguration;
+import com.bytechef.platform.connection.config.ConnectionIntTestConfigurationSharedMocks;
 import com.bytechef.platform.connection.domain.Connection;
-import com.bytechef.platform.constant.AppType;
+import com.bytechef.platform.constant.PlatformType;
 import com.bytechef.test.config.testcontainers.PostgreSQLContainerConfiguration;
 import java.util.Map;
 import org.apache.commons.lang3.Validate;
@@ -36,6 +38,7 @@ import org.springframework.context.annotation.Import;
  */
 @SpringBootTest(classes = ConnectionIntTestConfiguration.class)
 @Import(PostgreSQLContainerConfiguration.class)
+@ConnectionIntTestConfigurationSharedMocks
 public class ConnectionRepositoryIntTest {
 
     @Autowired
@@ -99,10 +102,11 @@ public class ConnectionRepositoryIntTest {
 
     private static Connection getConnection() {
         return Connection.builder()
+            .authorizationType(AuthorizationType.BASIC_AUTH)
             .componentName("componentName")
             .name("name")
             .parameters(Map.of("key1", "value1"))
-            .type(AppType.AUTOMATION)
+            .type(PlatformType.AUTOMATION)
             .build();
     }
 }

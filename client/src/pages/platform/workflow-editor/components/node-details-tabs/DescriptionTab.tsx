@@ -1,90 +1,211 @@
-import {Input} from '@/components/ui/input';
+import {Input} from '@/components/Input/Input';
+import ReadOnlyInput from '@/components/ReadOnlyInput/ReadOnlyInput';
 import {Label} from '@/components/ui/label';
 import {Textarea} from '@/components/ui/textarea';
 import useWorkflowDataStore from '@/pages/platform/workflow-editor/stores/useWorkflowDataStore';
 import useWorkflowNodeDetailsPanelStore from '@/pages/platform/workflow-editor/stores/useWorkflowNodeDetailsPanelStore';
+import {getTask} from '@/pages/platform/workflow-editor/utils/getTask';
+import {
+    ClusterElementDefinition,
+    ComponentDefinition,
+    TaskDispatcherDefinition,
+    TriggerDefinition,
+} from '@/shared/middleware/platform/configuration';
 import {UpdateWorkflowMutationType} from '@/shared/types';
+import {ComponentIcon} from 'lucide-react';
 import {ChangeEvent} from 'react';
+import InlineSVG from 'react-inlinesvg';
 import {useDebouncedCallback} from 'use-debounce';
+import {useShallow} from 'zustand/react/shallow';
 
+import saveClusterElementFieldChange from '../../utils/saveClusterElementFieldChange';
+import saveTaskDispatcherSubtaskFieldChange from '../../utils/saveTaskDispatcherSubtaskFieldChange';
 import saveWorkflowDefinition from '../../utils/saveWorkflowDefinition';
 
-const DescriptionTab = ({updateWorkflowMutation}: {updateWorkflowMutation: UpdateWorkflowMutationType}) => {
-    const {workflow} = useWorkflowDataStore();
-    const {currentComponent, currentNode, setCurrentComponent} = useWorkflowNodeDetailsPanelStore();
+interface DescriptionTabProps {
+    nodeDefinition: ComponentDefinition | ClusterElementDefinition | TaskDispatcherDefinition | TriggerDefinition;
+    updateWorkflowMutation: UpdateWorkflowMutationType;
+}
+
+const DescriptionTab = ({nodeDefinition, updateWorkflowMutation}: DescriptionTabProps) => {
+    const {currentNode, setCurrentNode} = useWorkflowNodeDetailsPanelStore(
+        useShallow((state) => ({
+            currentNode: state.currentNode,
+            setCurrentNode: state.setCurrentNode,
+        }))
+    );
+    const {nodes, workflow} = useWorkflowDataStore(
+        useShallow((state) => ({
+            nodes: state.nodes,
+            workflow: state.workflow,
+        }))
+    );
 
     const handleLabelChange = useDebouncedCallback((event: ChangeEvent<HTMLInputElement>) => {
-        if (!currentComponent) {
+        if (!currentNode) {
             return;
         }
 
-        if (currentComponent?.componentName) {
-            saveWorkflowDefinition(
-                {
-                    componentName: currentComponent.componentName as string,
-                    description: currentComponent?.notes,
-                    icon: undefined,
-                    label: event.target.value,
-                    name: currentComponent.workflowNodeName,
+        if (
+            currentNode.conditionData ||
+            currentNode.loopData ||
+            currentNode.branchData ||
+            currentNode.parallelData ||
+            currentNode.eachData ||
+            currentNode.forkJoinData ||
+            currentNode.onErrorData
+        ) {
+            saveTaskDispatcherSubtaskFieldChange({
+                currentComponentDefinition: nodeDefinition as ComponentDefinition,
+                currentNodeIndex: nodes.findIndex((node) => node.data.name === currentNode.workflowNodeName),
+                fieldUpdate: {
+                    field: 'label',
+                    value: event.target.value,
                 },
-                workflow,
                 updateWorkflowMutation,
-                undefined,
-                () => {
-                    setCurrentComponent({
-                        ...currentComponent,
-                        title: event.target.value,
-                    });
-                }
-            );
+            });
+
+            return;
         }
-    }, 200);
+
+        if (currentNode.clusterElementType || currentNode.clusterRoot) {
+            saveClusterElementFieldChange({
+                currentComponentDefinition: nodeDefinition as ComponentDefinition,
+                fieldUpdate: {
+                    field: 'label',
+                    value: event.target.value,
+                },
+                updateWorkflowMutation,
+            });
+
+            return;
+        }
+
+        saveWorkflowDefinition({
+            decorative: true,
+            nodeData: {
+                ...currentNode,
+                label: event.target.value,
+                name: currentNode.workflowNodeName,
+                version: 'version' in nodeDefinition ? nodeDefinition.version : 1,
+            },
+            onSuccess: () => {
+                setCurrentNode({
+                    ...currentNode,
+                    label: event.target.value,
+                });
+            },
+            updateWorkflowMutation,
+        });
+    }, 600);
 
     const handleNotesChange = useDebouncedCallback((event: ChangeEvent<HTMLTextAreaElement>) => {
-        if (currentComponent?.componentName) {
-            saveWorkflowDefinition(
-                {
-                    componentName: currentComponent.componentName as string,
-                    description: event.target.value,
-                    icon: undefined,
-                    label: currentComponent?.title,
-                    name: currentComponent.workflowNodeName,
-                    operationName: currentComponent.operationName,
-                    trigger: !!currentNode?.trigger,
-                },
-                workflow,
-                updateWorkflowMutation,
-                undefined,
-                () => {
-                    setCurrentComponent({
-                        ...currentComponent,
-                        notes: event.target.value,
-                    });
-                }
-            );
+        if (!currentNode) {
+            return;
         }
-    }, 200);
+
+        if (
+            currentNode.conditionData ||
+            currentNode.loopData ||
+            currentNode.branchData ||
+            currentNode.parallelData ||
+            currentNode.eachData ||
+            currentNode.forkJoinData ||
+            currentNode.onErrorData
+        ) {
+            saveTaskDispatcherSubtaskFieldChange({
+                currentComponentDefinition: nodeDefinition as ComponentDefinition,
+                currentNodeIndex: nodes.findIndex((node) => node.data.name === currentNode.workflowNodeName),
+                fieldUpdate: {
+                    field: 'description',
+                    value: event.target.value,
+                },
+                updateWorkflowMutation,
+            });
+
+            return;
+        }
+
+        if (currentNode.clusterElementType || currentNode.clusterRoot) {
+            saveClusterElementFieldChange({
+                currentComponentDefinition: nodeDefinition as ComponentDefinition,
+                fieldUpdate: {
+                    field: 'description',
+                    value: event.target.value,
+                },
+                updateWorkflowMutation,
+            });
+
+            return;
+        }
+
+        saveWorkflowDefinition({
+            decorative: true,
+            nodeData: {
+                ...currentNode,
+                description: event.target.value,
+                name: currentNode.workflowNodeName,
+                version: 'version' in nodeDefinition ? nodeDefinition.version : 1,
+            },
+            onSuccess: () => {
+                setCurrentNode({
+                    ...currentNode,
+                    description: event.target.value,
+                });
+            },
+            updateWorkflowMutation,
+        });
+    }, 600);
+
+    let workflowTaskOrTrigger =
+        workflow.triggers?.find((trigger) => trigger.name === currentNode?.workflowNodeName) ||
+        (currentNode?.workflowNodeName
+            ? getTask({
+                  tasks: workflow.tasks || [],
+                  workflowNodeName: currentNode.workflowNodeName,
+              })
+            : undefined);
+
+    if (!workflowTaskOrTrigger && currentNode?.clusterElementType) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        workflowTaskOrTrigger = currentNode as any;
+    }
 
     return (
         <div className="flex h-full flex-col gap-4 overflow-auto p-4">
-            <fieldset className="space-y-2">
+            {nodeDefinition.title && (
+                <ReadOnlyInput
+                    inlineIcon={
+                        'icon' in nodeDefinition && nodeDefinition.icon ? (
+                            <InlineSVG className="size-5 shrink-0" src={nodeDefinition.icon} />
+                        ) : (
+                            <ComponentIcon />
+                        )
+                    }
+                    label="Component"
+                    text={nodeDefinition.title}
+                />
+            )}
+
+            <fieldset className="space-y-1">
                 <Label>Title</Label>
 
                 <Input
-                    defaultValue={currentComponent?.title}
-                    key={`${currentComponent?.componentName}_nodeTitle`}
+                    className="bg-white shadow-none"
+                    defaultValue={workflowTaskOrTrigger?.label}
+                    key={`${currentNode?.componentName}-${currentNode?.workflowNodeName}_nodeTitle`}
                     name="nodeTitle"
                     onChange={handleLabelChange}
                 />
             </fieldset>
 
-            <fieldset className="space-y-2">
+            <fieldset className="space-y-1">
                 <Label>Notes</Label>
 
                 <Textarea
-                    className="mt-1"
-                    defaultValue={currentComponent?.notes || ''}
-                    key={`${currentComponent?.componentName}_nodeNotes`}
+                    className="bg-white shadow-none"
+                    defaultValue={workflowTaskOrTrigger?.description}
+                    key={`${currentNode?.componentName}-${workflowTaskOrTrigger?.type}_nodeNotes`}
                     name="nodeNotes"
                     onChange={handleNotesChange}
                     placeholder="Write some notes for yourself..."

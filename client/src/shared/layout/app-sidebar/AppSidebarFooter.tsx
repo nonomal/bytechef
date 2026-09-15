@@ -1,0 +1,298 @@
+import {Avatar, AvatarFallback} from '@/components/ui/avatar';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuPortal,
+    DropdownMenuRadioGroup,
+    DropdownMenuRadioItem,
+    DropdownMenuSeparator,
+    DropdownMenuSub,
+    DropdownMenuSubContent,
+    DropdownMenuSubTrigger,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {useWorkspaceStore} from '@/pages/automation/stores/useWorkspaceStore';
+import {PlatformType, usePlatformTypeStore} from '@/pages/home/stores/usePlatformTypeStore';
+import {DEVELOPMENT_ENVIRONMENT} from '@/shared/constants';
+import {useAnalytics} from '@/shared/hooks/useAnalytics';
+import {useEnvironmentsQuery} from '@/shared/middleware/graphql';
+import {useGetUserWorkspacesQuery} from '@/shared/queries/automation/workspaces.queries';
+import {useApplicationInfoStore} from '@/shared/stores/useApplicationInfoStore';
+import {useAuthenticationStore} from '@/shared/stores/useAuthenticationStore';
+import {useEnvironmentStore} from '@/shared/stores/useEnvironmentStore';
+import {useQueryClient} from '@tanstack/react-query';
+import {
+    BlendIcon,
+    ChevronsUpDownIcon,
+    DiamondIcon,
+    HelpCircleIcon,
+    PlusIcon,
+    SettingsIcon,
+    User2Icon,
+    UserRoundCogIcon,
+} from 'lucide-react';
+import {useEffect} from 'react';
+import {useLocation, useNavigate} from 'react-router-dom';
+import {useShallow} from 'zustand/react/shallow';
+
+export function AppSidebarFooter() {
+    const application = useApplicationInfoStore((state) => state.application);
+    const {account, logout} = useAuthenticationStore(
+        useShallow((state) => ({
+            account: state.account,
+            logout: state.logout,
+        }))
+    );
+    const {currentType, setCurrentType} = usePlatformTypeStore(
+        useShallow((state) => ({
+            currentType: state.currentType,
+            setCurrentType: state.setCurrentType,
+        }))
+    );
+    const {currentEnvironmentId, setCurrentEnvironmentId} = useEnvironmentStore(
+        useShallow((state) => ({
+            currentEnvironmentId: state.currentEnvironmentId,
+            setCurrentEnvironmentId: state.setCurrentEnvironmentId,
+        }))
+    );
+    const {currentWorkspaceId, setCurrentWorkspaceId} = useWorkspaceStore(
+        useShallow((state) => ({
+            currentWorkspaceId: state.currentWorkspaceId,
+            setCurrentWorkspaceId: state.setCurrentWorkspaceId,
+        }))
+    );
+
+    const analytics = useAnalytics();
+
+    const {pathname} = useLocation();
+
+    const navigate = useNavigate();
+
+    const queryClient = useQueryClient();
+
+    /* eslint-disable @typescript-eslint/no-non-null-asserted-optional-chain */
+    const {data: environmentsQuery} = useEnvironmentsQuery();
+
+    const {data: workspaces} = useGetUserWorkspacesQuery(account?.id!, !!account);
+
+    const handleLogOutClick = async () => {
+        analytics.reset();
+
+        await queryClient.cancelQueries();
+
+        await logout();
+
+        queryClient.clear();
+    };
+
+    const handlePlatformTypeChange = (value: string) => {
+        const selectedType = +value;
+
+        setCurrentType(selectedType);
+
+        if (selectedType === PlatformType.AUTOMATION) {
+            navigate(`/automation${currentEnvironmentId === DEVELOPMENT_ENVIRONMENT ? '/projects' : '/deployments'}`);
+        } else if (selectedType === PlatformType.EMBEDDED) {
+            navigate(
+                `/embedded${currentEnvironmentId === DEVELOPMENT_ENVIRONMENT ? '/integrations' : '/configurations'}`
+            );
+        }
+    };
+
+    const handleWorkspaceValueChange = (value: string) => {
+        setCurrentWorkspaceId(+value);
+
+        if (currentType === PlatformType.AUTOMATION) {
+            navigate(`/automation${currentEnvironmentId === DEVELOPMENT_ENVIRONMENT ? '/projects' : '/deployments'}`);
+        }
+    };
+
+    useEffect(() => {
+        const environments = environmentsQuery?.environments;
+
+        if (environments && environments.length > 0) {
+            if (currentEnvironmentId) {
+                if (!environments.map((environment) => environment?.id!).find((id) => +id === currentEnvironmentId)) {
+                    if (environments[0]?.id) {
+                        setCurrentEnvironmentId(+environments[0]?.id);
+                    }
+                }
+            } else if (environments[0]?.id && !currentEnvironmentId) {
+                setCurrentEnvironmentId(+environments[0]?.id);
+            }
+        }
+    }, [currentEnvironmentId, environmentsQuery?.environments, setCurrentEnvironmentId]);
+
+    useEffect(() => {
+        if (workspaces && workspaces.length > 0) {
+            if (currentWorkspaceId) {
+                if (!workspaces.map((workspace) => workspace.id!).find((id) => id === currentWorkspaceId)) {
+                    if (workspaces[0]?.id) {
+                        setCurrentWorkspaceId(workspaces[0]?.id);
+                    }
+                }
+            } else if (workspaces[0]?.id && !currentWorkspaceId) {
+                setCurrentWorkspaceId(workspaces[0]?.id);
+            }
+        }
+    }, [currentWorkspaceId, workspaces, setCurrentWorkspaceId]);
+
+    return (
+        <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+                <button
+                    aria-label="User menu"
+                    className="flex h-12 w-full items-center gap-2 rounded-md px-[3px] py-2 text-left hover:bg-sidebar-accent"
+                    type="button"
+                >
+                    <Avatar className="shrink-0">
+                        <AvatarFallback className="bg-white text-primary">
+                            <User2Icon className="size-7" />
+                        </AvatarFallback>
+                    </Avatar>
+
+                    <div className="flex w-full min-w-0 items-center justify-between group-data-[collapsible=icon]:hidden">
+                        <div className="flex flex-1 flex-col">
+                            <span className="text-xs text-muted-foreground">Signed in as</span>
+
+                            <span className="truncate text-sm font-medium">{account?.email}</span>
+                        </div>
+
+                        <ChevronsUpDownIcon className="size-4" />
+                    </div>
+                </button>
+            </DropdownMenuTrigger>
+
+            <DropdownMenuContent align="start" className="w-72 space-y-2 p-2">
+                <div className="flex items-center space-x-2">
+                    <Avatar className="cursor-pointer">
+                        <AvatarFallback className="bg-muted">
+                            <User2Icon className="size-6" />
+                        </AvatarFallback>
+                    </Avatar>
+
+                    <div className="min-w-0">
+                        <div className="text-sm text-muted-foreground">Signed in as</div>
+
+                        <div className="text-sm break-all">{account?.email}</div>
+                    </div>
+                </div>
+
+                <DropdownMenuSeparator />
+
+                {application?.edition === 'EE' && (
+                    <>
+                        <DropdownMenuSub>
+                            <DropdownMenuSubTrigger className="cursor-pointer font-semibold">
+                                <BlendIcon className="size-5" />
+
+                                <span>{`Mode: ${currentType === PlatformType.AUTOMATION ? 'Automation' : 'Embedded'}`}</span>
+                            </DropdownMenuSubTrigger>
+
+                            <DropdownMenuPortal>
+                                <DropdownMenuSubContent>
+                                    <DropdownMenuRadioGroup
+                                        onValueChange={handlePlatformTypeChange}
+                                        value={currentType?.toString()}
+                                    >
+                                        <DropdownMenuRadioItem value="0">Automation</DropdownMenuRadioItem>
+
+                                        <DropdownMenuRadioItem value="1">Embedded</DropdownMenuRadioItem>
+                                    </DropdownMenuRadioGroup>
+                                </DropdownMenuSubContent>
+                            </DropdownMenuPortal>
+                        </DropdownMenuSub>
+
+                        <DropdownMenuSeparator />
+                    </>
+                )}
+
+                {pathname.startsWith('/automation') && application?.edition === 'EE' && workspaces && (
+                    <>
+                        <DropdownMenuSub>
+                            <DropdownMenuSubTrigger className="cursor-pointer font-semibold">
+                                <DiamondIcon className="size-5" />
+
+                                {`Workspace: ${workspaces.find((w) => w.id === currentWorkspaceId)?.name}`}
+                            </DropdownMenuSubTrigger>
+
+                            <DropdownMenuPortal>
+                                <DropdownMenuSubContent>
+                                    <DropdownMenuRadioGroup
+                                        onValueChange={handleWorkspaceValueChange}
+                                        value={currentWorkspaceId?.toString()}
+                                    >
+                                        {workspaces.map((workspace) => (
+                                            <DropdownMenuRadioItem key={workspace.id} value={workspace.id!.toString()}>
+                                                {workspace.name}
+                                            </DropdownMenuRadioItem>
+                                        ))}
+                                    </DropdownMenuRadioGroup>
+
+                                    <DropdownMenuSeparator />
+
+                                    <DropdownMenuItem
+                                        className="flex space-x-2"
+                                        onClick={() => navigate('/automation/settings/workspaces')}
+                                    >
+                                        <PlusIcon /> <span>New Workspace</span>
+                                    </DropdownMenuItem>
+                                </DropdownMenuSubContent>
+                            </DropdownMenuPortal>
+                        </DropdownMenuSub>
+
+                        <DropdownMenuSeparator />
+                    </>
+                )}
+
+                <div className="min-h-40 space-y-1">
+                    <DropdownMenuItem
+                        className="cursor-pointer font-semibold"
+                        onClick={() =>
+                            navigate(`${pathname.startsWith('/automation') ? '/automation' : '/embedded'}/settings`)
+                        }
+                    >
+                        <div className="flex items-center space-x-1">
+                            <SettingsIcon className="size-5" />
+
+                            <span>Settings</span>
+                        </div>
+                    </DropdownMenuItem>
+
+                    <DropdownMenuItem
+                        className="cursor-pointer font-semibold"
+                        onClick={() =>
+                            navigate(`${pathname.startsWith('/automation') ? '/automation' : '/embedded'}/account`)
+                        }
+                    >
+                        <div className="flex items-center space-x-1">
+                            <UserRoundCogIcon className="size-5" />
+
+                            <span>Your account</span>
+                        </div>
+                    </DropdownMenuItem>
+
+                    <DropdownMenuSeparator />
+
+                    <DropdownMenuItem
+                        className="cursor-pointer font-semibold"
+                        onClick={() => window.open('https://docs.bytechef.io', '_blank')}
+                    >
+                        <div className="flex items-center space-x-1">
+                            <HelpCircleIcon className="size-5" />
+
+                            <span>Documentation</span>
+                        </div>
+                    </DropdownMenuItem>
+                </div>
+
+                <DropdownMenuSeparator />
+
+                <DropdownMenuItem className="cursor-pointer font-semibold" onClick={handleLogOutClick}>
+                    Log Out
+                </DropdownMenuItem>
+            </DropdownMenuContent>
+        </DropdownMenu>
+    );
+}

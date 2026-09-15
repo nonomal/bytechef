@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,72 +16,70 @@
 
 package com.bytechef.component.microsoft.outlook.action;
 
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.array;
-import static com.bytechef.component.definition.ComponentDSL.bool;
-import static com.bytechef.component.definition.ComponentDSL.date;
-import static com.bytechef.component.definition.ComponentDSL.dateTime;
-import static com.bytechef.component.definition.ComponentDSL.integer;
-import static com.bytechef.component.definition.ComponentDSL.nullable;
-import static com.bytechef.component.definition.ComponentDSL.number;
-import static com.bytechef.component.definition.ComponentDSL.object;
-import static com.bytechef.component.definition.ComponentDSL.string;
-import static com.bytechef.component.definition.ComponentDSL.time;
-import static com.bytechef.component.microsoft.outlook.constant.MicrosoftOutlook365Constants.BASE_URL;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.string;
 import static com.bytechef.component.microsoft.outlook.constant.MicrosoftOutlook365Constants.CATEGORY;
+import static com.bytechef.component.microsoft.outlook.constant.MicrosoftOutlook365Constants.FORMAT;
+import static com.bytechef.component.microsoft.outlook.constant.MicrosoftOutlook365Constants.FORMAT_PROPERTY;
 import static com.bytechef.component.microsoft.outlook.constant.MicrosoftOutlook365Constants.FROM;
-import static com.bytechef.component.microsoft.outlook.constant.MicrosoftOutlook365Constants.SEARCH_EMAIL;
+import static com.bytechef.component.microsoft.outlook.constant.MicrosoftOutlook365Constants.ODATA_NEXT_LINK;
 import static com.bytechef.component.microsoft.outlook.constant.MicrosoftOutlook365Constants.SUBJECT;
 import static com.bytechef.component.microsoft.outlook.constant.MicrosoftOutlook365Constants.TO;
+import static com.bytechef.component.microsoft.outlook.constant.MicrosoftOutlook365Constants.VALUE;
+import static com.bytechef.component.microsoft.outlook.definition.Format.SIMPLE;
+import static com.bytechef.component.microsoft.outlook.util.MicrosoftOutlook365Utils.createSimpleMessage;
+import static com.bytechef.microsoft.commons.MicrosoftUtils.getItemsFromNextPage;
 
-import com.bytechef.component.definition.ActionContext;
-import com.bytechef.component.definition.ComponentDSL.ModifiableActionDefinition;
+import com.bytechef.component.definition.ActionDefinition.OptionsFunction;
+import com.bytechef.component.definition.ComponentDsl.ModifiableActionDefinition;
+import com.bytechef.component.definition.Context;
 import com.bytechef.component.definition.Context.Http;
-import com.bytechef.component.definition.Context.TypeReference;
-import com.bytechef.component.definition.OptionsDataSource.ActionOptionsFunction;
 import com.bytechef.component.definition.Parameters;
+import com.bytechef.component.definition.TypeReference;
+import com.bytechef.component.microsoft.outlook.definition.Format;
+import com.bytechef.component.microsoft.outlook.util.MicrosoftOutlook365OptionUtils;
 import com.bytechef.component.microsoft.outlook.util.MicrosoftOutlook365Utils;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
+import com.bytechef.microsoft.commons.MicrosoftUtils;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 /**
- * @author Monika Domiter
+ * @author Monika Kušter
  */
 public class MicrosoftOutlook365SearchEmailAction {
 
-    public static final ModifiableActionDefinition ACTION_DEFINITION = action(SEARCH_EMAIL)
+    public static final ModifiableActionDefinition ACTION_DEFINITION = action("searchEmail")
         .title("Search Email")
-        .description("Get the messages in the signed-in user's mailbox")
+        .description("Lists the email messages in the signed-in user's mailbox.")
+        .help("", "https://docs.bytechef.io/reference/components/microsoft-outlook-365_v1#search-email")
         .properties(
+            FORMAT_PROPERTY,
             string(FROM)
                 .label("From")
-                .description("The address sending the mail")
+                .description("The email address sending the mail.")
                 .required(false),
             string(TO)
                 .label("To")
-                .description("The address receiving the new mail")
+                .description("The email address receiving the new mail.")
                 .required(false),
             string(SUBJECT)
                 .label("Subject")
-                .description("Words in the subject line")
+                .description("Words in the subject line.")
                 .required(false),
             string(CATEGORY)
                 .label("Category")
-                .description("Messages in a certain category")
-                .options((ActionOptionsFunction<String>) MicrosoftOutlook365Utils::getCategoryOptions)
+                .description("Messages in a certain category.")
+                .options((OptionsFunction<String>) MicrosoftOutlook365OptionUtils::getCategoryOptions)
                 .required(false))
-        .outputSchema(
-            object()
-                .additionalProperties(
-                    array(), bool(), date(), dateTime(), integer(), nullable(), number(), object(), string(), time()))
-        .perform(MicrosoftOutlook365SearchEmailAction::perform);
+        .output(MicrosoftOutlook365Utils::getArrayMessageOutput)
+        .perform(MicrosoftOutlook365SearchEmailAction::perform)
+        .processErrorResponse(MicrosoftUtils::processErrorResponse);
 
     private MicrosoftOutlook365SearchEmailAction() {
     }
 
-    public static Object perform(
-        Parameters inputParameters, Parameters connectionParameters, ActionContext context) {
-
+    public static List<?> perform(Parameters inputParameters, Parameters connectionParameters, Context context) {
         StringBuilder stringBuilder = new StringBuilder();
 
         addParameter(stringBuilder, FROM, inputParameters.getString(FROM));
@@ -89,17 +87,42 @@ public class MicrosoftOutlook365SearchEmailAction {
         addParameter(stringBuilder, SUBJECT, inputParameters.getString(SUBJECT));
         addParameter(stringBuilder, CATEGORY, inputParameters.getString(CATEGORY));
 
-        String encode = URLEncoder.encode(stringBuilder.toString(), StandardCharsets.UTF_8);
+        List<Map<?, ?>> emails = new ArrayList<>();
 
-        return context.http(http -> http.get(BASE_URL + "/messages?$search=" + encode))
+        Map<String, Object> body = context.http(http -> http.get("/me/messages"))
+            .queryParameters("$search", stringBuilder.isEmpty() ? null : stringBuilder.toString(), "$top", 100)
             .configuration(Http.responseType(Http.ResponseType.JSON))
             .execute()
             .getBody(new TypeReference<>() {});
+
+        if (body.get(VALUE) instanceof List<?> list) {
+            for (Object o : list) {
+                if (o instanceof Map<?, ?> map) {
+                    emails.add(map);
+                }
+            }
+        }
+
+        emails.addAll(getItemsFromNextPage((String) body.get(ODATA_NEXT_LINK), context));
+
+        Format format = inputParameters.getRequired(FORMAT, Format.class);
+
+        if (format.equals(SIMPLE)) {
+            List<MicrosoftOutlook365Utils.SimpleMessage> simpleMessages = new ArrayList<>();
+
+            for (Map<?, ?> email : emails) {
+                simpleMessages.add(createSimpleMessage(context, email));
+            }
+
+            return simpleMessages;
+        } else {
+            return emails;
+        }
     }
 
     private static void addParameter(StringBuilder stringBuilder, String parameterName, String parameterValue) {
         if (parameterValue != null) {
-            if (!parameterName.equals("from") && !stringBuilder.isEmpty()) {
+            if (!parameterName.equals(FROM) && !stringBuilder.isEmpty()) {
                 stringBuilder.append(" AND ");
             }
 

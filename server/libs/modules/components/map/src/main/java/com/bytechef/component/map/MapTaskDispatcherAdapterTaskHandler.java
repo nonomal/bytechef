@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * Modifications copyright (C) 2023 ByteChef Inc.
+ * Modifications copyright (C) 2025 ByteChef
  */
 
 package com.bytechef.component.map;
@@ -39,16 +39,15 @@ import com.bytechef.atlas.worker.task.handler.TaskHandler;
 import com.bytechef.atlas.worker.task.handler.TaskHandlerResolver;
 import com.bytechef.component.map.concurrency.CurrentThreadExecutorService;
 import com.bytechef.error.ExecutionError;
+import com.bytechef.evaluator.Evaluator;
 import com.bytechef.file.storage.base64.service.Base64FileStorageService;
-import com.bytechef.message.broker.sync.SyncMessageBroker;
+import com.bytechef.message.broker.memory.SyncMessageBroker;
 import com.bytechef.message.event.MessageEvent;
 import com.bytechef.task.dispatcher.map.MapTaskDispatcher;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import org.apache.commons.lang3.Validate;
+import java.util.Objects;
 import org.springframework.context.ApplicationEventPublisher;
 
 /**
@@ -59,12 +58,11 @@ import org.springframework.context.ApplicationEventPublisher;
 public class MapTaskDispatcherAdapterTaskHandler implements TaskHandler<List<?>> {
 
     private final CurrentThreadExecutorService currentThreadExecutorService = new CurrentThreadExecutorService();
-    private final ObjectMapper objectMapper;
+    private final Evaluator evaluator;
     private final TaskHandlerResolver taskHandlerResolver;
 
-    @SuppressFBWarnings("EI")
-    public MapTaskDispatcherAdapterTaskHandler(ObjectMapper objectMapper, TaskHandlerResolver taskHandlerResolver) {
-        this.objectMapper = objectMapper;
+    public MapTaskDispatcherAdapterTaskHandler(Evaluator evaluator, TaskHandlerResolver taskHandlerResolver) {
+        this.evaluator = evaluator;
         this.taskHandlerResolver = taskHandlerResolver;
     }
 
@@ -72,7 +70,7 @@ public class MapTaskDispatcherAdapterTaskHandler implements TaskHandler<List<?>>
     public List<?> handle(TaskExecution taskExecution) {
         List<Object> result = new ArrayList<>();
 
-        SyncMessageBroker syncMessageBroker = new SyncMessageBroker(objectMapper);
+        SyncMessageBroker syncMessageBroker = new SyncMessageBroker();
         TaskFileStorage taskFileStorage = new TaskFileStorageImpl(new Base64FileStorageService());
 
         syncMessageBroker.receive(TaskCoordinatorMessageRoute.TASK_EXECUTION_COMPLETE_EVENTS, message -> {
@@ -102,17 +100,19 @@ public class MapTaskDispatcherAdapterTaskHandler implements TaskHandler<List<?>>
         ContextService contextService = new ContextServiceImpl(new InMemoryContextRepository());
 
         contextService.push(
-            Validate.notNull(taskExecution.getId(), "id"), Context.Classname.TASK_EXECUTION,
+            Objects.requireNonNull(taskExecution.getId()), Context.Classname.TASK_EXECUTION,
             taskFileStorage.storeTaskExecutionOutput(
-                Validate.notNull(taskExecution.getId(), "id"), Collections.emptyMap()));
+                Objects.requireNonNull(taskExecution.getJobId()), Objects.requireNonNull(taskExecution.getId()),
+                Collections.emptyMap()));
 
         TaskWorker taskWorker = new TaskWorker(
-            getEventPublisher(syncMessageBroker), currentThreadExecutorService::execute, taskHandlerResolver,
-            taskFileStorage);
+            null, evaluator, getEventPublisher(syncMessageBroker), currentThreadExecutorService::execute,
+            taskHandlerResolver,
+            taskFileStorage, List.of());
 
         MapTaskDispatcher mapTaskDispatcher = new MapTaskDispatcher(
+            contextService, new CounterServiceImpl(new InMemoryCounterRepository()), evaluator,
             event -> syncMessageBroker.send(((MessageEvent<?>) event).getRoute(), event),
-            contextService, new CounterServiceImpl(new InMemoryCounterRepository()),
             curTaskExecution -> taskWorker.onTaskExecutionEvent(new TaskExecutionEvent(curTaskExecution)),
             taskExecutionService, taskFileStorage);
 

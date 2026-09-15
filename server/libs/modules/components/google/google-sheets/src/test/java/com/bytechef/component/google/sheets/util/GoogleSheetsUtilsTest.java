@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,36 +16,56 @@
 
 package com.bytechef.component.google.sheets.util;
 
-import static com.bytechef.component.google.sheets.constant.GoogleSheetsConstants.INCLUDE_ITEMS_FROM_ALL_DRIVES;
+import static com.bytechef.component.definition.ComponentDsl.array;
+import static com.bytechef.component.definition.ComponentDsl.bool;
+import static com.bytechef.component.definition.ComponentDsl.number;
+import static com.bytechef.component.definition.ComponentDsl.object;
+import static com.bytechef.component.definition.ComponentDsl.option;
+import static com.bytechef.component.definition.ComponentDsl.string;
+import static com.bytechef.component.google.sheets.constant.GoogleSheetsConstants.COLUMN;
 import static com.bytechef.component.google.sheets.constant.GoogleSheetsConstants.IS_THE_FIRST_ROW_HEADER;
 import static com.bytechef.component.google.sheets.constant.GoogleSheetsConstants.ROW;
+import static com.bytechef.component.google.sheets.constant.GoogleSheetsConstants.ROW_NUMBER;
+import static com.bytechef.component.google.sheets.constant.GoogleSheetsConstants.SHEET_ID;
 import static com.bytechef.component.google.sheets.constant.GoogleSheetsConstants.SHEET_NAME;
 import static com.bytechef.component.google.sheets.constant.GoogleSheetsConstants.SPREADSHEET_ID;
+import static com.bytechef.component.google.sheets.constant.GoogleSheetsConstants.UPDATE_WHOLE_ROW;
+import static com.bytechef.component.google.sheets.constant.GoogleSheetsConstants.VALUE;
 import static com.bytechef.component.google.sheets.constant.GoogleSheetsConstants.VALUES;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.mockito.ArgumentCaptor.forClass;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 
 import com.bytechef.component.definition.ActionContext;
-import com.bytechef.component.definition.ComponentDSL;
-import com.bytechef.component.definition.ComponentDSL.ModifiableObjectProperty;
+import com.bytechef.component.definition.ActionDefinition.PropertiesFunction;
+import com.bytechef.component.definition.ComponentDsl.ModifiableArrayProperty;
+import com.bytechef.component.definition.ComponentDsl.ModifiableObjectProperty;
 import com.bytechef.component.definition.Option;
 import com.bytechef.component.definition.Parameters;
-import com.bytechef.component.definition.Property;
+import com.bytechef.component.definition.Property.ValueProperty;
+import com.bytechef.component.test.definition.MockParametersFactory;
 import com.bytechef.google.commons.GoogleServices;
-import com.google.api.services.drive.Drive;
-import com.google.api.services.drive.model.File;
-import com.google.api.services.drive.model.FileList;
 import com.google.api.services.sheets.v4.Sheets;
+import com.google.api.services.sheets.v4.Sheets.Spreadsheets;
+import com.google.api.services.sheets.v4.Sheets.Spreadsheets.BatchUpdate;
+import com.google.api.services.sheets.v4.Sheets.Spreadsheets.Get;
+import com.google.api.services.sheets.v4.Sheets.Spreadsheets.Values;
+import com.google.api.services.sheets.v4.Sheets.Spreadsheets.Values.Append;
+import com.google.api.services.sheets.v4.model.BatchUpdateSpreadsheetRequest;
+import com.google.api.services.sheets.v4.model.BatchUpdateSpreadsheetResponse;
+import com.google.api.services.sheets.v4.model.DeleteDimensionRequest;
+import com.google.api.services.sheets.v4.model.DimensionRange;
+import com.google.api.services.sheets.v4.model.Request;
 import com.google.api.services.sheets.v4.model.Sheet;
 import com.google.api.services.sheets.v4.model.SheetProperties;
 import com.google.api.services.sheets.v4.model.Spreadsheet;
+import com.google.api.services.sheets.v4.model.ValueRange;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -56,26 +76,191 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.MockedStatic;
 
 /**
- * @author Monika Domiter
+ * @author Monika Kušter
  */
 class GoogleSheetsUtilsTest {
 
-    private final ArgumentCaptor<Boolean> includeItemsFromAllDrivesArgumentCaptor =
-        ArgumentCaptor.forClass(Boolean.class);
-    private final ArgumentCaptor<Boolean> supportsAllDrivesArgumentCaptor = ArgumentCaptor.forClass(Boolean.class);
-    private final ActionContext mockedContext = mock(ActionContext.class);
-    private final Drive mockedDrive = mock(Drive.class);
-    private final Drive.Files mockedFiles = mock(Drive.Files.class);
-    private final Sheets.Spreadsheets.Get mockedGet = mock(Sheets.Spreadsheets.Get.class);
-    private final Drive.Files.List mockedList = mock(Drive.Files.List.class);
-    private final Parameters mockedParameters = mock(Parameters.class);
+    private final ActionContext mockedActionContext = mock(ActionContext.class);
+    private final Append mockedAppend = mock(Append.class);
+    private final Get mockedGet = mock(Get.class);
+    private Parameters mockedParameters;
     private final Sheets mockedSheets = mock(Sheets.class);
     private final Spreadsheet mockedSpreadsheet = mock(Spreadsheet.class);
-    private final Sheets.Spreadsheets mockedSpreadsheets = mock(Sheets.Spreadsheets.class);
-    private final ArgumentCaptor<String> qArgumentCaptor = ArgumentCaptor.forClass(String.class);
-    private final ArgumentCaptor<Integer> rowNumberArgumentCaptor = ArgumentCaptor.forClass(Integer.class);
-    private final ArgumentCaptor<String> sheetNameArgumentCaptor = ArgumentCaptor.forClass(String.class);
-    private final ArgumentCaptor<String> spreadsheetIdArgumentCaptor = ArgumentCaptor.forClass(String.class);
+    private final Spreadsheets mockedSpreadsheets = mock(Spreadsheets.class);
+    private final Values mockedValues = mock(Values.class);
+    private final Values.Get mockedValuesGet = mock(Values.Get.class);
+    private final ValueRange mockedValueRange = mock(ValueRange.class);
+    private final ArgumentCaptor<Integer> integerArgumentCaptor = forClass(Integer.class);
+    private final ArgumentCaptor<Sheets> sheetsArgumentCaptor = forClass(Sheets.class);
+    private final ArgumentCaptor<String> stringArgumentCaptor = forClass(String.class);
+    private final ArgumentCaptor<BatchUpdateSpreadsheetRequest> batchUpdateSpreadsheetRequestArgumentCaptor =
+        forClass(BatchUpdateSpreadsheetRequest.class);
+    private final BatchUpdateSpreadsheetResponse mockedBatchUpdateSpreadsheetResponse =
+        mock(BatchUpdateSpreadsheetResponse.class);
+    private final BatchUpdate mockedBatchUpdate = mock(BatchUpdate.class);
+    private final ArgumentCaptor<Parameters> parametersArgumentCaptor = forClass(Parameters.class);
+    private final ArgumentCaptor<ValueRange> valueRangeArgumentCaptor = forClass(ValueRange.class);
+
+    @Test
+    void appendValues() throws IOException {
+        when(mockedSheets.spreadsheets())
+            .thenReturn(mockedSpreadsheets);
+        when(mockedSpreadsheets.values())
+            .thenReturn(mockedValues);
+        when(mockedValues.append(
+            stringArgumentCaptor.capture(), stringArgumentCaptor.capture(), valueRangeArgumentCaptor.capture()))
+                .thenReturn(mockedAppend);
+        when(mockedAppend.setValueInputOption(stringArgumentCaptor.capture()))
+            .thenReturn(mockedAppend);
+
+        ValueRange valueRange = new ValueRange();
+        GoogleSheetsUtils.appendValues(mockedSheets, "abc", "range", valueRange, "RAW");
+
+        assertEquals(List.of("abc", "range", "RAW"), stringArgumentCaptor.getAllValues());
+        assertEquals(valueRange, valueRangeArgumentCaptor.getValue());
+    }
+
+    @Test
+    void createPropertiesToUpdateRowWhenFirstRowIsHeaderAndUpdatingWholeRow() {
+        mockedParameters = MockParametersFactory.create(Map.of(
+            IS_THE_FIRST_ROW_HEADER, true, UPDATE_WHOLE_ROW, true, SPREADSHEET_ID, "spreadsheetId",
+            SHEET_NAME, "sheetName"));
+
+        try (MockedStatic<GoogleServices> googleServicesMockedStatic = mockStatic(GoogleServices.class);
+            MockedStatic<GoogleSheetsRowUtils> googleSheetsRowUtilsMockedStatic =
+                mockStatic(GoogleSheetsRowUtils.class)) {
+
+            googleServicesMockedStatic.when(() -> GoogleServices.getSheets(parametersArgumentCaptor.capture()))
+                .thenReturn(mockedSheets);
+            googleSheetsRowUtilsMockedStatic
+                .when(() -> GoogleSheetsRowUtils.getRowValues(
+                    sheetsArgumentCaptor.capture(), stringArgumentCaptor.capture(),
+                    stringArgumentCaptor.capture(), integerArgumentCaptor.capture()))
+                .thenReturn(List.of("header 1", "header2", "header3"));
+
+            List<ValueProperty<?>> propertiesToUpdateRow = GoogleSheetsUtils
+                .createPropertiesToUpdateRow(mockedParameters, mockedParameters, Map.of(), mockedActionContext);
+
+            List<ModifiableObjectProperty> expectedProperties = List.of(
+                object(VALUES)
+                    .label("Values")
+                    .properties(
+                        string("header 1")
+                            .label("header 1")
+                            .defaultValue(""),
+                        string("header2")
+                            .label("header2")
+                            .defaultValue(""),
+                        string("header3")
+                            .label("header3")
+                            .defaultValue(""))
+                    .required(true));
+
+            assertEquals(expectedProperties, propertiesToUpdateRow);
+
+            assertEquals(mockedParameters, parametersArgumentCaptor.getValue());
+            assertEquals(mockedSheets, sheetsArgumentCaptor.getValue());
+            assertEquals(List.of("spreadsheetId", "sheetName"), stringArgumentCaptor.getAllValues());
+            assertEquals(1, integerArgumentCaptor.getValue());
+        }
+    }
+
+    @Test
+    void createPropertiesToUpdateRowWhenFirstRowIsHeaderAndUpdatingSelectedColumns() {
+        mockedParameters = MockParametersFactory.create(Map.of(
+            IS_THE_FIRST_ROW_HEADER, true, UPDATE_WHOLE_ROW, false, SPREADSHEET_ID, "spreadsheetId",
+            SHEET_NAME, "sheetName"));
+
+        try (MockedStatic<GoogleServices> googleServicesMockedStatic = mockStatic(GoogleServices.class);
+            MockedStatic<GoogleSheetsRowUtils> googleSheetsRowUtilsMockedStatic =
+                mockStatic(GoogleSheetsRowUtils.class)) {
+
+            googleServicesMockedStatic.when(() -> GoogleServices.getSheets(parametersArgumentCaptor.capture()))
+                .thenReturn(mockedSheets);
+            googleSheetsRowUtilsMockedStatic
+                .when(() -> GoogleSheetsRowUtils.getRowValues(
+                    sheetsArgumentCaptor.capture(), stringArgumentCaptor.capture(),
+                    stringArgumentCaptor.capture(), integerArgumentCaptor.capture()))
+                .thenReturn(List.of("header 1", "header2", "header3"));
+
+            List<ValueProperty<?>> propertiesToUpdateRow = GoogleSheetsUtils
+                .createPropertiesToUpdateRow(mockedParameters, mockedParameters, Map.of(), mockedActionContext);
+
+            List<ModifiableArrayProperty> expectedProperties = List.of(
+                array(VALUES)
+                    .label("Values")
+                    .items(
+                        object()
+                            .properties(
+                                string(COLUMN)
+                                    .label("Column")
+                                    .description("Column to update.")
+                                    .options(
+                                        option("header 1", "header 1"),
+                                        option("header2", "header2"),
+                                        option("header3", "header3"))
+                                    .required(true),
+                                string(VALUE)
+                                    .label("Column Value")
+                                    .defaultValue("")
+                                    .required(true)))
+                    .required(true));
+
+            assertEquals(expectedProperties, propertiesToUpdateRow);
+
+            assertEquals(mockedParameters, parametersArgumentCaptor.getValue());
+            assertEquals(mockedSheets, sheetsArgumentCaptor.getValue());
+            assertEquals(List.of("spreadsheetId", "sheetName", "spreadsheetId", "sheetName"),
+                stringArgumentCaptor.getAllValues());
+            assertEquals(1, integerArgumentCaptor.getValue());
+        }
+    }
+
+    @Test
+    void createPropertiesToUpdateRowWhenFirstRowIsNotHeaderAndUpdatingWholeRow() {
+        mockedParameters = MockParametersFactory.create(Map.of(
+            IS_THE_FIRST_ROW_HEADER, false, UPDATE_WHOLE_ROW, true, SPREADSHEET_ID, "spreadsheetId",
+            SHEET_NAME, "sheetName"));
+
+        List<ValueProperty<?>> propertiesToUpdateRow = GoogleSheetsUtils
+            .createPropertiesToUpdateRow(mockedParameters, mockedParameters, Map.of(), mockedActionContext);
+
+        List<ModifiableArrayProperty> expectedProperties = List.of(
+            array(VALUES)
+                .label("Values")
+                .items(bool(), number(), string())
+                .required(true));
+
+        assertEquals(expectedProperties, propertiesToUpdateRow);
+    }
+
+    @Test
+    void createPropertiesToUpdateRowWhenFirstRowIsNotHeaderAndUpdatingSelectedColumns() {
+        mockedParameters = MockParametersFactory.create(Map.of(
+            IS_THE_FIRST_ROW_HEADER, false, UPDATE_WHOLE_ROW, false, SPREADSHEET_ID, "spreadsheetId",
+            SHEET_NAME, "sheetName"));
+
+        List<ValueProperty<?>> propertiesToUpdateRow = GoogleSheetsUtils
+            .createPropertiesToUpdateRow(mockedParameters, mockedParameters, Map.of(), mockedActionContext);
+
+        List<ModifiableArrayProperty> expectedProperties = List.of(
+            array(VALUES)
+                .label("Values")
+                .items(
+                    object()
+                        .properties(
+                            string(COLUMN)
+                                .label("Column Label")
+                                .description("Label of the column to update. Example: A, B, C, ...")
+                                .exampleValue("A")
+                                .required(true),
+                            string(VALUE)
+                                .label("Column Value")
+                                .defaultValue("")
+                                .required(true))));
+
+        assertEquals(expectedProperties, propertiesToUpdateRow);
+    }
 
     @Test
     void testCreateRangeForRowNumberNotNull() {
@@ -92,95 +277,236 @@ class GoogleSheetsUtilsTest {
     }
 
     @Test
-    void testCreateArrayPropertyForRowWhereFirstRowIsHeader() throws Exception {
-        when(mockedParameters.getRequiredBoolean(IS_THE_FIRST_ROW_HEADER))
-            .thenReturn(true);
-        when(mockedParameters.getRequiredString(SPREADSHEET_ID))
-            .thenReturn("spreadsheetId");
-        when(mockedParameters.getRequiredString(SHEET_NAME))
-            .thenReturn("sheetName");
+    void testCreatePropertiesForNewRowsForOneRowAndWhenFirstRowIsHeader() throws Exception {
+        mockedParameters = MockParametersFactory.create(
+            Map.of(IS_THE_FIRST_ROW_HEADER, true, SPREADSHEET_ID, "spreadsheetId", SHEET_NAME, "sheetName"));
 
-        try (MockedStatic<GoogleServices> googleServicesMockedStatic = mockStatic(GoogleServices.class)) {
+        try (MockedStatic<GoogleServices> googleServicesMockedStatic = mockStatic(GoogleServices.class);
+            MockedStatic<GoogleSheetsRowUtils> googleSheetsRowUtilsMockedStatic =
+                mockStatic(GoogleSheetsRowUtils.class)) {
             googleServicesMockedStatic
-                .when(() -> GoogleServices.getSheets(mockedParameters))
+                .when(() -> GoogleServices.getSheets(parametersArgumentCaptor.capture()))
                 .thenReturn(mockedSheets);
-            try (MockedStatic<GoogleSheetsRowUtils> googleSheetsRowUtilsMockedStatic = mockStatic(
-                GoogleSheetsRowUtils.class)) {
+            googleSheetsRowUtilsMockedStatic
+                .when(() -> GoogleSheetsRowUtils.getRowValues(
+                    sheetsArgumentCaptor.capture(), stringArgumentCaptor.capture(), stringArgumentCaptor.capture(),
+                    integerArgumentCaptor.capture()))
+                .thenReturn(List.of("header1", "header2", "header3"));
 
-                googleSheetsRowUtilsMockedStatic
-                    .when(() -> GoogleSheetsRowUtils.getRowValues(
-                        any(Sheets.class), anyString(), anyString(), anyInt()))
-                    .thenReturn(List.of("header1", "header2", "header3"));
+            PropertiesFunction arrayPropertyForRow = GoogleSheetsUtils.createPropertiesForNewRows(true);
 
-                List<Property.ValueProperty<?>> result = GoogleSheetsUtils.createArrayPropertyForRow(
-                    mockedParameters, mockedParameters, Map.of(), mockedContext);
+            List<? extends ValueProperty<?>> result = arrayPropertyForRow.apply(
+                mockedParameters, mockedParameters, Map.of(), mockedActionContext);
 
-                assertEquals(1, result.size());
+            ModifiableObjectProperty expectedProperty = object(VALUES)
+                .label("Values")
+                .properties(
+                    string("header1")
+                        .label("header1")
+                        .defaultValue(""),
+                    string("header2")
+                        .label("header2")
+                        .defaultValue(""),
+                    string("header3")
+                        .label("header3")
+                        .defaultValue(""))
+                .required(true);
 
-                ModifiableObjectProperty first = (ModifiableObjectProperty) result.getFirst();
+            assertEquals(List.of(expectedProperty), result);
 
-                assertEquals(VALUES, first.getName());
-                assertEquals("Values", first.getLabel().get());
-
-                List<? extends Property.ValueProperty<?>> properties = first.getProperties().get();
-
-                assertEquals(3, properties.size());
-
-                for (int i = 0; i < properties.size(); i++) {
-                    assertEquals("header" + (i + 1), properties.get(i).getName());
-                    assertEquals("", properties.get(i).getDefaultValue().get());
-                }
-            }
+            assertEquals(mockedParameters, parametersArgumentCaptor.getValue());
+            assertEquals(mockedSheets, sheetsArgumentCaptor.getValue());
+            assertEquals(List.of("spreadsheetId", "sheetName"), stringArgumentCaptor.getAllValues());
+            assertEquals(1, integerArgumentCaptor.getValue());
         }
     }
 
     @Test
-    void testCreateArrayPropertyForRowWhereFirstRowNotHeader() throws Exception {
-        when(mockedParameters.getRequiredBoolean(IS_THE_FIRST_ROW_HEADER))
-            .thenReturn(false);
-        when(mockedParameters.getRequiredString(SPREADSHEET_ID))
-            .thenReturn("spreadsheetId");
-        when(mockedParameters.getRequiredString(SHEET_NAME))
-            .thenReturn("sheetName");
+    void testCreatePropertiesForNewRowsForMultipleRowsAndWhenFirstRowIsHeader() throws Exception {
+        mockedParameters = MockParametersFactory.create(
+            Map.of(IS_THE_FIRST_ROW_HEADER, true, SPREADSHEET_ID, "spreadsheetId", SHEET_NAME, "sheetName"));
 
-        List<Property.ValueProperty<?>> result = GoogleSheetsUtils.createArrayPropertyForRow(
-            mockedParameters, mockedParameters, Map.of(), mockedContext);
+        try (MockedStatic<GoogleServices> googleServicesMockedStatic = mockStatic(GoogleServices.class);
+            MockedStatic<GoogleSheetsRowUtils> googleSheetsRowUtilsMockedStatic = mockStatic(
+                GoogleSheetsRowUtils.class)) {
+            googleServicesMockedStatic
+                .when(() -> GoogleServices.getSheets(parametersArgumentCaptor.capture()))
+                .thenReturn(mockedSheets);
+            googleSheetsRowUtilsMockedStatic
+                .when(() -> GoogleSheetsRowUtils.getRowValues(
+                    sheetsArgumentCaptor.capture(), stringArgumentCaptor.capture(), stringArgumentCaptor.capture(),
+                    integerArgumentCaptor.capture()))
+                .thenReturn(List.of("header1", "header2", "header3"));
 
-        assertEquals(1, result.size());
+            PropertiesFunction propertiesForNewRows = GoogleSheetsUtils.createPropertiesForNewRows(false);
 
-        Property.ValueProperty<?> array = result.getFirst();
+            List<? extends ValueProperty<?>> result = propertiesForNewRows.apply(
+                mockedParameters, mockedParameters, Map.of(), mockedActionContext);
 
+            ModifiableArrayProperty expectedProperty = array(VALUES)
+                .label("Rows")
+                .items(object(VALUES)
+                    .label("Values")
+                    .properties(
+                        string("header1")
+                            .label("header1")
+                            .defaultValue(""),
+                        string("header2")
+                            .label("header2")
+                            .defaultValue(""),
+                        string("header3")
+                            .label("header3")
+                            .defaultValue(""))
+                    .required(true))
+                .required(true);
 
-        assertEquals(3, ((ComponentDSL.ModifiableArrayProperty) array).getItems().get().size());
+            assertEquals(List.of(expectedProperty), result);
 
-        assertEquals(VALUES, array.getName());
-        assertEquals("Values", array.getLabel().get());
-        assertEquals(true, array.getRequired().get());
+            assertEquals(mockedParameters, parametersArgumentCaptor.getValue());
+            assertEquals(mockedSheets, sheetsArgumentCaptor.getValue());
+            assertEquals(List.of("spreadsheetId", "sheetName"), stringArgumentCaptor.getAllValues());
+            assertEquals(1, integerArgumentCaptor.getValue());
+        }
+    }
+
+    @Test
+    void testCreatePropertiesForNewRowsForMultipleRowsAndWhenFirstRowIsNotHeader() throws Exception {
+        mockedParameters = MockParametersFactory.create(
+            Map.of(IS_THE_FIRST_ROW_HEADER, false, SPREADSHEET_ID, "spreadsheetId", SHEET_NAME, "sheetName"));
+
+        PropertiesFunction propertiesForNewRows = GoogleSheetsUtils.createPropertiesForNewRows(false);
+
+        List<? extends ValueProperty<?>> result = propertiesForNewRows.apply(
+            mockedParameters, mockedParameters, Map.of(), mockedActionContext);
+
+        ModifiableArrayProperty expectedProperty = array(VALUES)
+            .label("Rows")
+            .items(
+                array(VALUES)
+                    .label("Values")
+                    .items(bool(), number(), string())
+                    .required(true))
+            .required(true);
+
+        assertEquals(List.of(expectedProperty), result);
+    }
+
+    @Test
+    void testCreatePropertiesForNewRowsForOneRowAndWhenFirstRowIsNotHeader() throws Exception {
+        mockedParameters = MockParametersFactory.create(
+            Map.of(IS_THE_FIRST_ROW_HEADER, false, SPREADSHEET_ID, "spreadsheetId", SHEET_NAME, "sheetName"));
+
+        PropertiesFunction propertiesForNewRows = GoogleSheetsUtils.createPropertiesForNewRows(true);
+
+        List<? extends ValueProperty<?>> result = propertiesForNewRows.apply(
+            mockedParameters, mockedParameters, Map.of(), mockedActionContext);
+
+        ModifiableArrayProperty expectedProperty = array(VALUES)
+            .label("Values")
+            .items(bool(), number(), string())
+            .required(true);
+
+        assertEquals(List.of(expectedProperty), result);
+    }
+
+    @Test
+    void testDeleteDimensionWhenColumn() throws Exception {
+        mockedParameters = MockParametersFactory.create(Map.of(SPREADSHEET_ID, "spreadsheetId", SHEET_ID, 123));
+
+        try (MockedStatic<GoogleServices> googleServicesMockedStatic = mockStatic(GoogleServices.class)) {
+            googleServicesMockedStatic
+                .when(() -> GoogleServices.getSheets(parametersArgumentCaptor.capture()))
+                .thenReturn(mockedSheets);
+
+            when(mockedSheets.spreadsheets())
+                .thenReturn(mockedSpreadsheets);
+            when(mockedSpreadsheets.batchUpdate(
+                stringArgumentCaptor.capture(), batchUpdateSpreadsheetRequestArgumentCaptor.capture()))
+                    .thenReturn(mockedBatchUpdate);
+            when(mockedBatchUpdate.execute())
+                .thenReturn(mockedBatchUpdateSpreadsheetResponse);
+
+            GoogleSheetsUtils.deleteDimension(mockedParameters, mockedParameters, 2, "COLUMNS");
+
+            assertEquals(mockedParameters, parametersArgumentCaptor.getValue());
+            assertEquals("spreadsheetId", stringArgumentCaptor.getValue());
+
+            BatchUpdateSpreadsheetRequest batchUpdateSpreadsheetRequest = new BatchUpdateSpreadsheetRequest()
+                .setRequests(List.of(
+                    new Request()
+                        .setDeleteDimension(
+                            new DeleteDimensionRequest()
+                                .setRange(
+                                    new DimensionRange()
+                                        .setSheetId(123)
+                                        .setDimension("COLUMNS")
+                                        .setStartIndex(1)
+                                        .setEndIndex(2)))));
+
+            assertEquals(batchUpdateSpreadsheetRequest, batchUpdateSpreadsheetRequestArgumentCaptor.getValue());
+        }
+    }
+
+    @Test
+    void testDeleteDimensionWhenRow() throws Exception {
+        mockedParameters = MockParametersFactory.create(Map.of(SPREADSHEET_ID, "spreadsheetId", SHEET_ID, 123));
+
+        try (MockedStatic<GoogleServices> googleServicesMockedStatic = mockStatic(GoogleServices.class)) {
+            googleServicesMockedStatic
+                .when(() -> GoogleServices.getSheets(parametersArgumentCaptor.capture()))
+                .thenReturn(mockedSheets);
+
+            when(mockedSheets.spreadsheets())
+                .thenReturn(mockedSpreadsheets);
+            when(mockedSpreadsheets.batchUpdate(
+                stringArgumentCaptor.capture(), batchUpdateSpreadsheetRequestArgumentCaptor.capture()))
+                    .thenReturn(mockedBatchUpdate);
+            when(mockedBatchUpdate.execute())
+                .thenReturn(mockedBatchUpdateSpreadsheetResponse);
+
+            GoogleSheetsUtils.deleteDimension(mockedParameters, mockedParameters, 2, "ROWS");
+
+            assertEquals(mockedParameters, parametersArgumentCaptor.getValue());
+            assertEquals("spreadsheetId", stringArgumentCaptor.getValue());
+
+            BatchUpdateSpreadsheetRequest batchUpdateSpreadsheetRequest = new BatchUpdateSpreadsheetRequest()
+                .setRequests(List.of(
+                    new Request()
+                        .setDeleteDimension(
+                            new DeleteDimensionRequest()
+                                .setRange(
+                                    new DimensionRange()
+                                        .setSheetId(123)
+                                        .setDimension("ROWS")
+                                        .setStartIndex(1)
+                                        .setEndIndex(2)))));
+
+            assertEquals(batchUpdateSpreadsheetRequest, batchUpdateSpreadsheetRequestArgumentCaptor.getValue());
+        }
     }
 
     @Test
     @SuppressWarnings("unchecked")
-    void testGetMapOfValuesForRowWhereFirstRowHeaders() throws IOException {
+    void testGetMapOfValuesForRowWhereFirstRowHeaders() {
         List<Object> mockedRow = mock(List.class);
         List<Object> mockedFirstRow = mock(List.class);
 
-        when(mockedParameters.getRequiredBoolean(IS_THE_FIRST_ROW_HEADER))
-            .thenReturn(true);
-        when(mockedParameters.getRequiredString(SPREADSHEET_ID))
-            .thenReturn("spreadsheetId");
-        when(mockedParameters.getRequiredString(SHEET_NAME))
-            .thenReturn("sheetName");
+        mockedParameters = MockParametersFactory.create(
+            Map.of(IS_THE_FIRST_ROW_HEADER, true, SPREADSHEET_ID, "spreadsheetId", SHEET_NAME, "sheetName"));
 
         try (MockedStatic<GoogleSheetsRowUtils> sheetsRowUtilsMockedStatic = mockStatic(GoogleSheetsRowUtils.class)) {
             sheetsRowUtilsMockedStatic
                 .when(() -> GoogleSheetsRowUtils.getRowValues(
-                    any(Sheets.class), spreadsheetIdArgumentCaptor.capture(), sheetNameArgumentCaptor.capture(),
-                    rowNumberArgumentCaptor.capture()))
+                    any(Sheets.class), stringArgumentCaptor.capture(), stringArgumentCaptor.capture(),
+                    integerArgumentCaptor.capture()))
                 .thenReturn(mockedFirstRow);
 
-            when(mockedFirstRow.get(anyInt())).thenReturn("header1", "header2", "header3");
-            when(mockedRow.size()).thenReturn(3);
-            when(mockedRow.get(anyInt())).thenReturn("value1", "value2", "value3");
+            when(mockedFirstRow.get(integerArgumentCaptor.capture()))
+                .thenReturn("header1", "header2", "header3");
+            when(mockedRow.size())
+                .thenReturn(3);
+            when(mockedRow.get(integerArgumentCaptor.capture()))
+                .thenReturn("value1", "value2", "value3");
 
             Map<String, Object> result = GoogleSheetsUtils.getMapOfValuesForRow(
                 mockedParameters, mockedSheets, mockedRow);
@@ -192,21 +518,22 @@ class GoogleSheetsUtilsTest {
             expected.put("header3", "value3");
 
             assertEquals(expected, result);
-            assertEquals("spreadsheetId", spreadsheetIdArgumentCaptor.getValue());
-            assertEquals("sheetName", sheetNameArgumentCaptor.getValue());
-            assertEquals(1, rowNumberArgumentCaptor.getValue());
+            assertEquals(List.of("spreadsheetId", "sheetName"), stringArgumentCaptor.getAllValues());
+            assertEquals(2, integerArgumentCaptor.getValue());
         }
     }
 
     @Test
     @SuppressWarnings("unchecked")
-    void testGetMapOfValuesForRowWhereFirstRowNotHeaders() throws IOException {
+    void testGetMapOfValuesForRowWhereFirstRowNotHeaders() {
+        mockedParameters = MockParametersFactory.create(Map.of(IS_THE_FIRST_ROW_HEADER, false));
+
         List<Object> mockedRow = mock(List.class);
 
-        when(mockedParameters.getRequiredBoolean(IS_THE_FIRST_ROW_HEADER))
-            .thenReturn(false);
-        when(mockedRow.size()).thenReturn(3);
-        when(mockedRow.get(anyInt())).thenReturn("value1", "value2", "value3");
+        when(mockedRow.size())
+            .thenReturn(3);
+        when(mockedRow.get(integerArgumentCaptor.capture()))
+            .thenReturn("value1", "value2", "value3");
 
         Map<String, Object> result = GoogleSheetsUtils.getMapOfValuesForRow(mockedParameters, mockedSheets, mockedRow);
 
@@ -217,14 +544,14 @@ class GoogleSheetsUtilsTest {
         expected.put("column_C", "value3");
 
         assertEquals(expected, result);
+        assertEquals(2, integerArgumentCaptor.getValue());
     }
 
     @Test
     void testGetRowValuesWhereFirstSpreadsheetRowValuesHeaders() {
         Map<String, Object> rowMap = Map.of(VALUES, Map.of("name", "name", "email", "email"));
 
-        when(mockedParameters.getRequiredMap(ROW, Object.class))
-            .thenReturn(rowMap);
+        mockedParameters = MockParametersFactory.create(Map.of(ROW, rowMap));
 
         List<Object> rowValues = GoogleSheetsUtils.getRowValues(mockedParameters);
 
@@ -238,8 +565,7 @@ class GoogleSheetsUtilsTest {
 
         Map<String, Object> rowMap = Map.of(VALUES, rowList);
 
-        when(mockedParameters.getRequiredMap(ROW, Object.class))
-            .thenReturn(rowMap);
+        mockedParameters = MockParametersFactory.create(Map.of(ROW, rowMap));
 
         List<Object> rowValues = GoogleSheetsUtils.getRowValues(mockedParameters);
 
@@ -248,16 +574,18 @@ class GoogleSheetsUtilsTest {
 
     @Test
     void testGetSheetIdOptions() throws Exception {
-        List<Sheet> sheetsList = getSheetList();
+        List<Sheet> sheetsList = getSheets();
+
+        mockedParameters = MockParametersFactory.create(Map.of(SPREADSHEET_ID, "spreadsheetId"));
 
         try (MockedStatic<GoogleServices> googleServicesMockedStatic = mockStatic(GoogleServices.class)) {
             googleServicesMockedStatic
-                .when(() -> GoogleServices.getSheets(mockedParameters))
+                .when(() -> GoogleServices.getSheets(parametersArgumentCaptor.capture()))
                 .thenReturn(mockedSheets);
 
             when(mockedSheets.spreadsheets())
                 .thenReturn(mockedSpreadsheets);
-            when(mockedSpreadsheets.get(spreadsheetIdArgumentCaptor.capture()))
+            when(mockedSpreadsheets.get(stringArgumentCaptor.capture()))
                 .thenReturn(mockedGet);
             when(mockedGet.execute())
                 .thenReturn(mockedSpreadsheet);
@@ -265,35 +593,31 @@ class GoogleSheetsUtilsTest {
                 .thenReturn(sheetsList);
 
             List<Option<String>> sheetIdOptions = GoogleSheetsUtils.getSheetIdOptions(
-                mockedParameters, mockedParameters, Map.of(), anyString(), mockedContext);
+                mockedParameters, mockedParameters, Map.of(), anyString(), mockedActionContext);
 
-            assertNotNull(sheetIdOptions);
-            assertEquals(2, sheetIdOptions.size());
+            List<Option<String>> expectedOptions = List.of(
+                option("Sheet 1", "1234567890"), option("Sheet 2", "98765432"));
 
-            Option<String> sheetIdOptionsFirst = sheetIdOptions.getFirst();
-
-            assertEquals("Sheet 1", sheetIdOptionsFirst.getLabel());
-            assertEquals("1234567890", sheetIdOptionsFirst.getValue());
-
-            Option<String> option = sheetIdOptions.get(1);
-
-            assertEquals("Sheet 2", option.getLabel());
-            assertEquals("98765432", option.getValue());
+            assertEquals(expectedOptions, sheetIdOptions);
+            assertEquals(mockedParameters, parametersArgumentCaptor.getValue());
+            assertEquals("spreadsheetId", stringArgumentCaptor.getValue());
         }
     }
 
     @Test
     void testGetSheetNameOptions() throws Exception {
-        List<Sheet> sheetsList = getSheetList();
+        List<Sheet> sheetsList = getSheets();
+
+        mockedParameters = MockParametersFactory.create(Map.of(SPREADSHEET_ID, "spreadsheetId"));
 
         try (MockedStatic<GoogleServices> googleServicesMockedStatic = mockStatic(GoogleServices.class)) {
             googleServicesMockedStatic
-                .when(() -> GoogleServices.getSheets(mockedParameters))
+                .when(() -> GoogleServices.getSheets(parametersArgumentCaptor.capture()))
                 .thenReturn(mockedSheets);
 
             when(mockedSheets.spreadsheets())
                 .thenReturn(mockedSpreadsheets);
-            when(mockedSpreadsheets.get(spreadsheetIdArgumentCaptor.capture()))
+            when(mockedSpreadsheets.get(stringArgumentCaptor.capture()))
                 .thenReturn(mockedGet);
             when(mockedGet.execute())
                 .thenReturn(mockedSpreadsheet);
@@ -301,79 +625,135 @@ class GoogleSheetsUtilsTest {
                 .thenReturn(sheetsList);
 
             List<Option<String>> sheetNameOptions = GoogleSheetsUtils.getSheetNameOptions(
-                mockedParameters, mockedParameters);
+                mockedParameters, mockedParameters, Map.of(), anyString(), mockedActionContext);
 
-            assertNotNull(sheetNameOptions);
-            assertEquals(2, sheetNameOptions.size());
+            List<Option<String>> expectedOptions = List.of(
+                option("Sheet 1", "Sheet 1"), option("Sheet 2", "Sheet 2"));
 
-            Option<String> sheetNameOptionsFirst = sheetNameOptions.getFirst();
-
-            assertEquals("Sheet 1", sheetNameOptionsFirst.getLabel());
-            assertEquals("Sheet 1", sheetNameOptionsFirst.getValue());
-
-            Option<String> option = sheetNameOptions.get(1);
-
-            assertEquals("Sheet 2", option.getLabel());
-            assertEquals("Sheet 2", option.getValue());
+            assertEquals(expectedOptions, sheetNameOptions);
+            assertEquals(mockedParameters, parametersArgumentCaptor.getValue());
+            assertEquals("spreadsheetId", stringArgumentCaptor.getValue());
         }
     }
 
     @Test
-    void testGetSpreadsheetIdOptions() throws IOException {
-        File file1 = new File();
+    void testGetSpreadsheetValues() throws IOException {
+        when(mockedSheets.spreadsheets())
+            .thenReturn(mockedSpreadsheets);
+        when(mockedSpreadsheets.values())
+            .thenReturn(mockedValues);
+        when(mockedValues.get(stringArgumentCaptor.capture(), stringArgumentCaptor.capture()))
+            .thenReturn(mockedValuesGet);
+        when(mockedValuesGet.setValueRenderOption(stringArgumentCaptor.capture()))
+            .thenReturn(mockedValuesGet);
+        when(mockedValuesGet.setDateTimeRenderOption(stringArgumentCaptor.capture()))
+            .thenReturn(mockedValuesGet);
+        when(mockedValuesGet.setMajorDimension(stringArgumentCaptor.capture()))
+            .thenReturn(mockedValuesGet);
+        when(mockedValuesGet.execute())
+            .thenReturn(mockedValueRange);
+        when(mockedValueRange.getValues())
+            .thenReturn(List.of(List.of()));
 
-        file1.setName("Spreadsheet 1");
-        file1.setId("1234567890");
+        List<List<Object>> result = GoogleSheetsUtils.getSpreadsheetValues(mockedSheets, "spreadsheetId", "sheetName");
 
-        File file2 = new File();
+        assertEquals(List.of(List.of()), result);
 
-        file2.setName("Spreadsheet 2");
-        file2.setId("0987654321");
+        assertEquals(
+            List.of("spreadsheetId", "sheetName", "UNFORMATTED_VALUE", "FORMATTED_STRING", "ROWS"),
+            stringArgumentCaptor.getAllValues());
+    }
 
-        List<File> files = Arrays.asList(file1, file2);
+    @Test
+    void testGetUpdatedRowValuesWhenFirstRowIsHeaderAndUpdatingWholeRow() {
+        mockedParameters = MockParametersFactory.create(Map.of(ROW, Map.of(VALUES, Map.of("name", "abc"))));
 
-        try (MockedStatic<GoogleServices> googleServicesMockedStatic = mockStatic(GoogleServices.class)) {
-            googleServicesMockedStatic
-                .when(() -> GoogleServices.getDrive(mockedParameters))
-                .thenReturn(mockedDrive);
+        List<Object> rowValues = GoogleSheetsUtils.getUpdatedRowValues(mockedParameters, mockedParameters);
 
-            when(mockedParameters.getBoolean(INCLUDE_ITEMS_FROM_ALL_DRIVES))
-                .thenReturn(true);
-            when(mockedDrive.files())
-                .thenReturn(mockedFiles);
-            when(mockedFiles.list())
-                .thenReturn(mockedList);
-            when(mockedList.setQ(qArgumentCaptor.capture()))
-                .thenReturn(mockedList);
-            when(mockedList.setIncludeItemsFromAllDrives(includeItemsFromAllDrivesArgumentCaptor.capture()))
-                .thenReturn(mockedList);
-            when(mockedList.setSupportsAllDrives(supportsAllDrivesArgumentCaptor.capture()))
-                .thenReturn(mockedList);
-            when(mockedList.execute())
-                .thenReturn(new FileList().setFiles(files));
+        assertEquals(List.of("abc"), rowValues);
+    }
 
-            List<Option<String>> spreadsheetIdOptions = GoogleSheetsUtils.getSpreadsheetIdOptions(
-                mockedParameters, mockedParameters);
+    @Test
+    void testGetUpdatedRowValuesWhenFirstRowIsHeaderAndUpdatingSelectedColumns() {
+        mockedParameters = MockParametersFactory.create(Map.of(
+            SPREADSHEET_ID, "spreadsheetId", SHEET_NAME, "sheetName", ROW_NUMBER, 5,
+            IS_THE_FIRST_ROW_HEADER, true,
+            ROW, Map.of(VALUES, List.of(
+                Map.of(COLUMN, "header1", VALUE, "abc"),
+                Map.of(COLUMN, "header3", VALUE, false)))));
 
-            assertNotNull(spreadsheetIdOptions);
-            assertEquals(2, spreadsheetIdOptions.size());
+        try (MockedStatic<GoogleServices> googleServicesMockedStatic = mockStatic(GoogleServices.class);
+            MockedStatic<GoogleSheetsRowUtils> googleSheetsRowUtilsMockedStatic =
+                mockStatic(GoogleSheetsRowUtils.class)) {
 
-            Option<String> spreadsheetIdOptionsFirst = spreadsheetIdOptions.getFirst();
+            googleServicesMockedStatic.when(() -> GoogleServices.getSheets(parametersArgumentCaptor.capture()))
+                .thenReturn(mockedSheets);
 
-            assertEquals("Spreadsheet 1", spreadsheetIdOptionsFirst.getLabel());
-            assertEquals("1234567890", spreadsheetIdOptionsFirst.getValue());
+            List<Object> rowToUpdate = new ArrayList<>(List.of("cde", 345, true));
+            googleSheetsRowUtilsMockedStatic.when(() -> GoogleSheetsRowUtils.getRowValues(
+                sheetsArgumentCaptor.capture(), stringArgumentCaptor.capture(),
+                stringArgumentCaptor.capture(),
+                integerArgumentCaptor.capture()))
+                .thenReturn(List.of("header1", "header2", "header3"), rowToUpdate);
 
-            Option<String> option = spreadsheetIdOptions.get(1);
+            List<Object> result = GoogleSheetsUtils.getUpdatedRowValues(mockedParameters, mockedParameters);
 
-            assertEquals("Spreadsheet 2", option.getLabel());
-            assertEquals("0987654321", option.getValue());
-            assertEquals("mimeType='application/vnd.google-apps.spreadsheet'", qArgumentCaptor.getValue());
-            assertEquals(true, includeItemsFromAllDrivesArgumentCaptor.getValue());
-            assertEquals(true, supportsAllDrivesArgumentCaptor.getValue());
+            assertEquals(List.of("abc", 345, false), result);
+
+            assertEquals(mockedParameters, parametersArgumentCaptor.getValue());
+            assertEquals(List.of(mockedSheets, mockedSheets), sheetsArgumentCaptor.getAllValues());
+            assertEquals(
+                List.of("spreadsheetId", "sheetName", "spreadsheetId", "sheetName"),
+                stringArgumentCaptor.getAllValues());
+            assertEquals(List.of(1, 5), integerArgumentCaptor.getAllValues());
         }
     }
 
-    private static List<Sheet> getSheetList() {
+    @Test
+    void testGetUpdatedRowValuesWhenFirstRowIsNotHeaderAndUpdatingWholeRow() {
+        mockedParameters = MockParametersFactory.create(Map.of(
+            IS_THE_FIRST_ROW_HEADER, false, UPDATE_WHOLE_ROW, true,
+            ROW, Map.of(VALUES, List.of("abc", 345, false))));
+
+        List<Object> result = GoogleSheetsUtils.getUpdatedRowValues(mockedParameters, mockedParameters);
+
+        assertEquals(List.of("abc", 345, false), result);
+    }
+
+    @Test
+    void testGetUpdatedRowValuesWhenFirstRowIsNotHeaderAndUpdatingSelectedColumns() {
+        mockedParameters = MockParametersFactory.create(Map.of(
+            SPREADSHEET_ID, "spreadsheetId", SHEET_NAME, "sheetName", ROW_NUMBER, 5,
+            IS_THE_FIRST_ROW_HEADER, false, UPDATE_WHOLE_ROW, false,
+            ROW, Map.of(VALUES, List.of(
+                Map.of(COLUMN, "A", VALUE, "abc"),
+                Map.of(COLUMN, "C", VALUE, false)))));
+
+        try (MockedStatic<GoogleServices> googleServicesMockedStatic = mockStatic(GoogleServices.class);
+            MockedStatic<GoogleSheetsRowUtils> googleSheetsRowUtilsMockedStatic =
+                mockStatic(GoogleSheetsRowUtils.class)) {
+
+            googleServicesMockedStatic.when(() -> GoogleServices.getSheets(parametersArgumentCaptor.capture()))
+                .thenReturn(mockedSheets);
+
+            List<Object> rowToUpdate = new ArrayList<>(List.of("cde", 345, true));
+            googleSheetsRowUtilsMockedStatic.when(() -> GoogleSheetsRowUtils.getRowValues(
+                sheetsArgumentCaptor.capture(), stringArgumentCaptor.capture(),
+                stringArgumentCaptor.capture(), integerArgumentCaptor.capture()))
+                .thenReturn(rowToUpdate);
+
+            List<Object> result = GoogleSheetsUtils.getUpdatedRowValues(mockedParameters, mockedParameters);
+
+            assertEquals(List.of("abc", 345, false), result);
+
+            assertEquals(mockedParameters, parametersArgumentCaptor.getValue());
+            assertEquals(mockedSheets, sheetsArgumentCaptor.getValue());
+            assertEquals(List.of("spreadsheetId", "sheetName"), stringArgumentCaptor.getAllValues());
+            assertEquals(5, integerArgumentCaptor.getValue());
+        }
+    }
+
+    private static List<Sheet> getSheets() {
         Sheet sheet1 = createSheet("Sheet 1", 1234567890);
         Sheet sheet2 = createSheet("Sheet 2", 98765432);
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,19 +18,18 @@ package com.bytechef.atlas.execution.service;
 
 import com.bytechef.atlas.configuration.domain.Workflow;
 import com.bytechef.atlas.execution.domain.Job;
-import com.bytechef.atlas.execution.dto.JobParameters;
+import com.bytechef.atlas.execution.dto.JobParametersDTO;
 import com.bytechef.atlas.execution.repository.JobRepository;
 import com.bytechef.commons.util.OptionalUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import org.apache.commons.lang3.Validate;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.lang.NonNull;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.Assert;
 
 /**
  * @author Ivica Cardic
@@ -48,16 +47,16 @@ public class JobServiceImpl implements JobService {
     }
 
     @Override
-    public Job create(@NonNull JobParameters jobParameters, Workflow workflow) {
-        Validate.notNull(jobParameters, "'jobParameters' must not be null");
+    public Job create(JobParametersDTO jobParametersDTO, Workflow workflow) {
+        Assert.notNull(jobParametersDTO, "'jobParameters' must not be null");
 
-        String workflowId = jobParameters.getWorkflowId();
+        String workflowId = jobParametersDTO.getWorkflowId();
 
-        Validate.notNull(workflow, String.format("Unknown workflow: %s", workflowId));
+        Assert.notNull(workflow, String.format("Unknown workflow: %s", workflowId));
 
-        validate(jobParameters, workflow);
+        validate(jobParametersDTO, workflow);
 
-        Job job = getJob(jobParameters, workflow);
+        Job job = getJob(jobParametersDTO, workflow);
 
         job = jobRepository.save(job);
 
@@ -67,6 +66,11 @@ public class JobServiceImpl implements JobService {
     @Override
     public void deleteJob(long id) {
         jobRepository.deleteById(id);
+    }
+
+    @Override
+    public Optional<Job> fetchJob(Long id) {
+        return jobRepository.findById(id);
     }
 
     @Override
@@ -82,9 +86,26 @@ public class JobServiceImpl implements JobService {
     }
 
     @Override
+    public Optional<Job> fetchLastWorkflowJob(List<String> workflowIds) {
+        return jobRepository.findTop1ByWorkflowIdInOrderByIdDesc(workflowIds);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Long> getChildJobIds(long parentJobId) {
+        return jobRepository.findAllIdsByParentJobId(parentJobId);
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public Job getJob(long id) {
         return OptionalUtils.get(jobRepository.findById(id));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Job> getJobs(List<Long> ids) {
+        return jobRepository.findAllByIdIn(ids);
     }
 
     @Override
@@ -96,21 +117,18 @@ public class JobServiceImpl implements JobService {
     @Override
     @Transactional(readOnly = true)
     public Job getTaskExecutionJob(long taskExecutionId) {
-        return jobRepository.findByTaskExecutionId(taskExecutionId);
-    }
-
-    @Override
-    public List<Job> getWorkflowJobs(String workflowId) {
-        return jobRepository.findAllByWorkflowId(workflowId);
+        return jobRepository
+            .findByTaskExecutionId(taskExecutionId)
+            .orElseThrow(
+                () -> new IllegalArgumentException("Unable to locate job with taskExecutionId: " + taskExecutionId));
     }
 
     @Override
     public Job resumeToStatusStarted(long id) {
-        Job job = OptionalUtils.get(jobRepository.findById(id));
+        Job job = OptionalUtils.get(jobRepository.findById(id), String.format("Unknown job %s", id));
 
-        Validate.notNull(job, String.format("Unknown job %s", id));
-        Validate.isTrue(job.getParentTaskExecutionId() == null, "Can't resume a subflow");
-        Validate.isTrue(isRestartable(job), "can't resume job " + id + " as it is " + job.getStatus());
+        Assert.isTrue(job.getParentTaskExecutionId() == null, "Can't resume a subflow");
+        Assert.isTrue(isRestartable(job), "can't resume job " + id + " as it is " + job.getStatus());
 
         job.setStatus(Job.Status.STARTED);
 
@@ -121,10 +139,10 @@ public class JobServiceImpl implements JobService {
 
     @Override
     public Job setStatusToStarted(long id) {
-        Job job = OptionalUtils.get(jobRepository.findById(id));
+        Job job = OptionalUtils.get(jobRepository.findById(id), String.format("Unknown job %s", id));
 
         job.setCurrentTask(0);
-        job.setStartDate(LocalDateTime.now());
+        job.setStartDate(Instant.now());
         job.setStatus(Job.Status.STARTED);
 
         jobRepository.save(job);
@@ -134,12 +152,12 @@ public class JobServiceImpl implements JobService {
 
     @Override
     public Job setStatusToStopped(long id) {
-        Job job = OptionalUtils.get(jobRepository.findById(id));
+        Job job = OptionalUtils.get(jobRepository.findById(id), String.format("Unknown job %s", id));
 
-        Validate.isTrue(
-            job.getStatus() == Job.Status.STARTED,
-            "Job id=" + id + " can not be stopped as it is " + job.getStatus());
+        Assert.isTrue(
+            job.getStatus() == Job.Status.STARTED, "Job id=" + id + " can not be stopped as it is " + job.getStatus());
 
+        job.setEndDate(Instant.now());
         job.setStatus(Job.Status.STOPPED);
 
         jobRepository.save(job);
@@ -148,9 +166,7 @@ public class JobServiceImpl implements JobService {
     }
 
     @Override
-    public Job update(@NonNull Job job) {
-        Validate.notNull(job, "'job' must not be null");
-
+    public Job update(Job job) {
         return jobRepository.save(job);
     }
 
@@ -158,37 +174,37 @@ public class JobServiceImpl implements JobService {
         return job.getStatus() == Job.Status.STOPPED || job.getStatus() == Job.Status.FAILED;
     }
 
-    private static Job getJob(JobParameters jobParameters, Workflow workflow) {
+    private static Job getJob(JobParametersDTO jobParametersDTO, Workflow workflow) {
         Job job = new Job();
 
-        job.setInputs(jobParameters.getInputs());
-        job.setLabel(jobParameters.getLabel() == null ? workflow.getLabel() : jobParameters.getLabel());
-        job.setMetadata(jobParameters.getMetadata());
-        job.setParentTaskExecutionId(jobParameters.getParentTaskExecutionId());
-        job.setPriority(jobParameters.getPriority());
+        job.setInputs(jobParametersDTO.getInputs());
+        job.setLabel(jobParametersDTO.getLabel() == null ? workflow.getLabel() : jobParametersDTO.getLabel());
+        job.setMetadata(jobParametersDTO.getMetadata());
+        job.setParentTaskExecutionId(jobParametersDTO.getParentTaskExecutionId());
+        job.setPriority(jobParametersDTO.getPriority());
         job.setStatus(Job.Status.CREATED);
-        job.setWebhooks(jobParameters.getWebhooks());
+        job.setWebhooks(jobParametersDTO.getWebhooks());
         job.setWorkflowId(workflow.getId());
 
         return job;
     }
 
-    private static void validate(JobParameters jobParameters, Workflow workflow) {
+    private static void validate(JobParametersDTO jobParametersDTO, Workflow workflow) {
         // validate inputs
 
-        Map<String, Object> inputs = jobParameters.getInputs();
+        Map<String, Object> inputs = jobParametersDTO.getInputs();
 
         for (Workflow.Input input : workflow.getInputs()) {
             if (input.required()) {
-                Validate.isTrue(inputs.containsKey(input.name()), "Missing required param: " + input.name());
+                Assert.isTrue(inputs.containsKey(input.name()), "Missing required param: " + input.name());
             }
         }
 
         // validate webhooks
 
-        for (Job.Webhook webhook : jobParameters.getWebhooks()) {
-            Validate.notNull(webhook.type(), "must define 'type' on webhook");
-            Validate.notNull(webhook.url(), "must define 'url' on webhook");
+        for (Job.Webhook webhook : jobParametersDTO.getWebhooks()) {
+            Assert.notNull(webhook.type(), "must define 'type' on webhook");
+            Assert.notNull(webhook.url(), "must define 'url' on webhook");
         }
     }
 }

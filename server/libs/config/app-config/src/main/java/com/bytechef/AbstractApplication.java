@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,9 +23,11 @@ import java.net.UnknownHostException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.TimeZone;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.InitializingBean;
 import org.springframework.boot.context.event.ApplicationStartedEvent;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.ApplicationContext;
@@ -36,9 +38,14 @@ import org.springframework.core.env.Environment;
  * @author Ivica Cardic
  */
 @EnableConfigurationProperties(ApplicationProperties.class)
-public abstract class AbstractApplication {
+public abstract class AbstractApplication implements InitializingBean {
 
-    private static final Logger logger = LoggerFactory.getLogger(AbstractApplication.class);
+    private static final Logger log = LoggerFactory.getLogger(AbstractApplication.class);
+
+    @Override
+    public void afterPropertiesSet() {
+        TimeZone.setDefault(TimeZone.getTimeZone("GMT"));
+    }
 
     @EventListener
     public void onApplicationStartedEvent(ApplicationStartedEvent event) {
@@ -47,7 +54,11 @@ public abstract class AbstractApplication {
         logApplicationStartup(applicationContext.getEnvironment());
     }
 
-    private static void logApplicationStartup(Environment environment) {
+    private String checkNull(String mode) {
+        return mode == null ? "-" : mode;
+    }
+
+    private void logApplicationStartup(Environment environment) {
         String protocol = Optional.ofNullable(environment.getProperty("server.ssl.key-store"))
             .map(key -> "https")
             .orElse("http");
@@ -58,7 +69,7 @@ public abstract class AbstractApplication {
 
         String[] activeProfiles = environment.getActiveProfiles();
 
-        logger.info(
+        log.info(
             CRLFLogConverter.CRLF_SAFE_MARKER,
             """
                 \n----------------------------------------------------------
@@ -68,6 +79,7 @@ public abstract class AbstractApplication {
                 \tEdition: \t{}
                 \tTenant mode: {}
                 \tProfile(s): {}
+                \tGraphiQL: \t{}
                 \tSwaggerUI: \t{}
                 ----------------------------------------------------------""",
             environment.getProperty("spring.application.name"),
@@ -79,9 +91,10 @@ public abstract class AbstractApplication {
             serverPort,
             contextPath,
             StringUtils.upperCase(environment.getProperty("bytechef.edition")),
-            environment.getProperty("bytechef.tenant.mode"),
+            checkNull(environment.getProperty("bytechef.tenant.mode")),
             activeProfiles,
-            getSwaggerUiUrl(Arrays.asList(activeProfiles), protocol, serverPort, contextPath));
+            getUiUrl(Arrays.asList(activeProfiles), protocol, serverPort, contextPath, "graphiql"),
+            getUiUrl(Arrays.asList(activeProfiles), protocol, serverPort, contextPath, "swagger-ui.html"));
     }
 
     private static String getHostAddress() {
@@ -92,16 +105,16 @@ public abstract class AbstractApplication {
 
             hostAddress = inetAddress.getHostAddress();
         } catch (UnknownHostException e) {
-            logger.warn("The host name could not be determined, using `localhost` as fallback");
+            log.warn("The host name could not be determined, using `localhost` as fallback");
         }
         return hostAddress;
     }
 
-    private static String getSwaggerUiUrl(
-        List<String> activeProfiles, String protocol, String serverPort, String contextPath) {
+    private static String getUiUrl(
+        List<String> activeProfiles, String protocol, String serverPort, String contextPath, String path) {
 
         return activeProfiles.contains("api-docs")
-            ? "%s://127.0.0.1:%s%s".formatted(protocol, serverPort, contextPath + "swagger-ui.html")
+            ? "%s://127.0.0.1:%s%s".formatted(protocol, serverPort, contextPath + path)
             : "-";
     }
 }

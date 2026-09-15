@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,9 +16,11 @@
 
 package com.bytechef.platform.workflow.task.dispatcher.definition;
 
-import com.bytechef.platform.workflow.task.dispatcher.definition.Property.ObjectProperty;
+import com.bytechef.definition.BaseOutputDefinition;
+import com.bytechef.definition.BaseOutputFunction;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -57,13 +59,7 @@ public interface TaskDispatcherDefinition {
      *
      * @return
      */
-    Optional<OutputResponse> getOutput();
-
-    /**
-     *
-     * @return
-     */
-    Optional<OutputFunction> getOutputFunction();
+    Optional<OutputDefinition> getOutputDefinition();
 
     /**
      *
@@ -94,17 +90,63 @@ public interface TaskDispatcherDefinition {
      *
      * @return
      */
-    Optional<ObjectProperty> getVariableProperties();
-
-    /**
-     *
-     * @return
-     */
-    Optional<VariablePropertiesFunction> getVariablePropertiesFunction();
+    Optional<VariablePropertiesFunction> getVariableProperties();
 
     /**
      *
      * @return
      */
     int getVersion();
+
+    /**
+     *
+     */
+    @FunctionalInterface
+    interface OutputFunction extends BaseOutputFunction {
+
+        /**
+         * @param inputParameters
+         * @return
+         */
+        BaseOutputDefinition.OutputResponse apply(Map<String, ?> inputParameters) throws Exception;
+    }
+
+    /**
+     *
+     */
+    @FunctionalInterface
+    interface PropertiesFunction {
+
+        /**
+         * @param inputParameters
+         * @return
+         */
+        List<? extends Property> apply(Map<String, ?> inputParameters) throws Exception;
+    }
+
+    /**
+     *
+     */
+    @FunctionalInterface
+    interface OptionsFunction {
+
+        /**
+         * @param search
+         * @return
+         */
+        List<? extends Option<String>> apply(String search) throws Exception;
+    }
+
+    /**
+     *
+     */
+    @FunctionalInterface
+    interface VariablePropertiesFunction {
+
+        /**
+         * @param inputParameters
+         * @return
+         */
+        BaseOutputDefinition.OutputResponse apply(Map<String, ?> inputParameters) throws Exception;
+    }
 }

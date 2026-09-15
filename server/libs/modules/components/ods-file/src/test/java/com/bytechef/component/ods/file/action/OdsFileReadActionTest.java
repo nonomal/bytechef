@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -249,7 +249,7 @@ public class OdsFileReadActionTest {
             .thenReturn(readAsString);
 
         if (file != null) {
-            Mockito.when(context.file(file1 -> file1.getStream(Mockito.any(FileEntry.class))))
+            Mockito.when(context.file(file1 -> file1.getInputStream(Mockito.any(FileEntry.class))))
                 .thenReturn(new FileInputStream(file));
         }
 

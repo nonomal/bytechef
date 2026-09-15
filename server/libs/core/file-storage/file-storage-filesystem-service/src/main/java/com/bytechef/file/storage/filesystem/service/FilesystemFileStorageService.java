@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,162 +16,323 @@
 
 package com.bytechef.file.storage.filesystem.service;
 
+import com.bytechef.config.ApplicationProperties;
 import com.bytechef.file.storage.domain.FileEntry;
 import com.bytechef.file.storage.exception.FileStorageException;
 import com.bytechef.file.storage.service.FileStorageService;
 import com.bytechef.tenant.TenantContext;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.Validate;
+import org.springframework.util.Assert;
 
 /**
  * @author Ivica Cardic
  */
 public class FilesystemFileStorageService implements FileStorageService {
 
-    private static final String FILE = "file:";
+    private static final String URL_PREFIX = "file:";
 
     private final Path baseDirPath;
 
+    /**
+     * <b>Security Note:</b> Path traversal is intentional for this component. The baseDir parameter is sourced from
+     * application configuration properties ({@code bytechef.file-storage.filesystem.base-path}), not from untrusted
+     * user input. This allows deployment-specific storage location configuration.
+     */
+    @SuppressFBWarnings("PATH_TRAVERSAL_IN")
     public FilesystemFileStorageService(String baseDir) {
         this.baseDirPath = Paths.get(baseDir);
     }
 
     @Override
-    public void deleteFile(String directoryPath, FileEntry fileEntry) {
-        Path path = resolveDirectoryPath(directoryPath);
-        String url = fileEntry.getUrl();
+    public void deleteFile(String directory, FileEntry fileEntry) {
+        if (fileEntry != null) {
+            Path directoryPath = resolveDirectoryPath(directory);
+            Path filePath = resolveFilePath(directoryPath, directory, fileEntry.getUrl());
 
-        boolean deleted = path.resolve(url.replace(FILE, ""))
-            .toFile()
-            .delete();
+            File file = filePath.toFile();
 
-        if (!deleted) {
-            throw new FileStorageException("File %s cannot be deleted".formatted(path));
+            if (!file.exists()) {
+                return;
+            }
+
+            boolean deleted = file.delete();
+
+            if (!deleted) {
+                throw new FileStorageException("File %s cannot be deleted".formatted(filePath));
+            }
         }
     }
 
     @Override
-    public boolean fileExists(String directoryPath, FileEntry fileEntry) throws FileStorageException {
-        Path path = resolveDirectoryPath(directoryPath);
-        String url = fileEntry.getUrl();
+    public boolean fileExists(String directory, FileEntry fileEntry) throws FileStorageException {
+        File file = getFile(directory, fileEntry);
 
-        return path.resolve(url.replace(FILE, ""))
-            .toFile()
-            .exists();
+        return file.exists();
     }
 
     @Override
-    public InputStream getFileStream(String directoryPath, FileEntry fileEntry) {
-        Path path = resolveDirectoryPath(directoryPath);
-        String url = fileEntry.getUrl();
+    public boolean fileExists(String directory, String filename) throws FileStorageException {
+        Path directoryPath = resolveDirectoryPath(directory);
+
+        Path filePath = directoryPath.resolve(filename);
+
+        File file = filePath.toFile();
+
+        return file.exists();
+    }
+
+    @Override
+    public long getContentLength(String directory, FileEntry fileEntry) throws FileStorageException {
+        File file = getFile(directory, fileEntry);
+
+        return file.length();
+    }
+
+    @Override
+    public FileEntry getFileEntry(String directory, String filename) throws FileStorageException {
+        Path directoryPath = resolveDirectoryPath(directory);
+
+        Path filePath = directoryPath.resolve(filename);
+
+        FileEntry fileEntry = new FileEntry(filename, getUrl(directory, directoryPath, filePath));
+
+        fileExists(directory, fileEntry);
+
+        return fileEntry;
+    }
+
+    @Override
+    public Set<FileEntry> getFileEntries(String directory) throws FileStorageException {
+        Path directoryPath = resolveDirectoryPath(directory);
+
+        try (Stream<Path> stream = Files.walk(directoryPath)) {
+            return stream.filter(path -> !Files.isDirectory(path))
+                .map(path -> new FileEntry(String.valueOf(path.getFileName()), getUrl(directory, directoryPath, path)))
+                .collect(Collectors.toSet());
+        } catch (IOException e) {
+            throw new FileStorageException(e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public URL getFileEntryURL(String directory, FileEntry fileEntry) {
+        Path directoryPath = resolveDirectoryPath(directory);
+        Path filePath = resolveFilePath(directoryPath, directory, fileEntry.getUrl());
 
         try {
-            return Files.newInputStream(path.resolve(url.replace(FILE, "")), StandardOpenOption.READ);
-        } catch (IOException ioe) {
-            throw new FileStorageException("Failed to open file " + url, ioe);
+            return filePath.toUri()
+                .toURL();
+        } catch (MalformedURLException e) {
+            throw new RuntimeException(e);
         }
     }
 
     @Override
-    public byte[] readFileToBytes(String directoryPath, FileEntry fileEntry) throws FileStorageException {
-        Path path = resolveDirectoryPath(directoryPath);
-        String url = fileEntry.getUrl();
+    public InputStream getInputStream(String directory, FileEntry fileEntry) {
+        Path directoryPath = resolveDirectoryPath(directory);
+        Path filePath = resolveFilePath(directoryPath, directory, fileEntry.getUrl());
 
         try {
-            return Files.readAllBytes(path.resolve(url.replace(FILE, "")));
+            return Files.newInputStream(filePath, StandardOpenOption.READ);
         } catch (IOException ioe) {
-            throw new FileStorageException("Failed to open file " + url, ioe);
+            throw new FileStorageException("Failed to open file " + fileEntry.getUrl(), ioe);
         }
     }
 
     @Override
-    public String readFileToString(String directoryPath, FileEntry fileEntry) throws FileStorageException {
-        Path path = resolveDirectoryPath(directoryPath);
-        String url = fileEntry.getUrl();
+    public OutputStream getOutputStream(String directory, FileEntry fileEntry) throws FileStorageException {
+        Path directoryPath = resolveDirectoryPath(directory);
+        Path filePath = resolveFilePath(directoryPath, directory, fileEntry.getUrl());
 
         try {
-            return Files.readString(path.resolve(url.replace(FILE, "")));
+            return Files.newOutputStream(filePath, StandardOpenOption.WRITE, StandardOpenOption.APPEND);
         } catch (IOException ioe) {
-            throw new FileStorageException("Failed to open file " + url, ioe);
+            throw new FileStorageException("Failed to open file " + fileEntry.getUrl(), ioe);
         }
     }
 
     @Override
-    public FileEntry storeFileContent(String directoryPath, String fileName, byte[] data) throws FileStorageException {
-        Validate.notNull(directoryPath, "directory is required");
-        Validate.notNull(fileName, "fileName is required");
-        Validate.notNull(data, "data is required");
+    public byte[] readFileToBytes(String directory, FileEntry fileEntry) throws FileStorageException {
+        Path directoryPath = resolveDirectoryPath(directory);
+        Path filePath = resolveFilePath(directoryPath, directory, fileEntry.getUrl());
 
-        return doStoreFileContent(directoryPath, fileName, new ByteArrayInputStream(data));
+        try {
+            return Files.readAllBytes(filePath);
+        } catch (IOException ioe) {
+            throw new FileStorageException("Failed to open file " + fileEntry.getUrl(), ioe);
+        }
     }
 
     @Override
-    public FileEntry storeFileContent(String directoryPath, String fileName, String data) throws FileStorageException {
-        Validate.notNull(directoryPath, "directory is required");
-        Validate.notNull(fileName, "fileName is required");
-        Validate.notNull(data, "data is required");
+    public String readFileToString(String directory, FileEntry fileEntry) throws FileStorageException {
+        Path directoryPath = resolveDirectoryPath(directory);
+        Path filePath = resolveFilePath(directoryPath, directory, fileEntry.getUrl());
 
-        return doStoreFileContent(directoryPath, fileName,
-            new ByteArrayInputStream(data.getBytes(StandardCharsets.UTF_8)));
+        try {
+            return Files.readString(filePath);
+        } catch (IOException ioe) {
+            throw new FileStorageException("Failed to open file " + fileEntry.getUrl(), ioe);
+        }
     }
 
     @Override
-    public FileEntry storeFileContent(String directoryPath, String fileName, InputStream inputStream)
+    public String getType() {
+        return ApplicationProperties.FileStorage.Provider.FILESYSTEM.name();
+    }
+
+    @Override
+    public FileEntry storeFileContent(String directory, String filename, byte[] data) throws FileStorageException {
+        return storeFileContent(directory, filename, data, true);
+    }
+
+    @Override
+    public FileEntry storeFileContent(String directory, String filename, byte[] data, boolean generateFilename)
         throws FileStorageException {
 
-        Validate.notNull(directoryPath, "directory is required");
-        Validate.notNull(fileName, "fileName is required");
-        Validate.notNull(inputStream, "inputStream is required");
+        Assert.notNull(directory, "directory is required");
+        Assert.notNull(filename, "fileName is required");
+        Assert.notNull(data, "data is required");
 
-        return doStoreFileContent(directoryPath, fileName, inputStream);
+        return doStoreFileContent(directory, filename, new ByteArrayInputStream(data), generateFilename);
     }
 
-    private FileEntry doStoreFileContent(String directory, String fileName, InputStream inputStream) {
+    @Override
+    public FileEntry storeFileContent(String directory, String filename, String data) throws FileStorageException {
+        return storeFileContent(directory, filename, data, true);
+    }
+
+    @Override
+    public FileEntry storeFileContent(String directory, String filename, String data, boolean generateFilename)
+        throws FileStorageException {
+
+        Assert.notNull(directory, "directory is required");
+        Assert.notNull(filename, "fileName is required");
+        Assert.notNull(data, "data is required");
+
+        return doStoreFileContent(
+            directory, filename, new ByteArrayInputStream(data.getBytes(StandardCharsets.UTF_8)), generateFilename);
+    }
+
+    @Override
+    public FileEntry storeFileContent(String directory, String filename, InputStream inputStream)
+        throws FileStorageException {
+
+        return storeFileContent(directory, filename, inputStream, true);
+    }
+
+    @Override
+    public FileEntry storeFileContent(
+        String directory, String filename, InputStream inputStream, boolean generateFilename)
+        throws FileStorageException {
+
+        Assert.notNull(directory, "directory is required");
+        Assert.notNull(filename, "fileName is required");
+        Assert.notNull(inputStream, "inputStream is required");
+
+        return doStoreFileContent(directory, filename, inputStream, generateFilename);
+    }
+
+    private File getFile(String directory, FileEntry fileEntry) {
+        Path directoryPath = resolveDirectoryPath(directory);
+        Path filePath = resolveFilePath(directoryPath, directory, fileEntry.getUrl());
+
+        return filePath.toFile();
+    }
+
+    @SuppressFBWarnings("PATH_TRAVERSAL_IN")
+    private static Path resolveFilePath(Path directoryPath, String directory, String url) {
+        String relative = removeUrlPrefix(url, directory);
+        Path candidate = Paths.get(relative);
+
+        if (candidate.isAbsolute()) {
+            throw new FileStorageException("Invalid file path");
+        }
+
+        Path resolved = directoryPath.resolve(candidate)
+            .normalize();
+
+        if (!resolved.startsWith(directoryPath.normalize())) {
+            throw new FileStorageException("Invalid file path");
+        }
+
+        return resolved;
+    }
+
+    private FileEntry doStoreFileContent(
+        String directory, String filename, InputStream inputStream, boolean generateFilename) {
+
         directory = StringUtils.replace(directory.replaceAll("[^0-9a-zA-Z/_]", ""), " ", "");
 
-        Path path = resolveDirectoryPath(directory.toLowerCase());
+        Path directoryPath = resolveDirectoryPath(directory.toLowerCase());
 
-        path = path.resolve(generateUuid());
+        Path filePath = directoryPath;
 
-        try {
-            Files.copy(inputStream, path, StandardCopyOption.REPLACE_EXISTING);
-        } catch (IOException ioe) {
-            throw new FileStorageException("Failed to store file " + fileName, ioe);
+        if (generateFilename) {
+            int dotIndex = filename.lastIndexOf('.');
+            UUID uuid = UUID.randomUUID();
+
+            String generatedName = dotIndex > 0 ? uuid + filename.substring(dotIndex) : uuid.toString();
+
+            filePath = filePath.resolve(generatedName);
+        } else {
+            filePath = filePath.resolve(filename);
         }
 
-        File file = path.toFile();
+        try {
+            Files.copy(inputStream, filePath, StandardCopyOption.REPLACE_EXISTING);
+        } catch (IOException ioe) {
+            throw new FileStorageException("Failed to store file " + filename, ioe);
+        }
+
+        File file = filePath.toFile();
 
         if (file.length() == 0) {
-            throw new FileStorageException("Failed to store empty file " + fileName);
+            throw new FileStorageException("Failed to store empty file " + filename);
         }
 
-        return new FileEntry(fileName, FILE + path);
+        return new FileEntry(filename, getUrl(directory, directoryPath, filePath));
     }
 
-    private Path resolveDirectoryPath(String directoryPath) {
+    private static String getUrl(String directory, Path directoryPath, Path filePath) {
+        return URL_PREFIX + "/" + directory + File.separator + directoryPath.relativize(filePath);
+    }
+
+    private static String removeUrlPrefix(String url, String directory) {
+        return url.replace(URL_PREFIX + "/" + directory + File.separator, "");
+    }
+
+    /**
+     * <b>Security Note:</b> Path traversal is intentional for this component. This service manages file storage for
+     * workflow artifacts and is designed to access files under a configured base directory. File paths are derived from
+     * tenant context and internal directory parameters, not from untrusted user input. Access control is handled
+     * through tenant isolation.
+     */
+    @SuppressFBWarnings("PATH_TRAVERSAL_IN")
+    private Path resolveDirectoryPath(String directory) {
         try {
-            return Files.createDirectories(
-                baseDirPath.resolve(TenantContext.getCurrentTenantId())
-                    .resolve(directoryPath));
+            Path tenantDirectoryPath = baseDirPath.resolve(TenantContext.getCurrentTenantId());
+
+            return Files.createDirectories(tenantDirectoryPath.resolve(directory));
         } catch (IOException ioe) {
             throw new FileStorageException("Could not initialize storage", ioe);
         }
-    }
-
-    private String generateUuid() {
-        UUID uuid = UUID.randomUUID();
-
-        return uuid.toString();
     }
 }

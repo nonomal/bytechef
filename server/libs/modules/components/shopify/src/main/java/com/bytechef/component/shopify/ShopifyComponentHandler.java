@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,125 +16,68 @@
 
 package com.bytechef.component.shopify;
 
-import static com.bytechef.component.definition.Authorization.KEY;
-import static com.bytechef.component.definition.Authorization.VALUE;
-import static com.bytechef.component.definition.ComponentDSL.authorization;
-import static com.bytechef.component.definition.ComponentDSL.string;
-import static com.bytechef.component.shopify.constant.ShopifyConstants.PRODUCT_ID;
-import static com.bytechef.component.shopify.constant.ShopifyConstants.SHOP_NAME;
-import static com.bytechef.component.shopify.util.ShopifyUtils.getBaseUrl;
+import static com.bytechef.component.definition.ComponentDsl.component;
+import static com.bytechef.component.definition.ComponentDsl.tool;
 
-import com.bytechef.component.OpenApiComponentHandler;
-import com.bytechef.component.definition.ActionDefinition;
-import com.bytechef.component.definition.Authorization.AuthorizationType;
+import com.bytechef.component.ComponentHandler;
 import com.bytechef.component.definition.ComponentCategory;
-import com.bytechef.component.definition.ComponentDSL;
-import com.bytechef.component.definition.ComponentDSL.ModifiableArrayProperty;
-import com.bytechef.component.definition.ComponentDSL.ModifiableComponentDefinition;
-import com.bytechef.component.definition.ComponentDSL.ModifiableConnectionDefinition;
-import com.bytechef.component.definition.ComponentDSL.ModifiableIntegerProperty;
-import com.bytechef.component.definition.ComponentDSL.ModifiableObjectProperty;
-import com.bytechef.component.definition.ComponentDSL.ModifiableProperty;
-import com.bytechef.component.definition.OptionsDataSource.ActionOptionsFunction;
-import com.bytechef.component.definition.Property.ValueProperty;
+import com.bytechef.component.definition.ComponentDefinition;
+import com.bytechef.component.shopify.action.ShopifyCancelOrderAction;
+import com.bytechef.component.shopify.action.ShopifyCloseOrderAction;
+import com.bytechef.component.shopify.action.ShopifyCreateOrderAction;
+import com.bytechef.component.shopify.action.ShopifyCreateProductAction;
+import com.bytechef.component.shopify.action.ShopifyDeleteOrderAction;
+import com.bytechef.component.shopify.action.ShopifyGetAbandonedCartsAction;
+import com.bytechef.component.shopify.action.ShopifyGetOrderAction;
+import com.bytechef.component.shopify.action.ShopifyUpdateOrderAction;
+import com.bytechef.component.shopify.connection.ShopifyConnection;
 import com.bytechef.component.shopify.trigger.ShopifyNewCancelledOrderTrigger;
 import com.bytechef.component.shopify.trigger.ShopifyNewOrderTrigger;
 import com.bytechef.component.shopify.trigger.ShopifyNewPaidOrderTrigger;
-import com.bytechef.component.shopify.util.ShopifyUtils;
-import com.bytechef.definition.BaseProperty;
 import com.google.auto.service.AutoService;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
 
 /**
  * @author Monika Domiter
+ * @author Nikolina Spehar
  */
-@AutoService(OpenApiComponentHandler.class)
-public class ShopifyComponentHandler extends AbstractShopifyComponentHandler {
+@AutoService(ComponentHandler.class)
+public class ShopifyComponentHandler implements ComponentHandler {
 
-    @Override
-    public List<ComponentDSL.ModifiableTriggerDefinition> getTriggers() {
-        return List.of(
+    private static final ComponentDefinition COMPONENT_DEFINITION = component("shopify")
+        .title("Shopify")
+        .description(
+            "Shopify is an e-commerce platform that allows businesses to create online stores and sell products.")
+        .icon("path:assets/shopify.svg")
+        .categories(ComponentCategory.E_COMMERCE)
+        .connection(ShopifyConnection.CONNECTION_DEFINITION)
+        .customAction(true)
+        .customActionHelp("Shopify API docs", "https://shopify.dev/docs/api/admin-graphql/latest")
+        .actions(
+            ShopifyCancelOrderAction.ACTION_DEFINITION,
+            ShopifyCloseOrderAction.ACTION_DEFINITION,
+            ShopifyCreateOrderAction.ACTION_DEFINITION,
+            ShopifyCreateProductAction.ACTION_DEFINITION,
+            ShopifyDeleteOrderAction.ACTION_DEFINITION,
+            ShopifyGetAbandonedCartsAction.ACTION_DEFINITION,
+            ShopifyGetOrderAction.ACTION_DEFINITION,
+            ShopifyUpdateOrderAction.ACTION_DEFINITION)
+        .clusterElements(
+            tool(ShopifyCancelOrderAction.ACTION_DEFINITION),
+            tool(ShopifyCloseOrderAction.ACTION_DEFINITION),
+            tool(ShopifyCreateOrderAction.ACTION_DEFINITION),
+            tool(ShopifyCreateProductAction.ACTION_DEFINITION),
+            tool(ShopifyDeleteOrderAction.ACTION_DEFINITION),
+            tool(ShopifyGetAbandonedCartsAction.ACTION_DEFINITION),
+            tool(ShopifyGetOrderAction.ACTION_DEFINITION),
+            tool(ShopifyUpdateOrderAction.ACTION_DEFINITION))
+        .triggers(
             ShopifyNewCancelledOrderTrigger.TRIGGER_DEFINITION,
             ShopifyNewOrderTrigger.TRIGGER_DEFINITION,
-            ShopifyNewPaidOrderTrigger.TRIGGER_DEFINITION);
-    }
+            ShopifyNewPaidOrderTrigger.TRIGGER_DEFINITION)
+        .version(1);
 
     @Override
-    public ModifiableComponentDefinition modifyComponent(ModifiableComponentDefinition modifiableComponentDefinition) {
-        return modifiableComponentDefinition
-            .customAction(true)
-            .icon("path:assets/shopify.svg")
-            .categories(ComponentCategory.E_COMMERCE);
+    public ComponentDefinition getDefinition() {
+        return COMPONENT_DEFINITION;
     }
-
-    @Override
-    public ModifiableConnectionDefinition modifyConnection(
-        ModifiableConnectionDefinition modifiableConnectionDefinition) {
-
-        return modifiableConnectionDefinition
-            .authorizations(
-                authorization(AuthorizationType.API_KEY)
-                    .title("API Key")
-                    .properties(
-                        string(SHOP_NAME)
-                            .label("Shop name")
-                            .required(true),
-                        string(KEY)
-                            .label("Access token")
-                            .required(true)
-                            .defaultValue("X-Shopify-Access-Token")
-                            .hidden(true),
-                        string(VALUE)
-                            .label("Access Token")
-                            .required(true)))
-            .baseUri((connectionParameters, context) -> getBaseUrl(connectionParameters));
-    }
-
-    @Override
-    public ModifiableProperty<?> modifyProperty(
-        ActionDefinition actionDefinition, ModifiableProperty<?> modifiableProperty) {
-
-        if (Objects.equals(modifiableProperty.getName(), "orderId")) {
-            ((ModifiableIntegerProperty) modifiableProperty)
-                .options((ActionOptionsFunction<Long>) ShopifyUtils::getOrderIdOptions);
-        } else if (Objects.equals(modifiableProperty.getName(), "__item")) {
-            Optional<List<? extends ValueProperty<?>>> propertiesOptional =
-                ((ModifiableObjectProperty) modifiableProperty).getProperties();
-
-            for (BaseProperty baseProperty : propertiesOptional.get()) {
-                if (Objects.equals(baseProperty.getName(), "order")) {
-                    Optional<List<? extends ValueProperty<?>>> propertiesOptional1 =
-                        ((ModifiableObjectProperty) baseProperty).getProperties();
-
-                    for (BaseProperty baseProperty1 : propertiesOptional1.get()) {
-                        if (Objects.equals(baseProperty1.getName(), "line_items")) {
-                            Optional<List<? extends ValueProperty<?>>> items =
-                                ((ModifiableArrayProperty) baseProperty1).getItems();
-
-                            for (BaseProperty baseProperty2 : items.get()) {
-                                Optional<List<? extends ValueProperty<?>>> propertiesOptional2 =
-                                    ((ModifiableObjectProperty) baseProperty2).getProperties();
-
-                                for (BaseProperty baseProperty3 : propertiesOptional2.get()) {
-                                    if (Objects.equals(baseProperty3.getName(), PRODUCT_ID)) {
-                                        ((ModifiableIntegerProperty) baseProperty3)
-                                            .options((ActionOptionsFunction<Long>) ShopifyUtils::getProductIdOptions);
-                                    } else if (Objects.equals(baseProperty3.getName(), "variant_id")) {
-                                        ((ModifiableIntegerProperty) baseProperty3)
-                                            .optionsLookupDependsOn("__item.order.line_items[index]." + PRODUCT_ID)
-                                            .options((ActionOptionsFunction<Long>) ShopifyUtils::getVariantIdOptions);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        return modifiableProperty;
-    }
-
 }

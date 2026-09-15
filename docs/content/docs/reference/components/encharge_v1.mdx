@@ -1,0 +1,227 @@
+---
+title: "Encharge"
+description: "Encharge is a marketing automation platform that helps businesses automate their customer communication and marketing campaigns."
+---
+
+
+Categories: Marketing Automation
+
+
+Type: encharge/v1
+
+<hr />
+
+
+
+
+## Connections
+
+Version: 1
+
+
+### API Key
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| key | Key | STRING |  | true |
+| value | Value | STRING |  | true |
+
+
+
+## Connection Setup
+
+1. Login to your Encharge dashboard.
+2. Click on your profile icon in the top right corner and select **Your Account**.
+3. Copy **API Key** and use it in ByteChef.
+
+<div style={{ position: 'relative', height:0, width: '100%', overflow: 'hidden', zIndex: 49, boxSizing: 'border-box', paddingBottom: 'calc(53.05219207% + 32px)'}}>
+<iframe src="https://www.guidejar.com/embed/UFF1mx0JnE56hKDlrOYq?type=1&controls=on" width="100%" height="100%" style={{height:'100%', position:'absolute', inset:0}} allowFullScreen frameBorder="0"></iframe>
+</div>
+
+
+
+
+<hr />
+
+
+## Actions
+
+
+### Add Tag
+Name: addTag
+
+`Add tag(s) to an existing user.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| tag | Tag | STRING | Tag(s) to add. To add multiple tags, use a comma-separated list, e.g. tag1,tag2 | true |
+| email | Email | STRING | Email of the person. | true |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Add Tag",
+  "name" : "addTag",
+  "parameters" : {
+    "tag" : "",
+    "email" : ""
+  },
+  "type" : "encharge/v1/addTag"
+}
+```
+
+#### Output
+
+This action does not produce any output.
+
+
+
+
+
+
+### Create Email Template
+Name: createEmailTemplate
+
+`Creates email template.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| name | Name | STRING | Name of the email template. | true |
+| subject | Subject | STRING | Subject of the email. | true |
+| fromEmail | From Email | STRING | From address to send the email from. | true |
+| replyEmail | Reply Email | STRING | Address that recipients will reply to by default. | false |
+| html | HTML Content | STRING | HTML content of the email template. | false |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Create Email Template",
+  "name" : "createEmailTemplate",
+  "parameters" : {
+    "name" : "",
+    "subject" : "",
+    "fromEmail" : "",
+    "replyEmail" : "",
+    "html" : ""
+  },
+  "type" : "encharge/v1/createEmailTemplate"
+}
+```
+
+#### Output
+
+
+
+Type: OBJECT
+
+
+#### Properties
+
+|     Name     |     Type     |     Description     |
+|:------------:|:------------:|:-------------------:|
+| email | OBJECT <details> <summary> Properties </summary> &#123;INTEGER\(id), BOOLEAN\(isStandalone), INTEGER\(accountId), STRING\(name), STRING\(subject), STRING\(fromEmail), STRING\(replyEmail), STRING\(type), BOOLEAN\(archived), BOOLEAN\(canSpamCompliance), INTEGER\(communicationCategoryId), BOOLEAN\(isDefaultTemplate)&#125; </details> |  |
+
+
+
+
+#### Output Example
+```json
+{
+  "email" : {
+    "id" : 1,
+    "isStandalone" : false,
+    "accountId" : 1,
+    "name" : "",
+    "subject" : "",
+    "fromEmail" : "",
+    "replyEmail" : "",
+    "type" : "",
+    "archived" : false,
+    "canSpamCompliance" : false,
+    "communicationCategoryId" : 1,
+    "isDefaultTemplate" : false
+  }
+}
+```
+
+
+
+
+### Create Person
+Name: createPerson
+
+`Creates a new person in Encharge.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| __items | People | ARRAY <details> <summary> Items </summary> [&#123;STRING\(email), STRING\(firstName), STRING\(lastName), STRING\(website), STRING\(title), STRING\(phone)&#125;] </details> |  | true |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Create Person",
+  "name" : "createPerson",
+  "parameters" : {
+    "__items" : [ {
+      "email" : "",
+      "firstName" : "",
+      "lastName" : "",
+      "website" : "",
+      "title" : "",
+      "phone" : ""
+    } ]
+  },
+  "type" : "encharge/v1/createPerson"
+}
+```
+
+#### Output
+
+
+
+Type: OBJECT
+
+
+#### Properties
+
+|     Name     |     Type     |     Description     |
+|:------------:|:------------:|:-------------------:|
+| users | ARRAY <details> <summary> Items </summary> [&#123;STRING\(email), STRING\(firstName), STRING\(lastName), STRING\(website), STRING\(title), STRING\(id), STRING\(phone)&#125;] </details> |  |
+
+
+
+
+#### Output Example
+```json
+{
+  "users" : [ {
+    "email" : "",
+    "firstName" : "",
+    "lastName" : "",
+    "website" : "",
+    "title" : "",
+    "id" : "",
+    "phone" : ""
+  } ]
+}
+```
+
+
+
+
+
+
+## What to do if your action is not listed here?
+
+If this component doesn't have the action you need, you can use **Custom Action** to create your own. Custom Actions empower you to define HTTP requests tailored to your specific requirements, allowing for greater flexibility in integrating with external services or APIs.
+
+To create a Custom Action, simply specify the desired HTTP method, path, and any necessary parameters. This way, you can extend the functionality of your component beyond the predefined actions, ensuring that you can meet all your integration needs effectively.
+

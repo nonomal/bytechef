@@ -1,455 +1,163 @@
-import defaultEdges from '@/shared/defaultEdges';
-import defaultNodes from '@/shared/defaultNodes';
+import '@xyflow/react/dist/base.css';
+import useWorkflowDataStore from '@/pages/platform/workflow-editor/stores/useWorkflowDataStore';
+import {CANVAS_BACKGROUND_COLOR, CANVAS_TOP_OFFSET} from '@/shared/constants';
 import {
-    ActionDefinitionBasicModel,
-    ComponentDefinitionBasicModel,
-    TaskDispatcherDefinitionBasicModel,
+    ComponentDefinitionBasic,
+    TaskDispatcherDefinitionBasic,
+    Workflow,
 } from '@/shared/middleware/platform/configuration';
-import {ComponentOperationType} from '@/shared/types';
-import {getRandomId} from '@/shared/util/random-utils';
-import {Component1Icon} from '@radix-ui/react-icons';
-import {usePrevious} from '@uidotdev/usehooks';
-import {DragEventHandler, useCallback, useEffect, useMemo, useState} from 'react';
-import InlineSVG from 'react-inlinesvg';
-import ReactFlow, {Controls, Edge, MiniMap, Node, useReactFlow, useStore} from 'reactflow';
+import {Background, BackgroundVariant, ReactFlow, useNodesInitialized, useReactFlow, useStore} from '@xyflow/react';
+import {useEffect} from 'react';
+import {twMerge} from 'tailwind-merge';
+import {useShallow} from 'zustand/react/shallow';
 
-import PlaceholderEdge from '../edges/PlaceholderEdge';
-import WorkflowEdge from '../edges/WorkflowEdge';
-import useHandleDrop from '../hooks/useHandleDrop';
-import useLayout from '../hooks/useLayout';
-import PlaceholderNode from '../nodes/PlaceholderNode';
-import WorkflowNode from '../nodes/WorkflowNode';
-import useWorkflowDataStore from '../stores/useWorkflowDataStore';
-import useWorkflowNodeDetailsPanelStore from '../stores/useWorkflowNodeDetailsPanelStore';
+import useWorkflowEditorCanvas from '../hooks/useWorkflowEditorCanvas';
+import {WorkflowEditorReadOnlyContext} from '../providers/workflowEditorReadOnlyContext';
+import useLayoutDirectionStore from '../stores/useLayoutDirectionStore';
+import {getAxisCenteredViewport} from '../utils/axisCenteredViewportUtils';
+import NodeActionsHint from './NodeActionsHint';
+import WorkflowEditorToolbar from './WorkflowEditorToolbar';
+import WorkflowIssuesNote from './WorkflowIssuesNote';
 
-export interface WorkflowEditorProps {
-    componentDefinitions: ComponentDefinitionBasicModel[];
-    taskDispatcherDefinitions: TaskDispatcherDefinitionBasicModel[];
-}
+type ConditionalWorkflowEditorPropsType =
+    | {
+          readOnlyWorkflow?: Workflow;
+          parentId?: never;
+          parentType?: never;
+      }
+    | {
+          readOnlyWorkflow?: never;
+      };
 
-const WorkflowEditor = ({componentDefinitions, taskDispatcherDefinitions}: WorkflowEditorProps) => {
-    const [edges, setEdges] = useState<Array<Edge>>();
-    const [latestComponentName, setLatestComponentName] = useState('');
-    const [nodeOperations, setNodeOperations] = useState<Array<ComponentOperationType>>([]);
-    const [nodes, setNodes] = useState<Array<Node>>();
-    const [viewportWidth, setViewportWidth] = useState(0);
-    const [workflowComponentWithAlias, setWorkflowComponentWithAlias] = useState<
-        | (ComponentDefinitionBasicModel & {actions?: Array<ActionDefinitionBasicModel>; workflowNodeName: string})
-        | undefined
-    >();
+type WorkflowEditorPropsType = {
+    className?: string;
+    componentDefinitions: ComponentDefinitionBasic[];
+    customCanvasWidth?: number;
+    enableUndoRedo?: boolean;
+    fitViewOnLoad?: boolean;
+    leftSidebarOpen?: boolean;
+    onFitView?: () => void;
+    preview?: boolean;
+    taskDispatcherDefinitions: TaskDispatcherDefinitionBasic[];
+};
 
-    const {workflowNodeDetailsPanelOpen} = useWorkflowNodeDetailsPanelStore();
-    const {componentActions, latestComponentDefinition, setComponentActions, setWorkflow, workflow} =
-        useWorkflowDataStore();
+const CANVAS_DEFAULT_VIEWPORT = {x: 0, y: CANVAS_TOP_OFFSET, zoom: 1};
 
-    const {componentNames} = workflow;
+const FIT_VIEW_OPTIONS = {maxZoom: 1, minZoom: 0.1, padding: 0.15};
 
-    const {getEdge, getNode, getNodes, setViewport} = useReactFlow();
+const TRIGGER_NODE_HALF_WIDTH = 72 / 2;
 
-    const [handleDropOnPlaceholderNode, handleDropOnWorkflowEdge, handleDropOnTriggerNode] = useHandleDrop();
+const WorkflowEditor = ({
+    className,
+    componentDefinitions,
+    customCanvasWidth,
+    enableUndoRedo,
+    fitViewOnLoad,
+    leftSidebarOpen,
+    onFitView,
+    preview,
+    readOnlyWorkflow,
+    taskDispatcherDefinitions,
+}: WorkflowEditorPropsType & ConditionalWorkflowEditorPropsType) => {
+    const fitsViewOnLoad = fitViewOnLoad || preview;
 
-    const previousComponentNames: Array<string> | undefined = usePrevious(componentNames || []);
-
-    const nodeTypes = useMemo(
-        () => ({
-            placeholder: PlaceholderNode,
-            workflow: WorkflowNode,
-        }),
-        []
+    const {fitView, getNodesBounds, setViewport} = useReactFlow();
+    const nodesInitialized = useNodesInitialized();
+    const flowHeight = useStore((state) => state.height);
+    const flowWidth = useStore((state) => state.width);
+    const layoutDirection = useLayoutDirectionStore((state) => state.layoutDirection);
+    const {edges, nodes, onEdgesChange} = useWorkflowDataStore(
+        useShallow((state) => ({
+            edges: state.edges,
+            nodes: state.nodes,
+            onEdgesChange: state.onEdgesChange,
+        }))
     );
 
-    const edgeTypes = useMemo(
-        () => ({
-            placeholder: PlaceholderEdge,
-            workflow: WorkflowEdge,
-        }),
-        []
-    );
-
-    const width = useStore((store) => store.width);
-
-    const onDragOver: DragEventHandler = useCallback((event) => {
-        if (event.target instanceof HTMLButtonElement && event.target.dataset.nodeType === 'workflow') {
-            return;
-        }
-
-        event.preventDefault();
-
-        event.dataTransfer.dropEffect = 'move';
-    }, []);
-
-    const onDrop: DragEventHandler = (event) => {
-        const droppedNodeData = event.dataTransfer.getData('application/reactflow');
-
-        let droppedNodeType = '';
-        let droppedNodeName;
-
-        if (droppedNodeData.includes('--')) {
-            droppedNodeName = droppedNodeData.split('--')[0];
-
-            droppedNodeType = droppedNodeData.split('--')[1];
-        } else {
-            droppedNodeName = droppedNodeData;
-        }
-
-        const droppedNode = [...componentDefinitions, ...taskDispatcherDefinitions].find(
-            (node) => node.name === droppedNodeName
-        );
-
-        if (!droppedNode) {
-            return;
-        }
-
-        if (droppedNodeType === 'trigger') {
-            const targetChildNode = (event.target as HTMLElement).closest('.react-flow__node > div') as HTMLElement;
-
-            const targetNodeType = targetChildNode?.dataset.nodetype;
-
-            const targetNodeElement =
-                event.target instanceof HTMLElement
-                    ? targetChildNode?.parentNode
-                    : (event.target as SVGElement).closest('.react-flow__node');
-
-            if (targetNodeType === 'trigger' && targetNodeElement instanceof HTMLElement) {
-                const targetNodeId = targetNodeElement.dataset.id;
-
-                if (!targetNodeId) {
-                    return;
-                }
-
-                const targetNode = getNode(targetNodeId);
-
-                if (targetNode) {
-                    handleDropOnTriggerNode(droppedNode);
-                }
-
-                return;
-            }
-        } else {
-            if (event.target instanceof HTMLElement) {
-                const targetNodeElement = event.target.closest('.react-flow__node') as HTMLElement;
-
-                if (!targetNodeElement) {
-                    return;
-                }
-
-                if (targetNodeElement.dataset.nodetype === 'trigger') {
-                    return;
-                }
-
-                const targetNodeId = targetNodeElement.dataset.id!;
-
-                const targetNode = getNode(targetNodeId);
-
-                if (targetNode && targetNode.type === 'placeholder') {
-                    if (targetNode?.position.x === 0 && targetNode?.position.y === 0) {
-                        return;
-                    }
-
-                    handleDropOnPlaceholderNode(targetNode, droppedNode);
-                }
-            } else if (event.target instanceof SVGElement) {
-                const targetEdgeElement = event.target.closest('.react-flow__edge') as HTMLElement;
-
-                if (
-                    !targetEdgeElement ||
-                    (targetEdgeElement.parentNode as HTMLElement).dataset?.nodetype === 'trigger'
-                ) {
-                    return;
-                }
-
-                const targetEdge = getEdge(targetEdgeElement.id);
-
-                if (targetEdge) {
-                    handleDropOnWorkflowEdge(targetEdge, droppedNode);
-
-                    return;
-                }
-            }
-        }
-    };
-
-    const defaultNodesWithWorkflowNodes: Array<Node> | undefined = useMemo(() => {
-        if (!workflow || !componentDefinitions.length) {
-            return;
-        }
-
-        const workflowTasks = workflow.tasks?.filter((task) => task.name);
-        const workflowTrigger = workflow.triggers?.[0] || defaultNodes[0].data;
-
-        let workflowComponents = workflowTasks;
-
-        if (workflowTrigger) {
-            workflowComponents = [workflowTrigger, ...(workflowTasks || [])];
-        }
-
-        const workflowNodes = workflowComponents?.map((component, index) => {
-            const componentName = component.type?.split('/')[0];
-            const operationName = component.type?.split('/')[2];
-
-            let componentDefinition = componentDefinitions.find(
-                (componentDefinition) => componentDefinition.name === componentName
-            )!;
-
-            if (componentDefinition == undefined) {
-                componentDefinition = componentDefinitions.find(
-                    (componentDefinition) => componentDefinition.name === 'missing'
-                )!;
-            }
-
-            return {
-                data: {
-                    ...component,
-                    componentName: componentDefinition.name,
-                    icon: (
-                        <InlineSVG
-                            className="size-9"
-                            loader={<Component1Icon className="size-9 flex-none text-gray-900" />}
-                            src={componentDefinition.icon!}
-                        />
-                    ),
-                    id: componentDefinition.name,
-                    label: componentDefinition.title,
-                    name: component.name,
-                    operationName,
-                    trigger: index === 0,
-                    type: 'workflow',
-                },
-                id: component.name,
-                position: {x: 0, y: 150 * index},
-                type: 'workflow',
-            };
+    const {edgeTypes, handleNodeDragStart, handleNodeDragStop, handleNodesChange, nodeTypes, onDragOver, onDrop} =
+        useWorkflowEditorCanvas({
+            componentDefinitions,
+            customCanvasWidth,
+            fitViewOnLoad: fitsViewOnLoad,
+            leftSidebarOpen,
+            readOnlyWorkflow,
+            taskDispatcherDefinitions,
         });
 
-        if (workflowNodes?.length) {
-            setNodeOperations(
-                workflowNodes.map((node) => ({
-                    componentName: node.data.componentName,
-                    operationName: node.data.operationName,
-                    workflowNodeName: node.data.name,
-                }))
+    useEffect(() => {
+        if (!fitsViewOnLoad || !nodesInitialized || !flowWidth || !flowHeight) {
+            return;
+        }
+
+        const triggerNode = nodes[0];
+
+        if (layoutDirection === 'TB' && triggerNode) {
+            setViewport(
+                getAxisCenteredViewport({
+                    ...FIT_VIEW_OPTIONS,
+                    axisX: triggerNode.position.x + TRIGGER_NODE_HALF_WIDTH,
+                    bounds: getNodesBounds(nodes),
+                    flowHeight,
+                    flowWidth,
+                }),
+                {duration: 0}
             );
-
-            return workflowNodes;
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [workflow?.tasks, workflow?.triggers, workflow.id]);
-
-    const defaultEdgesWithWorkflowEdges = useMemo(() => {
-        const workflowEdges: Array<Edge> = [];
-
-        if (defaultNodesWithWorkflowNodes) {
-            defaultNodesWithWorkflowNodes.forEach((node, index) => {
-                const nextNode = defaultNodesWithWorkflowNodes[index + 1];
-
-                if (nextNode) {
-                    workflowEdges.push({
-                        id: `${node!.id}=>${nextNode?.id}`,
-                        source: node!.id,
-                        target: nextNode?.id,
-                        type: 'workflow',
-                    });
-                } else {
-                    const lastNodeId = nodes?.[nodes.length - 1].id ?? getRandomId();
-
-                    defaultNodesWithWorkflowNodes.push({
-                        data: {label: '+'},
-                        id: lastNodeId,
-                        position: {x: 0, y: 150 * (index + 1)},
-                        type: 'placeholder',
-                    });
-
-                    workflowEdges.push({
-                        id: `${node!.id}=>${lastNodeId}`,
-                        source: node!.id,
-                        target: lastNodeId,
-                        type: 'placeholder',
-                    });
-                }
-            });
-
-            return workflowEdges;
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [defaultNodesWithWorkflowNodes, workflow.id]);
-
-    // Update nodes and edges when workflow changes
-    useEffect(() => {
-        setNodes(defaultNodesWithWorkflowNodes as Array<Node>);
-
-        setEdges(defaultEdgesWithWorkflowEdges);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [defaultNodesWithWorkflowNodes, defaultEdgesWithWorkflowEdges, workflow.id]);
-
-    // Set workflowComponentWithAlias when latestComponentDefinition is changed
-    useEffect(() => {
-        if (!latestComponentDefinition || !componentNames?.length || !latestComponentName) {
-            return;
+        } else {
+            fitView({...FIT_VIEW_OPTIONS, duration: 0});
         }
 
-        const sameComponentNames = componentNames.filter((nodeName) => nodeName === latestComponentDefinition.name);
-
-        setWorkflowComponentWithAlias({
-            ...latestComponentDefinition,
-            workflowNodeName: `${latestComponentDefinition.name}_${sameComponentNames.length}`,
-        });
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [latestComponentDefinition?.name, componentNames]);
-
-    // Update workflow node names when nodes change
-    useEffect(() => {
-        const workflowNodes = getNodes();
-
-        if (workflowNodes?.length) {
-            const workflowNodeNames = workflowNodes.map((node) => {
-                if (node.data.type === 'workflow' && node?.data.name) {
-                    return node?.data.name;
-                }
-            });
-
-            setWorkflow({
-                ...workflow,
-                nodeNames: workflowNodeNames.filter((nodeName) => !!nodeName),
-            });
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [setWorkflow, nodes]);
-
-    // Set latest component name when component names change
-    useEffect(() => {
-        if (componentNames && previousComponentNames?.length) {
-            const latestName = componentNames.find((componentName) => {
-                const currentNameCount = componentNames.filter((name) => name === componentName).length;
-
-                const previousNameCount = previousComponentNames?.filter((name) => name === componentName).length;
-
-                return currentNameCount > previousNameCount;
-            });
-
-            if (latestName) {
-                setLatestComponentName(latestName);
-            }
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [previousComponentNames, componentNames]);
-
-    // Set component actions when node actions change
-    useEffect(() => {
-        setComponentActions(nodeOperations);
-    }, [nodeOperations, setComponentActions]);
-
-    // Reconstruct editor nodes on re-render
-    useEffect(() => {
-        const outOfDate = componentNames?.some(
-            (componentName) => !defaultNodesWithWorkflowNodes?.some((node) => node.data.componentName === componentName)
-        );
-
-        if (outOfDate) {
-            return;
-        }
-
-        if (defaultNodesWithWorkflowNodes?.length) {
-            const workflowNodes = defaultNodesWithWorkflowNodes.filter((node) => node?.data.componentName);
-
-            setWorkflow({
-                ...workflow,
-                componentNames: workflowNodes.map((node) => node?.data.componentName),
-                nodeNames: workflowNodes.map((node) => node?.data.name),
-            });
-
-            setNodes(defaultNodesWithWorkflowNodes as Array<Node>);
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [defaultNodesWithWorkflowNodes]);
-
-    // Reconstruct editor edges on re-render
-    useEffect(() => {
-        const isEdgesUnchanged = defaultEdgesWithWorkflowEdges?.every((edge, index) => edge.id === edges?.[index]?.id);
-
-        if (!isEdgesUnchanged) {
-            setEdges(defaultEdgesWithWorkflowEdges);
-        }
-    }, [defaultEdgesWithWorkflowEdges, edges]);
-
-    // Append counter to workflowNodeName when a new node with the same name is added
-    useEffect(() => {
-        if (workflowComponentWithAlias?.actions) {
-            const {actions, name} = workflowComponentWithAlias;
-
-            let workflowNodeName = `${name}_1`;
-            let index = 2;
-
-            while (componentActions.some((action) => action.workflowNodeName === workflowNodeName)) {
-                workflowNodeName = `${name}_${index}`;
-
-                index++;
-            }
-
-            const operationNames = componentActions.map((action) => action.operationName);
-
-            if (actions.length && !operationNames.includes(actions[0].name)) {
-                setComponentActions([
-                    ...componentActions,
-                    {
-                        componentName: name,
-                        operationName: actions[0].name,
-                        workflowNodeName,
-                    },
-                ]);
-            }
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [workflowComponentWithAlias?.workflowNodeName]);
-
-    // Set viewport width and position
-    useEffect(() => {
-        setViewportWidth(width);
-
-        const adaptedViewportWidth = workflowNodeDetailsPanelOpen
-            ? width / 2 - window.innerWidth / 6.5
-            : width / 2 - 38;
-
-        setViewport({
-            x: adaptedViewportWidth,
-            y: 50,
-            zoom: 1,
-        });
-    }, [workflowNodeDetailsPanelOpen, setViewport, width]);
-
-    useLayout();
+        onFitView?.();
+    }, [
+        fitsViewOnLoad,
+        fitView,
+        flowHeight,
+        flowWidth,
+        getNodesBounds,
+        layoutDirection,
+        nodes,
+        nodesInitialized,
+        onFitView,
+        setViewport,
+    ]);
 
     return (
-        <div className="flex h-full flex-1 flex-col">
-            <ReactFlow
-                defaultEdges={defaultEdgesWithWorkflowEdges || defaultEdges}
-                defaultNodes={defaultNodesWithWorkflowNodes || defaultNodes}
-                defaultViewport={{
-                    x: viewportWidth / 2,
-                    y: 50,
-                    zoom: 1,
-                }}
-                deleteKeyCode={null}
-                edgeTypes={edgeTypes}
-                edges={edges}
-                maxZoom={1.5}
-                minZoom={0.6}
-                nodeTypes={nodeTypes}
-                nodes={nodes}
-                nodesConnectable={false}
-                nodesDraggable={false}
-                onDragOver={onDragOver}
-                onDrop={onDrop}
-                panOnDrag
-                panOnScroll
-                proOptions={{hideAttribution: true}}
-                zoomOnDoubleClick={false}
-                zoomOnScroll={false}
-            >
-                <MiniMap />
+        <WorkflowEditorReadOnlyContext.Provider value={!!readOnlyWorkflow}>
+            <div className={twMerge('flex h-full flex-1 flex-col rounded-lg bg-background', className)}>
+                <ReactFlow
+                    defaultViewport={CANVAS_DEFAULT_VIEWPORT}
+                    deleteKeyCode={null}
+                    edgeTypes={edgeTypes}
+                    edges={edges}
+                    maxZoom={1.5}
+                    minZoom={0.001}
+                    nodeTypes={nodeTypes}
+                    nodes={nodes}
+                    nodesConnectable={false}
+                    nodesDraggable={!readOnlyWorkflow}
+                    onDragOver={onDragOver}
+                    onDrop={onDrop}
+                    onEdgesChange={onEdgesChange}
+                    onNodeDragStart={handleNodeDragStart}
+                    onNodeDragStop={handleNodeDragStop}
+                    onNodesChange={handleNodesChange}
+                    panActivationKeyCode={null}
+                    panOnDrag={!preview}
+                    panOnScroll={!preview}
+                    proOptions={{hideAttribution: true}}
+                    zoomOnDoubleClick={false}
+                    zoomOnPinch={!preview}
+                    zoomOnScroll={false}
+                >
+                    <Background color={CANVAS_BACKGROUND_COLOR} size={2} variant={BackgroundVariant.Dots} />
 
-                <Controls />
-            </ReactFlow>
-        </div>
+                    {!readOnlyWorkflow && nodes.length > 0 && <WorkflowIssuesNote fallback={<NodeActionsHint />} />}
+
+                    {!preview && (
+                        <WorkflowEditorToolbar enableUndoRedo={enableUndoRedo} readOnly={!!readOnlyWorkflow} />
+                    )}
+                </ReactFlow>
+            </div>
+        </WorkflowEditorReadOnlyContext.Provider>
     );
 };
 

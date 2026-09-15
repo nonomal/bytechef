@@ -1,12 +1,13 @@
-import {Button} from '@/components/ui/button';
+import Button from '@/components/Button/Button';
+import {Input} from '@/components/Input/Input';
 import {Form, FormControl, FormField, FormItem, FormLabel, FormMessage} from '@/components/ui/form';
-import {Input} from '@/components/ui/input';
-import {useToast} from '@/components/ui/use-toast';
 import {usePasswordStore} from '@/pages/account/settings/stores/usePasswordStore';
 import {zodResolver} from '@hookform/resolvers/zod';
-import React, {useEffect} from 'react';
+import {useEffect} from 'react';
 import {useForm} from 'react-hook-form';
+import {toast} from 'sonner';
 import {z} from 'zod';
+import {useShallow} from 'zustand/react/shallow';
 
 export const formSchema = z.object({
     currentPassword: z.string().min(4, 'Password is required').max(50),
@@ -14,9 +15,13 @@ export const formSchema = z.object({
 });
 
 const AccountProfilePassword = () => {
-    const {changePassword, reset, updateSuccess} = usePasswordStore();
-
-    const {toast} = useToast();
+    const {changePassword, reset, updateSuccess} = usePasswordStore(
+        useShallow((state) => ({
+            changePassword: state.changePassword,
+            reset: state.reset,
+            updateSuccess: state.updateSuccess,
+        }))
+    );
 
     const form = useForm<z.infer<typeof formSchema>>({
         defaultValues: {
@@ -40,15 +45,13 @@ const AccountProfilePassword = () => {
 
     useEffect(() => {
         if (updateSuccess) {
-            toast({description: 'Password has been changed.'});
+            toast('Password has been changed.');
         }
-
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [updateSuccess]);
 
     return (
         <div className="py-12">
-            <h2 className="text-base font-semibold leading-7 text-gray-900">Change password</h2>
+            <h2 className="text-base leading-7 font-semibold text-gray-900">Change password</h2>
 
             <Form {...form}>
                 <form className="mt-10 grid w-full gap-4" onSubmit={form.handleSubmit(handleSubmit)}>
@@ -85,7 +88,7 @@ const AccountProfilePassword = () => {
                     />
 
                     <div className="flex justify-end">
-                        <Button type="submit">Change password</Button>
+                        <Button label="Change password" type="submit" />
                     </div>
                 </form>
             </Form>

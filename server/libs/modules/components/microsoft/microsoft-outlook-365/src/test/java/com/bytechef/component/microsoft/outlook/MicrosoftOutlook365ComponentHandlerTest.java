@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,7 +26,7 @@ class MicrosoftOutlook365ComponentHandlerTest {
 
     @Test
     void testGetComponentDefinition() {
-        JsonFileAssert.assertEquals("definition/microsoft-outlook-365_v1.json",
-            new MicrosoftOutlook365ComponentHandler().getDefinition());
+        JsonFileAssert.assertEquals(
+            "definition/microsoft-outlook-365_v1.json", new MicrosoftOutlook365ComponentHandler().getDefinition());
     }
 }

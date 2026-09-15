@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 
 package com.bytechef.component.insightly;
 
-import static com.bytechef.component.definition.ComponentDSL.component;
+import static com.bytechef.component.definition.ComponentDsl.component;
 
 import com.bytechef.component.OpenApiComponentHandler;
 import com.bytechef.component.definition.ComponentDefinition;
@@ -35,12 +35,12 @@ public abstract class AbstractInsightlyComponentHandler implements OpenApiCompon
         component("insightly")
             .title("Insightly")
             .description(
-                "Insightly is a customer relationship management (CRM) software that helps businesses manage contacts, sales, projects, and tasks in one platform."))
-                    .actions(modifyActions(InsightlyCreateContactAction.ACTION_DEFINITION,
-                        InsightlyCreateOrganizationAction.ACTION_DEFINITION,
-                        InsightlyCreateTaskAction.ACTION_DEFINITION))
-                    .connection(modifyConnection(InsightlyConnection.CONNECTION_DEFINITION))
-                    .triggers(getTriggers());
+                "Insightly is a customer relationship management (CRM) software that helps businesses manage contacts, sales, projects, and tasks in one platform.")
+            .version(1))
+                .actions(modifyActions(InsightlyCreateContactAction.ACTION_DEFINITION,
+                    InsightlyCreateOrganizationAction.ACTION_DEFINITION, InsightlyCreateTaskAction.ACTION_DEFINITION))
+                .connection(modifyConnection(InsightlyConnection.CONNECTION_DEFINITION))
+                .triggers(getTriggers());
 
     @Override
     public ComponentDefinition getDefinition() {

@@ -1,106 +1,78 @@
-<p align="center">
-  <img alt="ByteChef logo" src="static/img/logo.svg" width="32px" />
-  <h1 align="center">ByteChef Documentation</h1>
-</p>
+# docs
 
-This repository contains the ByteChef documentation website code and Markdown source files for [docs.bytechef.io](docs.bytechef.io)
+This is a Next.js application generated with
+[Create Fumadocs](https://github.com/fuma-nama/fumadocs).
 
-## Index
-- [Feedback](#feedback)
-- [Documentation Issues](#documentation-issues)
-- [Contributing](#contributing)
-    - [Repository organization](#repository-organization)
-    - [Workflow](#workflow)
-    - [Conventions](#conventions)
-- [Local setup](#local-setup)
+Run development server:
 
-## Feedback
-If you want to give documentation feedback, please join our [Discord Community](https://discord.gg/VKvNxHjpYx) and drop us a message.
-
-## Documentation Issues
-To enter documentation bugs or submit any feature request for documentation, please create a new [GitHub issue](https://github.com/bytechefhq/bytechef/issues/new?assignees=&labels=documentation&template=03_documentation_report.yml&title=%5Bdocs%5D%3A+). Please check if there is an existing issue first.
-
-If you think the issue is with the ByteChef product itself, please choose the relevant issue template [here](https://github.com/bytechefhq/bytechef/issues/new/choose).
-
-## Contributing
-To contribute to ByteChef documentation, you need to fork this repository and submit a pull request for the Markdown and/or image changes that you're proposing.
-
-### Repository organization
-The documentation is built with [Astro Starlight](https://starlight.astro.build). The content in this directory follows the organization of documentation at https://docs.bytechef.io
-
-Inside the `docs` directory, you'll see the following folders and files:
-
-```
-.
-├── public/
-├── src/
-│   ├── assets/
-│   ├── content/
-│   │   ├── docs/
-│   │   └── config.ts
-│   └── env.d.ts
-├── astro.config.mjs
-├── package.json
-├── tailwind.config.mjs
-└── tsconfig.json
+```bash
+npm run dev
+# or
+pnpm dev
+# or
+yarn dev
 ```
 
-Starlight looks for `.md` or `.mdx` files in the `src/content/docs/` directory. Each file is exposed as a route based on its file name.
+Open http://localhost:3000 with your browser to see the result.
 
-Images can be added to `src/assets/` and embedded in Markdown with a relative link.
+## Learn More
 
-Static assets, like favicons, can be placed in the `public/` directory.
+To learn more about Next.js and Fumadocs, take a look at the following
+resources:
 
-### Workflow
-The two suggested workflows are:
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js
+  features and API.
+- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- [Fumadocs](https://fumadocs.vercel.app) - learn about Fumadocs
 
-- For small changes, use the "Edit this page" button on each page to edit the Markdown file directly on GitHub.
-- If you plan to make significant changes or preview the changes locally, clone the repo to your system to and follow the installation and local development steps in [Local setup](#local-setup).
+## API Reference pages
 
-### Conventions
+Everything under `content/docs/openapi/` except `index.mdx` and `meta.json` is generated from the
+OpenAPI specs in the monorepo. Do not edit the generated files by hand — the next run overwrites
+them.
 
-- Name directories and files using lowercase letters. Use dash `-` as word separator.
-  Example:
-    - `/docs/src/content/docs/reference/components/components/sap-component.md`
-    - `/docs/src/content/docs/how-to/bulk-database-updates.md`
-- The front matter for every markdown file should include the `title` and a `description`.
-  ```yaml
-  ---
-  title: Building custom component with ByteChef
-  description: This page explains the steps needed to build a custom component
-  ---
-  ```
+| Group prefix | Spec |
+|---|---|
+| `automation-*` | `server/ee/libs/automation/automation-configuration/automation-configuration-public-rest/openapi.yaml` |
+| `embedded-action`, `embedded-tool*`, `embedded-workflow-execution` | `server/ee/libs/embedded/embedded-execution/embedded-execution-public-rest/openapi.yaml` |
+| `embedded-configuration-*` | `server/ee/libs/embedded/embedded-configuration/embedded-configuration-public-rest/openapi.yaml` |
+| `embedded-webhook-*` | `server/ee/libs/embedded/embedded-webhook/embedded-webhook-public-rest/openapi.yaml` |
+| `custom-components` | `server/ee/libs/platform/platform-custom-component/platform-custom-component-configuration/platform-custom-component-configuration-rest/openapi.yaml` |
 
-- Images are important to bring the product to life and clarify the written content. For images you're adding to the repo, store them in the `src/assets` subfolder. For every topic there needs to be a folder inside `src/assets` section, for example: `src/assets/component-reference/components/airtable/airtable-component.png`.
-  When you link to an image, the path and filename are case-sensitive. The convention is for image filenames to be all lowercase and use dashes `-` for separators.
+`npm run dev` and `next build` both generate them, from `next.config.ts`, so a fresh checkout needs
+no extra step and a deployment cannot skip it by overriding the build command. After editing a spec
+outside a running dev server, regenerate from this directory:
 
-  >Example code for adding an image in markdown file:
-  ```
-  <div style={{textAlign: 'center'}}>
+```bash
+npm run generate:openapi
+```
 
-  ![ByteChef - Component - Airtable](component-reference/components/airtable/airtable-component.png)
+It runs on Node (`node --experimental-strip-types`), so `npm install` is the only setup needed.
 
-  </div>
-  ```
+### How pages are grouped
 
-## Local setup
+One group per **OpenAPI tag**, with the group id `<schemaId>-<tag>` — so the sidebar mirrors the
+grouping the specs declare, and retagging an operation moves it without touching the script. A spec
+declaring a single tag stays one group under its own id (`custom-components`, not
+`custom-components-custom-component`).
 
-### Requirements
-Rely to the latest LTS Node.js version 20 and its minors. Use nvm or other tool to setup or upgrade your OS environment. One may use [nvm](https://github.com/nvm-sh/nvm) to manage versions.
+The id is prefixed with the schema id because tag names repeat across specs: `workflow-execution`,
+`app-event-trigger` and `request-trigger` each appear in two. fumadocs' built-in `groupBy: 'tag'`
+keys on the bare tag and would merge those, which is why `scripts/generate-openapi.mts` parses the
+specs and computes the ids itself.
 
-### 🧞 Commands
+Adding a tag needs a matching `GROUP_META` entry in that script — title, optional `navTitle` for the
+sidebar, and description. Two guards fail the build rather than emitting something wrong: an
+operation carrying no tag cannot be placed, and a group with no `GROUP_META` entry would generate
+with an empty title. Both name the offender.
 
-All commands are run from the `docs` directory, from a terminal:
+`GROUP_META` also carries `comingSoon` for a whole group and `comingSoonOperations` for individual
+operations, which stamp the frontmatter flag that renders the *Coming soon* badge and callout. An
+operation id listed there that the spec no longer emits fails the build too.
 
-| Command                   | Action                                           |
-| :------------------------ | :----------------------------------------------- |
-| `npm install`             | Installs dependencies                            |
-| `npm run dev`             | Starts local dev server at `localhost:4321`      |
-| `npm run build`           | Build your production site to `./dist/`          |
-| `npm run preview`         | Preview your build locally, before deploying     |
-| `npm run astro ...`       | Run CLI commands like `astro add`, `astro check` |
-| `npm run astro -- --help` | Get help using the Astro CLI                     |
+### Hand-written files
 
-## Thank you
-
-Thanks for all your contributions and efforts towards improving the ByteChef documentation. We thank you being part of our ✨ community ✨!
+`content/docs/openapi/index.mdx` and `content/docs/openapi/meta.json` are written by hand and left
+alone by the generator. `meta.json` sets the sidebar order and the `--- Automation ---` /
+`--- Embedded ---` / `--- Platform ---` section headings, so a new group has to be added there to
+appear.

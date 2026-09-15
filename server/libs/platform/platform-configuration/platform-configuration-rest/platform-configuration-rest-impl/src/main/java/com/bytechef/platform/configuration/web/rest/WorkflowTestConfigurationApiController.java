@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,12 +16,12 @@
 
 package com.bytechef.platform.configuration.web.rest;
 
+import com.bytechef.atlas.coordinator.annotation.ConditionalOnCoordinator;
 import com.bytechef.commons.util.CollectionUtils;
-import com.bytechef.commons.util.OptionalUtils;
 import com.bytechef.platform.configuration.domain.WorkflowTestConfiguration;
 import com.bytechef.platform.configuration.facade.WorkflowTestConfigurationFacade;
 import com.bytechef.platform.configuration.service.WorkflowTestConfigurationService;
-import com.bytechef.platform.configuration.web.rest.model.SaveWorkflowTestConfigurationConnectionRequestModel;
+import com.bytechef.platform.configuration.web.rest.model.DeleteWorkflowTestConfigurationConnectionRequestModel;
 import com.bytechef.platform.configuration.web.rest.model.SaveWorkflowTestConfigurationInputsRequestModel;
 import com.bytechef.platform.configuration.web.rest.model.WorkflowTestConfigurationConnectionModel;
 import com.bytechef.platform.configuration.web.rest.model.WorkflowTestConfigurationModel;
@@ -37,6 +37,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @RestController
 @RequestMapping("${openapi.openAPIDefinition.base-path.platform:}/internal")
+@ConditionalOnCoordinator
 public class WorkflowTestConfigurationApiController implements WorkflowTestConfigurationApi {
 
     private final WorkflowTestConfigurationFacade workflowTestConfigurationFacade;
@@ -54,20 +55,23 @@ public class WorkflowTestConfigurationApiController implements WorkflowTestConfi
     }
 
     @Override
-    public ResponseEntity<WorkflowTestConfigurationModel> getWorkflowTestConfiguration(String workflowId) {
+    public ResponseEntity<WorkflowTestConfigurationModel> getWorkflowTestConfiguration(
+        String workflowId, Long environmentId) {
         return ResponseEntity.ok(
             conversionService.convert(
-                OptionalUtils.orElse(workflowTestConfigurationService.fetchWorkflowTestConfiguration(workflowId), null),
+                workflowTestConfigurationService.fetchWorkflowTestConfiguration(workflowId, environmentId)
+                    .orElse(null),
                 WorkflowTestConfigurationModel.class));
     }
 
     @Override
     public ResponseEntity<List<WorkflowTestConfigurationConnectionModel>> getWorkflowTestConfigurationConnections(
-        String workflowId, String workflowNodeName) {
+        String workflowId, String workflowNodeName, Long environmentId) {
 
         return ResponseEntity.ok(
             CollectionUtils.map(
-                workflowTestConfigurationService.getWorkflowTestConfigurationConnections(workflowId, workflowNodeName),
+                workflowTestConfigurationService.getWorkflowTestConfigurationConnections(
+                    workflowId, workflowNodeName, environmentId),
                 workflowTestConfigurationConnection -> conversionService.convert(
                     workflowTestConfigurationConnection, WorkflowTestConfigurationConnectionModel.class)));
     }
@@ -85,13 +89,13 @@ public class WorkflowTestConfigurationApiController implements WorkflowTestConfi
     }
 
     @Override
-    public ResponseEntity<Void> saveWorkflowTestConfigurationConnection(
-        String workflowId, String workflowNodeName, String workflowConnectionKey,
-        SaveWorkflowTestConfigurationConnectionRequestModel saveWorkflowTestConfigurationConnectionRequestModel) {
+    public ResponseEntity<Void> deleteWorkflowTestConfigurationConnection(
+        String workflowId, String workflowNodeName, String workflowConnectionKey, Long environmentId,
+        DeleteWorkflowTestConfigurationConnectionRequestModel deleteWorkflowTestConfigurationConnectionRequestModel) {
 
-        workflowTestConfigurationFacade.saveWorkflowTestConfigurationConnection(
+        workflowTestConfigurationFacade.deleteWorkflowTestConfigurationConnection(
             workflowId, workflowNodeName, workflowConnectionKey,
-            saveWorkflowTestConfigurationConnectionRequestModel.getConnectionId());
+            deleteWorkflowTestConfigurationConnectionRequestModel.getConnectionId(), environmentId);
 
         return ResponseEntity.noContent()
             .build();
@@ -99,11 +103,14 @@ public class WorkflowTestConfigurationApiController implements WorkflowTestConfi
 
     @Override
     public ResponseEntity<Void> saveWorkflowTestConfigurationInputs(
-        String workflowId,
+        String workflowId, Long environmentId,
         SaveWorkflowTestConfigurationInputsRequestModel saveWorkflowTestConfigurationInputsRequestModel) {
 
         workflowTestConfigurationFacade.saveWorkflowTestConfigurationInputs(
-            workflowId, saveWorkflowTestConfigurationInputsRequestModel.getInputs());
+            workflowId, saveWorkflowTestConfigurationInputsRequestModel.getKey(),
+            saveWorkflowTestConfigurationInputsRequestModel.getValue()
+                .orElse(null),
+            environmentId);
 
         return ResponseEntity.noContent()
             .build();

@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * Modifications copyright (C) 2023 ByteChef Inc.
+ * Modifications copyright (C) 2025 ByteChef
  */
 
 package com.bytechef.platform.workflow.coordinator.event.listener;
@@ -30,12 +30,12 @@ import org.springframework.stereotype.Component;
 @Component
 public class LogTriggerApplicationEventListener implements ApplicationEventListener {
 
-    private final Logger logger = LoggerFactory.getLogger(getClass());
+    private static final Logger log = LoggerFactory.getLogger(LogTriggerApplicationEventListener.class);
 
     @Override
     public void onApplicationEvent(ApplicationEvent applicationEvent) {
-        if (logger.isDebugEnabled()) {
-            logger.debug("{}", applicationEvent);
+        if (log.isDebugEnabled()) {
+            log.debug("{}", applicationEvent);
         }
     }
 }

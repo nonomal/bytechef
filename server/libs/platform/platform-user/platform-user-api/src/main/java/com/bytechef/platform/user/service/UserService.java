@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,19 +35,31 @@ public interface UserService {
 
     long countActiveUsers();
 
-    User createUser(AdminUserDTO userDTO);
+    User create(AdminUserDTO userDTO);
 
-    void deleteUser(String login);
+    void delete(String login);
 
-    Page<User> getAllActiveUsers(Pageable pageable);
+    void disableTotp(String login);
+
+    void enableTotp(String login);
 
     Optional<User> fetchCurrentUser();
 
     Optional<User> fetchUser(long id);
 
+    Optional<User> fetchUserByAuthProviderAndProviderId(String authProvider, String providerId);
+
     Optional<User> fetchUserByEmail(String email);
 
     Optional<User> fetchUserByLogin(String login);
+
+    User findOrCreateSocialUser(
+        String email, String firstName, String lastName, String imageUrl, String authProvider, String providerId,
+        boolean autoProvision, String defaultAuthority);
+
+    String generateTotpSecret(String login);
+
+    Page<User> getAllActiveUsers(Pageable pageable);
 
     Page<User> getAllManagedUsers(Pageable pageable);
 
@@ -55,7 +67,7 @@ public interface UserService {
 
     User getUser(long id);
 
-    void saveUser(User user);
+    User getUser(String login);
 
     User registerUser(AdminUserDTO userDTO, String password);
 
@@ -65,7 +77,13 @@ public interface UserService {
 
     Optional<User> requestPasswordReset(String email);
 
-    Optional<User> updateUser(AdminUserDTO userDTO);
+    void save(User user);
 
-    void updateUser(String firstName, String lastName, String email, String langKey, String imageUrl);
+    void unlinkProvider(String login);
+
+    Optional<User> update(AdminUserDTO userDTO);
+
+    void update(String firstName, String lastName, String email, String langKey, String imageUrl);
+
+    boolean verifyTotpCode(String login, String code);
 }

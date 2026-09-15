@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,15 +17,15 @@
 package com.bytechef.component.aws.s3.action;
 
 import static com.bytechef.component.aws.s3.constant.AwsS3Constants.BUCKET_NAME;
-import static com.bytechef.component.aws.s3.constant.AwsS3Constants.LIST_OBJECTS;
 import static com.bytechef.component.aws.s3.constant.AwsS3Constants.PREFIX;
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.array;
-import static com.bytechef.component.definition.ComponentDSL.object;
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.array;
+import static com.bytechef.component.definition.ComponentDsl.object;
+import static com.bytechef.component.definition.ComponentDsl.outputSchema;
+import static com.bytechef.component.definition.ComponentDsl.string;
 
 import com.bytechef.component.aws.s3.util.AwsS3Utils;
-import com.bytechef.component.definition.ComponentDSL.ModifiableActionDefinition;
+import com.bytechef.component.definition.ComponentDsl.ModifiableActionDefinition;
 import com.bytechef.component.definition.Context;
 import com.bytechef.component.definition.Parameters;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
@@ -40,35 +40,49 @@ import software.amazon.awssdk.services.s3.model.ListObjectsResponse;
 import software.amazon.awssdk.services.s3.model.S3Object;
 
 /**
+ * AWS S3 list objects action for workflow automation. Lists objects in an S3 bucket with a given prefix.
+ *
  * @author Ivica Cardic
  */
 public class AwsS3ListObjectsAction {
 
-    public static final ModifiableActionDefinition ACTION_DEFINITION = action(LIST_OBJECTS)
+    public static final ModifiableActionDefinition ACTION_DEFINITION = action("listObjects")
         .title("List Objects")
         .description("Get the list AWS S3 objects. Every object needs to have read permission in order to be seen.")
         .properties(
             string(PREFIX)
-                .label("Prefix")
-                .description("The prefix of an AWS S3 objects.")
-                .required(true))
-        .outputSchema(
-            array().items(object().properties(string("key"), string("suffix"), string("uri"))))
+                .label("Key Prefix")
+                .description("The prefix of an AWS S3 object key.")
+                .required(false))
+        .output(
+            outputSchema(
+                array()
+                    .items(
+                        object()
+                            .properties(
+                                string("key"),
+                                string("name"),
+                                string("uri")))))
         .perform(AwsS3ListObjectsAction::perform);
 
+    /**
+     * Security Note: PATH_TRAVERSAL_IN - Path traversal is intentional. The AWS S3 component allows workflow creators
+     * to list S3 objects. The prefix is provided by the workflow creator, not end users. Access is controlled by AWS
+     * IAM credentials configured in the connection.
+     */
+    @SuppressFBWarnings("PATH_TRAVERSAL_IN")
     protected static List<S3ObjectDescription> perform(
         Parameters inputParameters, Parameters connectionParameters, Context context) {
 
         try (S3Client s3Client = AwsS3Utils.buildS3Client(connectionParameters)) {
             ListObjectsResponse response = s3Client.listObjects(ListObjectsRequest.builder()
                 .bucket(connectionParameters.getRequiredString(BUCKET_NAME))
-                .prefix(inputParameters.getRequiredString(PREFIX))
+                .prefix(inputParameters.getString(PREFIX))
                 .build());
 
             return response.contents()
                 .stream()
-                .map(o -> new S3ObjectDescription(
-                    connectionParameters.getRequiredString(BUCKET_NAME), o))
+                .map(o -> new S3ObjectDescription(connectionParameters.getRequiredString(BUCKET_NAME), o))
                 .collect(Collectors.toList());
         }
     }
@@ -79,8 +93,10 @@ public class AwsS3ListObjectsAction {
             return s3Object.key();
         }
 
-        @SuppressFBWarnings("NP")
-        public String getSuffix() {
+        @SuppressFBWarnings(
+            value = "PATH_TRAVERSAL_IN",
+            justification = "Paths.get() is only used to parse S3 key and extract filename; no file I/O is performed")
+        public String getName() {
             Path path = Paths.get(getKey());
 
             Path fileName = Validate.notNull(path.getFileName(), "fileName");

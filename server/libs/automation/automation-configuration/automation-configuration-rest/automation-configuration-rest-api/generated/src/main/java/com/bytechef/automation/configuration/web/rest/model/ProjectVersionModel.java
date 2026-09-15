@@ -7,8 +7,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.annotation.JsonValue;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.lang.Nullable;
 import org.openapitools.jackson.nullable.JsonNullable;
 import java.time.OffsetDateTime;
 import jakarta.validation.Valid;
@@ -25,19 +26,19 @@ import jakarta.annotation.Generated;
 
 @Schema(name = "ProjectVersion", description = "The project version.")
 @JsonTypeName("ProjectVersion")
-@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2024-07-08T07:14:48.742903+02:00[Europe/Zagreb]", comments = "Generator version: 7.5.0")
+@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2026-07-03T17:58:17.010679+02:00[Europe/Zagreb]", comments = "Generator version: 7.22.0")
 public class ProjectVersionModel {
 
-  private String description;
+  private @Nullable String description;
 
   @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
-  private LocalDateTime publishedDate;
+  private @Nullable OffsetDateTime publishedDate;
 
-  private Integer version;
+  private @Nullable Integer version;
 
-  private ProjectStatusModel status;
+  private @Nullable ProjectStatusModel status;
 
-  public ProjectVersionModel description(String description) {
+  public ProjectVersionModel description(@Nullable String description) {
     this.description = description;
     return this;
   }
@@ -45,19 +46,20 @@ public class ProjectVersionModel {
   /**
    * The description of a project version
    * @return description
-  */
+   */
   
   @Schema(name = "description", description = "The description of a project version", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("description")
-  public String getDescription() {
+  public @Nullable String getDescription() {
     return description;
   }
 
-  public void setDescription(String description) {
+  @JsonProperty("description")
+  public void setDescription(@Nullable String description) {
     this.description = description;
   }
 
-  public ProjectVersionModel publishedDate(LocalDateTime publishedDate) {
+  public ProjectVersionModel publishedDate(@Nullable OffsetDateTime publishedDate) {
     this.publishedDate = publishedDate;
     return this;
   }
@@ -65,19 +67,20 @@ public class ProjectVersionModel {
   /**
    * The published date.
    * @return publishedDate
-  */
+   */
   @Valid 
   @Schema(name = "publishedDate", description = "The published date.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("publishedDate")
-  public LocalDateTime getPublishedDate() {
+  public @Nullable OffsetDateTime getPublishedDate() {
     return publishedDate;
   }
 
-  public void setPublishedDate(LocalDateTime publishedDate) {
+  @JsonProperty("publishedDate")
+  public void setPublishedDate(@Nullable OffsetDateTime publishedDate) {
     this.publishedDate = publishedDate;
   }
 
-  public ProjectVersionModel version(Integer version) {
+  public ProjectVersionModel version(@Nullable Integer version) {
     this.version = version;
     return this;
   }
@@ -85,19 +88,20 @@ public class ProjectVersionModel {
   /**
    * The version of a project.
    * @return version
-  */
+   */
   
   @Schema(name = "version", accessMode = Schema.AccessMode.READ_ONLY, description = "The version of a project.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("version")
-  public Integer getVersion() {
+  public @Nullable Integer getVersion() {
     return version;
   }
 
-  public void setVersion(Integer version) {
+  @JsonProperty("version")
+  public void setVersion(@Nullable Integer version) {
     this.version = version;
   }
 
-  public ProjectVersionModel status(ProjectStatusModel status) {
+  public ProjectVersionModel status(@Nullable ProjectStatusModel status) {
     this.status = status;
     return this;
   }
@@ -105,15 +109,16 @@ public class ProjectVersionModel {
   /**
    * Get status
    * @return status
-  */
+   */
   @Valid 
   @Schema(name = "status", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("status")
-  public ProjectStatusModel getStatus() {
+  public @Nullable ProjectStatusModel getStatus() {
     return status;
   }
 
-  public void setStatus(ProjectStatusModel status) {
+  @JsonProperty("status")
+  public void setStatus(@Nullable ProjectStatusModel status) {
     this.status = status;
   }
 
@@ -153,11 +158,8 @@ public class ProjectVersionModel {
    * Convert the given object to string with each line indented by 4 spaces
    * (except the first line).
    */
-  private String toIndentedString(Object o) {
-    if (o == null) {
-      return "null";
-    }
-    return o.toString().replace("\n", "\n    ");
+  private String toIndentedString(@Nullable Object o) {
+    return o == null ? "null" : o.toString().replace("\n", "\n    ");
   }
 }
 

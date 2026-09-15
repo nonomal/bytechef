@@ -2,13 +2,15 @@ package com.bytechef.platform.configuration.web.rest.model;
 
 import java.net.URI;
 import java.util.Objects;
-import com.bytechef.platform.configuration.web.rest.model.ActionDefinitionModel;
-import com.bytechef.platform.configuration.web.rest.model.PropertyModel;
-import com.bytechef.platform.configuration.web.rest.model.TaskDispatcherDefinitionModel;
-import com.bytechef.platform.configuration.web.rest.model.TriggerDefinitionModel;
+import com.bytechef.platform.configuration.web.rest.model.ActionDefinitionBasicModel;
+import com.bytechef.platform.configuration.web.rest.model.ClusterElementDefinitionBasicModel;
+import com.bytechef.platform.configuration.web.rest.model.OutputResponseModel;
+import com.bytechef.platform.configuration.web.rest.model.TaskDispatcherDefinitionBasicModel;
+import com.bytechef.platform.configuration.web.rest.model.TriggerDefinitionBasicModel;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import org.springframework.lang.Nullable;
 import org.openapitools.jackson.nullable.JsonNullable;
 import java.time.OffsetDateTime;
 import jakarta.validation.Valid;
@@ -25,18 +27,22 @@ import jakarta.annotation.Generated;
 
 @Schema(name = "WorkflowNodeOutput", description = "The workflow node output")
 @JsonTypeName("WorkflowNodeOutput")
-@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2024-06-30T07:20:54.243996+02:00[Europe/Zagreb]", comments = "Generator version: 7.5.0")
+@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2026-07-03T17:58:15.504637+02:00[Europe/Zagreb]", comments = "Generator version: 7.22.0")
 public class WorkflowNodeOutputModel {
 
-  private ActionDefinitionModel actionDefinition;
+  private @Nullable ActionDefinitionBasicModel actionDefinition;
 
-  private PropertyModel outputSchema;
+  private @Nullable ClusterElementDefinitionBasicModel clusterElementDefinition;
 
-  private Object sampleOutput;
+  private @Nullable OutputResponseModel outputResponse;
 
-  private TaskDispatcherDefinitionModel taskDispatcherDefinition;
+  private @Nullable TaskDispatcherDefinitionBasicModel taskDispatcherDefinition;
 
-  private TriggerDefinitionModel triggerDefinition;
+  private Boolean testOutputResponse = false;
+
+  private @Nullable TriggerDefinitionBasicModel triggerDefinition;
+
+  private @Nullable OutputResponseModel variableOutputResponse;
 
   private String workflowNodeName;
 
@@ -47,12 +53,11 @@ public class WorkflowNodeOutputModel {
   /**
    * Constructor with only required parameters
    */
-  public WorkflowNodeOutputModel(PropertyModel outputSchema, String workflowNodeName) {
-    this.outputSchema = outputSchema;
+  public WorkflowNodeOutputModel(String workflowNodeName) {
     this.workflowNodeName = workflowNodeName;
   }
 
-  public WorkflowNodeOutputModel actionDefinition(ActionDefinitionModel actionDefinition) {
+  public WorkflowNodeOutputModel actionDefinition(@Nullable ActionDefinitionBasicModel actionDefinition) {
     this.actionDefinition = actionDefinition;
     return this;
   }
@@ -60,59 +65,62 @@ public class WorkflowNodeOutputModel {
   /**
    * Get actionDefinition
    * @return actionDefinition
-  */
+   */
   @Valid 
   @Schema(name = "actionDefinition", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("actionDefinition")
-  public ActionDefinitionModel getActionDefinition() {
+  public @Nullable ActionDefinitionBasicModel getActionDefinition() {
     return actionDefinition;
   }
 
-  public void setActionDefinition(ActionDefinitionModel actionDefinition) {
+  @JsonProperty("actionDefinition")
+  public void setActionDefinition(@Nullable ActionDefinitionBasicModel actionDefinition) {
     this.actionDefinition = actionDefinition;
   }
 
-  public WorkflowNodeOutputModel outputSchema(PropertyModel outputSchema) {
-    this.outputSchema = outputSchema;
+  public WorkflowNodeOutputModel clusterElementDefinition(@Nullable ClusterElementDefinitionBasicModel clusterElementDefinition) {
+    this.clusterElementDefinition = clusterElementDefinition;
     return this;
   }
 
   /**
-   * Get outputSchema
-   * @return outputSchema
-  */
-  @NotNull @Valid 
-  @Schema(name = "outputSchema", requiredMode = Schema.RequiredMode.REQUIRED)
-  @JsonProperty("outputSchema")
-  public PropertyModel getOutputSchema() {
-    return outputSchema;
+   * Get clusterElementDefinition
+   * @return clusterElementDefinition
+   */
+  @Valid 
+  @Schema(name = "clusterElementDefinition", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+  @JsonProperty("clusterElementDefinition")
+  public @Nullable ClusterElementDefinitionBasicModel getClusterElementDefinition() {
+    return clusterElementDefinition;
   }
 
-  public void setOutputSchema(PropertyModel outputSchema) {
-    this.outputSchema = outputSchema;
+  @JsonProperty("clusterElementDefinition")
+  public void setClusterElementDefinition(@Nullable ClusterElementDefinitionBasicModel clusterElementDefinition) {
+    this.clusterElementDefinition = clusterElementDefinition;
   }
 
-  public WorkflowNodeOutputModel sampleOutput(Object sampleOutput) {
-    this.sampleOutput = sampleOutput;
+  public WorkflowNodeOutputModel outputResponse(@Nullable OutputResponseModel outputResponse) {
+    this.outputResponse = outputResponse;
     return this;
   }
 
   /**
-   * The sample value of an output.
-   * @return sampleOutput
-  */
-  
-  @Schema(name = "sampleOutput", description = "The sample value of an output.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
-  @JsonProperty("sampleOutput")
-  public Object getSampleOutput() {
-    return sampleOutput;
+   * Get outputResponse
+   * @return outputResponse
+   */
+  @Valid 
+  @Schema(name = "outputResponse", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+  @JsonProperty("outputResponse")
+  public @Nullable OutputResponseModel getOutputResponse() {
+    return outputResponse;
   }
 
-  public void setSampleOutput(Object sampleOutput) {
-    this.sampleOutput = sampleOutput;
+  @JsonProperty("outputResponse")
+  public void setOutputResponse(@Nullable OutputResponseModel outputResponse) {
+    this.outputResponse = outputResponse;
   }
 
-  public WorkflowNodeOutputModel taskDispatcherDefinition(TaskDispatcherDefinitionModel taskDispatcherDefinition) {
+  public WorkflowNodeOutputModel taskDispatcherDefinition(@Nullable TaskDispatcherDefinitionBasicModel taskDispatcherDefinition) {
     this.taskDispatcherDefinition = taskDispatcherDefinition;
     return this;
   }
@@ -120,19 +128,41 @@ public class WorkflowNodeOutputModel {
   /**
    * Get taskDispatcherDefinition
    * @return taskDispatcherDefinition
-  */
+   */
   @Valid 
   @Schema(name = "taskDispatcherDefinition", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("taskDispatcherDefinition")
-  public TaskDispatcherDefinitionModel getTaskDispatcherDefinition() {
+  public @Nullable TaskDispatcherDefinitionBasicModel getTaskDispatcherDefinition() {
     return taskDispatcherDefinition;
   }
 
-  public void setTaskDispatcherDefinition(TaskDispatcherDefinitionModel taskDispatcherDefinition) {
+  @JsonProperty("taskDispatcherDefinition")
+  public void setTaskDispatcherDefinition(@Nullable TaskDispatcherDefinitionBasicModel taskDispatcherDefinition) {
     this.taskDispatcherDefinition = taskDispatcherDefinition;
   }
 
-  public WorkflowNodeOutputModel triggerDefinition(TriggerDefinitionModel triggerDefinition) {
+  public WorkflowNodeOutputModel testOutputResponse(Boolean testOutputResponse) {
+    this.testOutputResponse = testOutputResponse;
+    return this;
+  }
+
+  /**
+   * If the output response is a sample or the real one
+   * @return testOutputResponse
+   */
+  
+  @Schema(name = "testOutputResponse", description = "If the output response is a sample or the real one", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+  @JsonProperty("testOutputResponse")
+  public Boolean getTestOutputResponse() {
+    return testOutputResponse;
+  }
+
+  @JsonProperty("testOutputResponse")
+  public void setTestOutputResponse(Boolean testOutputResponse) {
+    this.testOutputResponse = testOutputResponse;
+  }
+
+  public WorkflowNodeOutputModel triggerDefinition(@Nullable TriggerDefinitionBasicModel triggerDefinition) {
     this.triggerDefinition = triggerDefinition;
     return this;
   }
@@ -140,16 +170,38 @@ public class WorkflowNodeOutputModel {
   /**
    * Get triggerDefinition
    * @return triggerDefinition
-  */
+   */
   @Valid 
   @Schema(name = "triggerDefinition", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("triggerDefinition")
-  public TriggerDefinitionModel getTriggerDefinition() {
+  public @Nullable TriggerDefinitionBasicModel getTriggerDefinition() {
     return triggerDefinition;
   }
 
-  public void setTriggerDefinition(TriggerDefinitionModel triggerDefinition) {
+  @JsonProperty("triggerDefinition")
+  public void setTriggerDefinition(@Nullable TriggerDefinitionBasicModel triggerDefinition) {
     this.triggerDefinition = triggerDefinition;
+  }
+
+  public WorkflowNodeOutputModel variableOutputResponse(@Nullable OutputResponseModel variableOutputResponse) {
+    this.variableOutputResponse = variableOutputResponse;
+    return this;
+  }
+
+  /**
+   * Get variableOutputResponse
+   * @return variableOutputResponse
+   */
+  @Valid 
+  @Schema(name = "variableOutputResponse", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+  @JsonProperty("variableOutputResponse")
+  public @Nullable OutputResponseModel getVariableOutputResponse() {
+    return variableOutputResponse;
+  }
+
+  @JsonProperty("variableOutputResponse")
+  public void setVariableOutputResponse(@Nullable OutputResponseModel variableOutputResponse) {
+    this.variableOutputResponse = variableOutputResponse;
   }
 
   public WorkflowNodeOutputModel workflowNodeName(String workflowNodeName) {
@@ -160,7 +212,7 @@ public class WorkflowNodeOutputModel {
   /**
    * The workflow node name
    * @return workflowNodeName
-  */
+   */
   @NotNull 
   @Schema(name = "workflowNodeName", description = "The workflow node name", requiredMode = Schema.RequiredMode.REQUIRED)
   @JsonProperty("workflowNodeName")
@@ -168,6 +220,7 @@ public class WorkflowNodeOutputModel {
     return workflowNodeName;
   }
 
+  @JsonProperty("workflowNodeName")
   public void setWorkflowNodeName(String workflowNodeName) {
     this.workflowNodeName = workflowNodeName;
   }
@@ -182,16 +235,18 @@ public class WorkflowNodeOutputModel {
     }
     WorkflowNodeOutputModel workflowNodeOutput = (WorkflowNodeOutputModel) o;
     return Objects.equals(this.actionDefinition, workflowNodeOutput.actionDefinition) &&
-        Objects.equals(this.outputSchema, workflowNodeOutput.outputSchema) &&
-        Objects.equals(this.sampleOutput, workflowNodeOutput.sampleOutput) &&
+        Objects.equals(this.clusterElementDefinition, workflowNodeOutput.clusterElementDefinition) &&
+        Objects.equals(this.outputResponse, workflowNodeOutput.outputResponse) &&
         Objects.equals(this.taskDispatcherDefinition, workflowNodeOutput.taskDispatcherDefinition) &&
+        Objects.equals(this.testOutputResponse, workflowNodeOutput.testOutputResponse) &&
         Objects.equals(this.triggerDefinition, workflowNodeOutput.triggerDefinition) &&
+        Objects.equals(this.variableOutputResponse, workflowNodeOutput.variableOutputResponse) &&
         Objects.equals(this.workflowNodeName, workflowNodeOutput.workflowNodeName);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(actionDefinition, outputSchema, sampleOutput, taskDispatcherDefinition, triggerDefinition, workflowNodeName);
+    return Objects.hash(actionDefinition, clusterElementDefinition, outputResponse, taskDispatcherDefinition, testOutputResponse, triggerDefinition, variableOutputResponse, workflowNodeName);
   }
 
   @Override
@@ -199,10 +254,12 @@ public class WorkflowNodeOutputModel {
     StringBuilder sb = new StringBuilder();
     sb.append("class WorkflowNodeOutputModel {\n");
     sb.append("    actionDefinition: ").append(toIndentedString(actionDefinition)).append("\n");
-    sb.append("    outputSchema: ").append(toIndentedString(outputSchema)).append("\n");
-    sb.append("    sampleOutput: ").append(toIndentedString(sampleOutput)).append("\n");
+    sb.append("    clusterElementDefinition: ").append(toIndentedString(clusterElementDefinition)).append("\n");
+    sb.append("    outputResponse: ").append(toIndentedString(outputResponse)).append("\n");
     sb.append("    taskDispatcherDefinition: ").append(toIndentedString(taskDispatcherDefinition)).append("\n");
+    sb.append("    testOutputResponse: ").append(toIndentedString(testOutputResponse)).append("\n");
     sb.append("    triggerDefinition: ").append(toIndentedString(triggerDefinition)).append("\n");
+    sb.append("    variableOutputResponse: ").append(toIndentedString(variableOutputResponse)).append("\n");
     sb.append("    workflowNodeName: ").append(toIndentedString(workflowNodeName)).append("\n");
     sb.append("}");
     return sb.toString();
@@ -212,11 +269,8 @@ public class WorkflowNodeOutputModel {
    * Convert the given object to string with each line indented by 4 spaces
    * (except the first line).
    */
-  private String toIndentedString(Object o) {
-    if (o == null) {
-      return "null";
-    }
-    return o.toString().replace("\n", "\n    ");
+  private String toIndentedString(@Nullable Object o) {
+    return o == null ? "null" : o.toString().replace("\n", "\n    ");
   }
 }
 

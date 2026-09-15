@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,25 +16,19 @@
 
 package com.bytechef.component.aitable.action;
 
-import static com.bytechef.component.aitable.constant.AITableConstants.BASE_URL;
 import static com.bytechef.component.aitable.constant.AITableConstants.DATASHEET_ID;
 import static com.bytechef.component.aitable.constant.AITableConstants.DATASHEET_ID_PROPERTY;
 import static com.bytechef.component.aitable.constant.AITableConstants.FIELDS;
 import static com.bytechef.component.aitable.constant.AITableConstants.FIELDS_DYNAMIC_PROPERTY;
-import static com.bytechef.component.aitable.constant.AITableConstants.OUTPUT_PROPERTY;
 import static com.bytechef.component.aitable.constant.AITableConstants.RECORDS;
 import static com.bytechef.component.aitable.constant.AITableConstants.RECORD_ID;
 import static com.bytechef.component.aitable.constant.AITableConstants.SPACE_ID_PROPERTY;
-import static com.bytechef.component.aitable.constant.AITableConstants.UPDATE_RECORD;
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.string;
 
-import com.bytechef.component.aitable.util.AITableUtils;
-import com.bytechef.component.definition.ActionContext;
-import com.bytechef.component.definition.ComponentDSL.ModifiableActionDefinition;
+import com.bytechef.component.definition.ComponentDsl.ModifiableActionDefinition;
+import com.bytechef.component.definition.Context;
 import com.bytechef.component.definition.Context.Http;
-import com.bytechef.component.definition.Context.TypeReference;
-import com.bytechef.component.definition.OptionsDataSource;
 import com.bytechef.component.definition.Parameters;
 import java.util.List;
 import java.util.Map;
@@ -44,30 +38,27 @@ import java.util.Map;
  */
 public class AITableUpdateRecordAction {
 
-    public static final ModifiableActionDefinition ACTION_DEFINITION = action(UPDATE_RECORD)
-        .title("Update record")
+    public static final ModifiableActionDefinition ACTION_DEFINITION = action("updateRecord")
+        .title("Update Record")
         .description("Update record in datasheet")
+        .help("", "https://docs.bytechef.io/reference/components/aitable_v1#update-record")
         .properties(
             SPACE_ID_PROPERTY,
             DATASHEET_ID_PROPERTY,
             string(RECORD_ID)
-                .label("Record")
-                .description("Record to update")
-                .optionsLookupDependsOn(DATASHEET_ID)
-                .options((OptionsDataSource.ActionOptionsFunction<String>) AITableUtils::getDatasheetRecordIdOptions)
+                .label("Record ID")
+                .description("ID of the record to update.")
                 .required(true),
             FIELDS_DYNAMIC_PROPERTY)
-        .outputSchema(OUTPUT_PROPERTY)
+        .output()
         .perform(AITableUpdateRecordAction::perform);
 
     private AITableUpdateRecordAction() {
     }
 
-    public static Object perform(
-        Parameters inputParameters, Parameters connectionParameters, ActionContext actionContext) {
-
-        return actionContext.http(http -> http.patch(
-            BASE_URL + "/datasheets/" + inputParameters.getRequiredString(DATASHEET_ID) + "/records"))
+    public static Object perform(Parameters inputParameters, Parameters connectionParameters, Context context) {
+        return context
+            .http(http -> http.patch("/datasheets/" + inputParameters.getRequiredString(DATASHEET_ID) + "/records"))
             .body(
                 Http.Body.of(
                     RECORDS,
@@ -77,6 +68,6 @@ public class AITableUpdateRecordAction {
                             FIELDS, inputParameters.get(FIELDS)))))
             .configuration(Http.responseType(Http.ResponseType.JSON))
             .execute()
-            .getBody(new TypeReference<>() {});
+            .getBody();
     }
 }

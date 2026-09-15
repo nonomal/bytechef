@@ -12,37 +12,35 @@ tasks:
   type: "condition/v1"
   parameters:
     conditions:
-    - number:
+    - - type: "boolean"
         value1: "${value1}"
         operation: "EQUALS"
         value2: "${value2}"
-    combineOperation: "ANY"
     caseTrue:
     - name: "equalsResult"
-      type: "var"
+      type: "var/v1/set"
       parameters:
         value: "true branch"
     caseFalse:
     - name: "equalsResult"
-      type: "var"
+      type: "var/v1/set"
       parameters:
         value: "false branch"
 - name: "condition_2"
   type: "condition/v1"
   parameters:
     conditions:
-    - number:
+    - - type: "boolean"
         value1: "${value1}"
         operation: "NOT_EQUALS"
         value2: "${value2}"
-    combineOperation: "ANY"
     caseTrue:
     - name: "notEqualsResult"
-      type: "var"
+      type: "var/v1/set"
       parameters:
         value: "true branch"
     caseFalse:
     - name: "notEqualsResult"
-      type: "var"
+      type: "var/v1/set"
       parameters:
         value: "false branch"

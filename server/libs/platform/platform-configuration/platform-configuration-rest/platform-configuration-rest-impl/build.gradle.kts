@@ -6,7 +6,6 @@ val generateOpenAPISpring by tasks.registering(org.openapitools.generator.gradle
     apiPackage.set("com.bytechef.platform.configuration.web.rest")
     configOptions.set(
         mapOf(
-            "dateLibrary" to "java8-localdatetime",
             "interfaceOnly" to "true",
             "useSpringBoot3" to "true",
             "useTags" to "true"
@@ -22,13 +21,7 @@ val generateOpenAPISpring by tasks.registering(org.openapitools.generator.gradle
 val generateOpenAPITypeScriptFetch by tasks.registering(org.openapitools.generator.gradle.plugin.tasks.GenerateTask::class) {
     generatorName.set("typescript-fetch")
     inputSpec.set("$projectDir/openapi.yaml")
-    modelNameSuffix.set("Model")
     outputDir.set("$rootDir/client/src/shared/middleware/platform/configuration")
-    typeMappings.set(
-        mapOf(
-            "DateTime" to "Date"
-        )
-    )
 }
 
 tasks.register("generateOpenAPI") {
@@ -36,17 +29,31 @@ tasks.register("generateOpenAPI") {
 }
 
 dependencies {
+    compileOnly("jakarta.servlet:jakarta.servlet-api")
+
     implementation("org.apache.commons:commons-lang3")
+    implementation("org.springframework.graphql:spring-graphql")
     implementation("org.springframework:spring-web")
     implementation("org.springframework:spring-webmvc")
     implementation("org.springframework.boot:spring-boot-autoconfigure")
+    implementation(project(":server:libs:atlas:atlas-coordinator:atlas-coordinator-api"))
     implementation(project(":server:libs:core:commons:commons-util"))
-    implementation(project(":server:libs:platform:platform-api"))
+    implementation(project(":server:libs:core:file-storage:file-storage-base64-service"))
+    implementation(project(":server:libs:core:rest:rest-api"))
+    implementation(project(":server:libs:core:tenant:tenant-api"))
     implementation(project(":server:libs:platform:platform-configuration:platform-configuration-rest:platform-configuration-rest-api"))
+    implementation(project(":server:libs:platform:platform-workflow:platform-workflow-execution:platform-workflow-execution-api"))
+    implementation(project(":server:libs:platform:platform-file-storage:platform-file-storage-impl"))
+    implementation(project(":server:libs:platform:platform-notification:platform-notification-service"))
     implementation(project(":server:libs:platform:platform-oauth2:platform-oauth2-api"))
-    implementation(project(":server:libs:platform:platform-rest:platform-rest-api"))
+    implementation(project(":server:libs:platform:platform-security-web:platform-security-web-api"))
+    implementation(project(":server:libs:platform:platform-tag:platform-tag-api"))
+    implementation(project(":server:libs:platform:platform-tag:platform-tag-service"))
+    implementation(project(":server:libs:platform:platform-webhook:platform-webhook-rest:platform-webhook-rest-api"))
     implementation(project(":server:libs:platform:platform-workflow:platform-workflow-test:platform-workflow-test-api"))
 
     testImplementation("org.springframework:spring-webflux")
-    testImplementation("org.springframework.boot:spring-boot-starter-web")
+    testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
+    testImplementation(project(":server:libs:test:test-int-support"))
+    testImplementation(project(":server:libs:test:test-support"))
 }

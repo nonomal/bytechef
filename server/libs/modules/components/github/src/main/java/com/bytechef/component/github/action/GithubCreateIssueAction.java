@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,36 +16,41 @@
 
 package com.bytechef.component.github.action;
 
-import static com.bytechef.component.definition.ComponentDSL.ModifiableActionDefinition;
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.string;
-import static com.bytechef.component.definition.Context.Http.Body;
+import static com.bytechef.component.definition.ComponentDsl.ModifiableActionDefinition;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.outputSchema;
+import static com.bytechef.component.definition.ComponentDsl.string;
 import static com.bytechef.component.definition.Context.Http.ResponseType;
 import static com.bytechef.component.definition.Context.Http.responseType;
 import static com.bytechef.component.github.constant.GithubConstants.BODY;
-import static com.bytechef.component.github.constant.GithubConstants.CREATE_ISSUE;
 import static com.bytechef.component.github.constant.GithubConstants.ISSUE_OUTPUT_PROPERTY;
+import static com.bytechef.component.github.constant.GithubConstants.OWNER;
+import static com.bytechef.component.github.constant.GithubConstants.OWNER_PROPERTY;
 import static com.bytechef.component.github.constant.GithubConstants.REPOSITORY;
 import static com.bytechef.component.github.constant.GithubConstants.TITLE;
-import static com.bytechef.component.github.util.GithubUtils.getOwnerName;
 
-import com.bytechef.component.definition.ActionContext;
-import com.bytechef.component.definition.Context.TypeReference;
-import com.bytechef.component.definition.OptionsDataSource.ActionOptionsFunction;
+import com.bytechef.component.definition.Context;
+import com.bytechef.component.definition.Context.Http.Body;
 import com.bytechef.component.definition.Parameters;
-import com.bytechef.component.github.util.GithubUtils;
+import com.bytechef.component.definition.Property.ControlType;
+import com.bytechef.component.definition.TypeReference;
 import java.util.Map;
 
+/**
+ * @author Luka Ljubić
+ * @author Monika Kušter
+ */
 public class GithubCreateIssueAction {
 
-    public static final ModifiableActionDefinition ACTION_DEFINITION = action(CREATE_ISSUE)
-        .title("Create issue")
+    public static final ModifiableActionDefinition ACTION_DEFINITION = action("createIssue")
+        .title("Create Issue")
         .description("Create Issue in GitHub Repository")
+        .help("", "https://docs.bytechef.io/reference/components/github_v1#create-issue")
         .properties(
+            OWNER_PROPERTY,
             string(REPOSITORY)
                 .label("Repository")
                 .description("Repository where new issue will be created.")
-                .options((ActionOptionsFunction<String>) GithubUtils::getRepositoryOptions)
                 .required(true),
             string(TITLE)
                 .label("Title")
@@ -55,19 +60,21 @@ public class GithubCreateIssueAction {
             string(BODY)
                 .label("Description")
                 .description("The description of the issue.")
+                .controlType(ControlType.TEXT_AREA)
                 .required(false))
-        .outputSchema(ISSUE_OUTPUT_PROPERTY)
+        .output(outputSchema(ISSUE_OUTPUT_PROPERTY))
         .perform(GithubCreateIssueAction::perform);
 
     private GithubCreateIssueAction() {
     }
 
     public static Map<String, Object> perform(
-        Parameters inputParameters, Parameters connectionParameters, ActionContext context) {
+        Parameters inputParameters, Parameters connectionParameters, Context context) {
 
         return context
             .http(http -> http.post(
-                "/repos/" + getOwnerName(context) + "/" + inputParameters.getRequiredString(REPOSITORY) + "/issues"))
+                "/repos/" + inputParameters.getRequiredString(OWNER) + "/"
+                    + inputParameters.getRequiredString(REPOSITORY) + "/issues"))
             .body(
                 Body.of(
                     TITLE, inputParameters.getRequiredString(TITLE),

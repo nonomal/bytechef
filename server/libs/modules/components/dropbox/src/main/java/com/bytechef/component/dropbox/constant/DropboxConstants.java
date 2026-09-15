@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,24 +23,15 @@ package com.bytechef.component.dropbox.constant;
 public final class DropboxConstants {
 
     public static final String AUTORENAME = "autorename";
-    public static final String COPY = "copy";
-    public static final String CREATE_FOLDER = "createFolder";
-    public static final String CREATE_TEXT_FILE = "createTextFile";
-    public static final String DELETE = "delete";
-    public static final String DROPBOX = "dropbox";
     public static final String FILENAME = "filename";
     public static final String FILE_ENTRY = "fileEntry";
     public static final String FROM_PATH = "from_path";
-    public static final String GET_FILE_LINK = "getFileLink";
-    public static final String LIST_FOLDER = "listFolder";
-    public static final String MOVE = "move";
     public static final String MUTE = "mute";
     public static final String PATH = "path";
     public static final String QUERY = "query";
-    public static final String SEARCH = "search";
     public static final String STRICT_CONFLICT = "strict_conflict";
+    public static final String TEXT = "text";
     public static final String TO_PATH = "to_path";
-    public static final String UPLOAD_FILE = "uploadFile";
 
     private DropboxConstants() {
     }

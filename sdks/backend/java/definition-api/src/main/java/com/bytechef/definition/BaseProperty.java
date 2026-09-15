@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,6 +27,12 @@ import java.util.Optional;
  * @author Ivica Cardic
  */
 public interface BaseProperty {
+
+    String RESOURCE_REFERENCE_METADATA_KEY = "resourceReference";
+
+    enum ResourceType {
+        DATA_TABLE, KNOWLEDGE_BASE
+    }
 
     /**
      *
@@ -66,7 +72,9 @@ public interface BaseProperty {
     /**
      *
      */
-    Optional<Boolean> getRequired();
+    default Boolean getRequired() {
+        return Boolean.FALSE;
+    }
 
     /**
      *
@@ -218,6 +226,18 @@ public interface BaseProperty {
          * @return
          */
         Optional<Integer> getMinLength();
+
+        /**
+         *
+         * @return
+         */
+        Optional<String> getRegex();
+
+        /**
+         *
+         * @return
+         */
+        Optional<Boolean> getOptionsLoadedDynamically();
     }
 
     /**

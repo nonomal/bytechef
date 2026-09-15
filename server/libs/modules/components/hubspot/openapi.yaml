@@ -1,7 +1,7 @@
 ---
 openapi: "3.0.1"
 info:
-  title: "The HubSpot platform REST API"
+  title: "Hubspot"
   description: "HubSpot is a CRM platform with all the software, integrations, and\
     \ resources you need to connect marketing, sales, content management, and customer\
     \ service."
@@ -14,6 +14,10 @@ paths:
       summary: "Create Contact"
       description: "Create a contact with the given properties."
       operationId: "createContact"
+      x-ai-agent-tool: true
+      security:
+        - "oauth2":
+            - "crm.objects.contacts.write"
       requestBody:
         content:
           application/json:
@@ -26,16 +30,16 @@ paths:
                   properties:
                     firstname:
                       type: "string"
-                      title: "First name"
+                      title: "First Name"
                     lastname:
                       type: "string"
-                      title: "Last name"
+                      title: "Last Name"
                     email:
                       type: "string"
-                      title: "Email address"
+                      title: "Email Address"
                     phone:
                       type: "string"
-                      title: "Phone number"
+                      title: "Phone Number"
                     company:
                       type: "string"
                       description: "Company contact belongs to."
@@ -48,54 +52,15 @@ paths:
           content:
             application/json:
               schema:
-                type: "object"
-                properties:
-                  body:
-                    type: "object"
-                    properties:
-                      id:
-                        type: "string"
-                      properties:
-                        type: "object"
-                        properties:
-                          firstname:
-                            type: "string"
-                          lastname:
-                            type: "string"
-                          email:
-                            type: "string"
-                          phone:
-                            type: "string"
-                          company:
-                            type: "string"
-                          website:
-                            type: "string"
-  /crm/v3/objects/contacts/{contactId}:
-    delete:
-      summary: "Delete Contact"
-      description: "Move Contact to the recycling bin."
-      operationId: "deleteContact"
-      parameters:
-        - name: "contactId"
-          in: "path"
-          required: true
-          schema:
-            title: "Contact"
-            type: "string"
-      responses:
-        204:
-          description: "successful operation"
+                $ref: "#/components/schemas/Contact"
     get:
-      summary: "Get Contact"
-      description: "Get contact details."
-      operationId: "getContact"
-      parameters:
-        - name: "contactId"
-          in: "path"
-          required: true
-          schema:
-            title: "Contact"
-            type: "string"
+      summary: "Get Contacts"
+      description: "Get all contacts."
+      operationId: "getContacts"
+      x-ai-agent-tool: true
+      security:
+        - "oauth2":
+            - "crm.objects.contacts.read"
       responses:
         200:
           description: "successful operation"
@@ -104,39 +69,73 @@ paths:
               schema:
                 type: "object"
                 properties:
-                  body:
-                    type: "object"
-                    properties:
-                      id:
-                        type: "string"
-                      properties:
-                        type: "object"
-                        properties:
-                          firstname:
-                            type: "string"
-                          lastname:
-                            type: "string"
-                          email:
-                            type: "string"
-                          phone:
-                            type: "string"
-                          company:
-                            type: "string"
-                          website:
-                            type: "string"
+                  results:
+                    type: "array"
+                    items:
+                      $ref: "#/components/schemas/Contact"
+  /crm/v3/objects/contacts/{contactId}:
+    get:
+      summary: "Get Contact"
+      description: "Get contact details."
+      operationId: "getContact"
+      x-ai-agent-tool: true
+      security:
+        - "oauth2":
+            - "crm.objects.contacts.read"
+      parameters:
+        - name: "contactId"
+          in: "path"
+          required: true
+          schema:
+            title: "Contact ID"
+            type: "string"
+            x-dynamic-options: true
+      responses:
+        200:
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Contact"
+    delete:
+      summary: "Delete Contact"
+      description: "Move Contact to the recycling bin."
+      operationId: "deleteContact"
+      x-ai-agent-tool: true
+      security:
+        - "oauth2":
+            - "crm.objects.contacts.write"
+            - "crm.objects.contacts.read"
+      parameters:
+        - name: "contactId"
+          in: "path"
+          required: true
+          schema:
+            title: "Contact ID"
+            type: "string"
+            x-dynamic-options: true
+      responses:
+        204:
+          description: "successful operation"
     patch:
       summary: "Update Contact"
       description: "Update Contact properties."
       operationId: "updateContact"
+      x-ai-agent-tool: true
+      security:
+        - "oauth2":
+            - "crm.objects.contacts.write"
+            - "crm.objects.contacts.read"
       parameters:
         - name: "contactId"
           in: "path"
           required: true
           style: "simple"
-          explode: false
           schema:
-            title: "Contact to update."
+            title: "Contact"
+            description: "Contact to update."
             type: "string"
+            x-dynamic-options: true
       requestBody:
         content:
           application/json:
@@ -149,16 +148,16 @@ paths:
                   properties:
                     firstname:
                       type: "string"
-                      title: "First name"
+                      title: "First Name"
                     lastname:
                       type: "string"
-                      title: "Last name"
+                      title: "Last Name"
                     email:
                       type: "string"
-                      title: "Email address"
+                      title: "Email Address"
                     phone:
                       type: "string"
-                      title: "Phone number"
+                      title: "Phone Number"
                     company:
                       type: "string"
                       description: "Company contact belongs to."
@@ -171,33 +170,18 @@ paths:
           content:
             application/json:
               schema:
-                type: "object"
-                properties:
-                  body:
-                    type: "object"
-                    properties:
-                      id:
-                        type: "string"
-                      properties:
-                        type: "object"
-                        properties:
-                          firstname:
-                            type: "string"
-                          lastname:
-                            type: "string"
-                          email:
-                            type: "string"
-                          phone:
-                            type: "string"
-                          company:
-                            type: "string"
-                          website:
-                            type: "string"
+                $ref: "#/components/schemas/Contact"
   /crm/v3/objects/deals:
     post:
       summary: "Create Deal"
       description: "Creates a new deal."
       operationId: "createDeal"
+      x-ai-agent-tool: true
+      security:
+        - "oauth2":
+            - "crm.objects.deals.write"
+            - "crm.objects.owners.read"
+            - "crm.objects.deals.read"
       requestBody:
         content:
           application/json:
@@ -210,21 +194,27 @@ paths:
                   properties:
                     dealname:
                       type: "string"
-                      title: "Deal name"
+                      title: "Deal Name"
                     amount:
                       type: "number"
                     closedate:
                       type: "string"
                       format: "date"
+                      title: "Close Date"
                     pipeline:
                       type: "string"
                       title: "Pipeline"
+                      x-dynamic-options: true
                     dealstage:
                       type: "string"
-                      title: "Deal stage"
+                      title: "Deal Stage"
+                      x-dynamic-options: true
+                      x-dynamic-options-dependency:
+                        - "properties.pipeline"
                     hubspot_owner_id:
                       type: "string"
-                      title: "Deal owner"
+                      title: "Deal Owner"
+                      x-dynamic-options: true
       responses:
         201:
           description: "successful operation"
@@ -233,30 +223,245 @@ paths:
               schema:
                 type: "object"
                 properties:
-                  body:
+                  id:
+                    type: "string"
+                    description: "ID of the deal."
+                  properties:
                     type: "object"
                     properties:
-                      id:
+                      dealname:
                         type: "string"
-                      properties:
-                        type: "object"
-                        properties:
-                          dealname:
-                            type: "string"
-                            title: "Deal name"
-                          amount:
-                            type: "number"
-                          closedate:
-                            type: "string"
-                            format: "date"
-                          pipeline:
-                            type: "string"
-                            title: "Pipeline"
-                          dealstage:
-                            type: "string"
-                          hubspot_owner_id:
-                            type: "string"
+                        description: "The name of the deal."
+                      amount:
+                        type: "number"
+                        description: "The monetary value associated with the deal."
+                      closedate:
+                        type: "string"
+                        format: "date"
+                        description: "he date when the deal is expected to close."
+                      pipeline:
+                        type: "string"
+                        title: "Pipeline"
+                        description: "The sales pipeline to which the deal belongs, indicating its workflow path."
+                      dealstage:
+                        type: "string"
+                        description: "The current stage of the deal within its pipeline, reflecting its progress."
+                      hubspot_owner_id:
+                        type: "string"
+                        description: "ID for the HubSpot user responsible for managing the deal."
+  /crm/lists/2026-03:
+    post:
+      summary: "Create List"
+      description: "Create a new list."
+      operationId: "createList"
+      x-ai-agent-tool: true
+      security:
+        - "oauth2":
+            - "crm.lists.write"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              title: "List"
+              type: "object"
+              required:
+                - "name"
+                - "objectTypeId"
+                - "processingType"
+              properties:
+                name:
+                  type: "string"
+                  title: "Name"
+                  description: "The name of the list, which must be globally unique across all public lists in the portal."
+                objectTypeId:
+                  type: "string"
+                  title: "Object Type ID"
+                  description: "The object type ID of the type of objects that the list will store. (e.g., 0-1 for contacts)."
+                  default: "0-1"
+                processingType:
+                  type: "string"
+                  title: "Processing Type"
+                  description: "The processing type of the list."
+                  enum:
+                    - "MANUAL"
+                    - "DYNAMIC"
+                    - "SNAPSHOT"
+                listFolderId:
+                  type: "integer"
+                  title: "List Folder ID"
+                  description: "The ID of the folder that the list should be created in. If left blank, then the list will be created in the root of the list folder structure."
+                membershipSettings:
+                  type: "object"
+                  title: "Membership Settings"
+                  description: "Settings controlling list membership."
+                  properties:
+                    includeUnassigned:
+                      type: "boolean"
+                      description: "Whether to include unassigned records."
+                    membershipTeamId:
+                      type: "integer"
+                      description: "The team ID for membership filtering."
+      responses:
+        201:
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: "object"
+                properties:
+                  list:
+                    $ref: "#/components/schemas/List"
+  /crm/v3/objects/tickets/{ticketId}:
+    get:
+      summary: "Get Ticket"
+      description: "Gets ticket details."
+      operationId: "getTicket"
+      x-ai-agent-tool: true
+      security:
+        - "oauth2":
+            - "tickets"
+      parameters:
+        - name: "ticketId"
+          in: "path"
+          required: true
+          schema:
+            title: "Ticket ID"
+            description: "The ID of the ticket to get."
+            type: "string"
+            x-dynamic-options: true
+      responses:
+        200:
+          description: "successful operation"
+          content:
+            application/json:
+              schema:
+                type: "object"
+                properties:
+                  id:
+                    type: "string"
+                    description: "ID of the ticket"
+                  properties:
+                    type: "object"
+                    properties:
+                      content:
+                        type: "string"
+                        description: "The main content or body of the ticket, detailing the issue or request."
+                      hs_object_id:
+                        type: "string"
+                        description: "ID for the HubSpot object associated with the ticket."
+                      hs_pipeline:
+                        type: "string"
+                        description: "The pipeline to which the ticket belongs, indicating its workflow stage."
+                      hs_pipeline_stage:
+                        type: "string"
+                        description: "The current stage of the ticket within its pipeline, reflecting its progress."
+                      hs_ticket_priority:
+                        type: "string"
+                        description: "The priority level assigned to the ticket, such as high, medium, or low."
+                      subject:
+                        type: "string"
+                        description: "The subject or title of the ticket, summarizing the issue or request."
 components:
+  schemas:
+    List:
+      type: "object"
+      properties:
+        listId:
+          type: "string"
+          description: "ID of the list."
+        listVersion:
+          type: "integer"
+          description: "Version of the list."
+        name:
+          type: "string"
+          description: "Name of the list."
+        objectTypeId:
+          type: "string"
+          description: "Object type ID of the list."
+        processingStatus:
+          type: "string"
+          description: "Current processing status of the list."
+        processingType:
+          type: "string"
+          description: "Processing type of the list."
+        createdAt:
+          type: "string"
+          format: "date-time"
+          description: "When the list was created."
+        createdById:
+          type: "string"
+          description: "ID of the user who created the list."
+        deletedAt:
+          type: "string"
+          format: "date-time"
+          description: "When the list was deleted."
+        filterBranch:
+          type: "object"
+          description: "Filter branch defining membership criteria."
+        filtersUpdatedAt:
+          type: "string"
+          format: "date-time"
+          description: "When the filters were last updated."
+        listPermissions:
+          type: "object"
+          description: "Permissions for the list."
+          properties:
+            teamsWithEditAccess:
+              type: "array"
+              description: "Team IDs with edit access."
+              items:
+                type: "integer"
+            usersWithEditAccess:
+              type: "array"
+              description: "User IDs with edit access."
+              items:
+                type: "integer"
+        membershipSettings:
+          type: "object"
+          description: "Settings controlling list membership."
+          properties:
+            includeUnassigned:
+              type: "boolean"
+              description: "Whether unassigned records are included."
+            membershipTeamId:
+              type: "integer"
+              description: "The team ID for membership filtering."
+        size:
+          type: "integer"
+          description: "Number of members in the list."
+        updatedAt:
+          type: "string"
+          format: "date-time"
+          description: "When the list was last updated."
+        updatedById:
+          type: "string"
+          description: "ID of the user who last updated the list."
+    Contact:
+      properties:
+        id:
+          type: "string"
+          description: "ID of the newly created contact."
+        properties:
+          type: "object"
+          properties:
+            firstname:
+              type: "string"
+              description: "First name of the contact."
+            lastname:
+              type: "string"
+              description: "Last name of the contact."
+            email:
+              type: "string"
+              description: "Email address of the contact."
+            phone:
+              type: "string"
+              description: "Phone number of the contact."
+            company:
+              type: "string"
+              description: "Company contact belongs to."
+            website:
+              type: "string"
+              description: "Website of the contact."
   securitySchemes:
     oauth2:
       type: "oauth2"
@@ -266,9 +471,168 @@ components:
           tokenUrl: "https://api.hubapi.com/oauth/v1/token"
           refreshUrl: "https://api.hubapi.com/oauth/v1/token"
           scopes:
-            crm.objects.contacts.read: " "
-            crm.objects.contacts.write: " "
-            crm.objects.deals.read: " "
-            crm.objects.deals.write: " "
-            crm.schemas.deals.read: " "
-            crm.objects.owners.read: " "
+            account-info.security.read: ""
+            accounting: ""
+            actions: ""
+            analytics.behavioral_events.send: ""
+            automation: ""
+            automation.sequences.enrollments.write: ""
+            automation.sequences.read: ""
+            behavioral_events.event_definitions.read_write: ""
+            business-intelligence: ""
+            business_units.view.read: ""
+            cms.domains.read: ""
+            cms.domains.write: ""
+            cms.functions.read: ""
+            cms.functions.write: ""
+            cms.knowledge_base.articles.publish: ""
+            cms.knowledge_base.articles.read: ""
+            cms.knowledge_base.articles.write: ""
+            cms.knowledge_base.settings.read: ""
+            cms.knowledge_base.settings.write: ""
+            cms.membership.access_groups.read: ""
+            cms.membership.access_groups.write: ""
+            collector.graphql_query.execute: ""
+            collector.graphql_schema.read: ""
+            communication_preferences.read: ""
+            communication_preferences.read_write: ""
+            communication_preferences.statuses.batch.read: ""
+            communication_preferences.statuses.batch.write: ""
+            communication_preferences.write: ""
+            content: ""
+            conversations.custom_channels.read: ""
+            conversations.custom_channels.write: ""
+            conversations.read: ""
+            conversations.visitor_identification.tokens.create: ""
+            conversations.write: ""
+            crm.dealsplits.read_write: ""
+            crm.export: ""
+            crm.import: ""
+            crm.lists.read: ""
+            crm.lists.write: ""
+            crm.objects.appointments.read: ""
+            crm.objects.appointments.sensitive.read: ""
+            crm.objects.appointments.sensitive.write: ""
+            crm.objects.appointments.write: ""
+            crm.objects.carts.read: ""
+            crm.objects.carts.write: ""
+            crm.objects.commercepayments.read: ""
+            crm.objects.companies.highly_sensitive.read: ""
+            crm.objects.companies.highly_sensitive.write: ""
+            crm.objects.companies.read: ""
+            crm.objects.companies.sensitive.read: ""
+            crm.objects.companies.sensitive.write: ""
+            crm.objects.companies.write: ""
+            crm.objects.contacts.highly_sensitive.read: ""
+            crm.objects.contacts.highly_sensitive.write: ""
+            crm.objects.contacts.read: ""
+            crm.objects.contacts.sensitive.read: ""
+            crm.objects.contacts.sensitive.write: ""
+            crm.objects.contacts.write: ""
+            crm.objects.courses.read: ""
+            crm.objects.courses.write: ""
+            crm.objects.custom.highly_sensitive.read: ""
+            crm.objects.custom.highly_sensitive.write: ""
+            crm.objects.custom.read: ""
+            crm.objects.custom.sensitive.read: ""
+            crm.objects.custom.sensitive.write: ""
+            crm.objects.custom.write: ""
+            crm.objects.deals.highly_sensitive.read: ""
+            crm.objects.deals.highly_sensitive.write: ""
+            crm.objects.deals.read: ""
+            crm.objects.deals.sensitive.read: ""
+            crm.objects.deals.sensitive.write: ""
+            crm.objects.deals.write: ""
+            crm.objects.feedback_submission.read: ""
+            crm.objects.goals.read: ""
+            crm.objects.invoices.read: ""
+            crm.objects.leads.read: ""
+            crm.objects.leads.write: ""
+            crm.objects.line_items.read: ""
+            crm.objects.line_items.write: ""
+            crm.objects.listings.read: ""
+            crm.objects.listings.write: ""
+            crm.objects.marketing_events.read: ""
+            crm.objects.marketing_events.write: ""
+            crm.objects.orders.read: ""
+            crm.objects.orders.write: ""
+            crm.objects.owners.read: ""
+            crm.objects.partner-clients.read: ""
+            crm.objects.partner-clients.write: ""
+            crm.objects.partner-services.read: ""
+            crm.objects.partner-services.write: ""
+            crm.objects.projects.highly_sensitive.read: ""
+            crm.objects.projects.highly_sensitive.write: ""
+            crm.objects.projects.read: ""
+            crm.objects.projects.sensitive.read: ""
+            crm.objects.projects.sensitive.write: ""
+            crm.objects.projects.write: ""
+            crm.objects.quotes.read: ""
+            crm.objects.quotes.write: ""
+            crm.objects.services.read: ""
+            crm.objects.services.write: ""
+            crm.objects.subscriptions.read: ""
+            crm.objects.users.read: ""
+            crm.objects.users.write: ""
+            crm.pipelines.orders.read: ""
+            crm.pipelines.orders.write: ""
+            crm.schemas.appointments.read: ""
+            crm.schemas.appointments.write: ""
+            crm.schemas.carts.read: ""
+            crm.schemas.carts.write: ""
+            crm.schemas.commercepayments.read: ""
+            crm.schemas.companies.read: ""
+            crm.schemas.companies.write: ""
+            crm.schemas.contacts.read: ""
+            crm.schemas.contacts.write: ""
+            crm.schemas.courses.read: ""
+            crm.schemas.courses.write: ""
+            crm.schemas.custom.read: ""
+            crm.schemas.deals.read: ""
+            crm.schemas.deals.write: ""
+            crm.schemas.invoices.read: ""
+            crm.schemas.invoices.write: ""
+            crm.schemas.line_items.read: ""
+            crm.schemas.listings.read: ""
+            crm.schemas.listings.write: ""
+            crm.schemas.orders.read: ""
+            crm.schemas.orders.write: ""
+            crm.schemas.projects.read: ""
+            crm.schemas.projects.write: ""
+            crm.schemas.quotes.read: ""
+            crm.schemas.services.read: ""
+            crm.schemas.services.write: ""
+            crm.schemas.subscriptions.read: ""
+            crm.schemas.subscriptions.write: ""
+            ctas.read: ""
+            e-commerce: ""
+            external_integrations.forms.access: ""
+            files: ""
+            files.ui_hidden.read: ""
+            forms: ""
+            forms-uploaded-files: ""
+            hubdb: ""
+            integration-sync: ""
+            marketing-email: ""
+            marketing.campaigns.read: ""
+            marketing.campaigns.revenue.read: ""
+            marketing.campaigns.write: ""
+            media_bridge.read: ""
+            media_bridge.write: ""
+            oauth: ""
+            sales-email-read: ""
+            scheduler.meetings.meeting-link.read: ""
+            settings.billing.write: ""
+            settings.currencies.read: ""
+            settings.currencies.write: ""
+            settings.users.read: ""
+            settings.users.team.write: ""
+            settings.users.teams.read: ""
+            settings.users.write: ""
+            social: ""
+            tax_rates.read: ""
+            tickets: ""
+            tickets.highly_sensitive: ""
+            tickets.sensitive: ""
+            timeline: ""
+            transactional-email: ""

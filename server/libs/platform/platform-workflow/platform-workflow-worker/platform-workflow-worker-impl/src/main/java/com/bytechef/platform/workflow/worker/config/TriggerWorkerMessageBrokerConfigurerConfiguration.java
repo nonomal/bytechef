@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,12 +16,17 @@
 
 package com.bytechef.platform.workflow.worker.config;
 
+import static com.bytechef.tenant.TenantContext.CURRENT_TENANT_ID;
+
+import com.bytechef.atlas.worker.annotation.ConditionalOnWorker;
 import com.bytechef.message.broker.config.MessageBrokerConfigurer;
 import com.bytechef.message.event.MessageEvent;
 import com.bytechef.message.event.MessageEventPostReceiveProcessor;
+import com.bytechef.message.event.tracing.MessageEventTracing;
 import com.bytechef.platform.workflow.worker.TriggerWorker;
-import com.bytechef.platform.workflow.worker.trigger.event.TriggerExecutionEvent;
-import com.bytechef.platform.workflow.worker.trigger.message.route.TriggerWorkerMessageRoute;
+import com.bytechef.platform.workflow.worker.event.TriggerExecutionEvent;
+import com.bytechef.platform.workflow.worker.message.route.TriggerWorkerMessageRoute;
+import com.bytechef.tenant.TenantContext;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.List;
 import org.springframework.context.annotation.Bean;
@@ -31,6 +36,7 @@ import org.springframework.context.annotation.Configuration;
  * @author Ivica Cardic
  */
 @Configuration
+@ConditionalOnWorker
 public class TriggerWorkerMessageBrokerConfigurerConfiguration {
 
     private final List<MessageEventPostReceiveProcessor> messageEventPostReceiveProcessors;
@@ -43,40 +49,50 @@ public class TriggerWorkerMessageBrokerConfigurerConfiguration {
     }
 
     @Bean
-    MessageBrokerConfigurer<?> triggerWorkerMessageBrokerConfigurer(TriggerWorker triggerWorker) {
-        TaskWorkerDelegate taskWorkerDelegate =
-            new TaskWorkerDelegate(messageEventPostReceiveProcessors, triggerWorker);
+    MessageBrokerConfigurer<?> triggerWorkerMessageBrokerConfigurer(
+        MessageEventTracing messageEventTracing, TriggerWorker triggerWorker) {
+
+        TriggerWorkerDelegate triggerWorkerDelegate =
+            new TriggerWorkerDelegate(messageEventPostReceiveProcessors, messageEventTracing, triggerWorker);
 
         return (listenerEndpointRegistrar, messageBrokerListenerRegistrar) -> {
             messageBrokerListenerRegistrar.registerListenerEndpoint(
-                listenerEndpointRegistrar, TriggerWorkerMessageRoute.CONTROL_EVENTS, 1, taskWorkerDelegate,
+                listenerEndpointRegistrar, TriggerWorkerMessageRoute.CONTROL_EVENTS, 1, triggerWorkerDelegate,
                 "onCancelControlTriggerEvent");
 
             messageBrokerListenerRegistrar.registerListenerEndpoint(
-                listenerEndpointRegistrar, TriggerWorkerMessageRoute.TRIGGER_EXECUTION_EVENTS, 1, taskWorkerDelegate,
+                listenerEndpointRegistrar, TriggerWorkerMessageRoute.TRIGGER_EXECUTION_EVENTS, 1, triggerWorkerDelegate,
                 "onTriggerExecutionEvent");
         };
     }
 
-    private record TaskWorkerDelegate(
-        List<MessageEventPostReceiveProcessor> messageEventPostReceiveProcessors, TriggerWorker triggerWorker) {
+    private record TriggerWorkerDelegate(
+        List<MessageEventPostReceiveProcessor> messageEventPostReceiveProcessors,
+        MessageEventTracing messageEventTracing, TriggerWorker triggerWorker) {
 
         public void onCancelControlTriggerEvent(MessageEvent<?> messageEvent) {
-            process(messageEvent);
-
-            triggerWorker.onCancelControlTriggerEvent(messageEvent);
+            TenantContext.runWithTenantId(
+                (String) messageEvent.getMetadata(CURRENT_TENANT_ID),
+                () -> messageEventTracing.runWithTraceContext(
+                    messageEvent, "trigger.cancel",
+                    () -> triggerWorker.onCancelControlTriggerEvent(process(messageEvent))));
         }
 
         public void onTriggerExecutionEvent(TriggerExecutionEvent triggerExecutionEvent) {
-            process(triggerExecutionEvent);
-
-            triggerWorker.onTriggerExecutionEvent(triggerExecutionEvent);
+            TenantContext.runWithTenantId(
+                (String) triggerExecutionEvent.getMetadata(CURRENT_TENANT_ID),
+                () -> messageEventTracing.runWithTraceContext(
+                    triggerExecutionEvent, "trigger.execute",
+                    () -> triggerWorker.onTriggerExecutionEvent(
+                        (TriggerExecutionEvent) process(triggerExecutionEvent))));
         }
 
-        private void process(MessageEvent<?> messageEvent) {
+        private MessageEvent<?> process(MessageEvent<?> messageEvent) {
             for (MessageEventPostReceiveProcessor messageEventPostReceiveProcessor : messageEventPostReceiveProcessors) {
-                messageEventPostReceiveProcessor.process(messageEvent);
+                messageEvent = messageEventPostReceiveProcessor.process(messageEvent);
             }
+
+            return messageEvent;
         }
     }
 }

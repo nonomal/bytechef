@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,95 +16,85 @@
 
 package com.bytechef.component.accelo.action;
 
-import static com.bytechef.component.accelo.constant.AcceloConstants.COMPANY;
-import static com.bytechef.component.accelo.constant.AcceloConstants.CREATE_CONTACT;
-import static com.bytechef.component.accelo.constant.AcceloConstants.EMAIL;
-import static com.bytechef.component.accelo.constant.AcceloConstants.FIRST_NAME;
-import static com.bytechef.component.accelo.constant.AcceloConstants.LAST_NAME;
-import static com.bytechef.component.accelo.constant.AcceloConstants.PHONE;
-import static com.bytechef.component.accelo.constant.AcceloConstants.POSITION;
-import static com.bytechef.component.accelo.util.AcceloUtils.createUrl;
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.object;
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.OpenApiComponentHandler.PropertyType;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.object;
+import static com.bytechef.component.definition.ComponentDsl.outputSchema;
+import static com.bytechef.component.definition.ComponentDsl.string;
+import static com.bytechef.component.definition.Context.Http.BodyContentType;
+import static com.bytechef.component.definition.Context.Http.ResponseType;
 
 import com.bytechef.component.accelo.util.AcceloUtils;
-import com.bytechef.component.definition.ActionContext;
-import com.bytechef.component.definition.ComponentDSL.ModifiableActionDefinition;
-import com.bytechef.component.definition.Context.Http;
-import com.bytechef.component.definition.Context.TypeReference;
-import com.bytechef.component.definition.OptionsDataSource;
-import com.bytechef.component.definition.Parameters;
-import com.bytechef.component.definition.Property;
+import com.bytechef.component.definition.ActionDefinition;
+import com.bytechef.component.definition.ComponentDsl;
+import java.util.Map;
 
 /**
- * @author Monika Domiter
+ * Provides a list of the component actions.
+ *
+ * @generated
  */
 public class AcceloCreateContactAction {
+    public static final ComponentDsl.ModifiableActionDefinition ACTION_DEFINITION = action("createContact")
+        .title("Create Contact")
+        .description("Creates a new contact.")
+        .metadata(
+            Map.of(
+                "method", "POST",
+                "path", "/contacts", "bodyContentType", BodyContentType.JSON, "mimeType", "application/json"
 
-    public static final ModifiableActionDefinition ACTION_DEFINITION = action(CREATE_CONTACT)
-        .title("Create contact")
-        .description("Creates a new contact")
-        .properties(
-            string(FIRST_NAME)
-                .label("First name")
-                .description("The firstname of the contact.")
+            ))
+        .properties(string("firstname").metadata(
+            Map.of(
+                "type", PropertyType.BODY))
+            .label("First Name")
+            .description("The first name of the contact.")
+            .required(false),
+            string("surname").metadata(
+                Map.of(
+                    "type", PropertyType.BODY))
+                .label("Last Name")
+                .description("The last name of the contact.")
                 .required(false),
-            string(LAST_NAME)
-                .label("Last name")
-                .description("The lastname of the contact.")
-                .required(false),
-            string(COMPANY)
-                .label("Company")
-                .description("This is the company the new affiliated contact will be associated with.")
-                .options((OptionsDataSource.ActionOptionsFunction<String>) AcceloUtils::getCompanyIdOptions)
-                .required(true),
-            string(PHONE)
+            string("company_id").metadata(
+                Map.of(
+                    "type", PropertyType.BODY))
+                .label("Company ID")
+                .description("ID of the company  to which the newly affiliated contact will be linked.")
+                .required(true)
+                .options((ActionDefinition.OptionsFunction<String>) AcceloUtils::getCompanyIdOptions),
+            string("phone").metadata(
+                Map.of(
+                    "type", PropertyType.BODY))
                 .label("Phone")
                 .description("The contact's phone number in their role in the associated company.")
                 .required(false),
-            string(EMAIL)
+            string("email").metadata(
+                Map.of(
+                    "type", PropertyType.BODY))
                 .label("Email")
-                .description("The contact's email address.")
-                .controlType(Property.ControlType.EMAIL)
-                .required(false),
-            string(POSITION)
-                .label("Position")
                 .description("The contact's position in the associated company.")
                 .required(false))
-        .outputSchema(
-            object()
+        .output(
+            outputSchema(object()
                 .properties(
-                    object("response")
-                        .properties(
-                            string("id"),
-                            string(FIRST_NAME),
-                            string(LAST_NAME),
-                            string(EMAIL)),
+                    object("response").properties(string("id").description("The ID of the newly created contact.")
+                        .required(false),
+                        string("firstname").description("The first name of the newly created contact.")
+                            .required(false),
+                        string("lastname").description("The last name of the newly created contact.")
+                            .required(false),
+                        string("email").description("The email address of the newly created contact.")
+                            .required(false))
+                        .required(false),
                     object("meta")
-                        .properties(
-                            string("more_info"),
-                            string("status"),
-                            string("message"))))
-        .perform(AcceloCreateContactAction::perform);
+                        .properties(string("more_info").required(false), string("status").required(false),
+                            string("message").required(false))
+                        .required(false))
+                .metadata(
+                    Map.of(
+                        "responseType", ResponseType.JSON))));
 
     private AcceloCreateContactAction() {
-    }
-
-    public static Object perform(
-        Parameters inputParameters, Parameters connectionParameters, ActionContext actionContext) {
-
-        return actionContext.http(http -> http.post(createUrl(connectionParameters, "contacts")))
-            .body(
-                Http.Body.of(
-                    FIRST_NAME, inputParameters.getString(FIRST_NAME),
-                    LAST_NAME, inputParameters.getString(LAST_NAME),
-                    COMPANY, inputParameters.getString(COMPANY),
-                    PHONE, inputParameters.getString(PHONE),
-                    EMAIL, inputParameters.getString(EMAIL),
-                    POSITION, inputParameters.getString(POSITION)))
-            .configuration(Http.responseType(Http.ResponseType.JSON))
-            .execute()
-            .getBody(new TypeReference<>() {});
     }
 }

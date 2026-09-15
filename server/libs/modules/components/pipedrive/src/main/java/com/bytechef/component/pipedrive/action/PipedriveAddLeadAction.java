@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,17 +17,20 @@
 package com.bytechef.component.pipedrive.action;
 
 import static com.bytechef.component.OpenApiComponentHandler.PropertyType;
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.array;
-import static com.bytechef.component.definition.ComponentDSL.date;
-import static com.bytechef.component.definition.ComponentDSL.integer;
-import static com.bytechef.component.definition.ComponentDSL.number;
-import static com.bytechef.component.definition.ComponentDSL.object;
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.array;
+import static com.bytechef.component.definition.ComponentDsl.date;
+import static com.bytechef.component.definition.ComponentDsl.integer;
+import static com.bytechef.component.definition.ComponentDsl.number;
+import static com.bytechef.component.definition.ComponentDsl.object;
+import static com.bytechef.component.definition.ComponentDsl.outputSchema;
+import static com.bytechef.component.definition.ComponentDsl.string;
 import static com.bytechef.component.definition.Context.Http.BodyContentType;
 import static com.bytechef.component.definition.Context.Http.ResponseType;
 
-import com.bytechef.component.definition.ComponentDSL;
+import com.bytechef.component.definition.ActionDefinition;
+import com.bytechef.component.definition.ComponentDsl;
+import com.bytechef.component.pipedrive.util.PipedriveUtils;
 import java.util.Map;
 
 /**
@@ -36,8 +39,8 @@ import java.util.Map;
  * @generated
  */
 public class PipedriveAddLeadAction {
-    public static final ComponentDSL.ModifiableActionDefinition ACTION_DEFINITION = action("addLead")
-        .title("Add lead")
+    public static final ComponentDsl.ModifiableActionDefinition ACTION_DEFINITION = action("addLead")
+        .title("Add Lead")
         .description("Creates a lead. A lead always has to be linked to a person or an organization or both.")
         .metadata(
             Map.of(
@@ -45,56 +48,74 @@ public class PipedriveAddLeadAction {
                 "path", "/leads", "bodyContentType", BodyContentType.JSON, "mimeType", "application/json"
 
             ))
-        .properties(object("__item").properties(string("title").label("Title")
+        .properties(string("title").metadata(
+            Map.of(
+                "type", PropertyType.BODY))
+            .label("Title")
             .description("The name of the lead.")
             .required(true),
-            integer("owner_id").label("Owner")
+            integer("owner_id").metadata(
+                Map.of(
+                    "type", PropertyType.BODY))
+                .label("Owner ID")
                 .description("User which will be the owner of the created lead.")
-                .required(false),
-            array("label_ids").items(string().description("Lead labels which will be associated with the lead."))
+                .required(false)
+                .options((ActionDefinition.OptionsFunction<Long>) PipedriveUtils::getOwnerIdOptions),
+            array("label_ids").items(string().metadata(
+                Map.of(
+                    "type", PropertyType.BODY))
+                .description("ID of the labels which will be associated with the lead."))
                 .placeholder("Add to Label Ids")
-                .label("Lead   Labels")
-                .description("Lead labels which will be associated with the lead.")
-                .required(false),
-            integer("person_id").label("Person")
+                .metadata(
+                    Map.of(
+                        "type", PropertyType.BODY))
+                .label("Lead Labels IDs")
+                .description("ID of the labels which will be associated with the lead.")
+                .required(false)
+                .options((ActionDefinition.OptionsFunction<String>) PipedriveUtils::getLabelIdsOptions),
+            integer("person_id").metadata(
+                Map.of(
+                    "type", PropertyType.BODY))
+                .label("Person ID")
                 .description("Person which this lead will be linked to.")
-                .required(false),
-            integer("organization_id").label("Organization")
+                .required(false)
+                .options((ActionDefinition.OptionsFunction<Long>) PipedriveUtils::getPersonIdOptions),
+            integer("organization_id").metadata(
+                Map.of(
+                    "type", PropertyType.BODY))
+                .label("Organization ID")
                 .description("Organization which this lead will be linked to.")
-                .required(false),
+                .required(false)
+                .options((ActionDefinition.OptionsFunction<Long>) PipedriveUtils::getOrganizationIdOptions),
             object("value").properties(number("amount").label("Amount")
                 .required(true),
                 string("currency").label("Currency")
-                    .required(true))
+                    .required(true)
+                    .options((ActionDefinition.OptionsFunction<String>) PipedriveUtils::getCurrencyOptions))
+                .metadata(
+                    Map.of(
+                        "type", PropertyType.BODY))
                 .label("Value")
                 .description("The potential value of the lead")
                 .required(false),
-            date("expected_close_date").label("Expected Close Date")
+            date("expected_close_date").metadata(
+                Map.of(
+                    "type", PropertyType.BODY))
+                .label("Expected Close Date")
                 .description(
                     "The date of when the deal which will be created from the lead is expected to be closed. In ISO 8601 format: YYYY-MM-DD.")
                 .required(false))
-            .label("Lead")
+        .output(outputSchema(object()
+            .properties(object("data")
+                .properties(string("id").required(false), string("title").required(false),
+                    integer("owner_id").required(false),
+                    object("value").properties(integer("amount").required(false), string("currency").required(false))
+                        .required(false),
+                    date("expected_close_date").required(false), integer("person_id").required(false))
+                .required(false))
             .metadata(
                 Map.of(
-                    "type", PropertyType.BODY)))
-        .outputSchema(
-            object()
-                .properties(
-                    object("body")
-                        .properties(
-                            object("data")
-                                .properties(string("id").required(false), string("title").required(false),
-                                    integer("owner_id").required(false),
-                                    object("value")
-                                        .properties(integer("amount").required(false),
-                                            string("currency").required(false))
-                                        .required(false),
-                                    date("expected_close_date").required(false), integer("person_id").required(false))
-                                .required(false))
-                        .required(false))
-                .metadata(
-                    Map.of(
-                        "responseType", ResponseType.JSON)));
+                    "responseType", ResponseType.JSON))));
 
     private PipedriveAddLeadAction() {
     }

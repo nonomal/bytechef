@@ -1,0 +1,195 @@
+import Button from '@/components/Button/Button';
+import LoadingIcon from '@/components/LoadingIcon';
+import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from '@/components/Select/Select';
+import {Checkbox} from '@/components/ui/checkbox';
+import {Label} from '@/components/ui/label';
+import ConnectionDialog from '@/shared/components/connection/ConnectionDialog';
+import {Connection} from '@/shared/middleware/automation/configuration';
+import {McpComponent, McpToolsByComponentIdQuery} from '@/shared/middleware/graphql';
+import {ComponentDefinitionBasic} from '@/shared/middleware/platform/configuration';
+import {useCreateConnectionMutation} from '@/shared/mutations/automation/connections.mutations';
+import {useGetComponentDefinitionsQuery} from '@/shared/queries/automation/componentDefinitions.queries';
+import {ConnectionKeys, useGetConnectionTagsQuery} from '@/shared/queries/automation/connections.queries';
+import {PlusIcon} from 'lucide-react';
+import {useState} from 'react';
+
+import useMcpComponentDialogToolSelectionStep, {SelectedToolType} from './hooks/useMcpComponentDialogToolSelectionStep';
+
+interface ToolSelectionStepProps {
+    open: boolean;
+    mcpComponent?: McpComponent;
+    selectedComponent: ComponentDefinitionBasic | null;
+    selectedTools: SelectedToolType[];
+    selectedConnection: Connection | null;
+    onToolsChange: (tools: SelectedToolType[]) => void;
+    onConnectionChange: (connection: Connection | null) => void;
+    existingTools?: McpToolsByComponentIdQuery;
+}
+
+const McpComponentDialogToolSelectionStep = ({
+    existingTools,
+    mcpComponent,
+    onConnectionChange,
+    onToolsChange,
+    open,
+    selectedComponent,
+    selectedConnection,
+    selectedTools,
+}: ToolSelectionStepProps) => {
+    const [showCreateConnection, setShowCreateConnection] = useState(false);
+
+    const {
+        allToolsSelected,
+        componentDefinition,
+        connections,
+        currentWorkspaceId,
+        handleSelectAllTools,
+        handleToolToggle,
+        isLoadingComponentDefinition,
+        isLoadingConnections,
+        refetchConnections,
+        selectAllCheckboxRef,
+        toolElements,
+    } = useMcpComponentDialogToolSelectionStep({
+        existingTools,
+        mcpComponent,
+        onConnectionChange,
+        onToolsChange,
+        open,
+        selectedComponent,
+        selectedTools,
+    });
+
+    const {data: componentDefinitions} = useGetComponentDefinitionsQuery({connectionDefinitions: true});
+
+    const connectionTagsQueryResult = useGetConnectionTagsQuery();
+
+    return (
+        <div className="space-y-4 py-4">
+            <div className="space-y-2">
+                <Label className="text-sm font-medium" htmlFor="connection-select">
+                    Select Connection
+                </Label>
+
+                <div className="flex items-center gap-2">
+                    <Select
+                        onValueChange={(value) => {
+                            if (value === 'no-connection') {
+                                onConnectionChange(null);
+                            } else {
+                                const connection = connections.find((conn) => conn.id?.toString() === value);
+                                onConnectionChange(connection || null);
+                            }
+                        }}
+                        value={selectedConnection?.id?.toString() || 'no-connection'}
+                    >
+                        <SelectTrigger className="flex-1" id="connection-select">
+                            <SelectValue placeholder="Choose a connection..." />
+                        </SelectTrigger>
+
+                        <SelectContent>
+                            <SelectItem value="no-connection">No connection</SelectItem>
+
+                            {isLoadingConnections ? (
+                                <SelectItem disabled value="loading">
+                                    Loading connections...
+                                </SelectItem>
+                            ) : (
+                                connections.map((connection) => (
+                                    <SelectItem
+                                        key={connection.id}
+                                        value={connection.id?.toString() || 'no-connection'}
+                                    >
+                                        {connection.name}
+                                    </SelectItem>
+                                ))
+                            )}
+                        </SelectContent>
+                    </Select>
+
+                    <Button
+                        aria-label="Create new connection"
+                        disabled={!selectedComponent}
+                        icon={<PlusIcon />}
+                        onClick={() => setShowCreateConnection(true)}
+                        size="icon"
+                        title="Create new connection"
+                        variant="outline"
+                    />
+                </div>
+            </div>
+
+            {showCreateConnection && componentDefinition && componentDefinitions && currentWorkspaceId != null && (
+                <ConnectionDialog
+                    componentDefinition={componentDefinition}
+                    componentDefinitions={componentDefinitions}
+                    connectionTagsQueryKey={ConnectionKeys.connectionTags}
+                    connectionsQueryKey={ConnectionKeys.connections}
+                    onClose={() => setShowCreateConnection(false)}
+                    onConnectionCreate={async (newConnectionId) => {
+                        const {data: refreshedConnections} = await refetchConnections();
+
+                        const createdConnection = (refreshedConnections ?? []).find(
+                            (connection) => connection.id === newConnectionId
+                        );
+
+                        if (createdConnection) {
+                            onConnectionChange(createdConnection);
+                        }
+
+                        setShowCreateConnection(false);
+                    }}
+                    useCreateConnectionMutation={useCreateConnectionMutation}
+                    useGetConnectionTagsQuery={() => connectionTagsQueryResult}
+                />
+            )}
+
+            {isLoadingComponentDefinition ? (
+                <div className="flex items-center justify-center py-8">
+                    <LoadingIcon className="size-6" />
+                </div>
+            ) : toolElements.length === 0 ? (
+                <div className="py-8 text-center text-muted-foreground">No tools available for this component.</div>
+            ) : (
+                <>
+                    <div className="flex items-center space-x-3">
+                        <Checkbox
+                            checked={allToolsSelected}
+                            id="select-all-tools"
+                            onCheckedChange={(checked) => handleSelectAllTools(checked as boolean)}
+                            ref={selectAllCheckboxRef}
+                        />
+
+                        <label className="cursor-pointer text-sm leading-none font-medium" htmlFor="select-all-tools">
+                            Select All Tools ({toolElements.length})
+                        </label>
+                    </div>
+
+                    <div className="divide-y">
+                        {toolElements.map((tool) => (
+                            <div className="flex items-center space-x-3 py-3 hover:bg-gray-50" key={tool.name}>
+                                <Checkbox
+                                    checked={selectedTools.some((selectedTool) => selectedTool.name === tool.name)}
+                                    id={tool.name}
+                                    onCheckedChange={(checked) => handleToolToggle(tool, checked as boolean)}
+                                />
+
+                                <div className="flex-1">
+                                    <label className="cursor-pointer text-sm font-medium" htmlFor={tool.name}>
+                                        {tool.title || tool.name}
+                                    </label>
+
+                                    {tool.description && (
+                                        <p className="mt-1 text-sm text-muted-foreground">{tool.description}</p>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </>
+            )}
+        </div>
+    );
+};
+
+export default McpComponentDialogToolSelectionStep;

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,12 +16,16 @@
 
 package com.bytechef.platform.configuration.web.rest;
 
+import com.bytechef.atlas.coordinator.annotation.ConditionalOnCoordinator;
+import com.bytechef.component.definition.Authorization.AuthorizationType;
 import com.bytechef.platform.configuration.facade.OAuth2ParametersFacade;
+import com.bytechef.platform.configuration.web.rest.model.AuthorizationTypeModel;
 import com.bytechef.platform.configuration.web.rest.model.GetOAuth2AuthorizationParametersRequestModel;
 import com.bytechef.platform.configuration.web.rest.model.OAuth2AuthorizationParametersModel;
 import com.bytechef.platform.configuration.web.rest.model.OAuth2PropertiesModel;
 import com.bytechef.platform.oauth2.service.OAuth2Service;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import java.util.Objects;
 import org.springframework.core.convert.ConversionService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -32,6 +36,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @RestController
 @RequestMapping("${openapi.openAPIDefinition.base-path.platform:}/internal")
+@ConditionalOnCoordinator
 public class OAuth2ApiController implements Oauth2Api {
 
     private final ConversionService conversionService;
@@ -52,11 +57,16 @@ public class OAuth2ApiController implements Oauth2Api {
     public ResponseEntity<OAuth2AuthorizationParametersModel> getOAuth2AuthorizationParameters(
         GetOAuth2AuthorizationParametersRequestModel parametersRequestModel) {
 
+        AuthorizationTypeModel authorizationType =
+            Objects.requireNonNull(parametersRequestModel.getAuthorizationType());
+
         return ResponseEntity.ok(
             conversionService.convert(
                 oAuth2ParametersFacade.getOAuth2AuthorizationParameters(
-                    parametersRequestModel.getComponentName(), parametersRequestModel.getConnectionVersion(),
-                    parametersRequestModel.getParameters(), parametersRequestModel.getAuthorizationName()),
+                    parametersRequestModel.getComponentName(),
+                    Objects.requireNonNull(parametersRequestModel.getConnectionVersion()),
+                    parametersRequestModel.getParameters(),
+                    AuthorizationType.valueOf(authorizationType.name())),
                 OAuth2AuthorizationParametersModel.class));
     }
 

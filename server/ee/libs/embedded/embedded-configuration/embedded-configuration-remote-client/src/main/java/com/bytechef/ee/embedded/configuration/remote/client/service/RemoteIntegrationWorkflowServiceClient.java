@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the ByteChef Enterprise license (the "Enterprise License");
  * you may not use this file except in compliance with the Enterprise License.
@@ -7,8 +7,10 @@
 
 package com.bytechef.ee.embedded.configuration.remote.client.service;
 
-import com.bytechef.embedded.configuration.domain.IntegrationWorkflow;
-import com.bytechef.embedded.configuration.service.IntegrationWorkflowService;
+import com.bytechef.ee.embedded.configuration.domain.IntegrationWorkflow;
+import com.bytechef.ee.embedded.configuration.service.IntegrationWorkflowService;
+import com.bytechef.platform.annotation.ConditionalOnEEVersion;
+import com.bytechef.platform.configuration.domain.Environment;
 import java.util.List;
 import org.springframework.stereotype.Component;
 
@@ -18,6 +20,7 @@ import org.springframework.stereotype.Component;
  * @author Ivica Cardic
  */
 @Component
+@ConditionalOnEEVersion
 public class RemoteIntegrationWorkflowServiceClient implements IntegrationWorkflowService {
 
     @Override
@@ -26,14 +29,12 @@ public class RemoteIntegrationWorkflowServiceClient implements IntegrationWorkfl
     }
 
     @Override
-    public IntegrationWorkflow addWorkflow(
-        long integrationId, int integrationVersion, String workflowId, String workflowReferenceCode) {
-
+    public void delete(List<Long> ids) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public void deleteIntegrationWorkflows(List<Long> ids) {
+    public void delete(long projectId, int projectVersion, String workflowId) {
         throw new UnsupportedOperationException();
     }
 
@@ -43,7 +44,9 @@ public class RemoteIntegrationWorkflowServiceClient implements IntegrationWorkfl
     }
 
     @Override
-    public String getIntegrationWorkflowId(long integrationInstanceId, String workflowReferenceCode) {
+    public String getWorkflowId(
+        long integrationInstanceId, String workflowUuid) {
+
         throw new UnsupportedOperationException();
     }
 
@@ -63,12 +66,22 @@ public class RemoteIntegrationWorkflowServiceClient implements IntegrationWorkfl
     }
 
     @Override
+    public List<IntegrationWorkflow> getIntegrationWorkflows(List<Long> integrationIds) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
     public List<IntegrationWorkflow> getIntegrationWorkflows(long projectId, int lastVersion) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public List<String> getWorkflowIds(long projectId) {
+    public String getLastWorkflowId(String workflowUuid) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public String getLastWorkflowId(String workflowUuid, Environment environment) {
         throw new UnsupportedOperationException();
     }
 
@@ -83,12 +96,19 @@ public class RemoteIntegrationWorkflowServiceClient implements IntegrationWorkfl
     }
 
     @Override
-    public void removeWorkflow(long projectId, int projectVersion, String workflowId) {
+    public void publishWorkflow(
+        long integrationId, int oldIntegrationVersion, String oldWorkflowId, IntegrationWorkflow integrationWorkflow) {
+
         throw new UnsupportedOperationException();
     }
 
     @Override
     public IntegrationWorkflow update(IntegrationWorkflow projectWorkflow) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public IntegrationWorkflow updatePermissionExpression(long id, String permissionExpression) {
         throw new UnsupportedOperationException();
     }
 }

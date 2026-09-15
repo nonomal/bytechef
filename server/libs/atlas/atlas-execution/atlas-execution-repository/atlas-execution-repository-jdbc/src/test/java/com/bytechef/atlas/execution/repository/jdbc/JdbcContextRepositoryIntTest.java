@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -54,8 +54,9 @@ public class JdbcContextRepositoryIntTest {
 
         context = contextRepository.save(context);
 
-        Context resultContext = contextRepository.findTop1ByStackIdAndClassnameIdOrderByCreatedDateDesc(
-            1L, Context.Classname.TASK_EXECUTION.ordinal());
+        Context resultContext = contextRepository
+            .findTop1ByStackIdAndClassnameIdOrderByCreatedDateDesc(1L, Context.Classname.TASK_EXECUTION.ordinal())
+            .orElseThrow();
 
         Assertions.assertEquals(context.getValue(), resultContext.getValue());
     }

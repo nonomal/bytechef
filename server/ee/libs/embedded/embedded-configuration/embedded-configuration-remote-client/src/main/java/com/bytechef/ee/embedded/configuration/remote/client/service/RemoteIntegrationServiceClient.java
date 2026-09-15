@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the ByteChef Enterprise license (the "Enterprise License");
  * you may not use this file except in compliance with the Enterprise License.
@@ -7,14 +7,14 @@
 
 package com.bytechef.ee.embedded.configuration.remote.client.service;
 
+import com.bytechef.ee.embedded.configuration.domain.Integration;
+import com.bytechef.ee.embedded.configuration.domain.IntegrationVersion;
+import com.bytechef.ee.embedded.configuration.domain.IntegrationVersion.Status;
+import com.bytechef.ee.embedded.configuration.service.IntegrationService;
 import com.bytechef.ee.remote.client.LoadBalancedRestClient;
-import com.bytechef.embedded.configuration.domain.Integration;
-import com.bytechef.embedded.configuration.domain.IntegrationVersion;
-import com.bytechef.embedded.configuration.domain.IntegrationVersion.Status;
-import com.bytechef.embedded.configuration.service.IntegrationService;
+import com.bytechef.platform.annotation.ConditionalOnEEVersion;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.List;
-import java.util.Optional;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Component;
 
@@ -24,6 +24,7 @@ import org.springframework.stereotype.Component;
  * @author Ivica Cardic
  */
 @Component
+@ConditionalOnEEVersion
 public class RemoteIntegrationServiceClient implements IntegrationService {
 
     private static final String CONFIGURATION_APP = "configuration-app";
@@ -37,32 +38,12 @@ public class RemoteIntegrationServiceClient implements IntegrationService {
     }
 
     @Override
-    public int addVersion(long id) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public long countIntegrations() {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
     public Integration create(Integration integration) {
         throw new UnsupportedOperationException();
     }
 
     @Override
     public void delete(long id) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public Optional<Integration> fetchWorkflowIntegration(String id) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public Optional<Integration> fetchIntegration(String name) {
         throw new UnsupportedOperationException();
     }
 
@@ -74,6 +55,11 @@ public class RemoteIntegrationServiceClient implements IntegrationService {
                 .path(PROJECT_SERVICE + "/get-integration-instance-integration/{integrationInstanceId}")
                 .build(integrationInstanceId),
             Integration.class);
+    }
+
+    @Override
+    public Integration getIntegrationInstanceConfigurationIntegration(long integrationInstanceConfigurationId) {
+        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -122,7 +108,7 @@ public class RemoteIntegrationServiceClient implements IntegrationService {
     }
 
     @Override
-    public Integration publishIntegration(long id, String description) {
+    public int publishIntegration(long id, String description) {
         throw new UnsupportedOperationException();
     }
 

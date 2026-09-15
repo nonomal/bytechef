@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,106 +16,67 @@
 
 package com.bytechef.task.dispatcher.condition.util;
 
-import static com.bytechef.task.dispatcher.condition.constant.ConditionTaskDispatcherConstants.COMBINE_OPERATION;
 import static com.bytechef.task.dispatcher.condition.constant.ConditionTaskDispatcherConstants.EXPRESSION;
 import static com.bytechef.task.dispatcher.condition.constant.ConditionTaskDispatcherConstants.RAW_EXPRESSION;
 
 import com.bytechef.atlas.execution.domain.TaskExecution;
+import com.bytechef.commons.util.EncodingUtils;
 import com.bytechef.commons.util.MapUtils;
 import com.bytechef.task.dispatcher.condition.constant.ConditionTaskDispatcherConstants;
-import com.fasterxml.jackson.core.type.TypeReference;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import org.springframework.expression.EvaluationContext;
+import org.springframework.expression.Expression;
 import org.springframework.expression.ExpressionParser;
+import org.springframework.expression.ParseException;
 import org.springframework.expression.spel.standard.SpelExpressionParser;
+import org.springframework.expression.spel.support.SimpleEvaluationContext;
+import tools.jackson.core.type.TypeReference;
 
 /**
+ * Utility class for evaluating condition expressions in workflow condition dispatchers.
+ *
+ * <p>
+ * <b>Security:</b> Expression evaluation runs against a {@link SimpleEvaluationContext} that disables Java type
+ * references ({@code T(...)}), constructors, and bean references. Method resolution is limited to instance methods via
+ * {@code withInstanceMethods()}, which blocks static methods as well as methods declared on {@link Object},
+ * {@link Class}, and {@link ClassLoader}. This closes the SpEL-injection sink reported in
+ * <a href="https://github.com/bytechefhq/bytechef/issues/5081">#5081</a> that was independent of the
+ * {@code SpelEvaluator} hardening in #5035.
+ *
  * @author Matija Petanjek
  */
 public class ConditionTaskUtils {
 
-    private static final ExpressionParser expressionParser = new SpelExpressionParser();
-
-    public static boolean resolveCase(TaskExecution conditionTaskExecution) {
-        Boolean result;
-
-        if (MapUtils.getBoolean(conditionTaskExecution.getParameters(), RAW_EXPRESSION, false)) {
-            result = expressionParser
-                .parseExpression(MapUtils.getString(conditionTaskExecution.getParameters(), EXPRESSION))
-                .getValue(Boolean.class);
-        } else {
-            List<Map<String, Map<String, ?>>> conditions = MapUtils.getList(
-                conditionTaskExecution.getParameters(), ConditionTaskDispatcherConstants.CONDITIONS,
-                new TypeReference<>() {}, Collections.emptyList());
-            String combineOperation = MapUtils.getRequiredString(
-                conditionTaskExecution.getParameters(), COMBINE_OPERATION);
-
-            result = expressionParser
-                .parseExpression(String.join(getBooleanOperator(combineOperation), getConditionExpressions(conditions)))
-                .getValue(Boolean.class);
-        }
-
-        return result != null && result;
-    }
-
-    private static List<String> getConditionExpressions(List<Map<String, Map<String, ?>>> conditions) {
-        List<String> conditionExpressions = new ArrayList<>();
-
-        for (Map<String, Map<String, ?>> condition : conditions) {
-            for (String operandType : condition.keySet()) {
-                Map<String, ?> conditionParts = MapUtils.getMap(condition, operandType);
-
-                String conditionTemplate = conditionTemplates
-                    .get(operandType)
-                    .get(MapUtils.getRequiredString(conditionParts, ConditionTaskDispatcherConstants.OPERATION));
-
-                conditionExpressions.add(
-                    conditionTemplate
-                        .replace(
-                            "${value1}",
-                            MapUtils.getRequiredString(conditionParts, ConditionTaskDispatcherConstants.VALUE_1))
-                        .replace(
-                            "${value2}",
-                            MapUtils.getRequiredString(conditionParts, ConditionTaskDispatcherConstants.VALUE_2)));
-            }
-        }
-
-        return conditionExpressions;
-    }
-
-    private static String getBooleanOperator(String combineOperation) {
-        if (combineOperation.equalsIgnoreCase(ConditionTaskDispatcherConstants.CombineOperation.ANY.name())) {
-            return "||";
-        } else if (combineOperation.equalsIgnoreCase(ConditionTaskDispatcherConstants.CombineOperation.ALL.name())) {
-            return "&&";
-        }
-
-        throw new IllegalArgumentException("Invalid combine operation: " + combineOperation);
-    }
-
-    private static final Map<String, Map<String, String>> conditionTemplates = new HashMap<>();
+    private static final ExpressionParser EXPRESSION_PARSER = new SpelExpressionParser();
+    private static final Pattern UNRESOLVED_ACCESSOR_PATTERN = Pattern.compile("\\$\\{[^}]*}");
+    private static final Map<String, Map<String, String>> CONDITION_TEMPLATES = new HashMap<>();
 
     static {
-        conditionTemplates.put(
+        CONDITION_TEMPLATES.put(
             ConditionTaskDispatcherConstants.BOOLEAN,
             Map.ofEntries(
                 Map.entry(ConditionTaskDispatcherConstants.Operation.EQUALS.name(), "${value1} == ${value2}"),
                 Map.entry(ConditionTaskDispatcherConstants.Operation.NOT_EQUALS.name(), "${value1} != ${value2}")));
 
-        conditionTemplates.put(
+        CONDITION_TEMPLATES.put(
             ConditionTaskDispatcherConstants.DATE_TIME,
             Map.ofEntries(
                 Map.entry(
                     ConditionTaskDispatcherConstants.Operation.AFTER.name(),
-                    "T(java.time.LocalDateTime).parse('${value1}').isAfter(T(java.time.LocalDateTime).parse('${value2}'))"),
+                    "${value1}.isAfter(${value2})"),
                 Map.entry(
                     ConditionTaskDispatcherConstants.Operation.BEFORE.name(),
-                    "T(java.time.LocalDateTime).parse('${value1}').isBefore(T(java.time.LocalDateTime).parse('${value2}'))")));
+                    "${value1}.isBefore(${value2})")));
 
-        conditionTemplates.put(
+        CONDITION_TEMPLATES.put(
             ConditionTaskDispatcherConstants.NUMBER,
             Map.ofEntries(
                 Map.entry(ConditionTaskDispatcherConstants.Operation.EQUALS.name(), "${value1} == ${value2}"),
@@ -125,10 +86,13 @@ public class ConditionTaskUtils {
                 Map.entry(ConditionTaskDispatcherConstants.Operation.GREATER_EQUALS.name(), "${value1} >= ${value2}"),
                 Map.entry(ConditionTaskDispatcherConstants.Operation.LESS_EQUALS.name(), "${value1} <= ${value2}")));
 
-        conditionTemplates.put(
+        CONDITION_TEMPLATES.put(
             ConditionTaskDispatcherConstants.STRING,
             Map.ofEntries(
                 Map.entry(ConditionTaskDispatcherConstants.Operation.EQUALS.name(), "'${value1}'.equals('${value2}')"),
+                Map.entry(
+                    ConditionTaskDispatcherConstants.Operation.EQUALS_IGNORE_CASE.name(),
+                    "'${value1}'.equalsIgnoreCase('${value2}')"),
                 Map.entry(
                     ConditionTaskDispatcherConstants.Operation.NOT_EQUALS.name(),
                     "!'${value1}'.equals('${value2}')"),
@@ -147,5 +111,112 @@ public class ConditionTaskUtils {
                 Map.entry(ConditionTaskDispatcherConstants.Operation.EMPTY.name(), "'${value1}'.isEmpty()"),
                 Map.entry(
                     ConditionTaskDispatcherConstants.Operation.REGEX.name(), "'${value1}' matches '${value2}'")));
+    }
+
+    // SPEL_INJECTION is suppressed because SpotBugs flags any non-constant string flowing into
+    // SpelExpressionParser. The actual sink reported in #5081 is closed by evaluating against the
+    // SimpleEvaluationContext built below, which forbids T(...), constructors, bean references,
+    // and methods on Object/Class/ClassLoader.
+    @SuppressFBWarnings({
+        "SPEL_INJECTION", "REDOS"
+    })
+    public static boolean resolveCase(TaskExecution conditionTaskExecution) {
+        Map<String, Object> variables = new LinkedHashMap<>();
+        String expression;
+
+        if (MapUtils.getBoolean(conditionTaskExecution.getParameters(), RAW_EXPRESSION, false)) {
+            expression = MapUtils.getString(conditionTaskExecution.getParameters(), EXPRESSION);
+        } else {
+            List<List<Map<String, ?>>> conditions = MapUtils.getList(
+                conditionTaskExecution.getParameters(), ConditionTaskDispatcherConstants.CONDITIONS,
+                new TypeReference<>() {}, Collections.emptyList());
+
+            List<String> conditionExpressions = new ArrayList<>();
+
+            for (List<Map<String, ?>> andConditions : conditions) {
+                conditionExpressions.add(String.join(" && ", getConditionExpressions(andConditions, variables)));
+            }
+
+            expression = String.join(" || ", conditionExpressions);
+        }
+
+        EvaluationContext evaluationContext = SimpleEvaluationContext.forReadOnlyDataBinding()
+            .withInstanceMethods()
+            .build();
+
+        variables.forEach(evaluationContext::setVariable);
+
+        Expression parsedExpression;
+
+        try {
+            parsedExpression = EXPRESSION_PARSER.parseExpression(expression);
+        } catch (ParseException parseException) {
+            throw new IllegalArgumentException(getParseErrorMessage(expression), parseException);
+        }
+
+        Boolean result = parsedExpression.getValue(evaluationContext, Boolean.class);
+
+        return result != null && result;
+    }
+
+    private static String getParseErrorMessage(String expression) {
+        Matcher matcher = UNRESOLVED_ACCESSOR_PATTERN.matcher(expression);
+
+        if (matcher.find()) {
+            return "Condition expression contains the unresolved reference " + matcher.group() +
+                ", which the workflow context does not provide: " + expression;
+        }
+
+        return "Unparseable condition expression: " + expression;
+    }
+
+    private static List<String> getConditionExpressions(
+        List<Map<String, ?>> conditions, Map<String, Object> variables) {
+
+        List<String> conditionExpressions = new ArrayList<>();
+
+        for (Map<String, ?> condition : conditions) {
+            String operandType = MapUtils.getRequiredString(condition, "type");
+
+            String conditionTemplate = CONDITION_TEMPLATES
+                .get(operandType)
+                .get(MapUtils.getRequiredString(condition, ConditionTaskDispatcherConstants.OPERATION));
+
+            String replacement1;
+            String replacement2;
+
+            if (operandType.equals(ConditionTaskDispatcherConstants.DATE_TIME)) {
+                Object value1 = MapUtils.get(condition, ConditionTaskDispatcherConstants.VALUE_1);
+                Object value2 = MapUtils.get(condition, ConditionTaskDispatcherConstants.VALUE_2);
+
+                String variableName1 = "dt" + variables.size();
+                String variableName2 = "dt" + (variables.size() + 1);
+
+                variables.put(variableName1, DateTimeOperandParser.parse(value1, "value1"));
+                variables.put(variableName2, DateTimeOperandParser.parse(value2, "value2"));
+
+                replacement1 = "#" + variableName1;
+                replacement2 = "#" + variableName2;
+            } else if (operandType.equals(ConditionTaskDispatcherConstants.STRING)) {
+                String value1 = MapUtils.getString(condition, ConditionTaskDispatcherConstants.VALUE_1, "");
+                String value2 = MapUtils.getString(condition, ConditionTaskDispatcherConstants.VALUE_2, "");
+
+                replacement1 = EncodingUtils.urlEncode(value1);
+                replacement2 = EncodingUtils.urlEncode(value2);
+            } else {
+                String value1 = MapUtils.getString(condition, ConditionTaskDispatcherConstants.VALUE_1, "");
+                String value2 = MapUtils.getString(condition, ConditionTaskDispatcherConstants.VALUE_2, "");
+
+                replacement1 = value1;
+                replacement2 = value2;
+            }
+
+            conditionExpressions.add(
+                conditionTemplate
+                    .replace("${value1}", replacement1)
+                    .replace("${value2}", replacement2));
+        }
+
+        return conditionExpressions;
     }
 }

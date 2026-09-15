@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,12 +17,11 @@
 package com.bytechef.component.encharge.action;
 
 import static com.bytechef.component.OpenApiComponentHandler.PropertyType;
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.object;
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.string;
 import static com.bytechef.component.definition.Context.Http.BodyContentType;
 
-import com.bytechef.component.definition.ComponentDSL;
+import com.bytechef.component.definition.ComponentDsl;
 import java.util.Map;
 
 /**
@@ -31,8 +30,8 @@ import java.util.Map;
  * @generated
  */
 public class EnchargeAddTagAction {
-    public static final ComponentDSL.ModifiableActionDefinition ACTION_DEFINITION = action("addTag")
-        .title("Add tag")
+    public static final ComponentDsl.ModifiableActionDefinition ACTION_DEFINITION = action("addTag")
+        .title("Add Tag")
         .description("Add tag(s) to an existing user.")
         .metadata(
             Map.of(
@@ -40,17 +39,18 @@ public class EnchargeAddTagAction {
                 "path", "/tags", "bodyContentType", BodyContentType.JSON, "mimeType", "application/json"
 
             ))
-        .properties(object("__item").properties(string("tag").label("Tag")
+        .properties(string("tag").metadata(
+            Map.of(
+                "type", PropertyType.BODY))
+            .label("Tag")
             .description("Tag(s) to add. To add multiple tags, use a comma-separated list, e.g. tag1,tag2")
             .required(true),
-            string("email").label("Email")
-                .description("Email of the person.")
-                .required(true))
-            .label("Tag")
-            .required(true)
-            .metadata(
+            string("email").metadata(
                 Map.of(
-                    "type", PropertyType.BODY)));
+                    "type", PropertyType.BODY))
+                .label("Email")
+                .description("Email of the person.")
+                .required(true));
 
     private EnchargeAddTagAction() {
     }

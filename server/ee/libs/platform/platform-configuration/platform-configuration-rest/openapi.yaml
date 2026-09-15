@@ -1,0 +1,75 @@
+---
+openapi: "3.0.1"
+info:
+  title: "The Platform Internal API"
+  version: "1"
+servers:
+  - url: "/api/platform/internal"
+tags:
+  - name: "git-configuration"
+    description: "The Platform Git Configuration Internal API"
+paths:
+  /workspaces/{id}/git-configuration:
+    get:
+      description: "Get git configuration of a workspace."
+      summary: "Get git configuration of a workspace."
+      tags:
+        - "git-configuration"
+      operationId: "getGitConfiguration"
+      parameters:
+        - name: "id"
+          description: "The id of a workspace."
+          in: "path"
+          required: true
+          schema:
+            type: "integer"
+            format: "int64"
+      responses:
+        "200":
+          description: "The git configuration object."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GitConfiguration"
+    put:
+      description: "Update git configuration."
+      summary: "Update git configuration."
+      tags:
+        - "git-configuration"
+      operationId: "updateGitConfiguration"
+      parameters:
+        - name: "id"
+          description: "The id of a workspace."
+          in: "path"
+          required: true
+          schema:
+            type: "integer"
+            format: "int64"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GitConfiguration"
+        required: true
+      responses:
+        "204":
+          description: "Successful operation."
+components:
+  schemas:
+    GitConfiguration:
+      description: "The git configuration."
+      required:
+        - url
+        - username
+        - password
+      properties:
+        url:
+          description: "The repository url."
+          type: "string"
+        username:
+          description: "The username."
+          type: "string"
+        password:
+          description: "The password."
+          type: "string"
+          writeOnly: true

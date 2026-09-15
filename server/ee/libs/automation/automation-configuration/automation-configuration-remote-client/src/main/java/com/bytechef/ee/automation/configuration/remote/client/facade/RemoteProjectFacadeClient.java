@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the ByteChef Enterprise license (the "Enterprise License");
  * you may not use this file except in compliance with the Enterprise License.
@@ -9,12 +9,12 @@ package com.bytechef.ee.automation.configuration.remote.client.facade;
 
 import com.bytechef.automation.configuration.domain.ProjectVersion.Status;
 import com.bytechef.automation.configuration.dto.ProjectDTO;
-import com.bytechef.automation.configuration.dto.WorkflowDTO;
+import com.bytechef.automation.configuration.dto.ProjectTemplateDTO;
+import com.bytechef.automation.configuration.dto.ProjectWorkflowDTO;
+import com.bytechef.automation.configuration.dto.SharedProjectDTO;
 import com.bytechef.automation.configuration.facade.ProjectFacade;
-import com.bytechef.platform.category.domain.Category;
-import com.bytechef.platform.tag.domain.Tag;
+import com.bytechef.platform.annotation.ConditionalOnEEVersion;
 import java.util.List;
-import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Component;
 
 /**
@@ -23,15 +23,11 @@ import org.springframework.stereotype.Component;
  * @author Ivica Cardic
  */
 @Component
+@ConditionalOnEEVersion
 public class RemoteProjectFacadeClient implements ProjectFacade {
 
     @Override
-    public WorkflowDTO addWorkflow(long id, @NonNull String definition) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public ProjectDTO createProject(@NonNull ProjectDTO projectDTO) {
+    public long createProject(ProjectDTO projectDTO) {
         throw new UnsupportedOperationException();
     }
 
@@ -41,7 +37,7 @@ public class RemoteProjectFacadeClient implements ProjectFacade {
     }
 
     @Override
-    public void deleteWorkflow(@NonNull String workflowId) {
+    public void deleteSharedProject(long id) {
         throw new UnsupportedOperationException();
     }
 
@@ -51,7 +47,17 @@ public class RemoteProjectFacadeClient implements ProjectFacade {
     }
 
     @Override
-    public String duplicateWorkflow(long id, @NonNull String workflowId) {
+    public byte[] exportProject(long id) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void exportSharedProject(long id, String description) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public ProjectTemplateDTO getProjectTemplate(String id, boolean sharedProject) {
         throw new UnsupportedOperationException();
     }
 
@@ -61,69 +67,50 @@ public class RemoteProjectFacadeClient implements ProjectFacade {
     }
 
     @Override
-    public List<Category> getProjectCategories() {
+    public List<ProjectTemplateDTO> getPreBuiltProjectTemplates(String query, String category) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public List<Tag> getProjectTags() {
+    public List<ProjectDTO> getProjects(Long categoryId, Boolean projectDeployments, Long tagId, Status status) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public WorkflowDTO getProjectWorkflow(String workflowId) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public WorkflowDTO getProjectWorkflow(long projectWorkflowId) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public List<WorkflowDTO> getProjectWorkflows() {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public List<WorkflowDTO> getProjectWorkflows(long id) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public List<WorkflowDTO> getProjectVersionWorkflows(long id, int projectVersion) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public List<ProjectDTO> getProjects(Long categoryId, boolean projectInstances, Long tagId, Status status) {
+    public SharedProjectDTO getSharedProject(String projectUuid) {
         throw new UnsupportedOperationException();
     }
 
     @Override
     public List<ProjectDTO> getWorkspaceProjects(
-        long workspaceId, Long categoryId, boolean projectInstances, Long tagId, Status status) {
+        Boolean apiCollections, Long categoryId, boolean includeAllFields, Boolean projectDeployments, Status status,
+        Long tagId, long workspaceId) {
 
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public void publishProject(long id, String description) {
+    public List<ProjectWorkflowDTO> getWorkspaceProjectWorkflows(long workspaceId) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public ProjectDTO updateProject(@NonNull ProjectDTO projectDTO) {
+    public long importProject(byte[] projectData, long workspaceId) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public void updateProjectTags(long id, @NonNull List<Tag> tags) {
+    public long importProjectTemplate(String id, long workspaceId, boolean sharedProject) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public WorkflowDTO updateWorkflow(String workflowId, String definition, int version) {
+    public int publishProject(long id, String description, boolean syncWithGit) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void updateProject(ProjectDTO projectDTO) {
         throw new UnsupportedOperationException();
     }
 }

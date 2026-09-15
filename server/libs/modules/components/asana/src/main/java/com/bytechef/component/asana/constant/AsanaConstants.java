@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,11 +21,9 @@ package com.bytechef.component.asana.constant;
  */
 public class AsanaConstants {
 
-    public static final String ASSIGNEE = "assignee";
-    public static final String BASE_URL = "https://app.asana.com/api/1.0";
-    public static final String PROJECT = "project";
-    public static final String TAGS = "tags";
-    public static final String TEAM = "team";
+    public static final String GID = "gid";
+    public static final String RESOURCE = "resource";
+    public static final String TARGET = "target";
     public static final String WORKSPACE = "workspace";
 
     private AsanaConstants() {

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,12 +16,14 @@
 
 package com.bytechef.component.google.contacts.connection;
 
-import com.bytechef.component.definition.ComponentDSL.ModifiableConnectionDefinition;
+import com.bytechef.component.definition.ComponentDsl.ModifiableConnectionDefinition;
 import com.bytechef.google.commons.GoogleConnection;
-import java.util.List;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 /**
  * @author Monika Domiter
+ * @author Nikolina Spehar
  */
 public class GoogleContactsConnection {
 
@@ -29,5 +31,25 @@ public class GoogleContactsConnection {
     }
 
     public static final ModifiableConnectionDefinition CONNECTION_DEFINITION = GoogleConnection.createConnection(
-        (connection, context) -> List.of("https://www.googleapis.com/auth/contacts"));
+        "https://people.googleapis.com/v1",
+        1,
+        "https://docs.bytechef.io/reference/components/google-contacts_v1#connection-setup",
+        (connection, context) -> {
+            Map<String, Boolean> map = new LinkedHashMap<>();
+
+            map.put("https://www.googleapis.com/auth/contacts", true);
+            map.put("https://www.googleapis.com/auth/contacts.other.readonly", false);
+            map.put("https://www.googleapis.com/auth/contacts.readonly", false);
+            map.put("https://www.googleapis.com/auth/directory.readonly", false);
+            map.put("https://www.googleapis.com/auth/user.addresses.read", false);
+            map.put("https://www.googleapis.com/auth/user.birthday.read", false);
+            map.put("https://www.googleapis.com/auth/user.emails.read", false);
+            map.put("https://www.googleapis.com/auth/user.gender.read", false);
+            map.put("https://www.googleapis.com/auth/user.organization.read", false);
+            map.put("https://www.googleapis.com/auth/user.phonenumbers.read", false);
+            map.put("https://www.googleapis.com/auth/userinfo.email", false);
+            map.put("https://www.googleapis.com/auth/userinfo.profile", false);
+
+            return map;
+        });
 }

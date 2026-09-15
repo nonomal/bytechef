@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,15 +20,21 @@ import com.bytechef.atlas.configuration.domain.Workflow;
 import com.bytechef.atlas.configuration.domain.WorkflowTask;
 import com.bytechef.atlas.configuration.service.WorkflowService;
 import com.bytechef.commons.util.CollectionUtils;
-import com.bytechef.platform.configuration.domain.DataStream;
+import com.bytechef.platform.component.domain.ComponentDefinition;
+import com.bytechef.platform.component.service.ComponentDefinitionService;
+import com.bytechef.platform.configuration.domain.ClusterElementMap;
+import com.bytechef.platform.configuration.domain.ComponentConnection;
 import com.bytechef.platform.configuration.domain.WorkflowTrigger;
 import com.bytechef.platform.configuration.dto.WorkflowDTO;
 import com.bytechef.platform.configuration.dto.WorkflowTaskDTO;
 import com.bytechef.platform.configuration.dto.WorkflowTriggerDTO;
+import com.bytechef.platform.definition.WorkflowNodeType;
+import com.bytechef.platform.workflow.validator.WorkflowValidatorFacade;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import org.springframework.stereotype.Service;
 
 /**
@@ -37,13 +43,26 @@ import org.springframework.stereotype.Service;
 @Service
 public class WorkflowFacadeImpl implements WorkflowFacade {
 
-    private final WorkflowConnectionFacade workflowConnectionFacade;
+    private final ComponentConnectionFacade componentConnectionFacade;
+    private final ComponentDefinitionService componentDefinitionService;
+    private final WorkflowValidatorFacade workflowValidatorFacade;
     private final WorkflowService workflowService;
 
     @SuppressFBWarnings("EI")
-    public WorkflowFacadeImpl(WorkflowConnectionFacade workflowConnectionFacade, WorkflowService workflowService) {
-        this.workflowConnectionFacade = workflowConnectionFacade;
+    public WorkflowFacadeImpl(
+        ComponentConnectionFacade componentConnectionFacade, ComponentDefinitionService componentDefinitionService,
+        WorkflowValidatorFacade workflowValidatorFacade, WorkflowService workflowService) {
+
+        this.componentConnectionFacade = componentConnectionFacade;
+        this.componentDefinitionService = componentDefinitionService;
+        this.workflowValidatorFacade = workflowValidatorFacade;
         this.workflowService = workflowService;
+    }
+
+    @Override
+    public Optional<WorkflowDTO> fetchWorkflow(String id) {
+        return workflowService.fetchWorkflow(id)
+            .map(this::toWorkflowDTO);
     }
 
     @Override
@@ -52,22 +71,72 @@ public class WorkflowFacadeImpl implements WorkflowFacade {
     }
 
     @Override
-    public WorkflowDTO update(String id, String definition, Integer version) {
-        return toWorkflowDTO(workflowService.update(id, definition, version));
+    public boolean hasSseStreamResponse(String workflowId) {
+        Workflow workflow = workflowService.getWorkflow(workflowId);
+
+        return checkTasksForSseStreamResponse(workflow.getTasks(true));
+    }
+
+    @Override
+    public boolean hasSseStreamResponse(WorkflowDTO workflowDTO) {
+        Workflow workflow = workflowDTO.getWorkflow();
+
+        return checkTasksForSseStreamResponse(workflow.getTasks(true));
+    }
+
+    @Override
+    public void update(String id, String definition, Integer version) {
+        workflowValidatorFacade.validateNoDuplicateNodeNames(definition);
+        workflowValidatorFacade.validateInputNames(definition);
+
+        workflowService.update(id, definition, version);
+    }
+
+    private boolean checkTasksForSseStreamResponse(List<WorkflowTask> tasks) {
+        for (WorkflowTask task : tasks) {
+            WorkflowNodeType workflowNodeType = WorkflowNodeType.ofType(task.getType());
+
+            Optional<ComponentDefinition> componentDefinition = componentDefinitionService.fetchComponentDefinition(
+                workflowNodeType.name(), workflowNodeType.version());
+
+            if (componentDefinition.isPresent()) {
+                boolean taskHasSseStreamResponse = componentDefinition.get()
+                    .getActions()
+                    .stream()
+                    .filter(actionDefinition -> Objects.equals(
+                        actionDefinition.getName(), workflowNodeType.operation()))
+                    .anyMatch(com.bytechef.platform.component.domain.ActionDefinition::isSseStreamResponse);
+
+                if (taskHasSseStreamResponse) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     private WorkflowDTO toWorkflowDTO(Workflow workflow) {
         List<WorkflowTaskDTO> workflowTaskDTOs = new ArrayList<>();
 
-        for (WorkflowTask workflowTask : workflow.getAllTasks()) {
+        List<WorkflowTask> allTasks = workflow.getTasks(true);
+
+        for (WorkflowTask workflowTask : allTasks) {
+            List<ComponentConnection> componentConnections = componentConnectionFacade.getComponentConnections(
+                CollectionUtils.getFirst(
+                    allTasks, curWorkflowTask -> Objects.equals(curWorkflowTask.getName(), workflowTask.getName())));
+
+            WorkflowNodeType workflowNodeType = WorkflowNodeType.ofType(workflowTask.getType());
+
+            Boolean clusterRoot = componentDefinitionService
+                .fetchComponentDefinition(workflowNodeType.name(), workflowNodeType.version())
+                .map(ComponentDefinition::isClusterRoot)
+                .orElse(Boolean.FALSE);
+
             workflowTaskDTOs.add(
                 new WorkflowTaskDTO(
-                    workflowTask,
-                    workflowConnectionFacade.getWorkflowConnections(
-                        CollectionUtils.getFirst(
-                            workflow.getAllTasks(),
-                            curWorkflowTask -> Objects.equals(curWorkflowTask.getName(), workflowTask.getName()))),
-                    DataStream.of(workflowTask.getExtensions())));
+                    workflowTask, clusterRoot, ClusterElementMap.of(workflowTask.getExtensions()),
+                    componentConnections));
         }
 
         List<WorkflowTriggerDTO> workflowTriggerDTOs = new ArrayList<>();
@@ -77,7 +146,7 @@ public class WorkflowFacadeImpl implements WorkflowFacade {
             workflowTriggerDTOs.add(
                 new WorkflowTriggerDTO(
                     workflowTriggerModel,
-                    workflowConnectionFacade.getWorkflowConnections(
+                    componentConnectionFacade.getComponentConnections(
                         CollectionUtils.getFirst(
                             workflowTriggers,
                             curWorkflowTrigger -> Objects.equals(

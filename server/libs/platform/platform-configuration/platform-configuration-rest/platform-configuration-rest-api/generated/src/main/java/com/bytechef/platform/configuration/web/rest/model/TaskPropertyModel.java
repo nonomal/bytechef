@@ -11,6 +11,9 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.annotation.JsonValue;
+import java.util.HashMap;
+import java.util.Map;
+import org.springframework.lang.Nullable;
 import org.openapitools.jackson.nullable.JsonNullable;
 import java.time.OffsetDateTime;
 import jakarta.validation.Valid;
@@ -27,10 +30,10 @@ import jakarta.annotation.Generated;
 
 @Schema(name = "TaskProperty", description = "A task property used in task dispatchers.")
 
-@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2024-06-30T07:20:54.243996+02:00[Europe/Zagreb]", comments = "Generator version: 7.5.0")
+@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2026-07-03T17:58:15.504637+02:00[Europe/Zagreb]", comments = "Generator version: 7.22.0")
 public class TaskPropertyModel extends PropertyModel {
 
-  private String name;
+  private @Nullable String name;
 
   public TaskPropertyModel() {
     super();
@@ -43,7 +46,7 @@ public class TaskPropertyModel extends PropertyModel {
     super(type);
   }
 
-  public TaskPropertyModel name(String name) {
+  public TaskPropertyModel name(@Nullable String name) {
     this.name = name;
     return this;
   }
@@ -51,15 +54,16 @@ public class TaskPropertyModel extends PropertyModel {
   /**
    * The task name.
    * @return name
-  */
+   */
   
   @Schema(name = "name", description = "The task name.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("name")
-  public String getName() {
+  public @Nullable String getName() {
     return name;
   }
 
-  public void setName(String name) {
+  @JsonProperty("name")
+  public void setName(@Nullable String name) {
     this.name = name;
   }
 
@@ -86,6 +90,16 @@ public class TaskPropertyModel extends PropertyModel {
 
   public TaskPropertyModel hidden(Boolean hidden) {
     super.hidden(hidden);
+    return this;
+  }
+
+  public TaskPropertyModel metadata(Map<String, Object> metadata) {
+    super.metadata(metadata);
+    return this;
+  }
+
+  public TaskPropertyModel putMetadataItem(String key, Object metadataItem) {
+    super.putMetadataItem(key, metadataItem);
     return this;
   }
 
@@ -130,11 +144,8 @@ public class TaskPropertyModel extends PropertyModel {
    * Convert the given object to string with each line indented by 4 spaces
    * (except the first line).
    */
-  private String toIndentedString(Object o) {
-    if (o == null) {
-      return "null";
-    }
-    return o.toString().replace("\n", "\n    ");
+  private String toIndentedString(@Nullable Object o) {
+    return o == null ? "null" : o.toString().replace("\n", "\n    ");
   }
 }
 

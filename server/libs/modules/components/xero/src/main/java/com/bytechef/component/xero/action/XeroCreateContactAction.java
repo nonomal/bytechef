@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,24 +16,23 @@
 
 package com.bytechef.component.xero.action;
 
-import static com.bytechef.component.definition.ComponentDSL.ModifiableActionDefinition;
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.array;
-import static com.bytechef.component.definition.ComponentDSL.object;
-import static com.bytechef.component.definition.ComponentDSL.option;
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.definition.ComponentDsl.ModifiableActionDefinition;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.array;
+import static com.bytechef.component.definition.ComponentDsl.object;
+import static com.bytechef.component.definition.ComponentDsl.option;
+import static com.bytechef.component.definition.ComponentDsl.outputSchema;
+import static com.bytechef.component.definition.ComponentDsl.string;
 import static com.bytechef.component.xero.constant.XeroConstants.ACCOUNT_NUMBER;
 import static com.bytechef.component.xero.constant.XeroConstants.ADDRESSES;
 import static com.bytechef.component.xero.constant.XeroConstants.ADDRESS_TYPE;
 import static com.bytechef.component.xero.constant.XeroConstants.BANK_ACCOUNT_DETAILS;
-import static com.bytechef.component.xero.constant.XeroConstants.BASE_URL;
 import static com.bytechef.component.xero.constant.XeroConstants.CITY;
 import static com.bytechef.component.xero.constant.XeroConstants.COMPANY_NUMBER;
 import static com.bytechef.component.xero.constant.XeroConstants.CONTACTS;
 import static com.bytechef.component.xero.constant.XeroConstants.CONTACT_OUTPUT_PROPERTY;
 import static com.bytechef.component.xero.constant.XeroConstants.CONTACT_STATUS;
 import static com.bytechef.component.xero.constant.XeroConstants.COUNTRY;
-import static com.bytechef.component.xero.constant.XeroConstants.CREATE_CONTACT;
 import static com.bytechef.component.xero.constant.XeroConstants.EMAIL_ADDRESS;
 import static com.bytechef.component.xero.constant.XeroConstants.FIRST_NAME;
 import static com.bytechef.component.xero.constant.XeroConstants.LAST_NAME;
@@ -51,9 +50,9 @@ import static com.bytechef.component.xero.constant.XeroConstants.TAX_NUMBER;
 import com.bytechef.component.definition.ActionContext;
 import com.bytechef.component.definition.Context.ContextFunction;
 import com.bytechef.component.definition.Context.Http;
-import com.bytechef.component.definition.Context.TypeReference;
 import com.bytechef.component.definition.Parameters;
 import com.bytechef.component.definition.Property.ControlType;
+import com.bytechef.component.definition.TypeReference;
 import java.util.List;
 import java.util.Map;
 
@@ -63,8 +62,8 @@ import java.util.Map;
  */
 public class XeroCreateContactAction {
 
-    public static final ModifiableActionDefinition ACTION_DEFINITION = action(CREATE_CONTACT)
-        .title("Create contact")
+    public static final ModifiableActionDefinition ACTION_DEFINITION = action("createContact")
+        .title("Create Contact")
         .description("Creates a new contact.")
         .properties(
             string(NAME)
@@ -78,12 +77,12 @@ public class XeroCreateContactAction {
                 .maxLength(50)
                 .required(false),
             string(ACCOUNT_NUMBER)
-                .label("Account number")
+                .label("Account Number")
                 .description("Unique account number to identify, reference and search for the contact.")
                 .maxLength(50)
                 .required(false),
             string(CONTACT_STATUS)
-                .label("Contact status")
+                .label("Contact Status")
                 .description("Current status of a contact.")
                 .options(
                     option("Active", "ACTIVE", "The Contact is active and can be used in transactions."),
@@ -93,27 +92,27 @@ public class XeroCreateContactAction {
                         "The Contact is the subject of a GDPR erasure request and can no longer be used in transctions."))
                 .required(false),
             string(FIRST_NAME)
-                .label("First name")
+                .label("First Name")
                 .description("First name of primary person.")
                 .maxLength(255)
                 .required(false),
             string(LAST_NAME)
-                .label("Last name")
+                .label("Last Name")
                 .description("Last name of primary person.")
                 .maxLength(255)
                 .required(false),
             string(EMAIL_ADDRESS)
-                .label("Email address")
+                .label("Email Address")
                 .description("Email address of contact person.")
                 .controlType(ControlType.EMAIL)
                 .maxLength(255)
                 .required(false),
             string(BANK_ACCOUNT_DETAILS)
-                .label("Bank account number")
+                .label("Bank Account Number")
                 .description("Bank account number of contact.")
                 .required(false),
             string(TAX_NUMBER)
-                .label("Tax number")
+                .label("Tax Number")
                 .description(
                     "Tax number of contact – this is also known as the ABN (Australia), GST Number (New Zealand), " +
                         "VAT Number (UK) or Tax ID Number (US and global) in the Xero UI depending on which " +
@@ -126,6 +125,7 @@ public class XeroCreateContactAction {
                     object()
                         .properties(
                             string(PHONE_TYPE)
+                                .label("Phone Type")
                                 .options(
                                     option("Default", "DEFAULT"),
                                     option("Fax", "FAX"),
@@ -152,7 +152,7 @@ public class XeroCreateContactAction {
                     object()
                         .properties(
                             string(ADDRESS_TYPE)
-                                .label("Address type")
+                                .label("Address Type")
                                 .options(
                                     option("POBOX", "POBOX"),
                                     option("STREET", "STREET"))
@@ -166,7 +166,7 @@ public class XeroCreateContactAction {
                                 .maxLength(255)
                                 .required(false),
                             string(POSTAL_CODE)
-                                .label("Postal/Zip code")
+                                .label("Postal/Zip Code")
                                 .maxLength(50)
                                 .required(false),
                             string(COUNTRY)
@@ -175,11 +175,11 @@ public class XeroCreateContactAction {
                                 .required(false)))
                 .maxItems(2)
                 .required(false))
-        .outputSchema(CONTACT_OUTPUT_PROPERTY)
+        .output(outputSchema(CONTACT_OUTPUT_PROPERTY))
         .perform(XeroCreateContactAction::perform);
 
     protected static final ContextFunction<Http, Http.Executor> POST_CONTACTS_CONTEXT_FUNCTION =
-        http -> http.post(BASE_URL + "/" + CONTACTS);
+        http -> http.post("/" + CONTACTS);
 
     private XeroCreateContactAction() {
     }

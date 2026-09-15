@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,13 +16,8 @@
 
 package com.bytechef.component.microsoft.excel.action;
 
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.bool;
-import static com.bytechef.component.definition.ComponentDSL.integer;
-import static com.bytechef.component.definition.ComponentDSL.number;
-import static com.bytechef.component.definition.ComponentDSL.object;
-import static com.bytechef.component.definition.ComponentDSL.string;
-import static com.bytechef.component.microsoft.excel.constant.MicrosoftExcelConstants.FIND_ROW_BY_NUM;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.integer;
 import static com.bytechef.component.microsoft.excel.constant.MicrosoftExcelConstants.IS_THE_FIRST_ROW_HEADER_PROPERTY;
 import static com.bytechef.component.microsoft.excel.constant.MicrosoftExcelConstants.ROW_NUMBER;
 import static com.bytechef.component.microsoft.excel.constant.MicrosoftExcelConstants.WORKBOOK_ID_PROPERTY;
@@ -30,38 +25,37 @@ import static com.bytechef.component.microsoft.excel.constant.MicrosoftExcelCons
 import static com.bytechef.component.microsoft.excel.util.MicrosoftExcelRowUtils.getRowFromWorksheet;
 import static com.bytechef.component.microsoft.excel.util.MicrosoftExcelUtils.getMapOfValuesForRow;
 
-import com.bytechef.component.definition.ActionContext;
-import com.bytechef.component.definition.ComponentDSL.ModifiableActionDefinition;
+import com.bytechef.component.definition.ComponentDsl.ModifiableActionDefinition;
+import com.bytechef.component.definition.Context;
 import com.bytechef.component.definition.Parameters;
+import com.bytechef.microsoft.commons.MicrosoftUtils;
 import java.util.List;
 
 /**
- * @author Monika Domiter
+ * @author Monika Kušter
  */
 public class MicrosoftExcelFindRowByNumAction {
 
-    public static final ModifiableActionDefinition ACTION_DEFINITION = action(FIND_ROW_BY_NUM)
-        .title("Find row by number")
-        .description("Get row values from the worksheet by the row number")
+    public static final ModifiableActionDefinition ACTION_DEFINITION = action("findRowByNum")
+        .title("Find Row by Number")
+        .description("Get row values from the worksheet by the row number.")
+        .help("", "https://docs.bytechef.io/reference/components/microsoft-excel_v1#find-row-by-num")
         .properties(
             WORKBOOK_ID_PROPERTY,
             WORKSHEET_NAME_PROPERTY,
             IS_THE_FIRST_ROW_HEADER_PROPERTY,
             integer(ROW_NUMBER)
-                .label("Row number")
-                .description("The row number to get the values from")
+                .label("Row Number")
+                .description("The row number to get the values from.")
                 .required(true))
-        .outputSchema(
-            object()
-                .additionalProperties(bool(), number(), string()))
-        .perform(MicrosoftExcelFindRowByNumAction::perform);
+        .output()
+        .perform(MicrosoftExcelFindRowByNumAction::perform)
+        .processErrorResponse(MicrosoftUtils::processErrorResponse);
 
     private MicrosoftExcelFindRowByNumAction() {
     }
 
-    public static Object perform(
-        Parameters inputParameters, Parameters connectionParameters, ActionContext context) {
-
+    public static Object perform(Parameters inputParameters, Parameters connectionParameters, Context context) {
         List<Object> row = getRowFromWorksheet(
             inputParameters, context, inputParameters.getRequiredInteger(ROW_NUMBER));
 

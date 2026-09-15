@@ -1,122 +1,269 @@
 import {UpdateWorkflowRequestI} from '@/shared//mutations/platform/workflows.mutations';
 import {
-    ArrayPropertyModel,
-    BooleanPropertyModel,
-    ComponentDefinitionBasicModel,
-    ComponentDefinitionModel,
-    ControlTypeModel,
-    DatePropertyModel,
-    DateTimePropertyModel,
-    DynamicPropertiesPropertyModel,
-    FileEntryPropertyModel,
-    IntegerPropertyModel,
-    NullPropertyModel,
-    NumberPropertyModel,
-    ObjectPropertyModel,
-    PropertyModel,
-    StringPropertyModel,
-    TaskDispatcherDefinitionModel,
-    TaskPropertyModel,
-    TimePropertyModel,
-    ValuePropertyModel,
-    WorkflowModel,
+    ArrayProperty,
+    BooleanProperty,
+    ClusterElementDefinitionBasic,
+    ClusterElementType,
+    ComponentConnection,
+    ComponentDefinition,
+    ComponentDefinitionBasic,
+    ConnectionDefinitionBasic,
+    ControlType,
+    DateProperty,
+    DateTimeProperty,
+    DynamicPropertiesProperty,
+    FileEntryProperty,
+    IntegerProperty,
+    // NullProperty,
+    NumberProperty,
+    ObjectProperty,
+    Property,
+    StringProperty,
+    TaskDispatcherDefinition,
+    TaskProperty,
+    TimeProperty,
+    TriggerDefinition,
+    TriggerType,
+    ValueProperty,
+    Workflow,
+    WorkflowInput,
+    WorkflowTask,
 } from '@/shared/middleware/platform/configuration';
 import {UseMutationResult} from '@tanstack/react-query';
 import {ReactNode} from 'react';
 
 export type DataPillType = {
     componentName?: string;
-    componentDefinition?: ComponentDefinitionModel | string;
+    componentDefinition?: ComponentDefinition | string;
     componentIcon?: string;
     id: string;
     nodeName?: string;
     value: string;
 };
 
-export type ComponentOperationType = {
-    componentName: string;
+export type DataPillDragPayloadType = {
+    mentionId: string;
+};
+
+export type WorkflowNodeType = {
+    name: string;
+    version: number;
     operationName: string;
     workflowNodeName?: string;
 };
 
 export type ComponentPropertiesType =
     | {
-          componentDefinition: ComponentDefinitionBasicModel;
-          properties?: Array<PropertyModel>;
+          componentDefinition: ComponentDefinitionBasic;
+          properties?: Array<Property>;
       }
     | undefined;
 
-export type ComponentType = {
-    componentName: string;
-    displayConditions?: {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        [key: string]: boolean;
-    };
-    metadata?: {
-        ui?: {
-            dynamicPropertyTypes?: {[key: string]: string};
-        };
-    };
-    notes?: string;
-    operationName: string;
-    parameters?: {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        [key: string]: any;
-    };
-    title?: string;
-    type?: string;
-    workflowNodeName: string;
+export type DefinitionType = (ComponentDefinitionBasic | TaskDispatcherDefinition) & {
+    taskDispatcher: boolean;
+    trigger: boolean;
 };
 
-export type ClickedItemType = {
-    componentName?: string;
-    trigger?: boolean;
+export type ClickedDefinitionType = {
     taskDispatcher?: boolean;
-} & (ComponentDefinitionBasicModel | TaskDispatcherDefinitionModel);
-
-export type NodeType = {
-    componentName?: string;
-    connections?: Array<WorkflowConnectionType>;
-    connectionId?: number;
-    displayConditions?: {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        [key: string]: boolean;
-    };
-    metadata?: {
-        ui?: {
-            dynamicPropertyTypes?: {[key: string]: string};
-        };
-    };
-    icon?: ReactNode;
-    id: string;
-    label?: string;
-    name: string;
-    operationName?: string;
-    parameters?: {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        [key: string]: any;
-    };
     trigger?: boolean;
-    type: 'component' | 'flowControl';
+} & (ComponentDefinition & TriggerDefinition & TaskDispatcherDefinition);
+
+export type ClickedOperationType = {
+    componentLabel?: string;
+    componentName: string;
+    icon?: string;
+    operationName: string;
+    taskDispatcher?: boolean;
+    trigger?: boolean;
+    type: string;
     version: number;
 };
 
-export type SubPropertyType = PropertyType & {custom: boolean};
+export type TabNameType = 'description' | 'clusterElements' | 'connection' | 'properties' | 'output';
+
+export type TabValueType = 'input' | 'output' | 'error' | 'logs';
+
+type ConditionDataType = {
+    conditionCase: 'caseTrue' | 'caseFalse';
+    conditionId: string;
+    index: number;
+};
+
+type OnErrorDataType = {
+    index: number;
+    onErrorCase: 'mainBranch' | 'onErrorBranch';
+    onErrorId: string;
+};
+
+type BranchDataType = {
+    branchId: string;
+    caseKey: string | number;
+    index: number;
+};
+
+type LoopDataType = {
+    index: number;
+    loopId: string;
+};
+
+type MapDataType = {
+    index: number;
+    mapId: string;
+};
+
+type LoopBreakDataType = {
+    loopBreakId: string;
+};
+
+type SubflowDataType = {
+    subflowId: string;
+};
+
+type TerminateDataType = {
+    terminateId: string;
+};
+
+type ParallelDataType = {
+    index: number;
+    parallelId: string;
+};
+
+type EachDataType = {
+    eachId: string;
+    index: number;
+};
+
+type ForkJoinDataType = {
+    branchIndex: number;
+    forkJoinId: string;
+    index: number;
+};
+
+export type TaskDispatcherDataType = BranchDataType &
+    EachDataType &
+    LoopDataType &
+    LoopBreakDataType &
+    MapDataType &
+    OnErrorDataType &
+    SubflowDataType &
+    TerminateDataType &
+    ConditionDataType &
+    ParallelDataType &
+    ForkJoinDataType;
+
+export type NestedClusterRootComponentDefinitionType = {
+    actionClusterElementTypes: {[key: string]: Array<string>};
+    clusterElementClusterElementTypes: {[key: string]: Array<string>};
+    clusterElementTypes: Array<ClusterElementType>;
+};
+
+export type ClusterElementItemType = {
+    clusterElements?: ClusterElementsType;
+    clusterElementTypesCount?: number;
+    connections?: {[key: string]: ComponentConnectionType};
+    label?: string;
+    isNestedClusterRoot?: boolean;
+    metadata?: {
+        ui?: {
+            nodePosition?: {x: number; y: number};
+            placeholderPositions?: Record<string, {x: number; y: number}>;
+        };
+    };
+    name: string;
+    parentClusterRootId?: string;
+    type: string;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    parameters?: {[key: string]: any};
+};
+
+type ClusterElementValueType = ClusterElementItemType | ClusterElementItemType[] | null;
+
+export type ClusterElementsType = {
+    [key: string]: ClusterElementValueType;
+};
+
+export type NodeDataType = {
+    branchData?: BranchDataType;
+    branchId?: string;
+    clusterElements?: ClusterElementsType | Array<ClusterElementDefinitionBasic>;
+    clusterElementName?: string;
+    clusterElementType?: string;
+    clusterRoot?: boolean;
+    componentName: string;
+    conditionCase?: 'caseTrue' | 'caseFalse';
+    conditionData?: ConditionDataType;
+    connection?: ConnectionDefinitionBasic;
+    connections?: Array<ComponentConnection>;
+    conditionId?: string;
+    connectionId?: number;
+    description?: string;
+    displayConditions?: {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        [key: string]: any;
+    };
+    eachId?: string;
+    eachData?: EachDataType;
+    forkJoinId?: string;
+    forkJoinData?: ForkJoinDataType;
+    icon?: ReactNode;
+    isNestedClusterRoot?: boolean;
+    label?: string;
+    loopBreakData?: LoopBreakDataType;
+    loopData?: LoopDataType;
+    loopId?: string;
+    mapData?: MapDataType;
+    mapId?: string;
+    maxRetries?: number;
+    onErrorData?: OnErrorDataType;
+    onErrorId?: string;
+    metadata?: {
+        ui?: {
+            chainAlignedPosition?: {x: number; y: number};
+            condition?: string;
+            dynamicPropertyTypes?: {[key: string]: string};
+            fromAi?: Array<string>;
+            nodePosition?: {x: number; y: number};
+            placeholderPositions?: Record<string, {x: number; y: number}>;
+        };
+    };
+    multipleClusterElementsNode?: boolean;
+    name: string;
+    operationName?: string;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    parameters?: {[key: string]: any};
+    parallelData?: {
+        parallelId: string;
+        index: number;
+    };
+    parentClusterRootId?: string;
+    subflowData?: SubflowDataType;
+    taskDispatcher?: boolean;
+    taskDispatcherId?: string;
+    terminateData?: TerminateDataType;
+    terminateId?: string;
+    title?: string;
+    trigger?: boolean;
+    type?: string;
+    triggerType?: TriggerType;
+    version?: number;
+    workflowNodeName: string;
+};
+
+export type BranchCaseType = {
+    key: string | number;
+    tasks: Array<WorkflowTask>;
+};
+
+export type SubPropertyType = PropertyAllType & {custom: boolean};
 
 export type WorkflowDefinitionType = {
     description?: string;
     label?: string;
-    inputs?: Array<WorkflowInputType>;
+    inputs?: Array<WorkflowInput>;
     outputs?: Array<WorkflowOutputType>;
     tasks?: Array<WorkflowTaskType>;
     triggers?: Array<WorkflowTriggerType>;
-};
-
-export type WorkflowInputType = {
-    label?: string;
-    name: string;
-    required?: boolean;
-    type?: string;
 };
 
 export type WorkflowOutputType = {
@@ -125,6 +272,7 @@ export type WorkflowOutputType = {
 };
 
 export type WorkflowTaskType = {
+    clusterElements?: ClusterElementsType;
     connections: [
         {
             componentName: string;
@@ -134,13 +282,14 @@ export type WorkflowTaskType = {
             workflowNodeName: string;
         },
     ] & {
-        [key: string]: WorkflowConnectionType;
+        [key: string]: ComponentConnectionType;
     };
     finalize?: Array<WorkflowTaskType>;
     label?: string;
+    maxRetries?: number;
     name: string;
     node?: string;
-    parameters?: {[key: string]: object};
+    parameters?: {[key: string]: object | []};
     post?: Array<WorkflowTaskType>;
     pre?: Array<WorkflowTaskType>;
     timeout?: string;
@@ -155,43 +304,102 @@ export type WorkflowTriggerType = {
     type: string;
 };
 
-export type WorkflowConnectionType = {
+export type ComponentConnectionType = {
     componentName: string;
     componentVersion: number;
 };
 
-export type ArrayPropertyType = PropertyModel & {
-    additionalProperties?: Array<PropertyModel>;
-    controlType?: ControlTypeModel;
+export type ArrayPropertyType = Property & {
+    additionalProperties?: Array<Property>;
+    controlType?: ControlType;
     custom?: boolean;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     defaultValue?: any;
+    items?: Array<Property>;
     key?: string;
     label?: string;
-    properties?: Array<PropertyType>;
+    placeholder?: string;
+    properties?: Array<PropertyAllType>;
 };
 
-type PropertyTypeAllType = ArrayPropertyModel &
-    BooleanPropertyModel &
-    DatePropertyModel &
-    DateTimePropertyModel &
-    DynamicPropertiesPropertyModel &
-    FileEntryPropertyModel &
-    IntegerPropertyModel &
-    NumberPropertyModel &
-    NullPropertyModel &
-    ObjectPropertyModel &
-    PropertyModel &
-    StringPropertyModel &
-    TaskPropertyModel &
-    TimePropertyModel &
-    ValuePropertyModel;
+type PropertyTypeAllType = ArrayProperty &
+    BooleanProperty &
+    DateProperty &
+    DateTimeProperty &
+    DynamicPropertiesProperty &
+    FileEntryProperty &
+    IntegerProperty &
+    NumberProperty &
+    // NullProperty &
+    ObjectProperty &
+    Property &
+    StringProperty &
+    TaskProperty &
+    TimeProperty &
+    ValueProperty;
 
-export type PropertyType = Omit<PropertyTypeAllType, 'controlType'> & {
-    additionalProperties?: Array<PropertyModel>;
-    controlType?: ControlTypeModel;
+export type PropertyAllType = Omit<PropertyTypeAllType, 'controlType'> & {
+    additionalProperties?: Array<Property>;
+    controlType?: ControlType;
     custom?: boolean;
     expressionEnabled?: boolean;
+    optionsLoadedDynamically?: boolean;
+    properties?: Array<PropertyAllType>;
 };
 
-export type UpdateWorkflowMutationType = UseMutationResult<WorkflowModel, Error, UpdateWorkflowRequestI, unknown>;
+export type UpdateWorkflowMutationType = UseMutationResult<Workflow, Error, UpdateWorkflowRequestI, unknown>;
+
+export type TaskDispatcherContextType = {
+    branchIndex?: number;
+    branchId?: string;
+    caseKey?: string | number;
+    conditionCase?: 'caseTrue' | 'caseFalse';
+    conditionId?: string;
+    eachId?: string;
+    forkJoinId?: string;
+    index?: number;
+    loopBreakId?: string;
+    loopId?: string;
+    mapId?: string;
+    onErrorCase?: 'mainBranch' | 'onErrorBranch';
+    onErrorId?: string;
+    parallelId?: string;
+    subflowId?: string;
+    taskDispatcherId: string;
+    terminateId?: string;
+};
+
+export type BuildNodeDataType = {
+    taskDispatcherContext: TaskDispatcherContextType;
+    taskDispatcherId: string;
+    baseNodeData: NodeDataType;
+};
+
+export type UpdateTaskParametersType = {
+    context?: TaskDispatcherContextType;
+    task: WorkflowTask;
+    updatedSubtasks: Array<WorkflowTask>;
+};
+
+export type BranchChildTasksType = {
+    [branchId: string]: {cases: {[caseKey: string | number]: string[]}; default: string[]};
+};
+export type ConditionChildTasksType = {[conditionId: string]: {caseTrue: string[]; caseFalse: string[]}};
+export type OnErrorChildTasksType = {
+    [onErrorId: string]: {mainBranch: string[]; onErrorBranch: string[]};
+};
+export type EachChildTasksType = {[eachId: string]: {iteratee: string}};
+export type LoopChildTasksType = {[loopId: string]: {iteratee: string[]}};
+export type MapChildTasksType = {[mapId: string]: {iteratee: string[]}};
+export type ParallelChildTasksType = {[parallelId: string]: {tasks: string[]}};
+export type ForkJoinChildTasksType = {[forkJoinId: string]: {branches: string[][]}};
+
+export type WorkflowInputType = WorkflowInput & {
+    testValue?: string;
+};
+
+export type SelectOptionType = {
+    description?: string;
+    label: string;
+    value: string;
+};

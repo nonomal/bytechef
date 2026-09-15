@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,41 +16,85 @@
 
 package com.bytechef.component.jira.action;
 
+import static com.bytechef.component.jira.constant.JiraConstants.ID;
 import static com.bytechef.component.jira.constant.JiraConstants.ISSUES;
 import static com.bytechef.component.jira.constant.JiraConstants.JQL;
 import static com.bytechef.component.jira.constant.JiraConstants.MAX_RESULTS;
+import static com.bytechef.component.jira.constant.JiraConstants.NEXT_PAGE_TOKEN;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.mockito.ArgumentCaptor.forClass;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 import com.bytechef.component.definition.Context;
+import com.bytechef.component.definition.Context.ContextFunction;
+import com.bytechef.component.definition.Context.Http;
+import com.bytechef.component.definition.Context.Http.Configuration.ConfigurationBuilder;
+import com.bytechef.component.definition.Parameters;
+import com.bytechef.component.definition.TypeReference;
+import com.bytechef.component.test.definition.MockParametersFactory;
+import com.bytechef.component.test.definition.extension.MockContextSetupExtension;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 
 /**
- * @author Monika Domiter
+ * @author Monika Kušter
  */
-class JiraSearchForissuesUsingJqlActionTest extends AbstractJiraActionTest {
+@ExtendWith(MockContextSetupExtension.class)
+class JiraSearchForissuesUsingJqlActionTest {
+
+    private final Parameters mockedParameters = MockParametersFactory.create(Map.of(JQL, "project=ABC"));
+    private final ArgumentCaptor<Object[]> objectsArgumentCaptor = forClass(Object[].class);
+    private final ArgumentCaptor<String> stringArgumentCaptor = forClass(String.class);
 
     @Test
-    void testPerform() {
-        when(mockedParameters.getRequiredInteger(MAX_RESULTS))
-            .thenReturn(100);
-        when(mockedParameters.getString(JQL))
-            .thenReturn("projec=ABC");
+    void testPerform(
+        Context mockedContext, Http.Response mockedResponse, Http.Executor mockedExecutor, Http mockedHttp,
+        ArgumentCaptor<ContextFunction<Http, Http.Executor>> httpFunctionArgumentCaptor,
+        ArgumentCaptor<ConfigurationBuilder> configurationBuilderArgumentCaptor) {
 
-        when(mockedContext.http(any()))
+        when(mockedHttp.get(stringArgumentCaptor.capture()))
             .thenReturn(mockedExecutor);
-        when(mockedExecutor.configuration(any()))
+        when(mockedExecutor.queryParameters(objectsArgumentCaptor.capture()))
             .thenReturn(mockedExecutor);
-        when(mockedExecutor.execute())
-            .thenReturn(mockedResponse);
-        when(mockedResponse.getBody(any(Context.TypeReference.class)))
-            .thenReturn(Map.of(ISSUES, List.of()));
+        when(mockedResponse.getBody(any(TypeReference.class)))
+            .thenReturn(
+                Map.of(ISSUES, List.of(Map.of(ID, 1)), NEXT_PAGE_TOKEN, "t1"),
+                Map.of(ISSUES, List.of(Map.of(ID, 2))));
 
-        Object result = JiraSearchForIssuesUsingJqlAction.perform(mockedParameters, mockedParameters, mockedContext);
+        Object result = JiraSearchForIssuesUsingJqlAction.perform(mockedParameters, null, mockedContext);
 
-        assertEquals(List.of(), result);
+        assertEquals(List.of(Map.of(ID, 1), Map.of(ID, 2)), result);
+
+        ContextFunction<Http, Http.Executor> capturedFunction = httpFunctionArgumentCaptor.getValue();
+
+        assertNotNull(capturedFunction);
+
+        ConfigurationBuilder configurationBuilder = configurationBuilderArgumentCaptor.getValue();
+
+        Http.Configuration configuration = configurationBuilder.build();
+
+        Http.ResponseType responseType = configuration.getResponseType();
+
+        assertEquals(Http.ResponseType.Type.JSON, responseType.getType());
+        assertEquals(List.of("/search/jql", "/search/jql"), stringArgumentCaptor.getAllValues());
+
+        List<Object[]> objectsArgumentCaptorAllValues = objectsArgumentCaptor.getAllValues();
+
+        Object[] objects = {
+            MAX_RESULTS, 5000, NEXT_PAGE_TOKEN, null, JQL, "project=ABC"
+        };
+        Object[] objects2 = {
+            MAX_RESULTS, 5000, NEXT_PAGE_TOKEN, "t1", JQL, "project=ABC"
+        };
+
+        assertEquals(2, objectsArgumentCaptorAllValues.size());
+        assertArrayEquals(objects, objectsArgumentCaptorAllValues.getFirst());
+        assertArrayEquals(objects2, objectsArgumentCaptorAllValues.getLast());
     }
 }

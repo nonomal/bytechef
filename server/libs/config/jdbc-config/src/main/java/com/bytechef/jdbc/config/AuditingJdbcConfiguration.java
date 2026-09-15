@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,26 +24,25 @@ import org.springframework.data.auditing.CurrentDateTimeProvider;
 import org.springframework.data.auditing.DateTimeProvider;
 import org.springframework.data.domain.AuditorAware;
 import org.springframework.data.jdbc.repository.config.EnableJdbcAuditing;
-import org.springframework.data.jdbc.repository.config.EnableJdbcRepositories;
 
 /**
  * @author Ivica Cardic
  */
 @Configuration
 @EnableJdbcAuditing(auditorAwareRef = "springSecurityAuditorAware", dateTimeProviderRef = "auditingDateTimeProvider")
-@EnableJdbcRepositories(basePackages = "com.bytechef")
 public class AuditingJdbcConfiguration {
 
     private static final String SYSTEM = "system";
 
     @Bean
-    public DateTimeProvider auditingDateTimeProvider() {
+    DateTimeProvider auditingDateTimeProvider() {
         return CurrentDateTimeProvider.INSTANCE;
     }
 
     @Bean
     AuditorAware<String> springSecurityAuditorAware() {
-        return () -> Optional.of(SecurityUtils.getCurrentUserLogin()
-            .orElse(SYSTEM));
+        return () -> Optional.of(
+            SecurityUtils.fetchCurrentUserLogin()
+                .orElse(SYSTEM));
     }
 }

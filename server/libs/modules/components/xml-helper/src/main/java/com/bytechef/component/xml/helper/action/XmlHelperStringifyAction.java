@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,49 +16,55 @@
 
 package com.bytechef.component.xml.helper.action;
 
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.array;
-import static com.bytechef.component.definition.ComponentDSL.integer;
-import static com.bytechef.component.definition.ComponentDSL.object;
-import static com.bytechef.component.definition.ComponentDSL.option;
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.array;
+import static com.bytechef.component.definition.ComponentDsl.object;
+import static com.bytechef.component.definition.ComponentDsl.option;
+import static com.bytechef.component.definition.ComponentDsl.outputSchema;
+import static com.bytechef.component.definition.ComponentDsl.string;
+import static com.bytechef.component.xml.helper.constant.XmlHelperConstants.SOURCE;
+import static com.bytechef.component.xml.helper.constant.XmlHelperConstants.TYPE;
 
 import com.bytechef.component.definition.ActionContext;
-import com.bytechef.component.definition.ComponentDSL.ModifiableActionDefinition;
+import com.bytechef.component.definition.ComponentDsl.ModifiableActionDefinition;
 import com.bytechef.component.definition.Parameters;
-import com.bytechef.component.xml.helper.constant.XmlHelperConstants;
 
 /**
  * @author Ivica Cardic
  */
 public class XmlHelperStringifyAction {
 
-    public static final ModifiableActionDefinition ACTION_DEFINITION = action(XmlHelperConstants.STRINGIFY)
-        .title("Convert to XML string")
+    private enum ValueType {
+
+        OBJECT, ARRAY;
+    }
+
+    public static final ModifiableActionDefinition ACTION_DEFINITION = action("stringify")
+        .title("Convert to XML String")
         .description("Writes the object/array to a XML string.")
         .properties(
-            integer(XmlHelperConstants.TYPE)
+            string(TYPE)
                 .label("Type")
                 .description("The value type.")
                 .options(
-                    option("Object", 1),
-                    option("Array", 2)),
-            object(XmlHelperConstants.SOURCE)
+                    option("Object", ValueType.OBJECT.name()),
+                    option("Array", ValueType.ARRAY.name())),
+            object(SOURCE)
                 .label("Source")
                 .description("The object to convert to XML string.")
-                .displayCondition("type == 1")
+                .displayCondition("type == '%s'".formatted(ValueType.OBJECT.name()))
                 .required(true),
-            array(XmlHelperConstants.SOURCE)
+            array(SOURCE)
                 .label("Source")
                 .description("The array to convert to XML string.")
-                .displayCondition("type == 2")
+                .displayCondition("type == '%s'".formatted(ValueType.ARRAY.name()))
                 .required(true))
-        .outputSchema(string())
+        .output(outputSchema(string().description("The XML string.")))
         .perform(XmlHelperStringifyAction::perform);
 
     protected static String perform(
         Parameters inputParameters, Parameters connectionParameters, ActionContext context) {
 
-        return context.xml(xml -> xml.write(inputParameters.getRequired(XmlHelperConstants.SOURCE)));
+        return context.xml(xml -> xml.write(inputParameters.getRequired(SOURCE)));
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,11 +16,11 @@
 
 package com.bytechef.component.http.client.action;
 
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.Context.Http.RequestMethod;
+import static com.bytechef.component.definition.ComponentDsl.action;
 
-import com.bytechef.component.definition.ComponentDSL.ModifiableActionDefinition;
-import com.bytechef.component.http.client.constant.HttpClientComponentConstants;
+import com.bytechef.component.definition.ComponentDsl.ModifiableActionDefinition;
+import com.bytechef.component.definition.Context.Http.RequestMethod;
+import com.bytechef.component.http.client.constant.HttpClientConstants;
 import com.bytechef.component.http.client.util.HttpClientActionUtils;
 
 /**
@@ -29,20 +29,12 @@ import com.bytechef.component.http.client.util.HttpClientActionUtils;
  */
 public class HttpClientGetAction {
 
-    public static final ModifiableActionDefinition ACTION_DEFINITION = action(HttpClientComponentConstants.GET)
+    public static final ModifiableActionDefinition ACTION_DEFINITION = action("get")
         .title("GET")
-        .description("The request method to use.")
+        .description("Use GET method to retrieve information about the specified resource.")
         .properties(
             HttpClientActionUtils.toArray(
-                //
-                // Common properties
-                //
-
-                HttpClientComponentConstants.COMMON_PROPERTIES,
-                //
-                // Options
-                //
-
+                HttpClientConstants.COMMON_PROPERTIES,
                 HttpClientActionUtils.options(false)))
         .output()
         .perform(HttpClientActionUtils.getPerform(RequestMethod.GET));

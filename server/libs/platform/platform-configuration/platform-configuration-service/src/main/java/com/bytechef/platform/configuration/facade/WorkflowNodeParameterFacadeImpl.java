@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,34 +19,48 @@ package com.bytechef.platform.configuration.facade;
 import com.bytechef.atlas.configuration.constant.WorkflowConstants;
 import com.bytechef.atlas.configuration.domain.Workflow;
 import com.bytechef.atlas.configuration.domain.WorkflowTask;
+import com.bytechef.atlas.configuration.exception.WorkflowErrorType;
 import com.bytechef.atlas.configuration.service.WorkflowService;
 import com.bytechef.commons.util.JsonUtils;
 import com.bytechef.commons.util.MapUtils;
 import com.bytechef.evaluator.Evaluator;
-import com.bytechef.platform.component.registry.domain.ActionDefinition;
-import com.bytechef.platform.component.registry.domain.DynamicPropertiesProperty;
-import com.bytechef.platform.component.registry.domain.OptionsDataSource;
-import com.bytechef.platform.component.registry.domain.OptionsDataSourceAware;
-import com.bytechef.platform.component.registry.domain.PropertiesDataSource;
-import com.bytechef.platform.component.registry.domain.Property;
-import com.bytechef.platform.component.registry.domain.TriggerDefinition;
-import com.bytechef.platform.component.registry.service.ActionDefinitionService;
-import com.bytechef.platform.component.registry.service.TriggerDefinitionService;
-import com.bytechef.platform.component.util.PropertyUtils;
+import com.bytechef.exception.ConfigurationException;
+import com.bytechef.platform.component.domain.ActionDefinition;
+import com.bytechef.platform.component.domain.ArrayProperty;
+import com.bytechef.platform.component.domain.ClusterElementDefinition;
+import com.bytechef.platform.component.domain.DynamicPropertiesProperty;
+import com.bytechef.platform.component.domain.ObjectProperty;
+import com.bytechef.platform.component.domain.OptionsDataSource;
+import com.bytechef.platform.component.domain.OptionsDataSourceAware;
+import com.bytechef.platform.component.domain.PropertiesDataSource;
+import com.bytechef.platform.component.domain.TriggerDefinition;
+import com.bytechef.platform.component.service.ActionDefinitionService;
+import com.bytechef.platform.component.service.ClusterElementDefinitionService;
+import com.bytechef.platform.component.service.TriggerDefinitionService;
 import com.bytechef.platform.configuration.constant.WorkflowExtConstants;
-import com.bytechef.platform.configuration.dto.UpdateParameterResultDTO;
+import com.bytechef.platform.configuration.dto.DisplayConditionResultDTO;
+import com.bytechef.platform.configuration.dto.ParameterResultDTO;
 import com.bytechef.platform.configuration.service.WorkflowTestConfigurationService;
 import com.bytechef.platform.definition.WorkflowNodeType;
+import com.bytechef.platform.domain.BaseProperty;
+import com.bytechef.platform.workflow.task.dispatcher.domain.TaskDispatcherDefinition;
+import com.bytechef.platform.workflow.task.dispatcher.service.TaskDispatcherDefinitionService;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 /**
@@ -55,11 +69,20 @@ import org.springframework.stereotype.Service;
 @Service
 public class WorkflowNodeParameterFacadeImpl implements WorkflowNodeParameterFacade {
 
+    private static final Logger log = LoggerFactory.getLogger(WorkflowNodeParameterFacadeImpl.class);
+
+    protected static final Pattern ARRAY_INDEX_VALUE_PATTERN = Pattern.compile("\\[(\\d+)]");
+    private static final Pattern ARRAY_INDEXES_PATTERN =
+        Pattern.compile("(\\b\\w+\\b)?((\\[index])+)");
     private static final String DYNAMIC_PROPERTY_TYPES = "dynamicPropertyTypes";
+    private static final String FROM_AI = "fromAi";
     private static final String METADATA = "metadata";
     private static final String UI = "ui";
 
     private final ActionDefinitionService actionDefinitionService;
+    private final ClusterElementDefinitionService clusterElementDefinitionService;
+    private final Evaluator evaluator;
+    private final TaskDispatcherDefinitionService taskDispatcherDefinitionService;
     private final TriggerDefinitionService triggerDefinitionService;
     private final WorkflowNodeOutputFacade workflowNodeOutputFacade;
     private final WorkflowService workflowService;
@@ -67,11 +90,16 @@ public class WorkflowNodeParameterFacadeImpl implements WorkflowNodeParameterFac
 
     @SuppressFBWarnings("EI")
     public WorkflowNodeParameterFacadeImpl(
-        ActionDefinitionService actionDefinitionService, TriggerDefinitionService triggerDefinitionService,
-        WorkflowNodeOutputFacade workflowNodeOutputFacade, WorkflowService workflowService,
-        WorkflowTestConfigurationService workflowTestConfigurationService) {
+        ActionDefinitionService actionDefinitionService,
+        ClusterElementDefinitionService clusterElementDefinitionService, Evaluator evaluator,
+        TaskDispatcherDefinitionService taskDispatcherDefinitionService,
+        TriggerDefinitionService triggerDefinitionService, WorkflowNodeOutputFacade workflowNodeOutputFacade,
+        WorkflowService workflowService, WorkflowTestConfigurationService workflowTestConfigurationService) {
 
         this.actionDefinitionService = actionDefinitionService;
+        this.clusterElementDefinitionService = clusterElementDefinitionService;
+        this.evaluator = evaluator;
+        this.taskDispatcherDefinitionService = taskDispatcherDefinitionService;
         this.triggerDefinitionService = triggerDefinitionService;
         this.workflowNodeOutputFacade = workflowNodeOutputFacade;
         this.workflowService = workflowService;
@@ -79,270 +107,801 @@ public class WorkflowNodeParameterFacadeImpl implements WorkflowNodeParameterFac
     }
 
     @Override
-    public Map<String, ?> deleteParameter(String workflowId, String workflowNodeName, String path) {
+    public ParameterResultDTO deleteClusterElementParameter(
+        String workflowId, String workflowNodeName, String clusterElementTypeName,
+        String clusterElementWorkflowNodeName, String parameterPath, long environmentId) {
+
         Workflow workflow = workflowService.getWorkflow(workflowId);
 
         Map<String, ?> definitionMap = JsonUtils.readMap(workflow.getDefinition());
 
-        ParameterMapPropertiesResult result =
-            getParameterMapProperties(workflowNodeName, definitionMap);
+        WorkflowNodeStructure workflowNodeStructure = getWorkflowNodeStructure(
+            workflowNodeName, clusterElementTypeName, clusterElementWorkflowNodeName, definitionMap);
 
-        String[] pathItems = path.split("\\.");
+        Map<String, Object> metadataMap = getMetadataMap(
+            workflowNodeName, clusterElementTypeName, clusterElementWorkflowNodeName, definitionMap);
 
-        setDynamicPropertyTypeItem(path, null, getMetadataMap(workflowNodeName, definitionMap));
-        setParameter(pathItems, null, true, result.parameterMap);
+        Map<String, ?> dynamicPropertyTypesMap = getDynamicPropertyTypesMap(metadataMap);
 
-        workflowService.update(
-            workflowId, JsonUtils.writeWithDefaultPrettyPrinter(definitionMap, true), workflow.getVersion());
+        String[] parameterPathParts = parameterPath.split("\\.");
 
-        return result.parameterMap;
+        setParameter(parameterPathParts, null, true, workflowNodeStructure.parameterMap);
+
+        checkDependOn(
+            parameterPathParts[0], workflowNodeStructure.properties(), workflowNodeStructure.parameterMap,
+            dynamicPropertyTypesMap);
+
+        WorkflowTestContext testContext = fetchWorkflowTestContext(
+            workflow, workflowNodeName, workflowNodeStructure.operationType, environmentId);
+
+        Map<String, Boolean> displayConditionMap = checkDisplayConditionsAndParameters(
+            parameterPath, workflowNodeStructure.operationType,
+            workflowNodeStructure.parameterMap, testContext.inputMap, dynamicPropertyTypesMap,
+            workflowNodeStructure.properties, true, testContext.previousOutputs);
+
+        updateFromAiMetadataPaths(false, getFromAiPaths(metadataMap), parameterPath);
+
+        setDynamicPropertyTypeItem(parameterPath, null, metadataMap);
+
+        if (workflowNodeStructure.isNotBranchTaskDispatcher()) {
+            removeEmptyCollections(workflowNodeStructure.parameterMap);
+        }
+
+        Workflow updatedWorkflow = workflowService.update(
+            workflowId, JsonUtils.writeWithDefaultPrettyPrinter(definitionMap), workflow.getVersion());
+
+        return new ParameterResultDTO(
+            displayConditionMap, metadataMap, workflowNodeStructure.missingRequiredProperties,
+            workflowNodeStructure.parameterMap, updatedWorkflow.getVersion());
     }
 
     @Override
-    public Map<String, Boolean> getDisplayConditions(String workflowId, String workflowNodeName) {
+    public ParameterResultDTO deleteWorkflowNodeParameter(
+        String workflowId, String workflowNodeName, String parameterPath,
+        long environmentId) {
+
+        Workflow workflow = workflowService.getWorkflow(workflowId);
+
+        Map<String, ?> definitionMap = JsonUtils.readMap(workflow.getDefinition());
+
+        WorkflowNodeStructure workflowNodeStructure = getWorkflowNodeStructure(
+            workflowNodeName, null, null, definitionMap);
+
+        Map<String, Object> metadataMap = getMetadataMap(workflowNodeName, null, null, definitionMap);
+
+        Map<String, ?> dynamicPropertyTypesMap = getDynamicPropertyTypesMap(metadataMap);
+
+        String[] parameterPathParts = parameterPath.split("\\.");
+
+        setParameter(parameterPathParts, null, true, workflowNodeStructure.parameterMap);
+
+        checkDependOn(
+            parameterPathParts[0], workflowNodeStructure.properties(), workflowNodeStructure.parameterMap,
+            dynamicPropertyTypesMap);
+
+        WorkflowTestContext testContext = fetchWorkflowTestContext(
+            workflow, workflowNodeName, workflowNodeStructure.operationType, environmentId);
+
+        Map<String, Boolean> displayConditionMap = checkDisplayConditionsAndParameters(
+            parameterPath, workflowNodeStructure.operationType,
+            workflowNodeStructure.parameterMap, testContext.inputMap, dynamicPropertyTypesMap,
+            workflowNodeStructure.properties, true, testContext.previousOutputs);
+
+        setDynamicPropertyTypeItem(parameterPath, null, metadataMap);
+
+        if (workflowNodeStructure.isNotBranchTaskDispatcher()) {
+            removeEmptyCollections(workflowNodeStructure.parameterMap);
+        }
+
+        Workflow updatedWorkflow = workflowService.update(
+            workflowId, JsonUtils.writeWithDefaultPrettyPrinter(definitionMap), workflow.getVersion());
+
+        return new ParameterResultDTO(
+            displayConditionMap, metadataMap, workflowNodeStructure.missingRequiredProperties,
+            workflowNodeStructure.parameterMap, updatedWorkflow.getVersion());
+    }
+
+    @Override
+    public Map<String, Boolean> getDisplayConditions(
+        String componentName, int componentVersion, String operationName, OperationType operationType,
+        Map<String, ?> parameters) {
+
+        List<? extends BaseProperty> properties = switch (operationType) {
+            case ACTION -> {
+                ActionDefinition actionDefinition = actionDefinitionService.getActionDefinition(
+                    componentName, componentVersion, operationName);
+
+                yield actionDefinition.getProperties();
+            }
+            case CLUSTER_ELEMENT -> {
+                ClusterElementDefinition clusterElementDefinition =
+                    clusterElementDefinitionService.getClusterElementDefinition(
+                        componentName, componentVersion, operationName);
+
+                yield clusterElementDefinition.getProperties();
+            }
+            case TRIGGER -> {
+                TriggerDefinition triggerDefinition = triggerDefinitionService.getTriggerDefinition(
+                    componentName, componentVersion, operationName);
+
+                yield triggerDefinition.getProperties();
+            }
+        };
+
+        WorkflowNodeStructure.OperationType structureOperationType = switch (operationType) {
+            case ACTION -> WorkflowNodeStructure.OperationType.TASK;
+            case CLUSTER_ELEMENT -> WorkflowNodeStructure.OperationType.CLUSTER_ELEMENT;
+            case TRIGGER -> WorkflowNodeStructure.OperationType.TRIGGER;
+        };
+
+        return checkDisplayConditionsAndParameters(
+            "", structureOperationType, parameters, Map.of(), Map.of(), properties, false, Map.of());
+    }
+
+    @Override
+    public DisplayConditionResultDTO getClusterElementDisplayConditions(
+        String workflowId, String workflowNodeName, String clusterElementTypeName,
+        String clusterElementWorkflowNodeName, long environmentId) {
+
+        Map<String, Boolean> displayConditionMap = new HashMap<>();
+        Workflow workflow = workflowService.getWorkflow(workflowId);
+
+        Map<String, ?> definitionMap = JsonUtils.readMap(workflow.getDefinition());
+
+        WorkflowNodeStructure workflowNodeStructure = getWorkflowNodeStructure(
+            workflowNodeName, clusterElementTypeName, clusterElementWorkflowNodeName, definitionMap);
+
+        Set<String> keySet = workflowNodeStructure.parameterMap.keySet();
+
+        WorkflowTestContext testContext = fetchWorkflowTestContext(
+            workflow, workflowNodeName, workflowNodeStructure.operationType, environmentId);
+
+        for (String parameterName : new HashSet<>(keySet)) {
+            displayConditionMap.putAll(
+                checkDisplayConditionsAndParameters(
+                    parameterName, workflowNodeStructure.operationType,
+                    workflowNodeStructure.parameterMap, testContext.inputMap, Map.of(),
+                    workflowNodeStructure.properties, false, testContext.previousOutputs));
+        }
+
+        return new DisplayConditionResultDTO(
+            displayConditionMap, new ArrayList<>(workflowNodeStructure.missingRequiredProperties));
+    }
+
+    @Override
+    public Set<String> getClusterElementMissingRequiredProperties(
+        String workflowId, String workflowNodeName, String clusterElementTypeName,
+        String clusterElementWorkflowNodeName) {
+
+        Workflow workflow = workflowService.getWorkflow(workflowId);
+
+        Map<String, ?> definitionMap = JsonUtils.readMap(workflow.getDefinition());
+
+        WorkflowNodeStructure workflowNodeStructure = getWorkflowNodeStructure(
+            workflowNodeName, clusterElementTypeName, clusterElementWorkflowNodeName, definitionMap);
+
+        return Set.copyOf(workflowNodeStructure.missingRequiredProperties);
+    }
+
+    @Override
+    public DisplayConditionResultDTO getWorkflowNodeDisplayConditions(
+        String workflowId, String workflowNodeName, long environmentId) {
+
         Map<String, Boolean> displayConditionMap = new HashMap<>();
 
         Workflow workflow = workflowService.getWorkflow(workflowId);
 
         Map<String, ?> definitionMap = JsonUtils.readMap(workflow.getDefinition());
 
-        ParameterMapPropertiesResult parameterMapProperties = getParameterMapProperties(
-            workflowNodeName, definitionMap);
+        WorkflowNodeStructure workflowNodeStructure = getWorkflowNodeStructure(
+            workflowNodeName, null, null, definitionMap);
 
-        Set<String> keySet = parameterMapProperties.parameterMap.keySet();
+        Set<String> keySet = workflowNodeStructure.parameterMap.keySet();
 
-        Map<String, ?> inputMap = workflowTestConfigurationService.getWorkflowTestConfigurationInputs(workflow.getId());
+        WorkflowTestContext testContext = fetchWorkflowTestContext(
+            workflow, workflowNodeName, workflowNodeStructure.operationType, environmentId);
 
-        for (String name : new HashSet<>(keySet)) {
+        for (String parameterName : new HashSet<>(keySet)) {
             displayConditionMap.putAll(
-                checkDisplayConditionsParameters(
-                    workflowNodeName, name, parameterMapProperties.properties, workflow,
-                    parameterMapProperties.parameterMap, inputMap, parameterMapProperties.taskParameters, Map.of()));
+                checkDisplayConditionsAndParameters(
+                    parameterName, workflowNodeStructure.operationType,
+                    workflowNodeStructure.parameterMap, testContext.inputMap, Map.of(),
+                    workflowNodeStructure.properties, false, testContext.previousOutputs));
         }
 
-        return displayConditionMap;
+        return new DisplayConditionResultDTO(
+            displayConditionMap, new ArrayList<>(workflowNodeStructure.missingRequiredProperties));
     }
 
     @Override
-    public UpdateParameterResultDTO updateParameter(
-        String workflowId, String workflowNodeName, String path, Object value, String type, boolean includeInMetadata) {
+    public Set<String> getWorkflowNodeMissingRequiredProperties(String workflowId, String workflowNodeName) {
+        Workflow workflow = workflowService.getWorkflow(workflowId);
+
+        Map<String, ?> definitionMap = JsonUtils.readMap(workflow.getDefinition());
+
+        WorkflowNodeStructure workflowNodeStructure = getWorkflowNodeStructure(
+            workflowNodeName, null, null, definitionMap);
+
+        return Set.copyOf(workflowNodeStructure.missingRequiredProperties);
+    }
+
+    @Override
+    public ParameterResultDTO updateClusterElementParameter(
+        String workflowId, String workflowNodeName, String clusterElementTypeName,
+        String clusterElementWorkflowNodeName, String parameterPath, Object value, String type,
+        boolean fromAiInMetadata, boolean includeInMetadata, long environmentId) {
 
         Workflow workflow = workflowService.getWorkflow(workflowId);
 
         Map<String, ?> definitionMap = JsonUtils.readMap(workflow.getDefinition());
 
-        ParameterMapPropertiesResult result = getParameterMapProperties(workflowNodeName, definitionMap);
+        WorkflowNodeStructure workflowNodeStructure = getWorkflowNodeStructure(
+            workflowNodeName, clusterElementTypeName, clusterElementWorkflowNodeName, definitionMap);
 
-        String[] pathItems = path.split("\\.");
+        Map<String, Object> metadataMap = getMetadataMap(
+            workflowNodeName, clusterElementTypeName, clusterElementWorkflowNodeName, definitionMap);
 
-        setParameter(pathItems, value, false, result.parameterMap);
+        Map<String, ?> dynamicPropertyTypesMap = getDynamicPropertyTypesMap(metadataMap);
 
-        Map<String, Object> metadataMap = getMetadataMap(workflowNodeName, definitionMap);
+        String[] parameterPathParts = parameterPath.split("\\.");
 
-        Map<String, ?> dynamicPropertyTypeMap = getDynamicPropertyTypeMap(metadataMap);
+        setParameter(parameterPathParts, value, false, workflowNodeStructure.parameterMap);
 
-        // For now only check the first, root level of properties on which other properties could depend on
+        checkDependOn(
+            parameterPathParts[0], workflowNodeStructure.properties(), workflowNodeStructure.parameterMap,
+            dynamicPropertyTypesMap);
 
-        checkDependOn(pathItems[0], result.properties(), result.parameterMap, dynamicPropertyTypeMap);
+        WorkflowTestContext testContext = fetchWorkflowTestContext(
+            workflow, workflowNodeName, workflowNodeStructure.operationType, environmentId);
 
-        Map<String, ?> inputMap = workflowTestConfigurationService.getWorkflowTestConfigurationInputs(
-            workflow.getId());
+        Map<String, Boolean> displayConditionMap = checkDisplayConditionsAndParameters(
+            parameterPath, workflowNodeStructure.operationType,
+            workflowNodeStructure.parameterMap, testContext.inputMap, dynamicPropertyTypesMap,
+            workflowNodeStructure.properties, true, testContext.previousOutputs);
 
-        Map<String, Boolean> displayConditionMap = checkDisplayConditionsParameters(
-            workflowNodeName, pathItems[0], result.properties, workflow, result.parameterMap, inputMap,
-            result.taskParameters, dynamicPropertyTypeMap);
+        updateFromAiMetadataPaths(fromAiInMetadata, getFromAiPaths(metadataMap), parameterPath);
 
         if (includeInMetadata) {
-            setDynamicPropertyTypeItem(path, type, metadataMap);
+            setDynamicPropertyTypeItem(parameterPath, type, metadataMap);
         }
 
-        workflowService.update(
-            workflowId, JsonUtils.writeWithDefaultPrettyPrinter(definitionMap, true), workflow.getVersion());
+        if (workflowNodeStructure.isNotBranchTaskDispatcher()) {
+            removeEmptyCollections(workflowNodeStructure.parameterMap);
+        }
 
-        return new UpdateParameterResultDTO(displayConditionMap, metadataMap, result.parameterMap);
+        Workflow updatedWorkflow = workflowService.update(
+            workflowId, JsonUtils.writeWithDefaultPrettyPrinter(definitionMap), workflow.getVersion());
+
+        return new ParameterResultDTO(
+            displayConditionMap, metadataMap, workflowNodeStructure.missingRequiredProperties,
+            workflowNodeStructure.parameterMap, updatedWorkflow.getVersion());
+    }
+
+    @Override
+    public ParameterResultDTO updateWorkflowNodeParameter(
+        String workflowId, String workflowNodeName, String parameterPath, Object value, String type,
+        boolean includeInMetadata, long environmentId) {
+
+        Workflow workflow = workflowService.getWorkflow(workflowId);
+
+        Map<String, ?> definitionMap = JsonUtils.readMap(workflow.getDefinition());
+
+        WorkflowNodeStructure workflowNodeStructure = getWorkflowNodeStructure(
+            workflowNodeName, null, null, definitionMap);
+
+        Map<String, Object> metadataMap = getMetadataMap(workflowNodeName, null, null, definitionMap);
+
+        Map<String, ?> dynamicPropertyTypesMap = getDynamicPropertyTypesMap(metadataMap);
+
+        String[] parameterPathParts = parameterPath.split("\\.");
+
+        setParameter(parameterPathParts, value, false, workflowNodeStructure.parameterMap);
+
+        checkDependOn(
+            parameterPathParts[0], workflowNodeStructure.properties(), workflowNodeStructure.parameterMap,
+            dynamicPropertyTypesMap);
+
+        WorkflowTestContext testContext = fetchWorkflowTestContext(
+            workflow, workflowNodeName, workflowNodeStructure.operationType, environmentId);
+
+        Map<String, Boolean> displayConditionMap = checkDisplayConditionsAndParameters(
+            parameterPath, workflowNodeStructure.operationType,
+            workflowNodeStructure.parameterMap, testContext.inputMap, dynamicPropertyTypesMap,
+            workflowNodeStructure.properties, true, testContext.previousOutputs);
+
+        if (includeInMetadata) {
+            setDynamicPropertyTypeItem(parameterPath, type, metadataMap);
+        }
+
+        if (workflowNodeStructure.isNotBranchTaskDispatcher()) {
+            removeEmptyCollections(workflowNodeStructure.parameterMap);
+        }
+
+        Workflow updatedWorkflow = workflowService.update(
+            workflowId, JsonUtils.writeWithDefaultPrettyPrinter(definitionMap), workflow.getVersion());
+
+        return new ParameterResultDTO(
+            displayConditionMap, metadataMap, workflowNodeStructure.missingRequiredProperties,
+            workflowNodeStructure.parameterMap, updatedWorkflow.getVersion());
+    }
+
+    protected static boolean hasExpressionVariable(String displayCondition, String parameterPath) {
+        if ((displayCondition == null) || displayCondition.isEmpty()) {
+            return false;
+        }
+
+        // Remove string literals (single and double quoted, including those with escaped quotes)
+        String conditionWithoutStrings = displayCondition.replaceAll(
+            "'(?:[^'\\\\]|\\\\.)*'|\"(?:[^\"\\\\]|\\\\.)*\"", "");
+
+        String regex = "(^|.*\\W)" + parameterPath + "(\\W.*|$)";
+
+        Pattern pattern = Pattern.compile(regex);
+        Matcher matcher = pattern.matcher(conditionWithoutStrings);
+
+        return matcher.find();
+    }
+
+    protected static boolean hasExpressionVariable(
+        String displayCondition, String parameterPath, List<Integer> parameterPathIndexes) {
+
+        if ((displayCondition == null) || displayCondition.isEmpty()) {
+            return false;
+        }
+
+        if (!displayCondition.contains("[index]")) {
+            return false;
+        }
+
+        displayCondition = replaceIndexes(displayCondition, parameterPathIndexes);
+
+        return displayCondition.contains(parameterPath);
+    }
+
+    protected boolean evaluate(
+        String displayCondition, Map<String, Object> inputMap, Map<String, Object> outputs,
+        Map<String, ?> parameterMap) {
+
+        Map<String, Object> evaluate;
+
+        try {
+            evaluate = evaluator.evaluate(parameterMap, outputs, true);
+        } catch (Exception e) {
+            if (log.isTraceEnabled()) {
+                log.trace(e.getMessage());
+            }
+
+            evaluate = new HashMap<>(parameterMap);
+        }
+
+        return evaluate(
+            displayCondition,
+            MapUtils.concat(
+                MapUtils.concat(inputMap, outputs),
+                MapUtils.toMap(
+                    evaluate, Map.Entry::getKey, entry -> entry.getValue() == null ? "" : entry.getValue())));
+    }
+
+    protected void evaluateArray(
+        String propertyName, String displayCondition, Map<String, String> displayConditionMap,
+        Map<String, Object> inputMap, Map<String, Object> outputs, Map<String, ?> parameterMap) {
+
+        List<List<Integer>> indexesList = findIndexes(displayCondition, parameterMap);
+
+        if (indexesList.isEmpty()) {
+            boolean result = evaluate(displayCondition, inputMap, outputs, parameterMap);
+
+            if (result) {
+                displayConditionMap.put(displayCondition, propertyName);
+            }
+        } else {
+            for (List<Integer> indexes : indexesList) {
+                String updatedDisplayCondition = displayCondition.contains("[index]")
+                    ? replaceIndexes(displayCondition, indexes) : displayCondition;
+
+                if (displayConditionMap.containsKey(updatedDisplayCondition)) {
+                    continue;
+                }
+
+                boolean result = evaluate(updatedDisplayCondition, inputMap, outputs, parameterMap);
+
+                if (result) {
+                    String indexesString = indexes.stream()
+                        .map(String::valueOf)
+                        .collect(Collectors.joining("_"));
+
+                    displayConditionMap.put(updatedDisplayCondition, String.join("_", indexesString, propertyName));
+                }
+            }
+        }
+    }
+
+    private void updateFromAiMetadataPaths(boolean fromAiInMetadata, List<String> fromAiPaths, String parameterPath) {
+        if (fromAiInMetadata) {
+            fromAiPaths.add(parameterPath);
+        } else {
+            fromAiPaths.remove(parameterPath);
+        }
     }
 
     private void checkDependOn(
-        String name, List<? extends Property> properties, Map<String, ?> parameterMap,
+        String name, List<? extends BaseProperty> properties, Map<String, ?> parameterMap,
         Map<String, ?> dynamicPropertyTypesMap) {
 
-        for (Property property : properties) {
-            List<String> dependOnPropertyNames = List.of();
+        // Cascade through dependency chains so that clearing A also clears B (depends on A),
+        // C (depends on B), etc. Without this, transitive dependents keep stale values whose
+        // options can no longer be loaded — a request to fetch them would pass null lookup
+        // values to the component's options function and fail.
 
-            if (property instanceof OptionsDataSourceAware optionsDataSourceAware) {
-                OptionsDataSource optionsDataSource = optionsDataSourceAware.getOptionsDataSource();
+        Set<String> visitedNames = new HashSet<>();
+        Deque<String> namesToCheck = new ArrayDeque<>();
 
-                if (optionsDataSource == null) {
-                    continue;
-                }
+        namesToCheck.add(name);
 
-                dependOnPropertyNames = optionsDataSource.getOptionsLookupDependsOn();
-            } else if (property instanceof DynamicPropertiesProperty dynamicPropertiesProperty) {
-                PropertiesDataSource propertiesDataSource = dynamicPropertiesProperty.getPropertiesDataSource();
+        while (!namesToCheck.isEmpty()) {
+            String currentName = namesToCheck.removeFirst();
 
-                if (propertiesDataSource == null) {
-                    continue;
-                }
-
-                dependOnPropertyNames = propertiesDataSource.getPropertiesLookupDependsOn();
-            }
-
-            if (dependOnPropertyNames.contains(name)) {
-                parameterMap.remove(property.getName());
-
-                checkDynamicPropertyTypeItem(property.getName(), dynamicPropertyTypesMap);
-            }
-        }
-    }
-
-    // For now only check the first, root level of properties on which other properties could depend on
-    @SuppressWarnings("unchecked")
-    private Map<String, Boolean> checkDisplayConditionsParameters(
-        String workflowNodeName, String name, List<? extends Property> properties, Workflow workflow,
-        Map<String, ?> parameterMap, Map<String, ?> inputMap, boolean taskParameters,
-        Map<String, ?> dynamicPropertyTypeMap) {
-
-        Map<String, Boolean> displayConditionMap = new HashMap<>();
-
-        for (Property property : properties) {
-            if (property.getDisplayCondition() == null) {
+            if (!visitedNames.add(currentName)) {
                 continue;
             }
 
-            String displayCondition = property.getDisplayCondition();
+            for (BaseProperty property : properties) {
+                List<String> dependOnPropertyNames = List.of();
 
-            if (PropertyUtils.hasExpressionVariable(displayCondition, name)) {
-                parameterMap.remove(property.getName());
+                if (property instanceof OptionsDataSourceAware optionsDataSourceAware) {
+                    OptionsDataSource optionsDataSource = optionsDataSourceAware.getOptionsDataSource();
 
-                checkDynamicPropertyTypeItem(property.getName(), dynamicPropertyTypeMap);
+                    if (optionsDataSource == null) {
+                        continue;
+                    }
+
+                    dependOnPropertyNames = optionsDataSource.getOptionsLookupDependsOn();
+                } else if (property instanceof DynamicPropertiesProperty dynamicPropertiesProperty) {
+                    PropertiesDataSource propertiesDataSource = dynamicPropertiesProperty.getPropertiesDataSource();
+
+                    if (propertiesDataSource == null) {
+                        continue;
+                    }
+
+                    dependOnPropertyNames = propertiesDataSource.getPropertiesLookupDependsOn();
+                }
+
+                if (dependOnPropertyNames.contains(currentName)) {
+                    parameterMap.remove(property.getName());
+
+                    checkDynamicPropertyType(property.getName(), dynamicPropertyTypesMap);
+
+                    namesToCheck.add(property.getName());
+                }
             }
+        }
+    }
 
-            boolean result;
+    private Map<String, Boolean> checkDisplayConditionsAndParameters(
+        String parameterPath, WorkflowNodeStructure.OperationType operationType,
+        Map<String, ?> parameterMap, Map<String, ?> inputMap, Map<String, ?> dynamicPropertyTypesMap,
+        List<? extends BaseProperty> properties, boolean removeParameters,
+        Map<String, ?> previousOutputs) {
 
-            if (taskParameters) {
-                WorkflowTask workflowTask = workflow.getTask(workflowNodeName);
+        Map<String, String> displayConditionMap = new HashMap<>();
 
-                Map<String, ?> outputs = workflowNodeOutputFacade.getWorkflowNodeSampleOutputs(
-                    workflow.getId(), workflowTask.getName());
+        checkDisplayConditionsAndParameters(
+            parameterPath, operationType, parameterMap, inputMap,
+            displayConditionMap, dynamicPropertyTypesMap, properties, removeParameters,
+            previousOutputs);
 
-                result = evaluate(
-                    displayCondition,
-                    MapUtils.concat(
-                        MapUtils.concat((Map<String, Object>) inputMap, (Map<String, Object>) outputs),
-                        MapUtils.toMap(
-                            parameterMap,
-                            Map.Entry::getKey, entry -> entry.getValue() == null ? "" : entry.getValue())));
+        return MapUtils.toMap(displayConditionMap, Map.Entry::getKey, entry -> true);
+    }
+
+    @SuppressWarnings("unchecked")
+    private void checkDisplayConditionsAndParameters(
+        String parameterPath, WorkflowNodeStructure.OperationType operationType,
+        Map<String, ?> parameterMap, Map<String, ?> inputMap, Map<String, String> displayConditionMap,
+        Map<String, ?> dynamicPropertyTypesMap, List<? extends BaseProperty> properties, boolean removeParameters,
+        Map<String, ?> previousOutputs) {
+
+        for (BaseProperty property : properties) {
+            switch (property) {
+                case ArrayProperty arrayProperty -> {
+                    checkDisplayConditionsAndParameters(
+                        parameterPath, operationType, parameterMap,
+                        (Map<String, Object>) inputMap, displayConditionMap, dynamicPropertyTypesMap, arrayProperty,
+                        removeParameters, previousOutputs);
+
+                    List<? extends BaseProperty> itemsToCheck = filterArrayItems(
+                        arrayProperty.getItems(), parameterPath, dynamicPropertyTypesMap);
+
+                    checkDisplayConditionsAndParameters(
+                        parameterPath, operationType, parameterMap,
+                        inputMap, displayConditionMap, dynamicPropertyTypesMap, itemsToCheck,
+                        removeParameters, previousOutputs);
+                }
+                case com.bytechef.platform.workflow.task.dispatcher.domain.ArrayProperty arrayProperty -> {
+                    checkDisplayConditionsAndParameters(
+                        parameterPath, operationType, parameterMap,
+                        (Map<String, Object>) inputMap, displayConditionMap, dynamicPropertyTypesMap, arrayProperty,
+                        removeParameters, previousOutputs);
+
+                    List<? extends BaseProperty> itemsToCheck = filterArrayItems(
+                        arrayProperty.getItems(), parameterPath, dynamicPropertyTypesMap);
+
+                    checkDisplayConditionsAndParameters(
+                        parameterPath, operationType, parameterMap, inputMap,
+                        displayConditionMap, dynamicPropertyTypesMap, itemsToCheck, removeParameters,
+                        previousOutputs);
+                }
+                case ObjectProperty objectProperty -> {
+                    checkDisplayConditionsAndParameters(
+                        parameterPath, operationType, parameterMap,
+                        (Map<String, Object>) inputMap, displayConditionMap, dynamicPropertyTypesMap, objectProperty,
+                        removeParameters, previousOutputs);
+
+                    checkDisplayConditionsAndParameters(
+                        parameterPath, operationType, parameterMap,
+                        inputMap, displayConditionMap, dynamicPropertyTypesMap, objectProperty.getProperties(),
+                        removeParameters, previousOutputs);
+                }
+                case com.bytechef.platform.workflow.task.dispatcher.domain.ObjectProperty objectProperty -> {
+                    checkDisplayConditionsAndParameters(
+                        parameterPath, operationType, parameterMap,
+                        (Map<String, Object>) inputMap, displayConditionMap, dynamicPropertyTypesMap, objectProperty,
+                        removeParameters, previousOutputs);
+
+                    checkDisplayConditionsAndParameters(
+                        parameterPath, operationType, parameterMap,
+                        inputMap, displayConditionMap, dynamicPropertyTypesMap, objectProperty.getProperties(),
+                        removeParameters, previousOutputs);
+                }
+                default -> checkDisplayConditionsAndParameters(
+                    parameterPath, operationType, parameterMap,
+                    (Map<String, Object>) inputMap, displayConditionMap, dynamicPropertyTypesMap, property,
+                    removeParameters, previousOutputs);
+            }
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private void checkDisplayConditionsAndParameters(
+        String parameterPath, WorkflowNodeStructure.OperationType operationType,
+        Map<String, ?> parameterMap, Map<String, Object> inputMap, Map<String, String> displayConditionMap,
+        Map<String, ?> dynamicPropertyTypesMap, BaseProperty property, boolean removeParameters,
+        Map<String, ?> previousOutputs) {
+
+        if (property.getDisplayCondition() == null) {
+            return;
+        }
+
+        String displayCondition = property.getDisplayCondition();
+
+        if (operationType == WorkflowNodeStructure.OperationType.CLUSTER_ELEMENT ||
+            operationType == WorkflowNodeStructure.OperationType.TASK ||
+            operationType == WorkflowNodeStructure.OperationType.TASK_DISPATCHER) {
+
+            if (displayCondition.contains("[index]")) {
+                evaluateArray(
+                    property.getName(), displayCondition, displayConditionMap, inputMap,
+                    (Map<String, Object>) previousOutputs, parameterMap);
             } else {
-                result = evaluate(
-                    displayCondition,
-                    MapUtils.concat((Map<String, Object>) inputMap, (Map<String, Object>) parameterMap));
-            }
+                boolean result = evaluate(
+                    displayCondition, inputMap, (Map<String, Object>) previousOutputs, parameterMap);
 
-            displayConditionMap.put(displayCondition, result);
-        }
-
-        return displayConditionMap;
-    }
-
-    private static void checkDynamicPropertyTypeItem(String name, Map<String, ?> dynamicPropertyTypeMap) {
-        Set<String> keySet = new HashSet<>(dynamicPropertyTypeMap.keySet());
-
-        for (String key : keySet) {
-            if (key.equals(name) || key.startsWith(name + ".") || key.startsWith(name + "[")) {
-                dynamicPropertyTypeMap.remove(key);
-            }
-        }
-    }
-
-    private boolean evaluate(String displayCondition, Map<String, ?> inputParameters) {
-        Map<String, Object> result = Evaluator.evaluate(
-            Map.of("displayCondition", "${" + displayCondition + "}"), inputParameters);
-
-        Object displayConditionResult = result.get("displayCondition");
-
-        return !(displayConditionResult instanceof String) && (boolean) displayConditionResult;
-    }
-
-    @SuppressWarnings("unchecked")
-    private Map<String, Object> getMetadataMap(String workflowNodeName, Map<String, ?> definitionMap) {
-        Map<String, Object> metadataMap;
-
-        Map<String, ?> triggerMap = getTrigger(
-            workflowNodeName, (List<Map<String, ?>>) definitionMap.get(WorkflowExtConstants.TRIGGERS));
-
-        if (triggerMap == null) {
-            Map<String, ?> taskMap = getTask(
-                workflowNodeName, (List<Map<String, ?>>) definitionMap.get(WorkflowConstants.TASKS));
-
-            if (taskMap == null) {
-                throw new IllegalArgumentException("Workflow node %s does not exist".formatted(workflowNodeName));
-            }
-
-            metadataMap = (Map<String, Object>) taskMap.get(METADATA);
-
-            if (metadataMap == null) {
-                metadataMap = new HashMap<>();
-
-                ((Map<String, Object>) taskMap).put(METADATA, metadataMap);
+                if (result) {
+                    displayConditionMap.put(displayCondition, property.getName());
+                }
             }
         } else {
-            metadataMap = (Map<String, Object>) triggerMap.get(METADATA);
+            if (displayCondition.contains("[index]")) {
+                evaluateArray(
+                    property.getName(), displayCondition, displayConditionMap, inputMap, Map.of(),
+                    parameterMap);
+            } else {
+                boolean result = evaluate(
+                    displayCondition, MapUtils.concat(inputMap, (Map<String, Object>) parameterMap));
 
-            if (metadataMap == null) {
-                metadataMap = new HashMap<>();
-
-                ((Map<String, Object>) triggerMap).put(METADATA, metadataMap);
+                if (result) {
+                    displayConditionMap.put(displayCondition, property.getName());
+                }
             }
         }
 
-        return metadataMap;
-    }
+        if (parameterPath.contains("[")) {
+            if (removeParameters) {
+                List<Integer> parameterPathIndexes = extractIndexes(parameterPath);
 
-    @SuppressWarnings("unchecked")
-    private ParameterMapPropertiesResult getParameterMapProperties(
-        String workflowNodeName, Map<String, ?> definitionMap) {
+                String indexesString = parameterPathIndexes.stream()
+                    .map(String::valueOf)
+                    .collect(Collectors.joining("_"));
 
-        Map<String, ?> parameterMap;
-        List<? extends Property> properties;
+                if (hasExpressionVariable(displayCondition, parameterPath, parameterPathIndexes) &&
+                    !displayConditionMap.containsValue(String.join("_", indexesString, property.getName()))) {
 
-        Map<String, ?> triggerMap = getTrigger(
-            workflowNodeName, (List<Map<String, ?>>) definitionMap.get(WorkflowExtConstants.TRIGGERS));
+                    removeParameter(property.getName(), parameterPathIndexes, parameterMap);
 
-        if (triggerMap == null) {
-            Map<String, ?> taskMap = getTask(
-                workflowNodeName, (List<Map<String, ?>>) definitionMap.get(WorkflowConstants.TASKS));
-
-            if (taskMap == null) {
-                throw new IllegalArgumentException("Workflow node %s does not exist".formatted(workflowNodeName));
+                    checkDynamicPropertyType(property.getName(), dynamicPropertyTypesMap);
+                }
             }
-
-            parameterMap = (Map<String, ?>) taskMap.get(WorkflowConstants.PARAMETERS);
-            WorkflowNodeType workflowNodeType = WorkflowNodeType.ofType(
-                (String) taskMap.get(WorkflowConstants.TYPE));
-
-            ActionDefinition actionDefinition = actionDefinitionService.getActionDefinition(
-                workflowNodeType.componentName(), workflowNodeType.componentVersion(),
-                workflowNodeType.componentOperationName());
-
-            properties = actionDefinition.getProperties();
         } else {
-            parameterMap = (Map<String, ?>) triggerMap.get(WorkflowConstants.PARAMETERS);
-            WorkflowNodeType workflowNodeType = WorkflowNodeType.ofType(
-                (String) triggerMap.get(WorkflowConstants.TYPE));
+            if (removeParameters && hasExpressionVariable(displayCondition, parameterPath)) {
+                removeParameter(property.getName(), null, parameterMap);
 
-            TriggerDefinition triggerDefinition = triggerDefinitionService.getTriggerDefinition(
-                workflowNodeType.componentName(), workflowNodeType.componentVersion(),
-                workflowNodeType.componentOperationName());
+                checkDynamicPropertyType(property.getName(), dynamicPropertyTypesMap);
+            }
+        }
+    }
 
-            properties = triggerDefinition.getProperties();
+    private WorkflowTestContext fetchWorkflowTestContext(
+        Workflow workflow, String workflowNodeName,
+        WorkflowNodeStructure.OperationType operationType, long environmentId) {
+
+        Map<String, ?> inputMap = workflowTestConfigurationService.getWorkflowTestConfigurationInputs(
+            workflow.getId(), environmentId);
+
+        Map<String, ?> previousOutputs = Map.of();
+
+        if (operationType == WorkflowNodeStructure.OperationType.CLUSTER_ELEMENT ||
+            operationType == WorkflowNodeStructure.OperationType.TASK ||
+            operationType == WorkflowNodeStructure.OperationType.TASK_DISPATCHER) {
+
+            WorkflowTask workflowTask = workflow.getTask(workflowNodeName);
+
+            if (workflowTask != null) {
+                previousOutputs = workflowNodeOutputFacade.getPreviousWorkflowNodeSampleOutputs(
+                    workflow.getId(), workflowTask.getName(), environmentId);
+            }
         }
 
-        return new ParameterMapPropertiesResult(parameterMap, properties, triggerMap == null);
+        return new WorkflowTestContext(inputMap, previousOutputs);
+    }
+
+    private record WorkflowTestContext(Map<String, ?> inputMap, Map<String, ?> previousOutputs) {
+    }
+
+    /**
+     * Filters array items based on dynamic property types stored in metadata. For array paths like "conditions[0][0]",
+     * only returns the object variant that matches the stored type in dynamicPropertyTypesMap. <br/>
+     * In the condition component, array items are object variants with names like "boolean", "number", "string". We
+     * match the object name against the stored type. <br/>
+     * The type can be stored either: 1. Directly as "conditions[0][0]" -> "STRING" 2. Or inferred from child properties
+     * like "conditions[0][0].value1" -> "STRING"
+     *
+     * @param items                   the list of properties to be filtered, may be null or empty
+     * @param parameterPath           the parameter path that may contain array indices and property accessors
+     * @param dynamicPropertyTypesMap a map containing parameter paths as keys and their corresponding type names as
+     *                                values
+     * @return the filtered list of properties matching the stored type, or the original list if no filtering applies
+     */
+    private List<? extends BaseProperty> filterArrayItems(
+        List<? extends BaseProperty> items, String parameterPath, Map<String, ?> dynamicPropertyTypesMap) {
+
+        if (items == null || items.isEmpty() || !parameterPath.contains("[")) {
+            return items;
+        }
+
+        // Extract parent path (e.g., "conditions[0][0]" from "conditions[0][0].value2")
+        int lastDotIndex = parameterPath.lastIndexOf('.');
+
+        String parentPath = lastDotIndex > 0 ? parameterPath.substring(0, lastDotIndex) : parameterPath;
+
+        String storedType = (String) dynamicPropertyTypesMap.get(parentPath);
+
+        // If not found directly, try to infer from child properties
+        if (storedType == null) {
+            String prefix = parentPath + ".";
+
+            for (Map.Entry<String, ?> entry : dynamicPropertyTypesMap.entrySet()) {
+                String key = entry.getKey();
+
+                if (key.startsWith(prefix) && entry.getValue() instanceof String) {
+                    storedType = (String) entry.getValue();
+
+                    break;
+                }
+            }
+        }
+
+        if (storedType == null) {
+            return items;
+        }
+
+        List<BaseProperty> filteredProperties = new ArrayList<>();
+
+        for (BaseProperty item : items) {
+            if (item instanceof ObjectProperty objectProperty) {
+                String name = objectProperty.getName();
+
+                if (name != null && name.equalsIgnoreCase(storedType)) {
+                    filteredProperties.add(item);
+                }
+            } else if (item instanceof com.bytechef.platform.workflow.task.dispatcher.domain.ObjectProperty objectProperty) {
+
+                String name = objectProperty.getName();
+
+                if (name != null && name.equalsIgnoreCase(storedType)) {
+                    filteredProperties.add(item);
+                }
+            } else {
+                filteredProperties.add(item);
+            }
+        }
+
+        return filteredProperties.isEmpty() ? items : filteredProperties;
+    }
+
+    private static Map<String, ?> getClusterElementMap(
+        String clusterElementTypeName, String clusterElementWorkflowNodeName, Map<String, ?> taskMap) {
+
+        return getClusterElementMap(clusterElementTypeName, clusterElementWorkflowNodeName, taskMap, true);
     }
 
     @SuppressWarnings("unchecked")
-    private static Map<String, ?> getTask(String workflowNodeName, List<Map<String, ?>> tasksMaps) {
-        for (Map<String, ?> taskMap : tasksMaps) {
+    private static Map<String, ?> getClusterElementMap(
+        String clusterElementTypeName, String clusterElementWorkflowNodeName, Map<String, ?> taskMap,
+        boolean nullCheck) {
+
+        Map<String, ?> clusterElementMap = null;
+        Map<String, Map<String, ?>> clusterElementsMap = (Map<String, Map<String, ?>>) taskMap.get(
+            WorkflowExtConstants.CLUSTER_ELEMENTS);
+
+        for (Map.Entry<String, ?> entry : clusterElementsMap.entrySet()) {
+            if (clusterElementTypeName.equalsIgnoreCase(entry.getKey())) {
+                if (entry.getValue() instanceof Map<?, ?> map &&
+                    Objects.equals(map.get(WorkflowConstants.NAME), clusterElementWorkflowNodeName)) {
+
+                    clusterElementMap = (Map<String, ?>) map;
+                } else if (entry.getValue() instanceof List<?> list) {
+                    for (Object item : list) {
+                        if (item instanceof Map<?, ?> map) {
+                            String name = (String) map.get(WorkflowConstants.NAME);
+
+                            if (name.equals(clusterElementWorkflowNodeName)) {
+                                clusterElementMap = (Map<String, ?>) map;
+
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (clusterElementMap != null) {
+                break;
+            }
+
+            if (entry.getValue() instanceof Map<?, ?> map) {
+                if (map.containsKey(WorkflowExtConstants.CLUSTER_ELEMENTS)) {
+                    clusterElementMap = getClusterElementMap(
+                        clusterElementTypeName, clusterElementWorkflowNodeName, (Map<String, ?>) map, false);
+                }
+            } else if (entry.getValue() instanceof List<?> list) {
+                for (Object item : list) {
+                    if ((item instanceof Map<?, ?> map) && map.containsKey(WorkflowExtConstants.CLUSTER_ELEMENTS)) {
+                        clusterElementMap = getClusterElementMap(
+                            clusterElementTypeName, clusterElementWorkflowNodeName, (Map<String, ?>) map, false);
+
+                        if (clusterElementMap != null) {
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (clusterElementMap != null) {
+                break;
+            }
+        }
+
+        if (nullCheck && clusterElementMap == null) {
+            throw new ConfigurationException(
+                "Cluster element with name: %s does not exist".formatted(clusterElementWorkflowNodeName),
+                WorkflowErrorType.CLUSTER_ELEMENT_NOT_FOUND);
+        }
+
+        return clusterElementMap;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Map<String, ?> getTask(String workflowNodeName, List<Map<String, ?>> taskMaps) {
+        for (Map<String, ?> taskMap : taskMaps) {
             if (Objects.equals(taskMap.get(WorkflowConstants.NAME), workflowNodeName)) {
                 if (!taskMap.containsKey(WorkflowConstants.PARAMETERS)) {
                     ((Map<String, Object>) taskMap).put(WorkflowConstants.PARAMETERS, new HashMap<>());
@@ -358,7 +917,9 @@ public class WorkflowNodeParameterFacadeImpl implements WorkflowNodeParameterFac
             }
 
             for (Map.Entry<String, ?> entry : parameters.entrySet()) {
-                if (entry.getValue() instanceof Map<?, ?> curMap) {
+                Object value = entry.getValue();
+
+                if (value instanceof Map<?, ?> curMap) {
                     if (curMap.containsKey(WorkflowConstants.NAME)) {
                         Map<String, ?> curTaskMap = getTask(workflowNodeName, List.of((Map<String, ?>) curMap));
 
@@ -383,22 +944,61 @@ public class WorkflowNodeParameterFacadeImpl implements WorkflowNodeParameterFac
                             }
                         }
                     }
-                } else if (entry.getValue() instanceof List<?> curList && !curList.isEmpty() &&
-                    curList.getFirst() instanceof Map<?, ?>) {
+                } else if (value instanceof List<?> curList && !curList.isEmpty()) {
+                    if (curList.getFirst() instanceof Map<?, ?>) {
+                        for (Object curItem : curList) {
+                            if (curItem instanceof Map<?, ?> curTask) {
+                                if (curTask.containsKey(WorkflowConstants.TASKS)) {
+                                    Map<String, ?> curTaskMap = getTask(
+                                        workflowNodeName, (List<Map<String, ?>>) curTask.get(WorkflowConstants.TASKS));
 
-                    for (Object item : curList) {
-                        Map<String, ?> curTask = (Map<String, ?>) item;
+                                    if (curTaskMap != null) {
+                                        return curTaskMap;
+                                    }
+                                }
 
-                        if (!curTask.containsKey(WorkflowConstants.NAME) &&
-                            !curTask.containsKey(WorkflowConstants.PARAMETERS)) {
+                                if (!curTask.containsKey(WorkflowConstants.NAME) &&
+                                    !curTask.containsKey(WorkflowConstants.PARAMETERS)) {
 
-                            continue;
+                                    continue;
+                                }
+
+                                Map<String, ?> curTaskMap = getTask(
+                                    workflowNodeName, List.of((Map<String, ?>) curTask));
+
+                                if (curTaskMap != null) {
+                                    return curTaskMap;
+                                }
+                            }
                         }
+                    } else if (curList.getFirst() instanceof List<?>) {
+                        for (Object curListItem : curList) {
+                            for (Object curItem : (List<?>) curListItem) {
+                                if (curItem instanceof Map<?, ?> curTask) {
+                                    if (curTask.containsKey(WorkflowConstants.TASKS)) {
+                                        Map<String, ?> curTaskMap = getTask(
+                                            workflowNodeName,
+                                            (List<Map<String, ?>>) curTask.get(WorkflowConstants.TASKS));
 
-                        Map<String, ?> curTaskMap = getTask(workflowNodeName, List.of(curTask));
+                                        if (curTaskMap != null) {
+                                            return curTaskMap;
+                                        }
+                                    }
 
-                        if (curTaskMap != null) {
-                            return curTaskMap;
+                                    if (!curTask.containsKey(WorkflowConstants.NAME) &&
+                                        !curTask.containsKey(WorkflowConstants.PARAMETERS)) {
+
+                                        continue;
+                                    }
+
+                                    Map<String, ?> curTaskMap = getTask(
+                                        workflowNodeName, List.of((Map<String, ?>) curTask));
+
+                                    if (curTaskMap != null) {
+                                        return curTaskMap;
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -408,10 +1008,214 @@ public class WorkflowNodeParameterFacadeImpl implements WorkflowNodeParameterFac
         return null;
     }
 
+    private static void removeParameter(String parameterName, List<Integer> indexes, Map<?, ?> parameterMap) {
+        for (Object keyObj : new HashSet<>(parameterMap.keySet())) {
+            String key = (String) keyObj;
+
+            if (key.equals(parameterName)) {
+                parameterMap.remove(key);
+
+                return;
+            }
+
+            if (parameterMap.get(key) instanceof List<?> subList && indexes != null && !indexes.isEmpty()) {
+                int index = indexes.getFirst();
+
+                if (subList.size() <= index) {
+                    continue;
+                }
+
+                if (subList.get(index) instanceof Map<?, ?> subParameterMap) {
+                    indexes.removeFirst();
+
+                    removeParameter(parameterName, indexes, subParameterMap);
+                } else if (subList.get(index) instanceof List<?> subList2) {
+                    if (indexes.getFirst() < subList2.size() &&
+                        subList2.get(indexes.getFirst()) instanceof Map<?, ?> subParameterMap) {
+
+                        indexes.removeFirst();
+
+                        removeParameter(parameterName, indexes, subParameterMap);
+                    } else {
+                        indexes.removeFirst();
+                    }
+                }
+            } else if (parameterMap.get(key) instanceof Map<?, ?> subParameterMap) {
+                removeParameter(parameterName, indexes, subParameterMap);
+
+                if (subParameterMap.isEmpty()) {
+                    parameterMap.remove(key);
+                }
+            }
+        }
+    }
+
+    private static void checkDynamicPropertyType(String propertyName, Map<String, ?> dynamicPropertyTypesMap) {
+        for (String key : new HashSet<>(dynamicPropertyTypesMap.keySet())) {
+            if (key.equals(propertyName) || key.contains("." + propertyName) || key.startsWith(propertyName + ".") ||
+                key.startsWith(propertyName + "[")) {
+
+                dynamicPropertyTypesMap.remove(key);
+            }
+        }
+    }
+
+    private boolean evaluate(String displayCondition, Map<String, ?> inputParameters) {
+        try {
+            Map<String, Object> result = evaluator.evaluate(
+                Map.of("displayCondition", "=" + displayCondition), inputParameters, true);
+
+            Object displayConditionResult = result.get("displayCondition");
+
+            return displayConditionResult instanceof Boolean bool && bool;
+        } catch (RuntimeException runtimeException) {
+            return false;
+        }
+    }
+
+    private static List<Integer> extractIndexes(String expression) {
+        List<Integer> indexes = new ArrayList<>();
+
+        Matcher matcher = ARRAY_INDEX_VALUE_PATTERN.matcher(expression);
+
+        while (matcher.find()) {
+            indexes.add(Integer.parseInt(matcher.group(1)));
+        }
+
+        return indexes;
+    }
+
+    private static List<List<Integer>> findIndexes(String displayCondition, Map<String, ?> parameterMap) {
+        List<List<Integer>> allIndexes = new ArrayList<>();
+
+        if (displayCondition == null || displayCondition.isEmpty()) {
+            return List.of();
+        }
+
+        findIndexes(displayCondition, parameterMap, new ArrayList<>(), allIndexes);
+
+        return allIndexes;
+    }
+
+    private static void findIndexes(
+        String displayCondition, Object currentParameters, List<Integer> currentIndexes,
+        List<List<Integer>> allIndexes) {
+
+        if (displayCondition.startsWith(".")) {
+            displayCondition = displayCondition.substring(1);
+        }
+
+        Matcher matcher = ARRAY_INDEXES_PATTERN.matcher(displayCondition);
+
+        if (matcher.find()) {
+            String key = matcher.group(1);
+            String indexGroup = matcher.group(2);
+            int matchEnd = matcher.end();
+            String remainingExpression = displayCondition.substring(matchEnd);
+
+            if (key != null) {
+                if (currentParameters instanceof Map<?, ?> currentParameterMap) {
+                    if (currentParameterMap.containsKey(key)) {
+                        Object nextParameters = currentParameterMap.get(key);
+
+                        if (nextParameters instanceof List<?> nextList) {
+                            for (int i = 0; i < nextList.size(); i++) {
+                                currentIndexes.add(i);
+
+                                findIndexes(
+                                    indexGroup.replaceFirst("\\[index]", "") + remainingExpression, nextList.get(i),
+                                    currentIndexes, allIndexes);
+
+                                currentIndexes.removeLast();
+                            }
+                        } else {
+                            findIndexes(indexGroup + remainingExpression, nextParameters, currentIndexes, allIndexes);
+                        }
+                    } else {
+                        findIndexes(remainingExpression, currentParameters, currentIndexes, allIndexes);
+                    }
+                }
+            } else {
+                if (currentParameters instanceof List<?> currentList) {
+                    for (int i = 0; i < currentList.size(); i++) {
+                        currentIndexes.add(i);
+
+                        findIndexes(
+                            indexGroup.replaceFirst("\\[index]", "") + remainingExpression, currentList.get(i),
+                            currentIndexes, allIndexes);
+
+                        currentIndexes.removeLast();
+                    }
+                }
+            }
+        } else {
+            if (!currentIndexes.isEmpty()) {
+                allIndexes.add(new ArrayList<>(currentIndexes));
+            }
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> getMetadataMap(
+        String workflowNodeName, String clusterElementTypeName, String clusterElementWorkflowNodeName,
+        Map<String, ?> definitionMap) {
+
+        Map<String, Object> metadataMap;
+
+        Map<String, ?> triggerMap = getTrigger(
+            workflowNodeName, (List<Map<String, ?>>) definitionMap.get(WorkflowExtConstants.TRIGGERS));
+
+        if (triggerMap == null) {
+            Map<String, ?> taskMap = getTask(
+                workflowNodeName, (List<Map<String, ?>>) definitionMap.get(WorkflowConstants.TASKS));
+
+            if (taskMap == null) {
+                throw new ConfigurationException(
+                    "Workflow node with name: %s does not exist".formatted(workflowNodeName),
+                    WorkflowErrorType.WORKFLOW_NODE_NOT_FOUND);
+            }
+
+            if (clusterElementTypeName == null) {
+                metadataMap = (Map<String, Object>) taskMap.get(METADATA);
+
+                if (metadataMap == null) {
+                    metadataMap = new HashMap<>();
+
+                    ((Map<String, Object>) taskMap).put(METADATA, metadataMap);
+                }
+            } else {
+                Map<String, ?> clusterElementMap = getClusterElementMap(
+                    clusterElementTypeName, clusterElementWorkflowNodeName, taskMap);
+
+                metadataMap = (Map<String, Object>) clusterElementMap.get(METADATA);
+
+                if (metadataMap == null) {
+                    metadataMap = new HashMap<>();
+
+                    ((Map<String, Object>) clusterElementMap).put(METADATA, metadataMap);
+                }
+            }
+        } else {
+            metadataMap = (Map<String, Object>) triggerMap.get(METADATA);
+
+            if (metadataMap == null) {
+                metadataMap = new HashMap<>();
+
+                ((Map<String, Object>) triggerMap).put(METADATA, metadataMap);
+            }
+        }
+
+        return metadataMap;
+    }
+
     @SuppressWarnings("unchecked")
     private Map<String, ?> getTrigger(String workflowNodeName, List<Map<String, ?>> triggerMaps) {
         if (triggerMaps == null) {
             return null;
+        }
+
+        if (Objects.equals(workflowNodeName, "manual")) {
+            return Map.of("type", "manual/v1/manual", "parameters", Map.of());
         }
 
         for (Map<String, ?> triggerMap : triggerMaps) {
@@ -427,20 +1231,184 @@ public class WorkflowNodeParameterFacadeImpl implements WorkflowNodeParameterFac
         return null;
     }
 
-    private void setDynamicPropertyTypeItem(
-        String path, String type, Map<String, Object> metadataMap) {
+    @SuppressWarnings("unchecked")
+    private WorkflowNodeStructure getWorkflowNodeStructure(
+        String workflowNodeName, String clusterElementTypeName, String clusterElementWorkflowNodeName,
+        Map<String, ?> definitionMap) {
 
-        Map<String, Object> dynamicPropertyTypeMap = getDynamicPropertyTypeMap(metadataMap);
+        Map<String, ?> parameterMap;
+        List<? extends BaseProperty> properties;
+        String name;
 
-        if (type == null) {
-            dynamicPropertyTypeMap.remove(path);
+        // We need a mutable map
+        Map<String, ?> triggerMap = getTrigger(
+            workflowNodeName, (List<Map<String, ?>>) definitionMap.get(WorkflowExtConstants.TRIGGERS));
+
+        WorkflowNodeStructure.OperationType operationType;
+
+        if (triggerMap == null) {
+            // We need a mutable map
+
+            Map<String, ?> taskMap = getTask(
+                workflowNodeName, (List<Map<String, ?>>) definitionMap.get(WorkflowConstants.TASKS));
+
+            if (taskMap == null) {
+                throw new ConfigurationException(
+                    "Workflow node with name: %s does not exist".formatted(workflowNodeName),
+                    WorkflowErrorType.WORKFLOW_NODE_NOT_FOUND);
+            }
+
+            if (clusterElementTypeName == null) {
+                parameterMap = (Map<String, ?>) taskMap.get(WorkflowConstants.PARAMETERS);
+                WorkflowNodeType workflowNodeType = WorkflowNodeType.ofType(
+                    (String) taskMap.get(WorkflowConstants.TYPE));
+
+                if (workflowNodeType.operation() == null) {
+                    operationType = WorkflowNodeStructure.OperationType.TASK_DISPATCHER;
+
+                    TaskDispatcherDefinition taskDispatcherDefinition =
+                        taskDispatcherDefinitionService.getTaskDispatcherDefinition(
+                            workflowNodeType.name(), workflowNodeType.version());
+
+                    properties = taskDispatcherDefinition.getProperties();
+                    name = taskDispatcherDefinition.getName();
+                } else {
+                    operationType = WorkflowNodeStructure.OperationType.TASK;
+
+                    ActionDefinition actionDefinition = actionDefinitionService.getActionDefinition(
+                        workflowNodeType.name(), workflowNodeType.version(),
+                        workflowNodeType.operation());
+
+                    properties = actionDefinition.getProperties();
+                    name = actionDefinition.getName();
+                }
+            } else {
+                Map<String, ?> clusterElementMap = getClusterElementMap(
+                    clusterElementTypeName, clusterElementWorkflowNodeName, taskMap);
+
+                parameterMap = (Map<String, ?>) clusterElementMap.get(WorkflowConstants.PARAMETERS);
+
+                operationType = WorkflowNodeStructure.OperationType.CLUSTER_ELEMENT;
+
+                WorkflowNodeType workflowNodeType = WorkflowNodeType.ofType(
+                    (String) clusterElementMap.get(WorkflowConstants.TYPE));
+
+                ClusterElementDefinition clusterElementDefinition = clusterElementDefinitionService
+                    .getClusterElementDefinition(
+                        workflowNodeType.name(), workflowNodeType.version(),
+                        Objects.requireNonNull(workflowNodeType.operation()));
+
+                properties = clusterElementDefinition.getProperties();
+                name = clusterElementDefinition.getName();
+            }
         } else {
-            dynamicPropertyTypeMap.put(path, type);
+            operationType = WorkflowNodeStructure.OperationType.TRIGGER;
+            parameterMap = (Map<String, ?>) triggerMap.get(WorkflowConstants.PARAMETERS);
+            WorkflowNodeType workflowNodeType = WorkflowNodeType.ofType(
+                (String) triggerMap.get(WorkflowConstants.TYPE));
+
+            TriggerDefinition triggerDefinition = triggerDefinitionService.getTriggerDefinition(
+                workflowNodeType.name(), workflowNodeType.version(),
+                Objects.requireNonNull(workflowNodeType.operation()));
+
+            properties = triggerDefinition.getProperties();
+            name = triggerDefinition.getName();
+        }
+
+        Set<String> missingRequiredProperties = new HashSet<>();
+
+        if (parameterMap != null && properties != null) {
+            checkRequiredProperties(properties, parameterMap, "", missingRequiredProperties, parameterMap, List.of());
+        }
+
+        return new WorkflowNodeStructure(operationType, parameterMap, properties, missingRequiredProperties, name);
+    }
+
+    private void checkRequiredProperties(
+        List<?> properties, Map<?, ?> parameterMap, String prefix, Set<String> missingRequiredProperties,
+        Map<String, ?> rootParameterMap, List<Integer> indexes) {
+
+        for (Object prop : properties) {
+            if (!(prop instanceof BaseProperty property)) {
+                continue;
+            }
+
+            if (isHidden(property, rootParameterMap, indexes)) {
+                continue;
+            }
+
+            String propertyName = property.getName();
+
+            String propertyPath = prefix.isEmpty() ? propertyName : prefix + "." + propertyName;
+
+            if (property.getRequired() && isRequiredValueMissing(parameterMap, propertyName)) {
+                missingRequiredProperties.add(propertyPath);
+            } else if (parameterMap.containsKey(propertyName)) {
+                // Check nested properties
+                if (property instanceof ObjectProperty objectProperty) {
+                    List<?> nestedProperties = objectProperty.getProperties();
+
+                    if (nestedProperties != null && !nestedProperties.isEmpty()) {
+                        Object value = parameterMap.get(propertyName);
+
+                        if (value instanceof Map) {
+                            checkRequiredProperties(
+                                nestedProperties, (Map<?, ?>) value, propertyPath, missingRequiredProperties,
+                                rootParameterMap, indexes);
+                        }
+                    }
+                } else if (property instanceof ArrayProperty arrayProperty) {
+                    List<?> items = arrayProperty.getItems();
+                    if (items != null && !items.isEmpty()) {
+                        Object value = parameterMap.get(propertyName);
+
+                        if (value instanceof List<?> list) {
+                            for (int i = 0; i < list.size(); i++) {
+                                Object item = list.get(i);
+
+                                if (item instanceof Map) {
+                                    List<Integer> itemIndexes = new ArrayList<>(indexes);
+
+                                    itemIndexes.add(i);
+
+                                    checkRequiredProperties(
+                                        items, (Map<?, ?>) item, propertyPath + "[" + i + "]",
+                                        missingRequiredProperties, rootParameterMap, itemIndexes);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 
+    private boolean isHidden(BaseProperty property, Map<String, ?> rootParameterMap, List<Integer> indexes) {
+        String displayCondition = property.getDisplayCondition();
+
+        if (displayCondition == null || displayCondition.isEmpty()) {
+            return false;
+        }
+
+        if (displayCondition.contains("[index]")) {
+            displayCondition = replaceIndexes(displayCondition, indexes);
+        }
+
+        return !evaluate(displayCondition, rootParameterMap);
+    }
+
+    private static boolean isRequiredValueMissing(Map<?, ?> parameterMap, String propertyName) {
+        if (!parameterMap.containsKey(propertyName)) {
+            return true;
+        }
+
+        Object value = parameterMap.get(propertyName);
+
+        return value == null || (value instanceof String string && string.isBlank());
+    }
+
     @SuppressWarnings("unchecked")
-    private Map<String, Object> getDynamicPropertyTypeMap(Map<String, Object> metadataMap) {
+    private Map<String, Object> getDynamicPropertyTypesMap(Map<String, Object> metadataMap) {
         Map<String, Object> uiMap = (Map<String, Object>) metadataMap.get(UI);
 
         if (uiMap == null) {
@@ -461,11 +1429,143 @@ public class WorkflowNodeParameterFacadeImpl implements WorkflowNodeParameterFac
     }
 
     @SuppressWarnings("unchecked")
-    private void setParameter(String[] pathItems, Object value, boolean removeValue, Map<String, ?> parameterMap) {
+    private List<String> getFromAiPaths(Map<String, Object> metadataMap) {
+        Map<String, Object> uiMap = (Map<String, Object>) metadataMap.get(UI);
+
+        if (uiMap == null) {
+            uiMap = new HashMap<>();
+
+            metadataMap.put(UI, uiMap);
+        }
+
+        List<String> fromAi = (List<String>) uiMap.get(FROM_AI);
+
+        if (fromAi == null) {
+            fromAi = new ArrayList<>();
+
+            uiMap.put(FROM_AI, fromAi);
+        }
+
+        return fromAi;
+    }
+
+    private void setDynamicPropertyTypeItem(String path, String type, Map<String, Object> metadataMap) {
+        Map<String, Object> dynamicPropertyTypesMap = getDynamicPropertyTypesMap(metadataMap);
+
+        if (type == null) {
+            dynamicPropertyTypesMap.remove(path);
+
+            String childPrefixDot = path + ".";
+            String childPrefixBracket = path + "[";
+
+            for (String key : new HashSet<>(dynamicPropertyTypesMap.keySet())) {
+                if (key.startsWith(childPrefixDot) || key.startsWith(childPrefixBracket)) {
+                    dynamicPropertyTypesMap.remove(key);
+                }
+            }
+
+            if (path.contains("[")) {
+                int lastBracketStart = path.lastIndexOf("[");
+                int lastBracketEnd = path.indexOf("]", lastBracketStart);
+
+                int deletedIndex = Integer.parseInt(path.substring(lastBracketStart + 1, lastBracketEnd));
+
+                String pathPrefix = path.substring(0, lastBracketStart);
+
+                String siblingPrefix = pathPrefix + "[";
+
+                for (String key : new HashSet<>(dynamicPropertyTypesMap.keySet())) {
+                    if (!key.startsWith(siblingPrefix)) {
+                        continue;
+                    }
+
+                    String afterPrefix = key.substring(pathPrefix.length());
+                    Matcher siblingMatcher = ARRAY_INDEX_VALUE_PATTERN.matcher(afterPrefix);
+
+                    if (siblingMatcher.find() && siblingMatcher.start() == 0) {
+                        int siblingIndex = Integer.parseInt(siblingMatcher.group(1));
+
+                        if (siblingIndex > deletedIndex) {
+                            String newKey = pathPrefix + "[" + (siblingIndex - 1) + "]" +
+                                afterPrefix.substring(siblingMatcher.end());
+
+                            dynamicPropertyTypesMap.put(newKey, dynamicPropertyTypesMap.remove(key));
+                        }
+                    }
+                }
+            }
+        } else {
+            dynamicPropertyTypesMap.put(path, type);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static void removeEmptyCollections(Map<String, ?> parameterMap) {
+        for (String key : new HashSet<>(parameterMap.keySet())) {
+            Object value = parameterMap.get(key);
+
+            if (value instanceof Map<?, ?> nestedMap) {
+                removeEmptyCollections((Map<String, ?>) nestedMap);
+
+                if (nestedMap.isEmpty()) {
+                    ((Map<String, Object>) parameterMap).remove(key);
+                }
+            } else if (value instanceof List<?> list) {
+                removeEmptyCollectionsFromList((List<Object>) list);
+
+                if (list.isEmpty()) {
+                    ((Map<String, Object>) parameterMap).remove(key);
+                }
+            }
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static void removeEmptyCollectionsFromList(List<Object> list) {
+        Iterator<Object> iterator = list.iterator();
+
+        while (iterator.hasNext()) {
+            Object element = iterator.next();
+
+            if (element instanceof Map<?, ?> nestedMap) {
+                removeEmptyCollections((Map<String, ?>) nestedMap);
+
+                if (nestedMap.isEmpty()) {
+                    iterator.remove();
+                }
+            } else if (element instanceof List<?> nestedList) {
+                removeEmptyCollectionsFromList((List<Object>) nestedList);
+
+                if (nestedList.isEmpty()) {
+                    iterator.remove();
+                }
+            }
+        }
+    }
+
+    private static String replaceIndexes(String expression, List<Integer> indexes) {
+        Integer lastIndex = null;
+
+        for (Integer index : indexes) {
+            expression = expression.replaceFirst("\\[index]", "[" + index + "]");
+            lastIndex = index;
+        }
+
+        if (lastIndex != null && expression.contains("[index]")) {
+            expression = expression.replace("[index]", "[" + lastIndex + "]");
+        }
+
+        return expression;
+    }
+
+    @SuppressWarnings("unchecked")
+    private void setParameter(
+        String[] parameterPathParts, Object value, boolean removeValue, Map<String, ?> parameterMap) {
+
         Map<String, Object> map = (Map<String, Object>) parameterMap;
 
-        for (int i = 0; i < pathItems.length; i++) {
-            String pathItem = pathItems[i];
+        for (int i = 0; i < parameterPathParts.length; i++) {
+            String pathItem = parameterPathParts[i];
 
             if (pathItem.endsWith("]")) {
                 String name = pathItem.substring(0, pathItem.indexOf("["));
@@ -473,7 +1573,7 @@ public class WorkflowNodeParameterFacadeImpl implements WorkflowNodeParameterFac
 
                 List<Object> list;
 
-                if (map.containsKey(name)) {
+                if (Objects.nonNull(map.get(name))) {
                     list = (List<Object>) map.get(name);
                 } else {
                     list = new ArrayList<>();
@@ -481,8 +1581,7 @@ public class WorkflowNodeParameterFacadeImpl implements WorkflowNodeParameterFac
                     map.put(name, list);
                 }
 
-                Pattern pattern = Pattern.compile("\\[(\\d+)]");
-                Matcher matcher = pattern.matcher(arrays);
+                Matcher matcher = ARRAY_INDEX_VALUE_PATTERN.matcher(arrays);
 
                 List<Integer> arrayIndexes = new ArrayList<>();
 
@@ -500,7 +1599,7 @@ public class WorkflowNodeParameterFacadeImpl implements WorkflowNodeParameterFac
                     }
 
                     if (j == arrayIndexes.size() - 1) {
-                        if (i == pathItems.length - 1) {
+                        if (i == parameterPathParts.length - 1) {
                             if (removeValue) {
                                 list.remove(arrayIndex);
                             } else {
@@ -524,8 +1623,8 @@ public class WorkflowNodeParameterFacadeImpl implements WorkflowNodeParameterFac
                     }
                 }
             } else {
-                if (i < pathItems.length - 1) {
-                    if (map.containsKey(pathItem)) {
+                if (i < parameterPathParts.length - 1) {
+                    if (map.containsKey(pathItem) && map.get(pathItem) != null) {
                         map = (Map<String, Object>) map.get(pathItem);
                     } else {
                         Map<String, Object> subParameterMap = new HashMap<>();
@@ -545,8 +1644,19 @@ public class WorkflowNodeParameterFacadeImpl implements WorkflowNodeParameterFac
         }
     }
 
-    @SuppressFBWarnings("EI")
-    private record ParameterMapPropertiesResult(
-        Map<String, ?> parameterMap, List<? extends Property> properties, boolean taskParameters) {
+    private record WorkflowNodeStructure(
+        OperationType operationType, Map<String, ?> parameterMap, List<? extends BaseProperty> properties,
+        Set<String> missingRequiredProperties, String name) {
+
+        public boolean isNotBranchTaskDispatcher() {
+            return !OperationType.TASK_DISPATCHER.equals(operationType) || !"branch".equals(name);
+        }
+
+        enum OperationType {
+            CLUSTER_ELEMENT,
+            TASK,
+            TASK_DISPATCHER,
+            TRIGGER
+        }
     }
 }

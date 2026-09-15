@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,45 +16,38 @@
 
 package com.bytechef.component.accelo.connection;
 
-import static com.bytechef.component.accelo.constant.AcceloConstants.DEPLOYMENT;
+import static com.bytechef.component.definition.Authorization.AuthorizationType;
 import static com.bytechef.component.definition.Authorization.CLIENT_ID;
 import static com.bytechef.component.definition.Authorization.CLIENT_SECRET;
-import static com.bytechef.component.definition.ComponentDSL.authorization;
-import static com.bytechef.component.definition.ComponentDSL.connection;
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.definition.ComponentDsl.authorization;
+import static com.bytechef.component.definition.ComponentDsl.connection;
+import static com.bytechef.component.definition.ComponentDsl.string;
 
-import com.bytechef.component.definition.Authorization.AuthorizationType;
-import com.bytechef.component.definition.ComponentDSL.ModifiableConnectionDefinition;
-import java.util.List;
+import com.bytechef.component.definition.ComponentDsl;
+import java.util.Map;
 
 /**
- * @author Monika Domiter
+ * Provides the component connection definition.
+ *
+ * @generated
  */
 public class AcceloConnection {
+    public static final ComponentDsl.ModifiableConnectionDefinition CONNECTION_DEFINITION = connection()
+        .baseUri((connectionParameters, context) -> "https://{deployment}.api.accelo.com/api/v0")
+        .authorizations(authorization(AuthorizationType.OAUTH2_AUTHORIZATION_CODE)
+            .title("OAuth2 Authorization Code")
+            .properties(
+                string(CLIENT_ID)
+                    .label("Client Id")
+                    .required(true),
+                string(CLIENT_SECRET)
+                    .label("Client Secret")
+                    .required(true))
+            .authorizationUrl(
+                (connectionParameters, context) -> "https://{deployment}.api.accelo.com/oauth2/v0/authorize")
+            .scopes((connectionParameters, context) -> Map.of("write(all)", false))
+            .tokenUrl((connectionParameters, context) -> "https://{deployment}.api.accelo.com/oauth2/v0/token"));
 
     private AcceloConnection() {
     }
-
-    public static final ModifiableConnectionDefinition CONNECTION_DEFINITION = connection()
-        .authorizations(
-            authorization(AuthorizationType.OAUTH2_AUTHORIZATION_CODE)
-                .title("OAuth2 Authorization Code")
-                .properties(
-                    string(DEPLOYMENT)
-                        .label("Deployment")
-                        .description(
-                            "Actual deployment identifier or name to target a specific deployment within the " +
-                                "Accelo platform.")
-                        .required(true),
-                    string(CLIENT_ID)
-                        .label("Client Id")
-                        .required(true),
-                    string(CLIENT_SECRET)
-                        .label("Client Secret")
-                        .required(true))
-                .authorizationUrl((connection, context) -> "https://" + connection.getRequiredString(DEPLOYMENT) +
-                    ".api.accelo.com/oauth2/v0/authorize")
-                .scopes((connection, context) -> List.of("write(all)"))
-                .tokenUrl((connection, context) -> "https://" + connection.getRequiredString(DEPLOYMENT) +
-                    ".api.accelo.com/oauth2/v0/token"));
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,65 +18,67 @@ package com.bytechef.component.accelo.action;
 
 import static com.bytechef.component.accelo.constant.AcceloConstants.AGAINST_ID;
 import static com.bytechef.component.accelo.constant.AcceloConstants.AGAINST_TYPE;
-import static com.bytechef.component.accelo.constant.AcceloConstants.CREATE_TASK;
 import static com.bytechef.component.accelo.constant.AcceloConstants.DATE_STARTED;
 import static com.bytechef.component.accelo.constant.AcceloConstants.TITLE;
-import static com.bytechef.component.accelo.util.AcceloUtils.createUrl;
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.date;
-import static com.bytechef.component.definition.ComponentDSL.object;
-import static com.bytechef.component.definition.ComponentDSL.option;
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.date;
+import static com.bytechef.component.definition.ComponentDsl.object;
+import static com.bytechef.component.definition.ComponentDsl.option;
+import static com.bytechef.component.definition.ComponentDsl.outputSchema;
+import static com.bytechef.component.definition.ComponentDsl.string;
 
 import com.bytechef.component.accelo.util.AcceloUtils;
 import com.bytechef.component.definition.ActionContext;
-import com.bytechef.component.definition.ComponentDSL.ModifiableActionDefinition;
+import com.bytechef.component.definition.ActionDefinition.OptionsFunction;
+import com.bytechef.component.definition.ComponentDsl.ModifiableActionDefinition;
 import com.bytechef.component.definition.Context.Http;
-import com.bytechef.component.definition.Context.TypeReference;
-import com.bytechef.component.definition.OptionsDataSource;
 import com.bytechef.component.definition.Parameters;
+import com.bytechef.component.definition.TypeReference;
 
 /**
- * @author Monika Domiter
+ * @author Monika Kušter
  */
 public class AcceloCreateTaskAction {
 
-    public static final ModifiableActionDefinition ACTION_DEFINITION = action(CREATE_TASK)
-        .title("Create task")
-        .description("Creates a new task")
+    public static final ModifiableActionDefinition ACTION_DEFINITION = action("createTask")
+        .title("Create Task")
+        .description("Creates a new task.")
         .properties(
             string(TITLE)
                 .label("Title")
                 .required(true),
             string(AGAINST_TYPE)
-                .label("Against type")
+                .label("Against Type")
                 .description("The type of object the task is against.")
                 .options(
                     option("Company", "company"),
                     option("Prospect", "prospect"))
                 .required(true),
             string(AGAINST_ID)
-                .label("Against object")
-                .description("Object the task is against.")
+                .label("Against Object ID")
+                .description("ID of the object the task is against.")
                 .optionsLookupDependsOn(AGAINST_TYPE)
-                .options((OptionsDataSource.ActionOptionsFunction<String>) AcceloUtils::getAgainstIdOptions)
+                .options((OptionsFunction<String>) AcceloUtils::getAgainstIdOptions)
                 .required(true),
             date(DATE_STARTED)
-                .label("Start date")
+                .label("Start Date")
                 .description("The date the task is is scheduled to start.")
                 .required(true))
-        .outputSchema(
-            object()
-                .properties(
-                    object("response")
-                        .properties(
-                            string("id"),
-                            string(TITLE)),
-                    object("meta")
-                        .properties(
-                            string("more_info"),
-                            string("status"),
-                            string("message"))))
+        .output(
+            outputSchema(
+                object()
+                    .properties(
+                        object("response")
+                            .properties(
+                                string("id")
+                                    .description("The ID of the created task."),
+                                string(TITLE)
+                                    .description("The title of the created task.")),
+                        object("meta")
+                            .properties(
+                                string("more_info"),
+                                string("status"),
+                                string("message")))))
         .perform(AcceloCreateTaskAction::perform);
 
     private AcceloCreateTaskAction() {
@@ -85,7 +87,7 @@ public class AcceloCreateTaskAction {
     public static Object perform(
         Parameters inputParameters, Parameters connectionParameters, ActionContext actionContext) {
 
-        return actionContext.http(http -> http.post(createUrl(connectionParameters, "tasks")))
+        return actionContext.http(http -> http.post("/tasks"))
             .body(
                 Http.Body.of(
                     TITLE, inputParameters.getRequiredString(TITLE),

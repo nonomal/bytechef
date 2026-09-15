@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,15 +16,14 @@
 
 package com.bytechef.component.resend.action;
 
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.array;
-import static com.bytechef.component.definition.ComponentDSL.fileEntry;
-import static com.bytechef.component.definition.ComponentDSL.integer;
-import static com.bytechef.component.definition.ComponentDSL.object;
-import static com.bytechef.component.definition.ComponentDSL.option;
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.array;
+import static com.bytechef.component.definition.ComponentDsl.fileEntry;
+import static com.bytechef.component.definition.ComponentDsl.object;
+import static com.bytechef.component.definition.ComponentDsl.option;
+import static com.bytechef.component.definition.ComponentDsl.outputSchema;
+import static com.bytechef.component.definition.ComponentDsl.string;
 import static com.bytechef.component.resend.constant.ResendConstants.ATTACHMENTS;
-import static com.bytechef.component.resend.constant.ResendConstants.BASE_URL;
 import static com.bytechef.component.resend.constant.ResendConstants.BCC;
 import static com.bytechef.component.resend.constant.ResendConstants.CC;
 import static com.bytechef.component.resend.constant.ResendConstants.CONTENT_TYPE;
@@ -34,7 +33,6 @@ import static com.bytechef.component.resend.constant.ResendConstants.HEADERS;
 import static com.bytechef.component.resend.constant.ResendConstants.HTML;
 import static com.bytechef.component.resend.constant.ResendConstants.NAME;
 import static com.bytechef.component.resend.constant.ResendConstants.REPLY_TO;
-import static com.bytechef.component.resend.constant.ResendConstants.SEND_EMAIL;
 import static com.bytechef.component.resend.constant.ResendConstants.SUBJECT;
 import static com.bytechef.component.resend.constant.ResendConstants.TAGS;
 import static com.bytechef.component.resend.constant.ResendConstants.TEXT;
@@ -42,11 +40,11 @@ import static com.bytechef.component.resend.constant.ResendConstants.TO;
 import static com.bytechef.component.resend.constant.ResendConstants.VALUE;
 
 import com.bytechef.component.definition.ActionContext;
-import com.bytechef.component.definition.ComponentDSL.ModifiableActionDefinition;
+import com.bytechef.component.definition.ComponentDsl.ModifiableActionDefinition;
 import com.bytechef.component.definition.Context.Http;
-import com.bytechef.component.definition.Context.TypeReference;
 import com.bytechef.component.definition.Parameters;
 import com.bytechef.component.definition.Property;
+import com.bytechef.component.definition.Property.ControlType;
 import com.bytechef.component.resend.util.ResendUtils;
 import java.util.List;
 
@@ -55,14 +53,20 @@ import java.util.List;
  */
 public final class ResendSendEmailAction {
 
-    public static final ModifiableActionDefinition ACTION_DEFINITION = action(SEND_EMAIL)
+    private enum ContentType {
+
+        HTML, TEXT
+    }
+
+    public static final ModifiableActionDefinition ACTION_DEFINITION = action("sendEmail")
         .title("Send Email")
         .description("Send an email")
+        .help("", "https://docs.bytechef.io/reference/components/resend_v1#send-email")
         .properties(
             string(FROM)
                 .label("From")
                 .description("Sender email address.")
-                .controlType(Property.ControlType.EMAIL)
+                .controlType(ControlType.EMAIL)
                 .required(true),
             array(TO)
                 .label("To")
@@ -85,26 +89,28 @@ public final class ResendSendEmailAction {
                 .items(EMAIL_PROPERTY)
                 .required(false),
             array(REPLY_TO)
-                .label("Reply to")
+                .label("Reply To")
                 .description("Reply-to email addresses.")
                 .items(EMAIL_PROPERTY)
                 .required(false),
-            integer(CONTENT_TYPE)
-                .label("Content type")
+            string(CONTENT_TYPE)
+                .label("Content Type")
                 .options(
-                    option("HTML", 1),
-                    option("Plain text", 2))
-                .defaultValue(1)
+                    option("HTML", ContentType.HTML.name()),
+                    option("Plain text", ContentType.TEXT.name()))
+                .defaultValue(ContentType.HTML.name())
                 .required(true),
             string(HTML)
                 .label("HTML")
                 .description("The HTML version of the message.")
-                .displayCondition("%s == %s".formatted(CONTENT_TYPE, 1))
+                .displayCondition("%s == '%s'".formatted(CONTENT_TYPE, ContentType.HTML))
+                .controlType(Property.ControlType.RICH_TEXT)
                 .required(false),
             string(TEXT)
                 .label("Text")
                 .description("The plain text version of the message.")
-                .displayCondition("%s == %s".formatted(CONTENT_TYPE, 2))
+                .displayCondition("%s == '%s'".formatted(CONTENT_TYPE, ContentType.TEXT))
+                .controlType(ControlType.TEXT_AREA)
                 .required(false),
             object(HEADERS)
                 .label("Headers")
@@ -131,10 +137,12 @@ public final class ResendSendEmailAction {
                                 .maxLength(256)
                                 .required(true)))
                 .required(false))
-        .outputSchema(
-            object()
-                .properties(
-                    string("id")))
+        .output(
+            outputSchema(
+                object()
+                    .properties(
+                        string("id")
+                            .description("ID of the email."))))
         .perform(ResendSendEmailAction::perform);
 
     private ResendSendEmailAction() {
@@ -143,7 +151,7 @@ public final class ResendSendEmailAction {
     public static Object perform(
         Parameters inputParameters, Parameters connectionParameters, ActionContext actionContext) {
 
-        return actionContext.http(http -> http.post(BASE_URL + "/emails"))
+        return actionContext.http(http -> http.post("/emails"))
             .body(
                 Http.Body.of(
                     FROM, inputParameters.getRequiredString(FROM),
@@ -160,6 +168,6 @@ public final class ResendSendEmailAction {
                     TAGS, inputParameters.getList(TAGS)))
             .configuration(Http.responseType(Http.ResponseType.JSON))
             .execute()
-            .getBody(new TypeReference<>() {});
+            .getBody();
     }
 }

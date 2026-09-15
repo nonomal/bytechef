@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,8 +20,10 @@ package com.bytechef.component.var.constant;
  * @author Ivica Cardic
  */
 public class VarConstants {
-    public static final String VAR = "var";
-    public static final String SET = "set";
+
+    private VarConstants() {
+    }
+
     public static final String VALUE = "value";
     public static final String TYPE = "type";
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the ByteChef Enterprise license (the "Enterprise License");
  * you may not use this file except in compliance with the Enterprise License.
@@ -7,7 +7,7 @@
 
 package com.bytechef.ee.atlas.execution.remote.web.rest.facade;
 
-import com.bytechef.atlas.execution.dto.JobParameters;
+import com.bytechef.atlas.execution.dto.JobParametersDTO;
 import com.bytechef.atlas.execution.facade.JobFacade;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.swagger.v3.oas.annotations.Hidden;
@@ -38,7 +38,7 @@ public class RemoteJobFacadeController {
     @RequestMapping(
         method = RequestMethod.POST,
         value = "/create-async-job")
-    public ResponseEntity<Long> create(@Valid @RequestBody JobParameters jobParameters) {
-        return ResponseEntity.ok(jobFacade.createJob(jobParameters));
+    public ResponseEntity<Long> create(@Valid @RequestBody JobParametersDTO jobParametersDTO) {
+        return ResponseEntity.ok(jobFacade.createJob(jobParametersDTO));
     }
 }

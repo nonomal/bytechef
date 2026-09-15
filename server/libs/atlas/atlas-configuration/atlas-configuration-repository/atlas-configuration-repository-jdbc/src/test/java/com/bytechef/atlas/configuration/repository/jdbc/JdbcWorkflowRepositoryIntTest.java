@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,17 +23,11 @@ import com.bytechef.atlas.configuration.repository.WorkflowCrudRepository;
 import com.bytechef.commons.data.jdbc.converter.MapWrapperToStringConverter;
 import com.bytechef.commons.data.jdbc.converter.StringToMapWrapperConverter;
 import com.bytechef.commons.util.CollectionUtils;
-import com.bytechef.commons.util.JsonUtils;
-import com.bytechef.commons.util.MapUtils;
 import com.bytechef.commons.util.OptionalUtils;
+import com.bytechef.jackson.config.JacksonConfiguration;
 import com.bytechef.liquibase.config.LiquibaseConfiguration;
 import com.bytechef.test.config.jdbc.AbstractIntTestJdbcConfiguration;
 import com.bytechef.test.config.testcontainers.PostgreSQLContainerConfiguration;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Arrays;
 import java.util.List;
@@ -41,19 +35,21 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
+import org.springframework.boot.data.jdbc.autoconfigure.DataJdbcRepositoriesAutoConfiguration;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cache.annotation.EnableCaching;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
-import org.springframework.data.jdbc.repository.config.EnableJdbcRepositories;
+import org.springframework.data.jdbc.repository.config.EnableJdbcAuditing;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * @author Ivica Cardic
  */
 @SpringBootTest(properties = "bytechef.workflow.repository.jdbc.enabled=true")
-@Import(PostgreSQLContainerConfiguration.class)
+@Import({
+    JacksonConfiguration.class, LiquibaseConfiguration.class, PostgreSQLContainerConfiguration.class
+})
 public class JdbcWorkflowRepositoryIntTest {
 
     @Autowired
@@ -82,45 +78,12 @@ public class JdbcWorkflowRepositoryIntTest {
         Assertions.assertEquals(1, CollectionUtils.size(resultWorkflow.getTasks()));
     }
 
-    @ComponentScan(
-        basePackages = {
-            "com.bytechef.atlas.configuration.repository.jdbc",
-        })
-    @EnableAutoConfiguration
+    @EnableAutoConfiguration(exclude = DataJdbcRepositoriesAutoConfiguration.class)
     @EnableCaching
     @Configuration
-    @Import(LiquibaseConfiguration.class)
-    @SuppressFBWarnings("ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD")
     public static class WorkflowConfigurationRepositoryIntTestConfiguration {
 
-        @Bean
-        JsonUtils jsonUtils() {
-            return new JsonUtils() {
-                {
-                    objectMapper = objectMapper();
-                }
-            };
-        }
-
-        @Bean
-        MapUtils mapUtils() {
-            return new MapUtils() {
-                {
-                    objectMapper = objectMapper();
-                }
-            };
-        }
-
-        @Bean
-        ObjectMapper objectMapper() {
-            return new ObjectMapper()
-                .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
-                .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
-                .registerModule(new JavaTimeModule())
-                .registerModule(new Jdk8Module());
-        }
-
-        @EnableJdbcRepositories(basePackages = "com.bytechef.atlas.configuration.repository.jdbc")
+        @EnableJdbcAuditing(auditorAwareRef = "auditorProvider", dateTimeProviderRef = "auditingDateTimeProvider")
         public static class WorkflowConfigurationIntJdbcTestConfiguration extends AbstractIntTestJdbcConfiguration {
 
             private final ObjectMapper objectMapper;

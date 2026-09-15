@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,29 +24,21 @@ public class CapsuleCRMConstants {
     public static final String ABOUT = "about";
     public static final String ADDRESS = "address";
     public static final String ADDRESSES = "addresses";
-    public static final String BASE_URL = "https://api.capsulecrm.com/api/v2";
-    public static final String CAPSULE_CRM = "capsuleCRM";
     public static final String CATEGORY = "category";
     public static final String CITY = "city";
     public static final String COLOUR = "colour";
-    public static final String COUNTRY = "country";
-    public static final String CREATE_CONTACT = "createContact";
-    public static final String CREATE_TASK = "createTask";
     public static final String DESCRIPTION = "description";
     public static final String DETAIL = "detail";
     public static final String DUE_ON = "dueOn";
     public static final String EMAIL_ADDRESSES = "emailAddresses";
     public static final String FIRST_NAME = "firstName";
+    public static final String ID = "id";
     public static final String LAST_NAME = "lastName";
     public static final String NAME = "name";
     public static final String NUMBER = "number";
-    public static final String PERSON = "person";
     public static final String PHONE_NUMBERS = "phoneNumbers";
-    public static final String STATE = "state";
     public static final String STREET = "street";
-    public static final String STRING_DISPLAY_CONDITION = "%s == '%s'";
     public static final String TYPE = "type";
-    public static final String ZIP = "zip";
 
     private CapsuleCRMConstants() {
     }

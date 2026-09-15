@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,30 +16,28 @@
 
 package com.bytechef.component.one.simple.api.action;
 
-import static com.bytechef.component.definition.ComponentDSL.ModifiableActionDefinition;
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.object;
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.definition.ComponentDsl.ModifiableActionDefinition;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.object;
+import static com.bytechef.component.definition.ComponentDsl.outputSchema;
+import static com.bytechef.component.definition.ComponentDsl.string;
+import static com.bytechef.component.definition.Context.Http.ResponseType;
 import static com.bytechef.component.definition.Context.Http.responseType;
-import static com.bytechef.component.one.simple.api.constants.OneSimpleAPIConstants.ACCESS_TOKEN;
-import static com.bytechef.component.one.simple.api.constants.OneSimpleAPIConstants.BASE_URL;
-import static com.bytechef.component.one.simple.api.constants.OneSimpleAPIConstants.DESC;
+import static com.bytechef.component.one.simple.api.constants.OneSimpleAPIConstants.DESCRIPTION;
 import static com.bytechef.component.one.simple.api.constants.OneSimpleAPIConstants.TITLE;
 import static com.bytechef.component.one.simple.api.constants.OneSimpleAPIConstants.URL;
-import static com.bytechef.component.one.simple.api.constants.OneSimpleAPIConstants.WEB_INFORMATION;
 
-import com.bytechef.component.definition.ActionContext;
 import com.bytechef.component.definition.Context;
-import com.bytechef.component.definition.Context.Http.ResponseType;
-import com.bytechef.component.definition.Context.TypeReference;
 import com.bytechef.component.definition.Parameters;
+import com.bytechef.component.definition.TypeReference;
 
 /**
  * @author Luka Ljubić
+ * @author Monika Kušter
  */
 public class OneSimpleAPIWebPageInformationAction {
 
-    public static final ModifiableActionDefinition ACTION_DEFINITION = action(WEB_INFORMATION)
+    public static final ModifiableActionDefinition ACTION_DEFINITION = action("webInformation")
         .title("Web Page Information")
         .description("Get information about a certain webpage")
         .properties(
@@ -47,38 +45,36 @@ public class OneSimpleAPIWebPageInformationAction {
                 .label("URL")
                 .description("Place the web page url you want to get info from")
                 .required(true))
-        .outputSchema(
-            object()
-                .properties(
-                    object("general")
-                        .properties(
-                            string(TITLE),
-                            string(DESC),
-                            string("canonical")),
-                    object("twitter")
-                        .properties(
-                            string("site"),
-                            string(TITLE),
-                            string(DESC)),
-                    object("og")
-                        .properties(
-                            string(TITLE),
-                            string("url"),
-                            string("image"),
-                            string(DESC),
-                            string("type"))))
+        .output(
+            outputSchema(
+                object()
+                    .properties(
+                        object("general")
+                            .properties(
+                                string(TITLE),
+                                string(DESCRIPTION),
+                                string("canonical")),
+                        object("twitter")
+                            .properties(
+                                string("site"),
+                                string(TITLE),
+                                string(DESCRIPTION)),
+                        object("og")
+                            .properties(
+                                string(TITLE),
+                                string("url"),
+                                string("image"),
+                                string(DESCRIPTION),
+                                string("type")))))
+        .help("", "https://docs.bytechef.io/reference/components/one-simple-api_v1#web-page-information")
         .perform(OneSimpleAPIWebPageInformationAction::perform);
 
     private OneSimpleAPIWebPageInformationAction() {
     }
 
-    public static Object perform(Parameters inputParameters, Parameters connectionParameters, ActionContext context) {
-        return context.http(http -> http.get(BASE_URL + "/page_info"))
-            .body(
-                Context.Http.Body.of(
-                    ACCESS_TOKEN, connectionParameters.getRequiredString(ACCESS_TOKEN),
-                    URL, inputParameters.getRequiredString(URL),
-                    "output", "json"))
+    public static Object perform(Parameters inputParameters, Parameters connectionParameters, Context context) {
+        return context.http(http -> http.get("/page_info"))
+            .queryParameters(URL, inputParameters.getRequiredString(URL))
             .configuration(responseType(ResponseType.JSON))
             .execute()
             .getBody(new TypeReference<>() {});

@@ -1,0 +1,114 @@
+import Badge from '@/components/Badge/Badge';
+import Button from '@/components/Button/Button';
+import OutputPanelButton from '@/ee/pages/embedded/workflow-builder/components/workflow-builder-header/components/OutputButton';
+import PublishPopover from '@/ee/pages/embedded/workflow-builder/components/workflow-builder-header/components/PublishPopover';
+import WorkflowActionsButton from '@/ee/pages/embedded/workflow-builder/components/workflow-builder-header/components/WorkflowActionsButton';
+import {useWorkflowBuilderHeader} from '@/ee/pages/embedded/workflow-builder/components/workflow-builder-header/hooks/useWorkflowBuilderHeader';
+import useWorkflowDataStore from '@/pages/platform/workflow-editor/stores/useWorkflowDataStore';
+import useWorkflowEditorStore from '@/pages/platform/workflow-editor/stores/useWorkflowEditorStore';
+import LoadingIndicator from '@/shared/components/LoadingIndicator';
+import WorkflowDialog from '@/shared/components/workflow/WorkflowDialog';
+import {useGetWorkflowQuery} from '@/shared/queries/automation/workflows.queries';
+import {UpdateWorkflowMutationType} from '@/shared/types';
+import {onlineManager, useIsFetching} from '@tanstack/react-query';
+import {EditIcon} from 'lucide-react';
+import {RefObject} from 'react';
+import {PanelImperativeHandle} from 'react-resizable-panels';
+import {useShallow} from 'zustand/react/shallow';
+
+interface ProjectHeaderProps {
+    bottomResizablePanelRef: RefObject<PanelImperativeHandle | null>;
+    chatTrigger?: boolean;
+    projectId: number;
+    runDisabled: boolean;
+    updateWorkflowMutation: UpdateWorkflowMutationType;
+    workflowVersion?: number;
+}
+
+const WorkflowBuilderHeader = ({
+    bottomResizablePanelRef,
+    chatTrigger,
+    projectId,
+    runDisabled,
+    updateWorkflowMutation,
+    workflowVersion,
+}: ProjectHeaderProps) => {
+    const {setShowEditWorkflowDialog, showEditWorkflowDialog, workflowIsRunning} = useWorkflowEditorStore(
+        useShallow((state) => ({
+            setShowEditWorkflowDialog: state.setShowEditWorkflowDialog,
+            showEditWorkflowDialog: state.showEditWorkflowDialog,
+            workflowIsRunning: state.workflowIsRunning,
+        }))
+    );
+    const workflow = useWorkflowDataStore((state) => state.workflow);
+
+    const isFetching = useIsFetching();
+    const {
+        handlePublishProjectSubmit,
+        handleRunClick,
+        handleShowOutputClick,
+        handleStopClick,
+        publishProjectMutationIsPending,
+    } = useWorkflowBuilderHeader({
+        bottomResizablePanelRef,
+        chatTrigger,
+        projectId,
+    });
+
+    const isOnline = onlineManager.isOnline();
+
+    // if (!project) {
+    //     return <WorkflowBuilderSkeleton />;
+    // }
+
+    return (
+        <header className="flex items-center justify-between bg-transparent px-3 py-2.5">
+            <div className="flex items-center gap-2">
+                <div>{workflow.label}</div>
+
+                <div></div>
+
+                <Badge label={`V${(workflowVersion ?? 0) + 1} DRAFT`} styleType="outline-outline" weight="semibold" />
+            </div>
+
+            <div className="flex items-center space-x-2">
+                <LoadingIndicator isFetching={isFetching} isOnline={isOnline} />
+
+                <Button
+                    className="hover:bg-surface-neutral-primary-hover [&_svg]:size-5"
+                    icon={<EditIcon />}
+                    onClick={() => setShowEditWorkflowDialog(true)}
+                    size="icon"
+                    variant="ghost"
+                />
+
+                <OutputPanelButton onShowOutputClick={handleShowOutputClick} />
+
+                <WorkflowActionsButton
+                    chatTrigger={chatTrigger ?? false}
+                    onRunClick={handleRunClick}
+                    onStopClick={handleStopClick}
+                    runDisabled={runDisabled}
+                    workflowIsRunning={workflowIsRunning}
+                />
+
+                <PublishPopover
+                    isPending={publishProjectMutationIsPending}
+                    onPublishProjectSubmit={handlePublishProjectSubmit}
+                />
+            </div>
+
+            {showEditWorkflowDialog && (
+                <WorkflowDialog
+                    onClose={() => setShowEditWorkflowDialog(false)}
+                    parentId={projectId}
+                    updateWorkflowMutation={updateWorkflowMutation}
+                    useGetWorkflowQuery={useGetWorkflowQuery}
+                    workflowId={workflow.id!}
+                />
+            )}
+        </header>
+    );
+};
+
+export default WorkflowBuilderHeader;

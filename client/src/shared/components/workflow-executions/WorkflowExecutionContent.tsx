@@ -1,0 +1,111 @@
+import {Collapsible, CollapsibleContent, CollapsibleTrigger} from '@/components/ui/collapsible';
+import JsonView from '@/shared/components/JsonView';
+import {ExecutionError} from '@/shared/middleware/automation/workflow/execution';
+import {ChevronRightIcon} from 'lucide-react';
+import {useMemo, useState} from 'react';
+import {twMerge} from 'tailwind-merge';
+
+import {getFilteredOutput, hasValue} from './WorkflowExecutionsUtils';
+
+interface WorkflowExecutionContentProps {
+    error?: ExecutionError;
+    input?: {[key: string]: string};
+    output?: object;
+    jobInputs?: {[key: string]: object};
+    workflowTriggerName?: string;
+}
+
+const WorkflowExecutionContent = ({
+    error,
+    input,
+    jobInputs,
+    output,
+    workflowTriggerName,
+}: WorkflowExecutionContentProps) => {
+    const filteredOutput = useMemo(
+        () => getFilteredOutput(output, jobInputs, workflowTriggerName),
+        [output, jobInputs, workflowTriggerName]
+    );
+
+    const [stackTraceOpen, setStackTraceOpen] = useState(false);
+
+    if (error !== undefined) {
+        return (
+            <div className="flex flex-col gap-4 overflow-hidden">
+                <span className="w-fit rounded-md border border-stroke-destructive-secondary p-2 text-sm font-semibold text-content-destructive-primary">
+                    {error.message || 'No message.'}
+                </span>
+
+                {error.stackTrace && error.stackTrace.length > 0 && (
+                    <Collapsible onOpenChange={setStackTraceOpen} open={stackTraceOpen}>
+                        <CollapsibleTrigger className="flex cursor-pointer items-center gap-1">
+                            <ChevronRightIcon
+                                className={twMerge('size-4 transition-transform', stackTraceOpen && 'rotate-90')}
+                            />
+
+                            <span className="text-sm font-semibold">Stack Trace</span>
+                        </CollapsibleTrigger>
+
+                        <CollapsibleContent>
+                            <div className="mt-2 flex flex-col space-y-1 pl-5 text-sm">
+                                {error.stackTrace.map((line) => (
+                                    <div className="text-sm" key={line}>
+                                        {line}
+                                    </div>
+                                ))}
+                            </div>
+                        </CollapsibleContent>
+                    </Collapsible>
+                )}
+            </div>
+        );
+    }
+
+    if (input !== undefined) {
+        if (!hasValue(input)) {
+            return (
+                <div className="flex items-center justify-center p-4">
+                    <span className="text-sm text-muted-foreground">No input data</span>
+                </div>
+            );
+        }
+
+        return (
+            <div className="space-y-2 rounded-md">
+                {typeof input === 'object' ? (
+                    <div className="overflow-x-auto text-nowrap">
+                        <JsonView src={input as object} />
+                    </div>
+                ) : (
+                    <span className="block text-sm break-words whitespace-pre-wrap">{input}</span>
+                )}
+            </div>
+        );
+    }
+
+    if (output !== undefined || (jobInputs !== undefined && workflowTriggerName)) {
+        if (!hasValue(filteredOutput)) {
+            return (
+                <div className="flex items-center justify-center p-4">
+                    <span className="text-sm text-muted-foreground">No output data</span>
+                </div>
+            );
+        }
+
+        return (
+            <div className="space-y-2 rounded-md">
+                {typeof filteredOutput === 'object' && filteredOutput !== null ? (
+                    <div className="overflow-x-auto text-nowrap">
+                        <JsonView src={filteredOutput as object} />
+                    </div>
+                ) : (
+                    <span className="block text-sm break-words whitespace-pre-wrap">{String(filteredOutput)}</span>
+                )}
+            </div>
+        );
+    }
+
+    return null;
+};
+
+export default WorkflowExecutionContent;

@@ -1,0 +1,837 @@
+---
+title: "Google Drive"
+description: "Google Drive is a cloud storage service by Google that enables users to store, sync, share files, and collaborate online."
+---
+
+
+Categories: File Storage
+
+
+Type: googleDrive/v1
+
+<hr />
+
+
+
+
+## Connections
+
+Version: 1
+
+
+### OAuth2 Authorization Code
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| clientId | Client Id | STRING |  | true |
+| clientSecret | Client Secret | STRING |  | true |
+
+
+
+## Connection Setup
+
+### Create OAuth 2.0 Application
+
+Creation of OAuth 2.0 application is documented [here](/reference/components/google-application-setup_v1#create-oauth-20-application).
+
+### Enable Google Drive API
+
+1. In the [Google Cloud Console](https://console.cloud.google.com/), select your project.
+2. Go to the **APIs & Services**.
+3. Click on **ENABLE APIS AND SERVICES**.
+4. Search for "google drive api" in the search bar.
+5. Click on **Google Drive API**.
+6. Click **Enable**.
+
+<div style={{ position: 'relative', height:0, width: '100%', overflow: 'hidden', zindex: 49, boxSizing: 'border-box', paddingBottom: 'calc(50.05219207% + 32px)'}}>
+    <iframe src="https://www.guidejar.com/embed/4e69ce7b-c430-443c-801c-b01ea2781c39?type=1&controls=on" width="100%" height="100%" style={{height:'100%', position:'absolute', inset:0}} allowFullScreen frameBorder="0"></iframe>
+</div>
+
+
+
+<hr />
+
+
+## Actions
+
+
+### Copy File
+Name: copyFile
+
+`Copy a selected file to a different location within Google Drive.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| fileId | File ID | STRING | The ID of the file to be copied. | true |
+| fileName | New File Name | STRING | The name of the new file created as a result of the copy operation. | true |
+| folderId | Destination Folder ID | STRING | The ID of the folder where the copied file will be stored. | true |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Copy File",
+  "name" : "copyFile",
+  "parameters" : {
+    "fileId" : "",
+    "fileName" : "",
+    "folderId" : ""
+  },
+  "type" : "googleDrive/v1/copyFile"
+}
+```
+
+#### Output
+
+
+
+Type: OBJECT
+
+
+#### Properties
+
+|     Name     |     Type     |     Description     |
+|:------------:|:------------:|:-------------------:|
+| id | STRING | The ID of the file. |
+| kind | STRING | Identifies what kind of resource this is. |
+| mimeType | STRING | The MIME type of the file. |
+| name | STRING | The name of the file. |
+
+
+
+
+#### Output Example
+```json
+{
+  "id" : "",
+  "kind" : "",
+  "mimeType" : "",
+  "name" : ""
+}
+```
+
+#### Find File ID
+
+To find the File ID, click [here](/reference/components/google-drive_v1#how-to-find-file-id).
+
+#### Find Folder ID
+
+To find the Folder ID, click [here](/reference/components/google-drive_v1#how-to-find-folder-id).
+
+
+
+### Create New Folder
+Name: createNewFolder
+
+`Creates a new empty folder in Google Drive.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| folderName | Folder Name | STRING | The name of the new folder. | true |
+| folderId | Parent Folder ID | STRING | ID of the folder where the new folder will be created; if no folder is selected, the folder will be created in the root folder. | false |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Create New Folder",
+  "name" : "createNewFolder",
+  "parameters" : {
+    "folderName" : "",
+    "folderId" : ""
+  },
+  "type" : "googleDrive/v1/createNewFolder"
+}
+```
+
+#### Output
+
+
+___Sample Output:___
+
+```{id=1hPJ7kjhStTX90amAWSJ-V0K1-nhDlsIr, mimeType=plain/text, name=new-file.txt}```
+
+
+
+Type: OBJECT
+
+
+#### Properties
+
+|     Name     |     Type     |     Description     |
+|:------------:|:------------:|:-------------------:|
+| id | STRING | The ID of the file. |
+| kind | STRING | Identifies what kind of resource this is. |
+| mimeType | STRING | The MIME type of the file. |
+| name | STRING | The name of the file. |
+
+
+
+
+#### Output Example
+```json
+{
+  "id" : "",
+  "kind" : "",
+  "mimeType" : "",
+  "name" : ""
+}
+```
+
+#### Find Folder ID
+
+To find the Folder ID, click [here](/reference/components/google-drive_v1#how-to-find-folder-id).
+
+
+
+### Create New Text File
+Name: createNewTextFile
+
+`Creates a new text file in Google Drive.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| fileName | File Name | STRING | The name of the new text file. | true |
+| text | Text | STRING | The text content to add to file. | true |
+| mimeType | File Type | STRING <details> <summary> Options </summary> <span>plain/text</span>, <span>text/csv</span>, <span>text/xml</span> </details> | Select file type. | true |
+| folderId | Parent Folder ID | STRING | ID of the folder where the file should be created; if no folder is selected, the file will be created in the root folder. | false |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Create New Text File",
+  "name" : "createNewTextFile",
+  "parameters" : {
+    "fileName" : "",
+    "text" : "",
+    "mimeType" : "",
+    "folderId" : ""
+  },
+  "type" : "googleDrive/v1/createNewTextFile"
+}
+```
+
+#### Output
+
+
+___Sample Output:___
+
+```{id=1hPJ7kjhStTX90amAWSJ-V0K1-nhDlsIr, mimeType=plain/text, name=new-file.txt}```
+
+
+
+Type: OBJECT
+
+
+#### Properties
+
+|     Name     |     Type     |     Description     |
+|:------------:|:------------:|:-------------------:|
+| id | STRING | The ID of the file. |
+| kind | STRING | Identifies what kind of resource this is. |
+| mimeType | STRING | The MIME type of the file. |
+| name | STRING | The name of the file. |
+
+
+
+
+#### Output Example
+```json
+{
+  "id" : "",
+  "kind" : "",
+  "mimeType" : "",
+  "name" : ""
+}
+```
+
+#### Find Folder ID
+
+To find the Folder ID, click [here](/reference/components/google-drive_v1#how-to-find-folder-id).
+
+
+
+### Delete File
+Name: deleteFile
+
+`Delete a selected file from Google Drive.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| fileId | File ID | STRING | The ID of a file to delete. | true |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Delete File",
+  "name" : "deleteFile",
+  "parameters" : {
+    "fileId" : ""
+  },
+  "type" : "googleDrive/v1/deleteFile"
+}
+```
+
+#### Output
+
+This action does not produce any output.
+
+
+
+#### Find File ID
+
+To find the File ID, click [here](/reference/components/google-drive_v1#how-to-find-file-id).
+
+
+
+### Download File
+Name: downloadFile
+
+`Download selected file from Google Drive.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| fileId | File ID | STRING | ID of the file to download. | true |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Download File",
+  "name" : "downloadFile",
+  "parameters" : {
+    "fileId" : ""
+  },
+  "type" : "googleDrive/v1/downloadFile"
+}
+```
+
+#### Output
+
+
+
+Type: FILE_ENTRY
+
+
+#### Properties
+
+|     Name     |     Type     |     Description     |
+|:------------:|:------------:|:-------------------:|
+| extension | STRING |  |
+| mimeType | STRING |  |
+| name | STRING |  |
+| url | STRING |  |
+
+
+
+
+#### Output Example
+```json
+{
+  "extension" : "",
+  "mimeType" : "",
+  "name" : "",
+  "url" : ""
+}
+```
+
+#### Find File ID
+
+To find the File ID, click [here](/reference/components/google-drive_v1#how-to-find-file-id).
+
+
+
+### Get File
+Name: getFile
+
+`Retrieve a specified file from your Google Drive.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| fileId | File ID | STRING | ID of the file to be retrieved. | true |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Get File",
+  "name" : "getFile",
+  "parameters" : {
+    "fileId" : ""
+  },
+  "type" : "googleDrive/v1/getFile"
+}
+```
+
+#### Output
+
+
+
+Type: OBJECT
+
+
+#### Properties
+
+|     Name     |     Type     |     Description     |
+|:------------:|:------------:|:-------------------:|
+| id | STRING | The ID of the file. |
+| kind | STRING | Identifies what kind of resource this is. |
+| mimeType | STRING | The MIME type of the file. |
+| name | STRING | The name of the file. |
+
+
+
+
+#### Output Example
+```json
+{
+  "id" : "",
+  "kind" : "",
+  "mimeType" : "",
+  "name" : ""
+}
+```
+
+#### Find File ID
+
+To find the File ID, click [here](/reference/components/google-drive_v1#how-to-find-file-id).
+
+
+
+### List Files
+Name: listFiles
+
+`List files in a Google Drive folder.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| folderId | Parent Folder ID | STRING | ID of the folder from which you want to list files. If no folder is specified, the root folder will be used. | false |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "List Files",
+  "name" : "listFiles",
+  "parameters" : {
+    "folderId" : ""
+  },
+  "type" : "googleDrive/v1/listFiles"
+}
+```
+
+#### Output
+
+
+
+Type: ARRAY
+
+
+Items Type: OBJECT
+
+
+#### Properties
+|     Name     |     Type     |     Description     |
+|:------------:|:------------:|:-------------------:|
+| id | STRING | The ID of the file. |
+| kind | STRING | Identifies what kind of resource this is. |
+| mimeType | STRING | The MIME type of the file. |
+| name | STRING | The name of the file. |
+
+
+
+
+
+#### Output Example
+```json
+[ {
+  "id" : "",
+  "kind" : "",
+  "mimeType" : "",
+  "name" : ""
+} ]
+```
+
+#### Find Folder ID
+
+To find the Folder ID, click [here](/reference/components/google-drive_v1#how-to-find-folder-id).
+
+
+
+### List Folders
+Name: listFolders
+
+`List folders in a Google Drive folder.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| folderId | Parent Folder ID | STRING | ID of the folder from which you want to list folders. If no folder is specified, the root folder will be used. | false |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "List Folders",
+  "name" : "listFolders",
+  "parameters" : {
+    "folderId" : ""
+  },
+  "type" : "googleDrive/v1/listFolders"
+}
+```
+
+#### Output
+
+
+
+Type: ARRAY
+
+
+Items Type: OBJECT
+
+
+#### Properties
+|     Name     |     Type     |     Description     |
+|:------------:|:------------:|:-------------------:|
+| id | STRING | The ID of the file. |
+| kind | STRING | Identifies what kind of resource this is. |
+| mimeType | STRING | The MIME type of the file. |
+| name | STRING | The name of the file. |
+
+
+
+
+
+#### Output Example
+```json
+[ {
+  "id" : "",
+  "kind" : "",
+  "mimeType" : "",
+  "name" : ""
+} ]
+```
+
+#### Find Folder ID
+
+To find the Folder ID, click [here](/reference/components/google-drive_v1#how-to-find-folder-id).
+
+
+
+### Share File
+Name: shareFile
+
+`Share a specified file from your Google Drive.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| fileId | File ID | STRING | ID of the file to be shared. | true |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Share File",
+  "name" : "shareFile",
+  "parameters" : {
+    "fileId" : ""
+  },
+  "type" : "googleDrive/v1/shareFile"
+}
+```
+
+#### Output
+
+
+
+Type: STRING
+
+
+
+
+
+
+
+#### Find File ID
+
+To find the File ID, click [here](/reference/components/google-drive_v1#how-to-find-file-id).
+
+
+
+### Share Folder
+Name: shareFolder
+
+`Share a specified folder from your Google Drive.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| folderId | Folder ID | STRING | ID of the folder to be shared. | true |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Share Folder",
+  "name" : "shareFolder",
+  "parameters" : {
+    "folderId" : ""
+  },
+  "type" : "googleDrive/v1/shareFolder"
+}
+```
+
+#### Output
+
+
+
+Type: STRING
+
+
+
+
+
+
+
+#### Find Folder ID
+
+To find the Folder ID, click [here](/reference/components/google-drive_v1#how-to-find-folder-id).
+
+
+
+### Upload File
+Name: uploadFile
+
+`Uploads a file in your Google Drive.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| fileEntry | File Entry | FILE_ENTRY | The object property which contains a reference to the file to upload. | true |
+| folderId | Parent Folder ID | STRING | ID of the folder where the file will be uploaded; if no folder is selected, the file will be uploaded to the root folder. | false |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Upload File",
+  "name" : "uploadFile",
+  "parameters" : {
+    "fileEntry" : {
+      "extension" : "",
+      "mimeType" : "",
+      "name" : "",
+      "url" : ""
+    },
+    "folderId" : ""
+  },
+  "type" : "googleDrive/v1/uploadFile"
+}
+```
+
+#### Output
+
+
+___Sample Output:___
+
+```{id=1hPJ7kjhStTX90amAWSJ-V0K1-nhDlsIr, mimeType=plain/text, name=new-file.txt}```
+
+
+
+Type: OBJECT
+
+
+#### Properties
+
+|     Name     |     Type     |     Description     |
+|:------------:|:------------:|:-------------------:|
+| id | STRING | The ID of the file. |
+| kind | STRING | Identifies what kind of resource this is. |
+| mimeType | STRING | The MIME type of the file. |
+| name | STRING | The name of the file. |
+
+
+
+
+#### Output Example
+```json
+{
+  "id" : "",
+  "kind" : "",
+  "mimeType" : "",
+  "name" : ""
+}
+```
+
+#### Find Folder ID
+
+To find the Folder ID, click [here](/reference/components/google-drive_v1#how-to-find-folder-id).
+
+
+
+
+## Triggers
+
+
+### New File
+Name: newFile
+
+`Triggers when new file is uploaded to Google Drive.`
+
+Type: POLLING
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| folderId | Parent Folder ID | STRING | The ID of the folder where the new file is uploaded. | true |
+
+
+#### Output
+
+
+
+Type: ARRAY
+
+
+Items Type: OBJECT
+
+
+#### Properties
+|     Name     |     Type     |     Description     |
+|:------------:|:------------:|:-------------------:|
+| id | STRING | The ID of the file. |
+| kind | STRING | Identifies what kind of resource this is. |
+| mimeType | STRING | The MIME type of the file. |
+| name | STRING | The name of the file. |
+
+
+
+
+
+#### JSON Example
+```json
+{
+  "label" : "New File",
+  "name" : "newFile",
+  "parameters" : {
+    "folderId" : ""
+  },
+  "type" : "googleDrive/v1/newFile"
+}
+```
+#### Find Folder ID
+
+To find the Folder ID, click [here](/reference/components/google-drive_v1#how-to-find-folder-id).
+
+
+
+### New Folder
+Name: newFolder
+
+`Triggers when new folder is uploaded to Google Drive.`
+
+Type: POLLING
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| folderId | Parent Folder ID | STRING | The ID of the folder where the new folder is uploaded. | true |
+
+
+#### Output
+
+
+
+Type: ARRAY
+
+
+Items Type: OBJECT
+
+
+#### Properties
+|     Name     |     Type     |     Description     |
+|:------------:|:------------:|:-------------------:|
+| id | STRING | The ID of the file. |
+| kind | STRING | Identifies what kind of resource this is. |
+| mimeType | STRING | The MIME type of the file. |
+| name | STRING | The name of the file. |
+
+
+
+
+
+#### JSON Example
+```json
+{
+  "label" : "New Folder",
+  "name" : "newFolder",
+  "parameters" : {
+    "folderId" : ""
+  },
+  "type" : "googleDrive/v1/newFolder"
+}
+```
+#### Find Folder ID
+
+To find the Folder ID, click [here](/reference/components/google-drive_v1#how-to-find-folder-id).
+
+
+
+
+
+## What to do if your action is not listed here?
+
+If this component doesn't have the action you need, you can use **Custom Action** to create your own. Custom Actions empower you to define HTTP requests tailored to your specific requirements, allowing for greater flexibility in integrating with external services or APIs.
+
+To create a Custom Action, simply specify the desired HTTP method, path, and any necessary parameters. This way, you can extend the functionality of your component beyond the predefined actions, ensuring that you can meet all your integration needs effectively.
+
+<hr />
+
+# Additional Instructions
+
+### How to find File ID
+
+To find a File ID, open the file in your browser. The ID is the long string of letters and numbers in the URL between `/d/` and the next `/` (usually `/view` or `/edit`).
+
+For example, in the URL `https://drive.google.com/file/d/1234567890abcdefghijklmnopqrstuvwxyz/view`, the File ID is `1234567890abcdefghijklmnopqrstuvwxyz`.
+
+The File ID can also be found in the output of the following actions and triggers:
+* **Copy File**
+* **Create New Text File**
+* **Get File**
+* **List Files**
+* **Upload File**
+* **New File** trigger
+
+### How to find Folder ID
+
+To find a Folder ID, open the folder in your browser. The ID is the string of characters at the end of the URL after `folders/`.
+
+For example, in the URL `https://drive.google.com/drive/folders/abcjhadjh213102398890r4`, the Folder ID is `abcjhadjh213102398890r4`.
+
+The Folder ID can also be found in the output of the following actions and triggers:
+* **Create New Folder**
+* **Get File**
+* **List Folders**
+* **New Folder** trigger
+
+## Troubleshooting
+
+### Access Blocked: Verification Process Not Completed
+
+Documentation for how to add a test user can be found [here](/reference/components/google-application-setup_v1#access-blocked-verification-process-not-completed)

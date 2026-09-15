@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,13 +31,14 @@ public class ConditionTaskDispatcherConstants {
     public static final String VALUE_2 = "value2";
     public static final String DATE_TIME = "dateTime";
     public static final String STRING = "string";
-    public static final String COMBINE_OPERATION = "combineOperation";
     public static final String NUMBER = "number";
     public static final String CASE_TRUE = "caseTrue";
     public static final String CASE_FALSE = "caseFalse";
+    public static final String TYPE = "type";
 
     public enum Operation {
         EQUALS,
+        EQUALS_IGNORE_CASE,
         NOT_EQUALS,
         AFTER,
         BEFORE,
@@ -51,10 +52,5 @@ public class ConditionTaskDispatcherConstants {
         ENDS_WITH,
         REGEX,
         EMPTY,
-    }
-
-    public enum CombineOperation {
-        ALL,
-        ANY,
     }
 }

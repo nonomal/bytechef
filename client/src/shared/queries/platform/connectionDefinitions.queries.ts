@@ -1,10 +1,11 @@
 /* eslint-disable sort-keys */
 import {
+    ConnectionDefinition,
     ConnectionDefinitionApi,
-    ConnectionDefinitionModel,
     GetComponentConnectionDefinitionRequest,
     GetComponentConnectionDefinitionsRequest,
 } from '@/shared/middleware/platform/configuration';
+import {DEFINITION_STALE_TIME} from '@/shared/queries/queryConstants';
 import {useQuery} from '@tanstack/react-query';
 
 export const ConnectDefinitionKeys = {
@@ -20,16 +21,21 @@ export const ConnectDefinitionKeys = {
     ],
 };
 
-export const useGetConnectionDefinitionQuery = (request?: GetComponentConnectionDefinitionRequest) =>
-    useQuery<ConnectionDefinitionModel, Error>({
+export const useGetConnectionDefinitionQuery = (request: GetComponentConnectionDefinitionRequest, enabled?: boolean) =>
+    useQuery<ConnectionDefinition, Error>({
+        enabled: (enabled === undefined ? true : enabled) && !!request.componentName,
         queryKey: ConnectDefinitionKeys.connectionDefinition(request),
-        queryFn: () => new ConnectionDefinitionApi().getComponentConnectionDefinition(request!),
-        enabled: !!request?.componentName,
+        queryFn: () => new ConnectionDefinitionApi().getComponentConnectionDefinition(request),
+        staleTime: DEFINITION_STALE_TIME,
     });
 
-export const useGetConnectionDefinitionsQuery = (request: GetComponentConnectionDefinitionsRequest) =>
-    useQuery<ConnectionDefinitionModel[], Error>({
+export const useGetConnectionDefinitionsQuery = (
+    request: GetComponentConnectionDefinitionsRequest,
+    enabled?: boolean
+) =>
+    useQuery<ConnectionDefinition[], Error>({
+        enabled: enabled === undefined ? true : enabled,
         queryKey: ConnectDefinitionKeys.filteredConnectionDefinitions(request),
         queryFn: () => new ConnectionDefinitionApi().getComponentConnectionDefinitions(request),
-        enabled: !!request?.componentName,
+        staleTime: DEFINITION_STALE_TIME,
     });

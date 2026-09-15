@@ -5,6 +5,7 @@ import java.util.Objects;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import org.springframework.lang.Nullable;
 import org.openapitools.jackson.nullable.JsonNullable;
 import java.time.OffsetDateTime;
 import jakarta.validation.Valid;
@@ -20,7 +21,7 @@ import jakarta.annotation.Generated;
  */
 
 @JsonTypeName("WorkflowOutput")
-@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2024-06-30T07:20:54.243996+02:00[Europe/Zagreb]", comments = "Generator version: 7.5.0")
+@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2026-07-03T17:58:15.504637+02:00[Europe/Zagreb]", comments = "Generator version: 7.22.0")
 public class WorkflowOutputModel {
 
   private String name;
@@ -47,7 +48,7 @@ public class WorkflowOutputModel {
   /**
    * The name of an output
    * @return name
-  */
+   */
   @NotNull 
   @Schema(name = "name", description = "The name of an output", requiredMode = Schema.RequiredMode.REQUIRED)
   @JsonProperty("name")
@@ -55,6 +56,7 @@ public class WorkflowOutputModel {
     return name;
   }
 
+  @JsonProperty("name")
   public void setName(String name) {
     this.name = name;
   }
@@ -67,7 +69,7 @@ public class WorkflowOutputModel {
   /**
    * The value of an output
    * @return value
-  */
+   */
   @NotNull 
   @Schema(name = "value", description = "The value of an output", requiredMode = Schema.RequiredMode.REQUIRED)
   @JsonProperty("value")
@@ -75,6 +77,7 @@ public class WorkflowOutputModel {
     return value;
   }
 
+  @JsonProperty("value")
   public void setValue(Object value) {
     this.value = value;
   }
@@ -111,11 +114,8 @@ public class WorkflowOutputModel {
    * Convert the given object to string with each line indented by 4 spaces
    * (except the first line).
    */
-  private String toIndentedString(Object o) {
-    if (o == null) {
-      return "null";
-    }
-    return o.toString().replace("\n", "\n    ");
+  private String toIndentedString(@Nullable Object o) {
+    return o == null ? "null" : o.toString().replace("\n", "\n    ");
   }
 }
 

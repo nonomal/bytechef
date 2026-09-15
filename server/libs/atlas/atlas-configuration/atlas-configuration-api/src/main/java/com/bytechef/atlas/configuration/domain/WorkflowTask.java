@@ -13,15 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * Modifications copyright (C) 2023 ByteChef Inc.
+ * Modifications copyright (C) 2025 ByteChef
  */
 
 package com.bytechef.atlas.configuration.domain;
 
 import com.bytechef.atlas.configuration.constant.WorkflowConstants;
+import com.bytechef.atlas.configuration.util.WorkflowTaskUtils;
 import com.bytechef.commons.util.CollectionUtils;
 import com.bytechef.commons.util.MapUtils;
 import com.bytechef.evaluator.Evaluator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import java.io.Serializable;
 import java.util.Collections;
@@ -29,7 +31,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import org.apache.commons.lang3.Validate;
+import org.springframework.util.Assert;
 
 /**
  * @author Arik Cohen
@@ -55,7 +57,7 @@ public class WorkflowTask implements Task, Serializable {
 
     @SuppressWarnings("unchecked")
     public WorkflowTask(Map<String, ?> source) {
-        Validate.notNull(source, "'source' must not be null");
+        Assert.notNull(source, "'source' must not be null");
 
         for (Map.Entry<String, ?> entry : source.entrySet()) {
             if (WorkflowConstants.DESCRIPTION.equals(entry.getKey())) {
@@ -98,15 +100,19 @@ public class WorkflowTask implements Task, Serializable {
             }
         }
 
-        Validate.notNull(name, "'name' must not be null");
-        Validate.notNull(type, "'type' must not be null");
+        Assert.notNull(name, "'name' must not be null");
+        Assert.notNull(type, "'type' must not be null");
     }
 
     private WorkflowTask() {
     }
 
-    public Map<String, ?> evaluateParameters(Map<String, ?> context) {
-        WorkflowTask workflowTask = new WorkflowTask(Evaluator.evaluate(toMap(), context));
+    public Map<String, ?> evaluateParameters(Map<String, ?> context, Evaluator evaluator) {
+        return evaluateParameters(context, evaluator, false);
+    }
+
+    public Map<String, ?> evaluateParameters(Map<String, ?> context, Evaluator evaluator, boolean lenient) {
+        WorkflowTask workflowTask = new WorkflowTask(evaluator.evaluate(toMap(), context, lenient));
 
         return workflowTask.getParameters();
     }
@@ -236,6 +242,11 @@ public class WorkflowTask implements Task, Serializable {
 
     public int getTaskNumber() {
         return taskNumber;
+    }
+
+    @JsonIgnore
+    public List<WorkflowTask> getTasks() {
+        return WorkflowTaskUtils.getTasks(Collections.singletonList(this), null);
     }
 
     /**

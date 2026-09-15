@@ -1,40 +1,55 @@
 logging:
+  file:
+    name: /opt/bytechef/server/logs/bytechef.log
   level:
     ROOT: INFO
     com.bytechef: INFO
-
-management:
-  prometheus:
-    metrics:
-      export:
-        enabled: false
+  structured:
+    format:
+      file: ecs
 
 server:
   port: 8080
   shutdown: graceful # see https://docs.spring.io/spring-boot/docs/current/reference/html/spring-boot-features.html#boot-features-graceful-shutdown
   compression:
     enabled: true
-    mime-types: text/html,text/xml,text/plain,text/css, application/javascript, application/json
+    mime-types: text/html,text/xml,text/plain,text/css,text/javascript,application/javascript,application/json,image/svg+xml
     min-response-size: 1024
 
 spring:
   devtools:
     restart:
       enabled: false
-    livereload:
-      enabled: false
-  mail:
-    host: localhost
-    port: 25
-    username:
-    password:
   thymeleaf:
     cache: true
+
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
+#####
+
+command-bar:
+  org-id: 3816ef6c
+
+post-hog:
+  api-key: phc_oZ9XWAVf8xf6sI7IYBAbGldSbiud07ioZItD1XvhJ7S
+  host: https://eu.i.posthog.com
+
+billing:
+  stripe:
+    customer-portal-url: https://billing.stripe.com/p/login/9B68wP8Pz1BX5YfbKj4Ja00
 
 #####
 
 bytechef:
-  datasource:
-    url: jdbc:postgresql://localhost:5432/bytechef
-    username: root
-    password:
+  analytics:
+    enabled: true
+#  help-hub:
+#    enabled: true
+  public-url: http://127.0.0.1:8080
+  user-guiding:
+    enabled: true
+  webhook-url: ${bytechef.public-url}/webhooks/{id}

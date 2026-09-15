@@ -1,0 +1,241 @@
+---
+title: "DocuSign"
+description: "DocuSign is a cloud-based e-signature platform that enables secure digital document signing and workflow automation."
+---
+
+
+Categories: Productivity and Collaboration
+
+
+Type: docusign/v1
+
+<hr />
+
+
+
+
+## Connections
+
+Version: 1
+
+
+### oauth2_authorization_code
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| clientId | Integration Key | STRING | DocuSign app integration key. | true |
+| clientSecret | Secret Key | STRING | DocuSign app secret key. | true |
+| accountId | API Account ID | STRING | DocuSign API account ID. | true |
+| environment | Environment | STRING <details> <summary> Options </summary> <span>demo</span>, <span>www</span>, <span>eu</span> </details> | Environment of the connection. | true |
+| baseUri | Account Base URI | STRING | DocuSign account base URI. | true |
+
+
+
+## Connection Setup
+
+### Create DocuSign App
+
+1. Navigate to [DocuSign Admin page](https://apps-d.docusign.com/admin/apps-and-keys).
+2. Click on "Add App and Integration Key".
+3. Enter app name and click on "Create App".
+4. Here you can see your "Integration Key".
+5. Select "Third-party integration key".
+6. Click here.
+7. Click on "Add Secret Key".
+8. Copy your "Secret Key" because you will not be able to access it again.
+9. Click on "Add URI".
+10. Add https://app.bytechef.io/callback or http://127.0.0.1:5173/callback.
+11. Click this icon.
+12. Check every HTTP method.
+13. Click on "Save".
+14. Here you can see "API Account ID" and "Account Base URI".
+
+<div style={{ position: 'relative', height:0, width: '100%', overflow: 'hidden', zIndex: 49, boxSizing: 'border-box', paddingBottom: 'calc(50.05219207% + 32px)'}}>
+    <iframe src="https://www.guidejar.com/embed/c280627b-cbad-41db-a37f-ce77ccb01c01?type=1&controls=on" width="100%" height="100%" style={{height:'100%', position:'absolute', inset:0}} allowFullScreen frameBorder="0"></iframe>
+</div>
+
+
+
+<hr />
+
+
+## Actions
+
+
+### Create Envelope
+Name: createEnvelope
+
+`Creates a new envelope.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| documents | Documents | ARRAY <details> <summary> Items </summary> [&#123;FILE_ENTRY\(documentFile), STRING\(name), INTEGER\(documentId)&#125;\($document)] </details> | The documents to be signed. | true |
+| status | Status | STRING <details> <summary> Options </summary> <span>sent</span>, <span>created</span> </details> | The status of the envelope. | true |
+| emailSubject | Email Subject | STRING | The subject of the email used to send the envelope. | true |
+| signers | Signer Recipients | ARRAY <details> <summary> Items </summary> [&#123;STRING\(name), STRING\(email), INTEGER\(recipientId)&#125;\($recipient)] </details> | The recipients of the envelope that have to sign the documents inside it. | true |
+| carbonCopies | Cc Recipients | ARRAY <details> <summary> Items </summary> [&#123;STRING\(name), STRING\(email), INTEGER\(recipientId)&#125;\($recipient)] </details> | The recipients of the envelope that can only view the documents inside it. | false |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Create Envelope",
+  "name" : "createEnvelope",
+  "parameters" : {
+    "documents" : [ {
+      "documentFile" : {
+        "extension" : "",
+        "mimeType" : "",
+        "name" : "",
+        "url" : ""
+      },
+      "name" : "",
+      "documentId" : 1
+    } ],
+    "status" : "",
+    "emailSubject" : "",
+    "signers" : [ {
+      "name" : "",
+      "email" : "",
+      "recipientId" : 1
+    } ],
+    "carbonCopies" : [ {
+      "name" : "",
+      "email" : "",
+      "recipientId" : 1
+    } ]
+  },
+  "type" : "docusign/v1/createEnvelope"
+}
+```
+
+#### Output
+
+
+
+Type: OBJECT
+
+
+#### Properties
+
+|     Name     |     Type     |     Description     |
+|:------------:|:------------:|:-------------------:|
+| envelopeid | STRING | The id of the envelope. |
+| uri | STRING | A URI containing the user ID. |
+| statusDateTime | STRING | The DateTime that the envelope changed status (i.e. was created or sent.) |
+| status | STRING | Indicates the envelope status. |
+
+
+
+
+#### Output Example
+```json
+{
+  "envelopeid" : "",
+  "uri" : "",
+  "statusDateTime" : "",
+  "status" : ""
+}
+```
+
+
+
+
+### Download Envelope Document
+Name: downloadEnvelopeDocument
+
+`Downloads a single document or all documents from an envelope.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| fromDate | From Date | DATE | Envelops that were created from this date will be fetched. | true |
+| envelopeId | Envelope ID | STRING <details> <summary> Depends On </summary> fromDate </details> | The ID of the envelope. | true |
+| documentId | Document ID | STRING <details> <summary> Depends On </summary> envelopeId </details> | ID of the document that will be downloaded from the envelope. | true |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Download Envelope Document",
+  "name" : "downloadEnvelopeDocument",
+  "parameters" : {
+    "fromDate" : "2021-01-01",
+    "envelopeId" : "",
+    "documentId" : ""
+  },
+  "type" : "docusign/v1/downloadEnvelopeDocument"
+}
+```
+
+#### Output
+
+
+
+Type: FILE_ENTRY
+
+
+#### Properties
+
+|     Name     |     Type     |     Description     |
+|:------------:|:------------:|:-------------------:|
+| extension | STRING |  |
+| mimeType | STRING |  |
+| name | STRING |  |
+| url | STRING |  |
+
+
+
+
+#### Output Example
+```json
+{
+  "extension" : "",
+  "mimeType" : "",
+  "name" : "",
+  "url" : ""
+}
+```
+
+#### Find Envelope and Document ID
+
+To find the Envelope ID, click [here](/reference/components/docusign_v1#how-to-find-envelope-id).
+
+To find the Document ID, click [here](/reference/components/docusign_v1#how-to-find-document-id).
+
+
+
+
+
+## What to do if your action is not listed here?
+
+If this component doesn't have the action you need, you can use **Custom Action** to create your own. Custom Actions empower you to define HTTP requests tailored to your specific requirements, allowing for greater flexibility in integrating with external services or APIs.
+
+To create a Custom Action, simply specify the desired HTTP method, path, and any necessary parameters. This way, you can extend the functionality of your component beyond the predefined actions, ensuring that you can meet all your integration needs effectively.
+
+<hr />
+
+# Additional Instructions
+
+### How to find Envelope ID
+
+1. Login into your DocuSign account.
+2. Click on **Agreements**.
+3. Select the envelope you want to find ID of.
+4. URL will be in the format `https://apps.docusign.com/send/documents/details/b8f79238-1164-4c24-9629-01ca78dc63cf`
+5. Envelope ID will be `b8f79238-1164-4c24-9629-01ca78dc63cf` in this case.
+*. You will also be able to see **Copy Envelope ID to clipboard** button, when you click on it, you will have the envelope ID in your clipboard.
+
+### How to find Document ID
+
+1. Login into your DocuSign account.
+2. Click on **Agreements**.
+3. Select the envelope you want document ID from.
+4. Open document you want to find ID of.
+5. URL will be in the format `https://apps.docusign.com/api/send/api/accounts/f4a3a35c-e5c1-46c5-afa0-b9ad3b28efea/envelopes/b8f79238-1164-4c24-9629-01ca78dc63cf/documents/1/preview/name`
+6. Document ID will be after `/documents/`, in this case document ID is `1`.
+
+

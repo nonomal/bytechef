@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,11 +16,12 @@
 
 package com.bytechef.component.infobip.action;
 
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.array;
-import static com.bytechef.component.definition.ComponentDSL.integer;
-import static com.bytechef.component.definition.ComponentDSL.object;
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.array;
+import static com.bytechef.component.definition.ComponentDsl.integer;
+import static com.bytechef.component.definition.ComponentDsl.object;
+import static com.bytechef.component.definition.ComponentDsl.outputSchema;
+import static com.bytechef.component.definition.ComponentDsl.string;
 import static com.bytechef.component.infobip.constant.InfobipConstants.BULK_ID;
 import static com.bytechef.component.infobip.constant.InfobipConstants.CONTENT;
 import static com.bytechef.component.infobip.constant.InfobipConstants.DESCRIPTION;
@@ -29,20 +30,19 @@ import static com.bytechef.component.infobip.constant.InfobipConstants.GROUP_ID;
 import static com.bytechef.component.infobip.constant.InfobipConstants.GROUP_NAME;
 import static com.bytechef.component.infobip.constant.InfobipConstants.ID;
 import static com.bytechef.component.infobip.constant.InfobipConstants.MESSAGES;
+import static com.bytechef.component.infobip.constant.InfobipConstants.MESSAGE_COUNT;
 import static com.bytechef.component.infobip.constant.InfobipConstants.MESSAGE_ID;
 import static com.bytechef.component.infobip.constant.InfobipConstants.NAME;
 import static com.bytechef.component.infobip.constant.InfobipConstants.SENDER;
-import static com.bytechef.component.infobip.constant.InfobipConstants.SEND_SMS;
-import static com.bytechef.component.infobip.constant.InfobipConstants.SMS_COUNT;
 import static com.bytechef.component.infobip.constant.InfobipConstants.STATUS;
 import static com.bytechef.component.infobip.constant.InfobipConstants.TEXT;
 import static com.bytechef.component.infobip.constant.InfobipConstants.TO;
 
 import com.bytechef.component.definition.ActionContext;
-import com.bytechef.component.definition.ComponentDSL.ModifiableActionDefinition;
+import com.bytechef.component.definition.ComponentDsl.ModifiableActionDefinition;
 import com.bytechef.component.definition.Context.Http;
-import com.bytechef.component.definition.Context.TypeReference;
 import com.bytechef.component.definition.Parameters;
+import com.bytechef.component.definition.TypeReference;
 import java.util.List;
 import java.util.Map;
 
@@ -51,9 +51,9 @@ import java.util.Map;
  */
 public class InfobipSendSMSAction {
 
-    public static final ModifiableActionDefinition ACTION_DEFINITION = action(SEND_SMS)
+    public static final ModifiableActionDefinition ACTION_DEFINITION = action("sendSMS")
         .title("Send SMS")
-        .description("Send a new SMS message")
+        .description("Send a new SMS message to one or more recipients.")
         .properties(
             string(SENDER)
                 .label("From")
@@ -68,22 +68,49 @@ public class InfobipSendSMSAction {
                 .label("Text")
                 .description("Content of the message being sent.")
                 .required(true))
-        .outputSchema(
-            object()
-                .properties(
-                    string(BULK_ID),
-                    array(MESSAGES)
-                        .items(
-                            string(MESSAGE_ID),
-                            object(STATUS)
-                                .properties(
-                                    integer(GROUP_ID),
-                                    string(GROUP_NAME),
-                                    integer(ID),
-                                    string(NAME),
-                                    string(DESCRIPTION)),
-                            string(TO),
-                            integer(SMS_COUNT))))
+        .output(
+            outputSchema(
+                object()
+                    .properties(
+                        string(BULK_ID)
+                            .description(
+                                "ID assigned to the request if messaging multiple recipients or sending multiple " +
+                                    "messages via a single API request."),
+                        array(MESSAGES)
+                            .description(
+                                "An array of message objects of a single message or multiple messages sent under " +
+                                    "one bulk ID.")
+                            .items(
+                                object()
+                                    .properties(
+                                        string(MESSAGE_ID)
+                                            .description("ID of the message."),
+                                        object(STATUS)
+                                            .description("Status of the message.")
+                                            .properties(
+                                                integer(GROUP_ID)
+                                                    .description("Status group ID."),
+                                                string(GROUP_NAME)
+                                                    .description(
+                                                        "Status group name that describes which category the status " +
+                                                            "code belongs to"),
+                                                integer(ID)
+                                                    .description("Status code ID."),
+                                                string(NAME)
+                                                    .description("Status code name."),
+                                                string(DESCRIPTION)
+                                                    .description("Human-readable description of the status."),
+                                                string("action")
+                                                    .description("Action to take to recover from the error.")),
+                                        string("destination")
+                                            .description("The destination address of the message."),
+                                        object("details")
+                                            .description("Other details of the message.")
+                                            .properties(
+                                                integer(MESSAGE_COUNT)
+                                                    .description(
+                                                        "Number of SMS message parts required to deliver the message.")))))))
+        .help("", "https://docs.bytechef.io/reference/components/infobip_v1#send-sms")
         .perform(InfobipSendSMSAction::perform);
 
     private InfobipSendSMSAction() {

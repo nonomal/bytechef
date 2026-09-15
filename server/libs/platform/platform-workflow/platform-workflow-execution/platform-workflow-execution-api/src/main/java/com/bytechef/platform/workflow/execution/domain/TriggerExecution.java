@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,6 @@ package com.bytechef.platform.workflow.execution.domain;
 
 import com.bytechef.atlas.execution.domain.Job;
 import com.bytechef.commons.util.CollectionUtils;
-import com.bytechef.commons.util.LocalDateTimeUtils;
 import com.bytechef.error.Errorable;
 import com.bytechef.error.ExecutionError;
 import com.bytechef.evaluator.Evaluator;
@@ -27,12 +26,12 @@ import com.bytechef.message.Prioritizable;
 import com.bytechef.message.Retryable;
 import com.bytechef.platform.configuration.domain.Trigger;
 import com.bytechef.platform.configuration.domain.WorkflowTrigger;
-import com.bytechef.platform.workflow.execution.WorkflowExecutionId;
+import com.bytechef.platform.workflow.WorkflowExecutionId;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.time.Duration;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -40,7 +39,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import org.apache.commons.lang3.Validate;
 import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.Id;
@@ -50,6 +48,7 @@ import org.springframework.data.annotation.Transient;
 import org.springframework.data.relational.core.mapping.Column;
 import org.springframework.data.relational.core.mapping.MappedCollection;
 import org.springframework.data.relational.core.mapping.Table;
+import org.springframework.util.Assert;
 
 /**
  * @author Ivica Cardic
@@ -85,10 +84,10 @@ public class TriggerExecution implements Cloneable, Errorable, Prioritizable, Re
 
     @Column("created_date")
     @CreatedDate
-    private LocalDateTime createdDate;
+    private Instant createdDate;
 
     @Column("end_date")
-    private LocalDateTime endDate;
+    private Instant endDate;
 
     @Column("error")
     private ExecutionError error;
@@ -109,7 +108,7 @@ public class TriggerExecution implements Cloneable, Errorable, Prioritizable, Re
 
     @Column("last_modified_date")
     @LastModifiedDate
-    private LocalDateTime lastModifiedDate;
+    private Instant lastModifiedDate;
 
     @Transient
     private Map<String, Object> metadata = new HashMap<>();
@@ -133,7 +132,7 @@ public class TriggerExecution implements Cloneable, Errorable, Prioritizable, Re
     private int retryDelayFactor;
 
     @Column("start_date")
-    private LocalDateTime startDate;
+    private Instant startDate;
 
     @Transient
     private Object state;
@@ -167,10 +166,10 @@ public class TriggerExecution implements Cloneable, Errorable, Prioritizable, Re
      * @param context The context value to evaluate the task against
      * @return the evaluated {@link TriggerExecution} instance.
      */
-    public TriggerExecution evaluate(Map<String, ?> context) {
+    public TriggerExecution evaluate(Map<String, ?> context, Evaluator evaluator) {
         WorkflowTrigger workflowTrigger = getWorkflowTrigger();
 
-        Map<String, Object> map = Evaluator.evaluate(workflowTrigger.toMap(), context);
+        Map<String, Object> map = evaluator.evaluate(workflowTrigger.toMap(), context);
 
         setWorkflowTrigger(new WorkflowTrigger(map));
 
@@ -211,7 +210,7 @@ public class TriggerExecution implements Cloneable, Errorable, Prioritizable, Re
      *
      * @return Date
      */
-    public LocalDateTime getCreatedDate() {
+    public Instant getCreatedDate() {
         return createdDate;
     }
 
@@ -220,7 +219,7 @@ public class TriggerExecution implements Cloneable, Errorable, Prioritizable, Re
      *
      * @return Date
      */
-    public LocalDateTime getEndDate() {
+    public Instant getEndDate() {
         return endDate;
     }
 
@@ -241,7 +240,7 @@ public class TriggerExecution implements Cloneable, Errorable, Prioritizable, Re
 
     @JsonIgnore
     public long getInstanceId() {
-        return workflowExecutionId.getInstanceId();
+        return workflowExecutionId.getJobPrincipalId();
     }
 
     /**
@@ -264,7 +263,7 @@ public class TriggerExecution implements Cloneable, Errorable, Prioritizable, Re
         return lastModifiedBy;
     }
 
-    public LocalDateTime getLastModifiedDate() {
+    public Instant getLastModifiedDate() {
         return lastModifiedDate;
     }
 
@@ -328,7 +327,7 @@ public class TriggerExecution implements Cloneable, Errorable, Prioritizable, Re
      *
      * @return Date
      */
-    public LocalDateTime getStartDate() {
+    public Instant getStartDate() {
         return startDate;
     }
 
@@ -353,7 +352,7 @@ public class TriggerExecution implements Cloneable, Errorable, Prioritizable, Re
     @Override
     @JsonIgnore
     public String getType() {
-        Validate.notNull(workflowTrigger.getType(), "Type must not be null");
+        Assert.notNull(workflowTrigger.getType(), "Type must not be null");
 
         return workflowTrigger.getType();
     }
@@ -381,11 +380,11 @@ public class TriggerExecution implements Cloneable, Errorable, Prioritizable, Re
         this.batch = batch;
     }
 
-    public void setEndDate(LocalDateTime endDate) {
+    public void setEndDate(Instant endDate) {
         this.endDate = endDate;
 
         if (endDate != null && startDate != null) {
-            this.executionTime = LocalDateTimeUtils.getTime(endDate) - LocalDateTimeUtils.getTime(startDate);
+            this.executionTime = endDate.toEpochMilli() - startDate.toEpochMilli();
         }
     }
 
@@ -449,7 +448,7 @@ public class TriggerExecution implements Cloneable, Errorable, Prioritizable, Re
         this.retryDelayFactor = retryDelayFactor;
     }
 
-    public void setStartDate(LocalDateTime startDate) {
+    public void setStartDate(Instant startDate) {
         this.startDate = startDate;
     }
 
@@ -495,7 +494,7 @@ public class TriggerExecution implements Cloneable, Errorable, Prioritizable, Re
 
     @SuppressFBWarnings("EI")
     public static final class Builder {
-        private LocalDateTime endDate;
+        private Instant endDate;
         private ExecutionError error;
         private Long id;
         private int maxRetries;
@@ -505,7 +504,7 @@ public class TriggerExecution implements Cloneable, Errorable, Prioritizable, Re
         private int retryAttempts;
         private String retryDelay = "1s";
         private int retryDelayFactor = 2;
-        private LocalDateTime startDate;
+        private Instant startDate;
         private Status status = Status.CREATED;
         private WorkflowExecutionId workflowExecutionId;
         private WorkflowTrigger workflowTrigger;
@@ -513,7 +512,7 @@ public class TriggerExecution implements Cloneable, Errorable, Prioritizable, Re
         private Builder() {
         }
 
-        public Builder endDate(LocalDateTime endDate) {
+        public Builder endDate(Instant endDate) {
             this.endDate = endDate;
 
             return this;
@@ -569,7 +568,7 @@ public class TriggerExecution implements Cloneable, Errorable, Prioritizable, Re
             return this;
         }
 
-        public Builder startDate(LocalDateTime startDate) {
+        public Builder startDate(Instant startDate) {
             this.startDate = startDate;
 
             return this;
@@ -582,7 +581,7 @@ public class TriggerExecution implements Cloneable, Errorable, Prioritizable, Re
         }
 
         public Builder workflowExecutionId(WorkflowExecutionId workflowExecutionId) {
-            Validate.notNull(workflowExecutionId, "'workflowExecutionId' must not be null");
+            Assert.notNull(workflowExecutionId, "'workflowExecutionId' must not be null");
 
             this.workflowExecutionId = workflowExecutionId;
 
@@ -590,7 +589,7 @@ public class TriggerExecution implements Cloneable, Errorable, Prioritizable, Re
         }
 
         public Builder workflowTrigger(WorkflowTrigger workflowTrigger) {
-            Validate.notNull(workflowTrigger, "'workflowTrigger' must not be null");
+            Assert.notNull(workflowTrigger, "'workflowTrigger' must not be null");
 
             this.workflowTrigger = workflowTrigger;
 

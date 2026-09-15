@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,14 +16,13 @@
 
 package com.bytechef.automation.workflow.execution.web.rest;
 
+import com.bytechef.atlas.coordinator.annotation.ConditionalOnCoordinator;
 import com.bytechef.atlas.execution.domain.Job.Status;
-import com.bytechef.automation.configuration.web.rest.model.EnvironmentModel;
-import com.bytechef.automation.workflow.execution.facade.WorkflowExecutionFacade;
-import com.bytechef.automation.workflow.execution.web.rest.model.WorkflowExecutionBasicModel;
+import com.bytechef.automation.workflow.execution.facade.ProjectWorkflowExecutionFacade;
 import com.bytechef.automation.workflow.execution.web.rest.model.WorkflowExecutionModel;
-import com.bytechef.platform.constant.Environment;
+import com.bytechef.platform.workflow.execution.web.rest.model.TaskExecutionModel;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import org.springframework.core.convert.ConversionService;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
@@ -35,38 +34,54 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @RestController("com.bytechef.automation.workflow.execution.web.rest.WorkflowExecutionApiController")
 @RequestMapping("${openapi.openAPIDefinition.base-path.automation:}/internal")
+@ConditionalOnCoordinator
 public class WorkflowExecutionApiController implements WorkflowExecutionApi {
 
     private final ConversionService conversionService;
-    private final WorkflowExecutionFacade workflowExecutionFacade;
+    private final ProjectWorkflowExecutionFacade projectWorkflowExecutionFacade;
 
     @SuppressFBWarnings("EI")
     public WorkflowExecutionApiController(
-        ConversionService conversionService, WorkflowExecutionFacade workflowExecutionFacade) {
+        ConversionService conversionService, ProjectWorkflowExecutionFacade projectWorkflowExecutionFacade) {
 
         this.conversionService = conversionService;
-        this.workflowExecutionFacade = workflowExecutionFacade;
+        this.projectWorkflowExecutionFacade = projectWorkflowExecutionFacade;
+    }
+
+    @Override
+    public ResponseEntity<WorkflowExecutionModel> getTriggerExecutionWorkflowExecution(Long triggerExecutionId) {
+        return ResponseEntity.ok(
+            conversionService.convert(
+                projectWorkflowExecutionFacade.getTriggerExecutionWorkflowExecution(triggerExecutionId),
+                WorkflowExecutionModel.class));
     }
 
     @Override
     public ResponseEntity<WorkflowExecutionModel> getWorkflowExecution(Long id) {
         return ResponseEntity.ok(
-            conversionService.convert(workflowExecutionFacade.getWorkflowExecution(id),
-                WorkflowExecutionModel.class));
+            conversionService.convert(
+                projectWorkflowExecutionFacade.getWorkflowExecution(id), WorkflowExecutionModel.class));
+    }
+
+    @Override
+    public ResponseEntity<TaskExecutionModel> getWorkflowExecutionTaskExecution(Long id, Long taskExecutionId) {
+        return ResponseEntity.ok(
+            conversionService.convert(
+                projectWorkflowExecutionFacade.getWorkflowExecutionTaskExecution(id, taskExecutionId),
+                TaskExecutionModel.class));
     }
 
     @Override
     public ResponseEntity<Page> getWorkflowExecutionsPage(
-        EnvironmentModel environment, String jobStatus, LocalDateTime jobStartDate, LocalDateTime jobEndDate,
-        Long projectId, Long projectInstanceId, String workflowId, Integer pageNumber) {
+        Long workspaceId, Boolean embedded, Long environmentId, String jobStatus, OffsetDateTime jobStartDate,
+        OffsetDateTime jobEndDate, Long projectId, Long projectDeploymentId, String workflowId, Integer pageNumber) {
 
         return ResponseEntity.ok(
-            workflowExecutionFacade
+            projectWorkflowExecutionFacade
                 .getWorkflowExecutions(
-                    environment == null ? null : Environment.valueOf(environment.name()),
-                    jobStatus == null ? null : Status.valueOf(jobStatus),
-                    jobStartDate, jobEndDate, projectId, projectInstanceId, workflowId, pageNumber)
-                .map(workflowExecutionDTO -> conversionService.convert(
-                    workflowExecutionDTO, WorkflowExecutionBasicModel.class)));
+                    embedded, environmentId, jobStatus == null ? null : Status.valueOf(jobStatus),
+                    jobStartDate == null ? null : jobStartDate.toInstant(),
+                    jobEndDate == null ? null : jobEndDate.toInstant(), projectId, projectDeploymentId,
+                    workflowId, workspaceId, pageNumber));
     }
 }

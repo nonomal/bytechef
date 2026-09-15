@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,15 +17,18 @@
 package com.bytechef.component.teamwork.action;
 
 import static com.bytechef.component.OpenApiComponentHandler.PropertyType;
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.date;
-import static com.bytechef.component.definition.ComponentDSL.integer;
-import static com.bytechef.component.definition.ComponentDSL.object;
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.date;
+import static com.bytechef.component.definition.ComponentDsl.integer;
+import static com.bytechef.component.definition.ComponentDsl.object;
+import static com.bytechef.component.definition.ComponentDsl.outputSchema;
+import static com.bytechef.component.definition.ComponentDsl.string;
 import static com.bytechef.component.definition.Context.Http.BodyContentType;
 import static com.bytechef.component.definition.Context.Http.ResponseType;
 
-import com.bytechef.component.definition.ComponentDSL;
+import com.bytechef.component.definition.ActionDefinition;
+import com.bytechef.component.definition.ComponentDsl;
+import com.bytechef.component.teamwork.util.TeamworkUtils;
 import java.util.Map;
 
 /**
@@ -34,9 +37,9 @@ import java.util.Map;
  * @generated
  */
 public class TeamworkCreateTaskAction {
-    public static final ComponentDSL.ModifiableActionDefinition ACTION_DEFINITION = action("createTask")
-        .title("Creates a task")
-        .description("Create a new task")
+    public static final ComponentDsl.ModifiableActionDefinition ACTION_DEFINITION = action("createTask")
+        .title("Create Task")
+        .description("Create a new task.")
         .metadata(
             Map.of(
                 "method", "POST",
@@ -44,33 +47,37 @@ public class TeamworkCreateTaskAction {
                 "application/json"
 
             ))
-        .properties(integer("tasklistId").label("Tasklist Id")
-            .description("Task list where new task is added")
+        .properties(integer("tasklistId").label("Task List ID")
+            .description("Task list where new task is added.")
             .required(true)
+            .options((ActionDefinition.OptionsFunction<Long>) TeamworkUtils::getTasklistIdOptions)
             .metadata(
                 Map.of(
                     "type", PropertyType.PATH)),
-            object("__item").properties(object("task").properties(string("name").label("Name")
-                .description("Task name")
+            object("task").properties(string("name").label("Name")
+                .description("Name of the task.")
                 .required(false),
                 string("description").label("Description")
+                    .description("Description of the task.")
                     .required(false),
-                date("dueAt").label("Due At")
+                date("dueAt").label("Due Date")
+                    .description("Due date of the task.")
                     .required(false))
-                .label("Task")
-                .required(false))
-                .label("Task")
                 .metadata(
                     Map.of(
-                        "type", PropertyType.BODY)))
-        .outputSchema(object()
-            .properties(object("body")
-                .properties(string("name").required(false), string("description").required(false),
-                    string("dueAt").required(false))
+                        "type", PropertyType.BODY))
+                .label("Task")
+                .required(false))
+        .output(outputSchema(object().properties(string("name").description("Name of the task.")
+            .required(false),
+            string("description").description("Description of the task.")
+                .required(false),
+            string("dueAt").description("Due date of the task.")
                 .required(false))
             .metadata(
                 Map.of(
-                    "responseType", ResponseType.JSON)));
+                    "responseType", ResponseType.JSON))))
+        .help("", "https://docs.bytechef.io/reference/components/teamwork_v1#create-task");
 
     private TeamworkCreateTaskAction() {
     }

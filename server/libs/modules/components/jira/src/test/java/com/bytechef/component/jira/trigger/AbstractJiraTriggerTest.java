@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,20 +16,17 @@
 
 package com.bytechef.component.jira.trigger;
 
+import static org.mockito.ArgumentCaptor.forClass;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 
 import com.bytechef.component.definition.Parameters;
 import com.bytechef.component.definition.TriggerContext;
-import com.bytechef.component.definition.TriggerDefinition;
-import com.bytechef.component.definition.TriggerDefinition.DynamicWebhookEnableOutput;
-import com.bytechef.component.definition.TriggerDefinition.HttpHeaders;
-import com.bytechef.component.definition.TriggerDefinition.HttpParameters;
 import com.bytechef.component.definition.TriggerDefinition.WebhookBody;
-import com.bytechef.component.definition.TriggerDefinition.WebhookMethod;
 import com.bytechef.component.jira.util.JiraUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.mockito.ArgumentCaptor;
 import org.mockito.MockedStatic;
 
 /**
@@ -38,24 +35,21 @@ import org.mockito.MockedStatic;
 abstract class AbstractJiraTriggerTest {
 
     protected MockedStatic<JiraUtils> jiraUtilsMockedStatic;
-    protected DynamicWebhookEnableOutput mockedDynamicWebhookEnableOutput =
-        mock(TriggerDefinition.DynamicWebhookEnableOutput.class);
-    protected HttpHeaders mockedHttpHeaders = mock(HttpHeaders.class);
-    protected HttpParameters mockedHttpParameters = mock(HttpParameters.class);
-    protected WebhookMethod mockedWebhookMethod = mock(WebhookMethod.class);
     protected Object mockedObject = mock(Object.class);
     protected Parameters mockedParameters = mock(Parameters.class);
     protected TriggerContext mockedTriggerContext = mock(TriggerContext.class);
     protected WebhookBody mockedWebhookBody = mock(WebhookBody.class);
-    protected String workflowExecutionId = "testWorkflowExecutionId";
+    protected ArgumentCaptor<Parameters> parametersArgumentCaptor = forClass(Parameters.class);
+    protected ArgumentCaptor<String> stringArgumentCaptor = forClass(String.class);
+    protected ArgumentCaptor<TriggerContext> triggerContextArgumentCaptor = forClass(TriggerContext.class);
 
     @BeforeEach
-    public void beforeEach() {
+    void beforeEach() {
         jiraUtilsMockedStatic = mockStatic(JiraUtils.class);
     }
 
     @AfterEach
-    public void afterEach() {
+    void afterEach() {
         jiraUtilsMockedStatic.close();
     }
 }

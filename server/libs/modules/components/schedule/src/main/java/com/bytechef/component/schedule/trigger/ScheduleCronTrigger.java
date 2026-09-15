@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,21 +16,24 @@
 
 package com.bytechef.component.schedule.trigger;
 
-import static com.bytechef.component.definition.ComponentDSL.object;
-import static com.bytechef.component.definition.ComponentDSL.string;
-import static com.bytechef.component.definition.ComponentDSL.trigger;
-import static com.bytechef.component.schedule.constant.ScheduleConstants.DATETIME;
+import static com.bytechef.component.definition.ComponentDsl.dateTime;
+import static com.bytechef.component.definition.ComponentDsl.object;
+import static com.bytechef.component.definition.ComponentDsl.outputSchema;
+import static com.bytechef.component.definition.ComponentDsl.string;
+import static com.bytechef.component.definition.ComponentDsl.trigger;
+import static com.bytechef.component.schedule.constant.ScheduleConstants.DATE_TIME;
 import static com.bytechef.component.schedule.constant.ScheduleConstants.EXPRESSION;
+import static com.bytechef.component.schedule.constant.ScheduleConstants.FIRE_TIME;
 import static com.bytechef.component.schedule.constant.ScheduleConstants.TIMEZONE;
 
-import com.bytechef.component.definition.ComponentDSL.ModifiableTriggerDefinition;
+import com.bytechef.component.definition.ComponentDsl.ModifiableTriggerDefinition;
 import com.bytechef.component.definition.Parameters;
 import com.bytechef.component.definition.TriggerContext;
 import com.bytechef.component.definition.TriggerDefinition.ListenerEmitter;
 import com.bytechef.component.definition.TriggerDefinition.TriggerType;
 import com.bytechef.component.schedule.util.ScheduleUtils;
 import com.bytechef.platform.scheduler.TriggerScheduler;
-import com.bytechef.platform.workflow.execution.WorkflowExecutionId;
+import com.bytechef.platform.workflow.WorkflowExecutionId;
 import java.util.Map;
 
 /**
@@ -40,24 +43,38 @@ public class ScheduleCronTrigger {
 
     public final ModifiableTriggerDefinition triggerDefinition = trigger("cron")
         .title("Cron")
-        .description("Trigger off based on a custom schedule.")
+        .description("Runs the workflow on a custom schedule defined by a cron expression.")
         .type(TriggerType.LISTENER)
         .properties(
             string(EXPRESSION)
-                .label("Expression")
+                .label("Cron Expression")
                 .description(
-                    "The chron schedule expression. Format: [Minute] [Hour] [Day of Month] [Month] [Day of Week]")
+                    "The cron expression that defines when the workflow runs (without the seconds field). Format: " +
+                        "minute hour day-of-month month day-of-week.")
                 .required(true),
             string(TIMEZONE)
                 .label("Timezone")
-                .description("The timezone at which the cron expression will be scheduled.")
-                .options(ScheduleUtils.getTimeZoneOptions()))
-        .outputSchema(
-            object()
-                .properties(
-                    string(DATETIME),
-                    string(EXPRESSION),
-                    string(TIMEZONE)))
+                .description("The time zone used to interpret the schedule.")
+                .options(ScheduleUtils.getTimeZoneOptions())
+                .required(true))
+        .output(
+            outputSchema(
+                object()
+                    .properties(
+                        string(FIRE_TIME)
+                            .description("The exact date and time when the trigger was activated."),
+                        dateTime(DATE_TIME)
+                            .description(
+                                "The date and time when the trigger was activated, formatted according to the " +
+                                    "specified timezone."),
+                        string(EXPRESSION)
+                            .description(
+                                "The cron schedule expression that defines the timing pattern for triggering " +
+                                    "the workflow."),
+                        string(TIMEZONE)
+                            .description(
+                                "The timezone used for scheduling the cron expression, ensuring the trigger fires " +
+                                    "at the correct local time."))))
         .listenerDisable(this::listenerDisable)
         .listenerEnable(this::listenerEnable);
 
@@ -69,20 +86,20 @@ public class ScheduleCronTrigger {
 
     protected void listenerDisable(
         Parameters inputParameters, Parameters connectionParameters, String workflowExecutionId,
-        TriggerContext context) {
+        TriggerContext triggerContext) {
 
         triggerScheduler.cancelScheduleTrigger(workflowExecutionId);
     }
 
     protected void listenerEnable(
         Parameters inputParameters, Parameters connectionParameters, String workflowExecutionId,
-        ListenerEmitter listenerEmitter, TriggerContext context) {
+        ListenerEmitter listenerEmitter, TriggerContext triggerContext) {
+
+        String expression = inputParameters.getRequiredString(EXPRESSION);
+        String timezone = inputParameters.getRequiredString(TIMEZONE);
 
         triggerScheduler.scheduleScheduleTrigger(
-            "0 " + inputParameters.getString(EXPRESSION), inputParameters.getString(TIMEZONE),
-            Map.of(
-                EXPRESSION, inputParameters.getString(EXPRESSION),
-                TIMEZONE, inputParameters.getString(TIMEZONE)),
+            "0 " + expression, timezone, Map.of(EXPRESSION, expression, TIMEZONE, timezone),
             WorkflowExecutionId.parse(workflowExecutionId));
     }
 }

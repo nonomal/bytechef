@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@ package com.bytechef.atlas.execution.service;
 
 import com.bytechef.atlas.configuration.domain.Workflow;
 import com.bytechef.atlas.execution.domain.Job;
-import com.bytechef.atlas.execution.dto.JobParameters;
+import com.bytechef.atlas.execution.dto.JobParametersDTO;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Page;
@@ -28,21 +28,27 @@ import org.springframework.data.domain.Page;
  */
 public interface JobService {
 
-    Job create(JobParameters jobParameters, Workflow workflow);
+    Job create(JobParametersDTO jobParametersDTO, Workflow workflow);
 
     void deleteJob(long id);
+
+    Optional<Job> fetchJob(Long id);
 
     Optional<Job> fetchLastJob();
 
     Optional<Job> fetchLastWorkflowJob(String workflowId);
 
+    Optional<Job> fetchLastWorkflowJob(List<String> workflowIds);
+
+    List<Long> getChildJobIds(long parentJobId);
+
     Job getJob(long id);
+
+    List<Job> getJobs(List<Long> ids);
 
     Page<Job> getJobsPage(int pageNumber);
 
     Job getTaskExecutionJob(long taskExecutionId);
-
-    List<Job> getWorkflowJobs(String workflowId);
 
     Job resumeToStatusStarted(long id);
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,16 +16,8 @@
 
 package com.bytechef.component.accelo;
 
-import com.bytechef.test.jsonasssert.JsonFileAssert;
-import org.junit.jupiter.api.Test;
-
 /**
- * @author Monika Domiter
+ * @generated
  */
-class AcceloComponentHandlerTest {
-
-    @Test
-    void testGetComponentDefinition() {
-        JsonFileAssert.assertEquals("definition/accelo_v1.json", new AcceloComponentHandler().getDefinition());
-    }
+public class AcceloComponentHandlerTest extends AbstractAcceloComponentHandlerTest {
 }

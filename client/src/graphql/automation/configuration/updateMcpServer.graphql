@@ -1,0 +1,7 @@
+mutation updateMcpServer($id: ID!, $input: McpServerUpdateInput!) {
+    updateMcpServer(id: $id, input: $input) {
+        id
+        name
+        enabled
+    }
+}

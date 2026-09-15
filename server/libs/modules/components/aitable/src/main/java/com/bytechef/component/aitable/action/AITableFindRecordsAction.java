@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,74 +16,92 @@
 
 package com.bytechef.component.aitable.action;
 
-import static com.bytechef.component.aitable.constant.AITableConstants.BASE_URL;
 import static com.bytechef.component.aitable.constant.AITableConstants.DATASHEET_ID;
 import static com.bytechef.component.aitable.constant.AITableConstants.DATASHEET_ID_PROPERTY;
 import static com.bytechef.component.aitable.constant.AITableConstants.FIELDS;
-import static com.bytechef.component.aitable.constant.AITableConstants.FIND_RECORDS;
-import static com.bytechef.component.aitable.constant.AITableConstants.MAX_RECORDS;
-import static com.bytechef.component.aitable.constant.AITableConstants.OUTPUT_PROPERTY;
+import static com.bytechef.component.aitable.constant.AITableConstants.PAGE_SIZE;
 import static com.bytechef.component.aitable.constant.AITableConstants.RECORD_IDS;
 import static com.bytechef.component.aitable.constant.AITableConstants.SPACE_ID_PROPERTY;
-import static com.bytechef.component.aitable.util.AITableUtils.createQuery;
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.array;
-import static com.bytechef.component.definition.ComponentDSL.integer;
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.array;
+import static com.bytechef.component.definition.ComponentDsl.string;
 
 import com.bytechef.component.aitable.util.AITableUtils;
 import com.bytechef.component.definition.ActionContext;
-import com.bytechef.component.definition.ComponentDSL.ModifiableActionDefinition;
+import com.bytechef.component.definition.ActionDefinition.OptionsFunction;
+import com.bytechef.component.definition.ComponentDsl.ModifiableActionDefinition;
 import com.bytechef.component.definition.Context.Http;
-import com.bytechef.component.definition.Context.TypeReference;
-import com.bytechef.component.definition.OptionsDataSource.ActionOptionsFunction;
 import com.bytechef.component.definition.Parameters;
+import com.bytechef.component.definition.TypeReference;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 /**
  * @author Monika Domiter
  */
 public class AITableFindRecordsAction {
 
-    public static final ModifiableActionDefinition ACTION_DEFINITION = action(FIND_RECORDS)
-        .title("Find records")
+    public static final ModifiableActionDefinition ACTION_DEFINITION = action("findRecords")
+        .title("Find Records")
         .description("Find records in datasheet")
+        .help("", "https://docs.bytechef.io/reference/components/aitable_v1#find-records")
         .properties(
             SPACE_ID_PROPERTY,
             DATASHEET_ID_PROPERTY,
             array(FIELDS)
                 .label("Field Names")
                 .description("The returned record results are limited to the specified fields.")
-                .items(
-                    string()
-                        .options((ActionOptionsFunction<String>) AITableUtils::getFieldNamesOptions)
-                        .optionsLookupDependsOn(DATASHEET_ID))
+                .items(string())
+                .options((OptionsFunction<String>) AITableUtils::getFieldNamesOptions)
+                .optionsLookupDependsOn(DATASHEET_ID)
                 .required(false),
             array(RECORD_IDS)
                 .label("Record IDs")
                 .description("The IDs of the records to find.")
-                .items(
-                    string()
-                        .options((ActionOptionsFunction<String>) AITableUtils::getDatasheetRecordIdOptions)
-                        .optionsLookupDependsOn(DATASHEET_ID))
-                .required(false),
-            integer(MAX_RECORDS)
-                .label("Max records")
-                .description("How many records are returned in total")
+                .items(string())
                 .required(false))
-        .outputSchema(OUTPUT_PROPERTY)
+        .output()
         .perform(AITableFindRecordsAction::perform);
 
     private AITableFindRecordsAction() {
     }
 
-    public static Object perform(
-        Parameters inputParameters, Parameters connectionParameters, ActionContext actionContext) {
+    public static List<Map<?, ?>> perform(
+        Parameters inputParameters, Parameters connectionParameters, ActionContext context) {
 
-        return actionContext.http(http -> http.get(
-            BASE_URL + "/datasheets/" + inputParameters.getRequiredString(DATASHEET_ID) + "/records?"
-                + createQuery(inputParameters)))
-            .configuration(Http.responseType(Http.ResponseType.JSON))
-            .execute()
-            .getBody(new TypeReference<>() {});
+        int pageNum = 1;
+        int totalReceived = 0;
+        int total = 0;
+
+        List<Map<?, ?>> records = new ArrayList<>();
+        do {
+            Map<String, ?> body = context
+                .http(http -> http.get("/datasheets/" + inputParameters.getRequiredString(DATASHEET_ID) + "/records"))
+                .queryParameters(
+                    FIELDS, String.join(",", inputParameters.getList(FIELDS, String.class, List.of())),
+                    RECORD_IDS, String.join(",", inputParameters.getList(RECORD_IDS, String.class, List.of())),
+                    PAGE_SIZE, 1000,
+                    "pageNum", pageNum)
+                .configuration(Http.responseType(Http.ResponseType.JSON))
+                .execute()
+                .getBody(new TypeReference<>() {});
+
+            if (body.get("data") instanceof Map<?, ?> data) {
+                if (data.get("records") instanceof List<?> list) {
+                    for (Object record : list) {
+                        if (record instanceof Map<?, ?> map) {
+                            records.add(map);
+                        }
+                    }
+                }
+
+                totalReceived += (Integer) data.get(PAGE_SIZE);
+                pageNum++;
+                total = (Integer) data.get("total");
+            }
+        } while (totalReceived < total);
+
+        return records;
     }
 }

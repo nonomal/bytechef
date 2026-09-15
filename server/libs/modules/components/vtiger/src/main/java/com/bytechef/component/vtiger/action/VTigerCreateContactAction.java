@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,75 +16,82 @@
 
 package com.bytechef.component.vtiger.action;
 
-import static com.bytechef.component.definition.ComponentDSL.ModifiableActionDefinition;
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.object;
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.definition.ComponentDsl.ModifiableActionDefinition;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.object;
+import static com.bytechef.component.definition.ComponentDsl.outputSchema;
+import static com.bytechef.component.definition.ComponentDsl.string;
 import static com.bytechef.component.definition.Context.Http.responseType;
-import static com.bytechef.component.vtiger.constant.VTigerConstants.CREATE_CONTACT;
 import static com.bytechef.component.vtiger.constant.VTigerConstants.EMAIL;
 import static com.bytechef.component.vtiger.constant.VTigerConstants.FIRSTNAME;
-import static com.bytechef.component.vtiger.constant.VTigerConstants.INSTANCE_URL;
 import static com.bytechef.component.vtiger.constant.VTigerConstants.LASTNAME;
 
 import com.bytechef.component.definition.ActionContext;
-import com.bytechef.component.definition.Context;
 import com.bytechef.component.definition.Context.Http.Body;
+import com.bytechef.component.definition.Context.Http.ResponseType;
 import com.bytechef.component.definition.Parameters;
-import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
  * @author Luka Ljubić
+ * @author Monika Kušter
  */
 public class VTigerCreateContactAction {
 
-    public static final ModifiableActionDefinition ACTION_DEFINITION = action(CREATE_CONTACT)
-        .title("Create a contact")
-        .description("Create a new contact")
+    public static final ModifiableActionDefinition ACTION_DEFINITION = action("createContact")
+        .title("Create Contact")
+        .description("Creates a new contact.")
+        .help("", "https://docs.bytechef.io/reference/components/vtiger_v1#create-contact")
         .properties(
             string(FIRSTNAME)
                 .label("First Name")
-                .description("First name of the contact")
+                .description("First name of the contact.")
                 .required(true),
             string(LASTNAME)
                 .label("Last Name")
-                .description("Last name of the contact")
+                .description("Last name of the contact.")
                 .required(true),
             string(EMAIL)
-                .label("Contact email")
-                .description("email for your new contact")
+                .label("Email")
+                .description("Email address of the contact.")
                 .required(true))
-        .outputSchema(
-            object()
-                .properties(
-                    object("result")
-                        .properties(
-                            string(FIRSTNAME),
-                            string(LASTNAME),
-                            string(EMAIL),
-                            string("phone"))))
+        .output(
+            outputSchema(
+                object()
+                    .properties(
+                        object("result")
+                            .properties(
+                                string(FIRSTNAME)
+                                    .description("First name of the contact."),
+                                string(LASTNAME)
+                                    .description("Last name of the contact."),
+                                string(EMAIL)
+                                    .description("Email address of the contact."),
+                                string("phone")
+                                    .description("Phone number of the contact."),
+                                string("assigned_user_id")
+                                    .description("ID of the user assigned as the owner of this record."),
+                                string("id")
+                                    .description("ID of the contact.")))))
         .perform(VTigerCreateContactAction::perform);
 
     private VTigerCreateContactAction() {
     }
 
-    public static Object perform(Parameters inputParameters, Parameters connectionParameters, ActionContext context) {
-        Map<String, String> paramMap = new LinkedHashMap<>();
+    protected static Object perform(
+        Parameters inputParameters, Parameters connectionParameters, ActionContext actionContext) {
 
-        paramMap.put(FIRSTNAME, inputParameters.getRequiredString(FIRSTNAME));
-        paramMap.put(LASTNAME, inputParameters.getRequiredString(LASTNAME));
-        paramMap.put(EMAIL, inputParameters.getRequiredString(EMAIL));
-
-        return context
-            .http(http -> http.post(
-                connectionParameters.getRequiredString(INSTANCE_URL) + "/restapi/v1/vtiger/default/create"))
+        return actionContext
+            .http(http -> http.post("/create"))
             .body(
                 Body.of(
                     "elementType", "Contacts",
-                    "element", paramMap))
-            .configuration(responseType(Context.Http.ResponseType.JSON))
+                    "element",
+                    Map.of(FIRSTNAME, inputParameters.getRequiredString(FIRSTNAME),
+                        LASTNAME, inputParameters.getRequiredString(LASTNAME),
+                        EMAIL, inputParameters.getRequiredString(EMAIL))))
+            .configuration(responseType(ResponseType.JSON))
             .execute()
-            .getBody(new Context.TypeReference<>() {});
+            .getBody();
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
 
 package com.bytechef.platform.data.storage.jdbc.repository;
 
-import com.bytechef.component.definition.ActionContext.Data.Scope;
 import com.bytechef.platform.data.storage.jdbc.domain.DataEntry;
 import java.util.List;
 import java.util.Optional;
@@ -34,10 +33,10 @@ public interface DataStorageRepository
     extends ListPagingAndSortingRepository<DataEntry, Long>, ListCrudRepository<DataEntry, Long> {
 
     @Lock(LockMode.PESSIMISTIC_WRITE)
-    Optional<DataEntry> findByComponentNameAndScopeAndScopeIdAndKeyAndType(
-        String componentName, Scope scope, String scopeId, String key, int type);
+    Optional<DataEntry> findByComponentNameAndScopeAndScopeIdAndKeyAndEnvironmentAndType(
+        String componentName, int scope, String scopeId, String key, int environment, int type);
 
     @Lock(LockMode.PESSIMISTIC_WRITE)
-    Optional<List<DataEntry>> findByComponentNameAndScopeAndScopeIdAndType(
-        String componentName, Scope scope, String scopeId, int type);
+    List<DataEntry> findByComponentNameAndScopeAndScopeIdAndEnvironmentAndType(
+        String componentName, int scope, String scopeId, int environment, int type);
 }

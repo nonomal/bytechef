@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,6 @@ package com.bytechef.atlas.worker.event;
 import com.bytechef.atlas.configuration.domain.CancelControlTask;
 import com.bytechef.atlas.worker.message.route.TaskWorkerMessageRoute;
 import com.bytechef.message.event.MessageEvent;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 
 /**
  * @author Ivica Cardic
@@ -35,7 +34,6 @@ public class CancelControlTaskEvent extends AbstractEvent implements MessageEven
         this.controlTask = controlTask;
     }
 
-    @SuppressFBWarnings("EI")
     public CancelControlTask getControlTask() {
         return controlTask;
     }

@@ -1,68 +1,93 @@
+import Badge from '@/components/Badge/Badge';
 import {Accordion, AccordionContent, AccordionItem, AccordionTrigger} from '@/components/ui/accordion';
-import {Badge} from '@/components/ui/badge';
-import {Sheet, SheetContent, SheetHeader, SheetTitle} from '@/components/ui/sheet';
-import {ProjectStatusModel} from '@/shared/middleware/automation/configuration';
-import {useGetProjectVersionsQuery} from '@/shared/queries/automation/projectVersions.queries';
+import {Sheet, SheetCloseButton, SheetContent, SheetTitle} from '@/components/ui/sheet';
+import {ProjectStatus, ProjectVersion} from '@/shared/middleware/automation/configuration';
+import {VisuallyHidden} from 'radix-ui';
 
 interface ProjectVersionHistorySheetProps {
-    onClose: () => void;
-    projectId: number;
+    onSheetOpenChange: (open: boolean) => void;
+    projectVersions: ProjectVersion[];
+    sheetOpen: boolean;
 }
 
-const ProjectVersionHistorySheet = ({onClose, projectId}: ProjectVersionHistorySheetProps) => {
-    const {data: projectVersions} = useGetProjectVersionsQuery(projectId);
-
+const ProjectVersionHistorySheet = ({
+    onSheetOpenChange,
+    projectVersions,
+    sheetOpen,
+}: ProjectVersionHistorySheetProps) => {
     return (
-        <Sheet onOpenChange={() => onClose()} open>
+        <Sheet onOpenChange={onSheetOpenChange} open={sheetOpen}>
+            <VisuallyHidden.Root>
+                <SheetTitle>Project Version History</SheetTitle>
+            </VisuallyHidden.Root>
+
             <SheetContent
-                className="flex flex-col p-4 sm:max-w-[500px]"
+                className="top-3 right-4 bottom-4 flex h-auto flex-col gap-0 rounded-md bg-surface-neutral-secondary p-0 sm:max-w-workflow-sidebar-project-version-history-sheet-width"
                 onFocusOutside={(event) => event.preventDefault()}
                 onPointerDownOutside={(event) => event.preventDefault()}
             >
-                <SheetHeader>
-                    <SheetTitle>Project Version History</SheetTitle>
-                </SheetHeader>
+                <header className="flex w-full shrink-0 items-center justify-between gap-x-3 rounded-t-md border-b border-b-border/50 bg-surface-neutral-primary p-3">
+                    <span className="text-lg font-semibold">Project Version History</span>
 
-                <div className="overflow-y-auto">
-                    <Accordion type="single">
-                        {projectVersions &&
-                            projectVersions.map((projectVersion) => (
-                                <AccordionItem
-                                    key={projectVersion.version}
-                                    value={projectVersion.version?.toString() || ''}
-                                >
-                                    <AccordionTrigger disabled={projectVersion.status === ProjectStatusModel.Draft}>
-                                        <div className="flex w-full items-center justify-between pr-2">
-                                            <span className="text-sm font-semibold">{`V${projectVersion.version}`}</span>
+                    <SheetCloseButton />
+                </header>
 
-                                            <div className="flex items-center space-x-4">
-                                                {projectVersion.publishedDate && (
-                                                    <span className="text-sm">
-                                                        {`${projectVersion.publishedDate?.toLocaleDateString()} ${projectVersion.publishedDate?.toLocaleTimeString()}`}
-                                                    </span>
-                                                )}
+                <div className="flex min-h-0 flex-1 flex-col overflow-y-auto p-3">
+                    {projectVersions && (
+                        <Accordion
+                            defaultValue={projectVersions.length > 1 ? [projectVersions[1]!.version!.toString()] : []}
+                            type="multiple"
+                        >
+                            {projectVersions.map((projectVersion) => {
+                                return (
+                                    <AccordionItem
+                                        key={projectVersion.version}
+                                        value={projectVersion.version?.toString() || ''}
+                                    >
+                                        <AccordionTrigger disabled={projectVersion.status === ProjectStatus.Draft}>
+                                            <div className="flex w-full items-center justify-between pr-2">
+                                                <span className="text-sm font-semibold">{`V${projectVersion.version}`}</span>
 
-                                                <Badge
-                                                    variant={
-                                                        projectVersion.status === ProjectStatusModel.Published
-                                                            ? 'success'
-                                                            : 'secondary'
-                                                    }
-                                                >
-                                                    {projectVersion.status === ProjectStatusModel.Published
-                                                        ? `Published`
-                                                        : 'Draft'}
-                                                </Badge>
+                                                <div className="flex items-center space-x-4">
+                                                    {projectVersion.publishedDate && (
+                                                        <span className="text-sm">
+                                                            {`${projectVersion.publishedDate?.toLocaleDateString()} ${projectVersion.publishedDate?.toLocaleTimeString()}`}
+                                                        </span>
+                                                    )}
+
+                                                    <Badge
+                                                        label={
+                                                            projectVersion.status === ProjectStatus.Published
+                                                                ? 'Published'
+                                                                : 'Draft'
+                                                        }
+                                                        styleType={
+                                                            projectVersion.status === ProjectStatus.Published
+                                                                ? 'success-outline'
+                                                                : 'secondary-filled'
+                                                        }
+                                                        weight="semibold"
+                                                    />
+                                                </div>
                                             </div>
-                                        </div>
-                                    </AccordionTrigger>
+                                        </AccordionTrigger>
 
-                                    <AccordionContent>
-                                        {projectVersion.description ? projectVersion.description : 'No description.'}
-                                    </AccordionContent>
-                                </AccordionItem>
-                            ))}
-                    </Accordion>
+                                        <AccordionContent className="text-muted-foreground">
+                                            {projectVersion.description
+                                                ? projectVersion.description.split('\n').map((item, idx) => (
+                                                      <span key={idx}>
+                                                          {item}
+
+                                                          <br />
+                                                      </span>
+                                                  ))
+                                                : 'No description.'}
+                                        </AccordionContent>
+                                    </AccordionItem>
+                                );
+                            })}
+                        </Accordion>
+                    )}
                 </div>
             </SheetContent>
         </Sheet>

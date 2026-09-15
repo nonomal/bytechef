@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,20 +18,20 @@ package com.bytechef.component.email.action;
 
 import static com.bytechef.component.definition.Authorization.PASSWORD;
 import static com.bytechef.component.definition.Authorization.USERNAME;
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.array;
-import static com.bytechef.component.definition.ComponentDSL.fileEntry;
-import static com.bytechef.component.definition.ComponentDSL.integer;
-import static com.bytechef.component.definition.ComponentDSL.string;
-import static com.bytechef.component.email.constant.EmailConstants.HOST;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.array;
+import static com.bytechef.component.definition.ComponentDsl.fileEntry;
+import static com.bytechef.component.definition.ComponentDsl.integer;
+import static com.bytechef.component.definition.ComponentDsl.string;
 import static com.bytechef.component.email.constant.EmailConstants.PORT;
-import static com.bytechef.component.email.constant.EmailConstants.SEND;
-import static com.bytechef.component.email.constant.EmailConstants.TLS;
 
 import com.bytechef.component.definition.ActionContext;
-import com.bytechef.component.definition.ComponentDSL;
+import com.bytechef.component.definition.ComponentDsl.ModifiableActionDefinition;
 import com.bytechef.component.definition.FileEntry;
 import com.bytechef.component.definition.Parameters;
+import com.bytechef.component.definition.Property;
+import com.bytechef.component.email.EmailProtocol;
+import com.bytechef.component.email.commons.EmailUtils;
 import jakarta.activation.DataHandler;
 import jakarta.mail.Authenticator;
 import jakarta.mail.Message;
@@ -49,11 +49,10 @@ import jakarta.mail.util.ByteArrayDataSource;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
-import java.util.Objects;
-import java.util.Properties;
 
 /**
  * @author Ivica Cardic
+ * @author Igor Beslic
  */
 public class SendEmailAction {
 
@@ -66,11 +65,16 @@ public class SendEmailAction {
     private static final String CONTENT = "content";
     private static final String ATTACHMENTS = "attachments";
 
-    public static final ComponentDSL.ModifiableActionDefinition ACTION_DEFINITION = action(SEND)
+    public static final ModifiableActionDefinition ACTION_DEFINITION = action("send")
         .title("Send")
         .description("Send an email to any address.")
         .properties(
-            integer(FROM)
+            integer(PORT)
+                .label("Port")
+                .description("Defines the port to connect to the email server.")
+                .required(true)
+                .defaultValue(25),
+            string(FROM)
                 .label("From Email")
                 .description("From who to send the email.")
                 .required(true),
@@ -97,7 +101,8 @@ public class SendEmailAction {
                 .required(true),
             string(CONTENT)
                 .label("Content")
-                .description("Your email content. Will be sent as a HTML email."),
+                .description("Your email content. Will be sent as a HTML email.")
+                .controlType(Property.ControlType.RICH_TEXT),
             array(ATTACHMENTS)
                 .label("Attachments")
                 .description("A list of attachments to send with the email.")
@@ -108,53 +113,48 @@ public class SendEmailAction {
         Parameters inputParameters, Parameters connectionParameters, ActionContext context)
         throws MessagingException, IOException {
 
-        Properties properties = new Properties();
-
-        properties.put("mail.smtp.host", connectionParameters.getRequiredString(HOST));
-        properties.put("mail.smtp.port", connectionParameters.getRequiredInteger(PORT));
-
-        if (Objects.equals(connectionParameters.getBoolean(TLS), false)) {
-            properties.put("mail.smtp.starttls.enable", "true");
-//            prop.put("mail.smtp.ssl.trust", MapUtils.getRequiredString(context.getConnectionParameters(), HOST));
-        }
-
+        int port = inputParameters.getRequiredInteger(PORT);
         Session session;
 
         if (connectionParameters.containsKey(USERNAME)) {
-            properties.put("mail.smtp.auth", true);
-
-            session = Session.getInstance(properties, new Authenticator() {
-                @Override
-                protected PasswordAuthentication getPasswordAuthentication() {
-                    return new PasswordAuthentication(
-                        connectionParameters.getRequiredString(USERNAME),
-                        connectionParameters.getRequiredString(PASSWORD));
-                }
-            });
+            session =
+                Session.getInstance(EmailUtils.getMailSessionProperties(port, EmailProtocol.smtp, connectionParameters),
+                    new Authenticator() {
+                        @Override
+                        protected PasswordAuthentication getPasswordAuthentication() {
+                            return new PasswordAuthentication(
+                                connectionParameters.getRequiredString(USERNAME),
+                                connectionParameters.getRequiredString(PASSWORD));
+                        }
+                    });
         } else {
-            session = Session.getInstance(properties);
+            session = Session.getInstance(
+                EmailUtils.getMailSessionProperties(port, EmailProtocol.smtp, connectionParameters));
         }
 
         Message message = new MimeMessage(session);
 
         message.setFrom(new InternetAddress(inputParameters.getRequiredString(FROM)));
 
-        message.setRecipients(RecipientType.TO, InternetAddress.parse(
-            String.join(",", inputParameters.getRequiredList(TO, String.class))));
+        message.setRecipients(
+            RecipientType.TO,
+            InternetAddress.parse(String.join(",", inputParameters.getRequiredList(TO, String.class))));
 
         if (inputParameters.containsKey(CC)) {
-            message.setRecipients(RecipientType.CC, InternetAddress.parse(
-                String.join(",", inputParameters.getRequiredList(CC, String.class))));
+            message.setRecipients(
+                RecipientType.CC,
+                InternetAddress.parse(String.join(",", inputParameters.getRequiredList(CC, String.class))));
         }
 
         if (inputParameters.containsKey(BCC)) {
-            message.setRecipients(RecipientType.BCC, InternetAddress.parse(
-                String.join(",", inputParameters.getRequiredList(BCC, String.class))));
+            message.setRecipients(
+                RecipientType.BCC,
+                InternetAddress.parse(String.join(",", inputParameters.getRequiredList(BCC, String.class))));
         }
 
         if (inputParameters.containsKey(REPLY_TO)) {
-            message.setReplyTo(InternetAddress.parse(
-                String.join(",", inputParameters.getRequiredList(REPLY_TO, String.class))));
+            message.setReplyTo(
+                InternetAddress.parse(String.join(",", inputParameters.getRequiredList(REPLY_TO, String.class))));
         }
 
         if (inputParameters.containsKey(SUBJECT)) {
@@ -175,7 +175,7 @@ public class SendEmailAction {
             for (FileEntry fileEntry : inputParameters.getFileEntries(ATTACHMENTS, List.of())) {
                 attachmentBodyPart.setDataHandler(
                     new DataHandler(new ByteArrayDataSource(
-                        (InputStream) context.file(file -> file.getStream(fileEntry)), fileEntry.getMimeType())));
+                        (InputStream) context.file(file -> file.getInputStream(fileEntry)), fileEntry.getMimeType())));
 
                 multipart.addBodyPart(attachmentBodyPart);
             }
@@ -185,9 +185,9 @@ public class SendEmailAction {
 
         Transport.send(message);
 
-        context.logger(logger -> logger.debug(
-            "Message sent: from:{}, to:{}, subject:{}",
-            message.getFrom(), message.getRecipients(RecipientType.TO), message.getSubject()));
+        context.log(log -> log.debug(
+            "Message sent: from:{}, to:{}, subject:{}", message.getFrom(), message.getRecipients(RecipientType.TO),
+            message.getSubject()));
 
         return null;
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,36 +16,73 @@
 
 package com.bytechef.component.microsoft.outlook;
 
-import static com.bytechef.component.definition.ComponentDSL.component;
-import static com.bytechef.component.microsoft.outlook.constant.MicrosoftOutlook365Constants.MICROSOFT_OUTLOOK_365;
+import static com.bytechef.component.definition.ComponentDsl.component;
+import static com.bytechef.component.definition.ComponentDsl.tool;
 
 import com.bytechef.component.ComponentHandler;
 import com.bytechef.component.definition.ComponentCategory;
 import com.bytechef.component.definition.ComponentDefinition;
-import com.bytechef.component.microsoft.outlook.action.MicrosoftOutlook365GetMailAction;
+import com.bytechef.component.microsoft.outlook.action.MicrosoftOutlook365CreateEventAction;
+import com.bytechef.component.microsoft.outlook.action.MicrosoftOutlook365DeleteEventAction;
+import com.bytechef.component.microsoft.outlook.action.MicrosoftOutlook365ForwardEmailAction;
+import com.bytechef.component.microsoft.outlook.action.MicrosoftOutlook365GetEmailAction;
+import com.bytechef.component.microsoft.outlook.action.MicrosoftOutlook365GetEventsAction;
+import com.bytechef.component.microsoft.outlook.action.MicrosoftOutlook365GetFreeTimeSlotsAction;
+import com.bytechef.component.microsoft.outlook.action.MicrosoftOutlook365MoveEmailAction;
+import com.bytechef.component.microsoft.outlook.action.MicrosoftOutlook365ReplyToEmailAction;
 import com.bytechef.component.microsoft.outlook.action.MicrosoftOutlook365SearchEmailAction;
 import com.bytechef.component.microsoft.outlook.action.MicrosoftOutlook365SendEmailAction;
+import com.bytechef.component.microsoft.outlook.cluster.MicrosoftOutlook365ApprovalChannel;
 import com.bytechef.component.microsoft.outlook.connection.MicrosoftOutlook365Connection;
+import com.bytechef.component.microsoft.outlook.trigger.MicrosoftOutlook365NewEmailBatchTrigger;
+import com.bytechef.component.microsoft.outlook.trigger.MicrosoftOutlook365NewEmailTrigger;
 import com.google.auto.service.AutoService;
 
 /**
- * @author Monika Domiter
+ * @author Monika Kušter
  */
 @AutoService(ComponentHandler.class)
 public class MicrosoftOutlook365ComponentHandler implements ComponentHandler {
 
-    private static final ComponentDefinition COMPONENT_DEFINITION = component(MICROSOFT_OUTLOOK_365)
+    private static final ComponentDefinition COMPONENT_DEFINITION = component("microsoftOutlook365")
         .title("Microsoft Outlook 365")
         .description(
             "Microsoft Outlook 365 is a comprehensive email and productivity platform that integrates email, " +
                 "calendar, contacts, and tasks to streamline communication and organization.")
+        .customAction(true)
+        .customActionHelp(
+            "",
+            "https://learn.microsoft.com/en-us/graph/api/resources/mail-api-overview?view=graph-rest-1.0")
         .icon("path:assets/microsoft-outlook-365.svg")
         .categories(ComponentCategory.COMMUNICATION, ComponentCategory.CALENDARS_AND_SCHEDULING)
         .connection(MicrosoftOutlook365Connection.CONNECTION_DEFINITION)
         .actions(
-            MicrosoftOutlook365GetMailAction.ACTION_DEFINITION,
+            MicrosoftOutlook365CreateEventAction.ACTION_DEFINITION,
+            MicrosoftOutlook365DeleteEventAction.ACTION_DEFINITION,
+            MicrosoftOutlook365ForwardEmailAction.ACTION_DEFINITION,
+            MicrosoftOutlook365GetEmailAction.ACTION_DEFINITION,
+            MicrosoftOutlook365GetEventsAction.ACTION_DEFINITION,
+            MicrosoftOutlook365GetFreeTimeSlotsAction.ACTION_DEFINITION,
+            MicrosoftOutlook365MoveEmailAction.ACTION_DEFINITION,
+            MicrosoftOutlook365ReplyToEmailAction.ACTION_DEFINITION,
             MicrosoftOutlook365SearchEmailAction.ACTION_DEFINITION,
-            MicrosoftOutlook365SendEmailAction.ACTION_DEFINITION);
+            MicrosoftOutlook365SendEmailAction.ACTION_DEFINITION)
+        .clusterElements(
+            MicrosoftOutlook365ApprovalChannel.CLUSTER_ELEMENT_DEFINITION,
+            tool(MicrosoftOutlook365CreateEventAction.ACTION_DEFINITION),
+            tool(MicrosoftOutlook365DeleteEventAction.ACTION_DEFINITION),
+            tool(MicrosoftOutlook365ForwardEmailAction.ACTION_DEFINITION),
+            tool(MicrosoftOutlook365GetEmailAction.ACTION_DEFINITION),
+            tool(MicrosoftOutlook365GetEventsAction.ACTION_DEFINITION),
+            tool(MicrosoftOutlook365GetFreeTimeSlotsAction.ACTION_DEFINITION),
+            tool(MicrosoftOutlook365MoveEmailAction.ACTION_DEFINITION),
+            tool(MicrosoftOutlook365ReplyToEmailAction.ACTION_DEFINITION),
+            tool(MicrosoftOutlook365SearchEmailAction.ACTION_DEFINITION),
+            tool(MicrosoftOutlook365SendEmailAction.ACTION_DEFINITION))
+        .triggers(
+            MicrosoftOutlook365NewEmailBatchTrigger.TRIGGER_DEFINITION,
+            MicrosoftOutlook365NewEmailTrigger.TRIGGER_DEFINITION)
+        .version(1);
 
     @Override
     public ComponentDefinition getDefinition() {

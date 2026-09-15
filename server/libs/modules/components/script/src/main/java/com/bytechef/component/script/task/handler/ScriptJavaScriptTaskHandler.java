@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,9 +18,8 @@ package com.bytechef.component.script.task.handler;
 
 import static com.bytechef.platform.component.definition.ScriptComponentDefinition.SCRIPT;
 
-import com.bytechef.platform.component.registry.facade.ActionDefinitionFacade;
-import com.bytechef.platform.component.registry.handler.AbstractTaskHandler;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import com.bytechef.platform.component.facade.ActionDefinitionFacade;
+import com.bytechef.platform.workflow.worker.task.handler.AbstractTaskHandler;
 import org.springframework.stereotype.Component;
 
 /**
@@ -30,7 +29,6 @@ import org.springframework.stereotype.Component;
 @Component(SCRIPT + "/v1/javascript")
 public class ScriptJavaScriptTaskHandler extends AbstractTaskHandler {
 
-    @SuppressFBWarnings("EI")
     public ScriptJavaScriptTaskHandler(ActionDefinitionFacade actionDefinitionFacade) {
         super("script", 1, "javascript", actionDefinitionFacade);
     }

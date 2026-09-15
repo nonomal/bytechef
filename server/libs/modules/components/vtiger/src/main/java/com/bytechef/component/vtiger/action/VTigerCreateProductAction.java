@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,82 +16,77 @@
 
 package com.bytechef.component.vtiger.action;
 
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.object;
-import static com.bytechef.component.definition.ComponentDSL.option;
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.object;
+import static com.bytechef.component.definition.ComponentDsl.option;
+import static com.bytechef.component.definition.ComponentDsl.outputSchema;
+import static com.bytechef.component.definition.ComponentDsl.string;
+import static com.bytechef.component.definition.Context.Http.ResponseType;
 import static com.bytechef.component.definition.Context.Http.responseType;
-import static com.bytechef.component.vtiger.constant.VTigerConstants.CREATE_PRODUCT;
-import static com.bytechef.component.vtiger.constant.VTigerConstants.INSTANCE_URL;
 import static com.bytechef.component.vtiger.constant.VTigerConstants.PRODUCT_NAME;
 import static com.bytechef.component.vtiger.constant.VTigerConstants.PRODUCT_TYPE;
 
 import com.bytechef.component.definition.ActionContext;
-import com.bytechef.component.definition.ComponentDSL.ModifiableActionDefinition;
+import com.bytechef.component.definition.ComponentDsl.ModifiableActionDefinition;
 import com.bytechef.component.definition.Context.Http.Body;
-import com.bytechef.component.definition.Context.Http.ResponseType;
-import com.bytechef.component.definition.Context.TypeReference;
 import com.bytechef.component.definition.Parameters;
-import java.util.HashMap;
 import java.util.Map;
 
 /**
  * @author Luka Ljubić
+ * @author Monika Kušter
  */
 public class VTigerCreateProductAction {
 
-    public static final ModifiableActionDefinition ACTION_DEFINITION = action(CREATE_PRODUCT)
-        .title("Create a Product")
-        .description("Create a new Product for your CRM")
+    public static final ModifiableActionDefinition ACTION_DEFINITION = action("createProduct")
+        .title("Create Product")
+        .description("Creates a new product for your CRM.")
+        .help("", "https://docs.bytechef.io/reference/components/vtiger_v1#create-product")
         .properties(
             string(PRODUCT_NAME)
                 .label("Product Name")
-                .description("Name of the product")
+                .description("Name of the product.")
                 .required(true),
             string(PRODUCT_TYPE)
                 .options(
                     option("Solo", "Solo"),
                     option("Fixed Bundle", "Fixed Bundle"))
                 .label("Product Type")
-                .description("Type of the product")
+                .description("Type of the product.")
                 .required(true))
-        .outputSchema(
-            object()
-                .properties(
-                    object("results")
-                        .properties(
-                            string("id"),
-                            string(PRODUCT_NAME),
-                            string(PRODUCT_TYPE),
-                            string("createdtime"),
-                            string("source"),
-                            string("assigned_user_id"))))
+        .output(
+            outputSchema(
+                object()
+                    .properties(
+                        object("results")
+                            .properties(
+                                string(PRODUCT_NAME)
+                                    .description("Name of the product."),
+                                string(PRODUCT_TYPE)
+                                    .description("Type of the product."),
+                                string("assigned_user_id")
+                                    .description("ID of the user assigned as the owner of this record."),
+                                string("id")
+                                    .description("ID of the product.")))))
         .perform(VTigerCreateProductAction::perform);
 
     private VTigerCreateProductAction() {
     }
 
-    public static Object perform(Parameters inputParameters, Parameters connectionParameters, ActionContext context) {
-        Map<String, String> paramMap = paramMapFill(inputParameters);
+    protected static Object perform(
+        Parameters inputParameters, Parameters connectionParameters, ActionContext actionContext) {
 
-        return context
-            .http(http -> http.post(
-                connectionParameters.getRequiredString(INSTANCE_URL) + "/restapi/v1/vtiger/default/create"))
+        return actionContext
+            .http(http -> http.post("/create"))
             .body(
                 Body.of(
                     "elementType", "Products",
-                    "element", paramMap))
+                    "element",
+                    Map.of(
+                        PRODUCT_NAME, inputParameters.getRequiredString(PRODUCT_NAME),
+                        PRODUCT_TYPE, inputParameters.getRequiredString(PRODUCT_TYPE))))
             .configuration(responseType(ResponseType.JSON))
             .execute()
-            .getBody(new TypeReference<>() {});
-    }
-
-    private static Map<String, String> paramMapFill(Parameters inputParameters) {
-        Map<String, String> paramMap = new HashMap<>();
-
-        paramMap.put(PRODUCT_NAME, inputParameters.getRequiredString(PRODUCT_NAME));
-        paramMap.put(PRODUCT_TYPE, inputParameters.getRequiredString(PRODUCT_TYPE));
-
-        return paramMap;
+            .getBody();
     }
 }

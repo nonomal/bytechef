@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the ByteChef Enterprise license (the "Enterprise License");
  * you may not use this file except in compliance with the Enterprise License.
@@ -7,10 +7,11 @@
 
 package com.bytechef.ee.embedded.configuration.remote.client.service;
 
+import com.bytechef.ee.embedded.configuration.domain.IntegrationInstanceConfigurationWorkflow;
+import com.bytechef.ee.embedded.configuration.domain.IntegrationInstanceConfigurationWorkflowConnection;
+import com.bytechef.ee.embedded.configuration.service.IntegrationInstanceConfigurationWorkflowService;
 import com.bytechef.ee.remote.client.LoadBalancedRestClient;
-import com.bytechef.embedded.configuration.domain.IntegrationInstanceConfigurationWorkflow;
-import com.bytechef.embedded.configuration.domain.IntegrationInstanceConfigurationWorkflowConnection;
-import com.bytechef.embedded.configuration.service.IntegrationInstanceConfigurationWorkflowService;
+import com.bytechef.platform.annotation.ConditionalOnEEVersion;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.List;
 import java.util.Optional;
@@ -23,6 +24,7 @@ import org.springframework.stereotype.Component;
  * @author Ivica Cardic
  */
 @Component
+@ConditionalOnEEVersion
 public class RemoteIntegrationInstanceConfigurationConfigurationWorkflowServiceClient
     implements IntegrationInstanceConfigurationWorkflowService {
 
@@ -58,11 +60,6 @@ public class RemoteIntegrationInstanceConfigurationConfigurationWorkflowServiceC
     }
 
     @Override
-    public void deleteIntegrationInstanceConfigurationWorkflows(long integrationInstanceConfigurationId) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
     public Optional<IntegrationInstanceConfigurationWorkflowConnection>
         fetchIntegrationInstanceConfigurationWorkflowConnection(
             long integrationInstanceConfigurationId, String workflowId, String workflowNodeName,
@@ -74,10 +71,16 @@ public class RemoteIntegrationInstanceConfigurationConfigurationWorkflowServiceC
                     .host(CONFIGURATION_APP)
                     .path(
                         INTEGRATION_INSTANCE_CONFIGURATION_WORKFLOW_SERVICE +
-                            "/fetch-integration-instance-configuration-workflow-connection/{projectInstanceId}/" +
-                            "{workflowId}/{workflowNodeName}/{workflowConnectionKey}")
+                            "/fetch-integration-instance-configuration-workflow-connection" +
+                            "/{integrationInstanceConfigurationId}/{workflowId}/{workflowNodeName}" +
+                            "/{workflowConnectionKey}")
                     .build(integrationInstanceConfigurationId, workflowId, workflowNodeName, workflowConnectionKey),
                 IntegrationInstanceConfigurationWorkflowConnection.class));
+    }
+
+    @Override
+    public IntegrationInstanceConfigurationWorkflow getIntegrationInstanceConfigurationWorkflow(long id) {
+        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -152,7 +155,7 @@ public class RemoteIntegrationInstanceConfigurationConfigurationWorkflowServiceC
     }
 
     @Override
-    public boolean isIntegrationInstanceWorkflowEnabled(long integrationInstanceId, String workflowId) {
+    public boolean isIntegrationInstanceWorkflowEnabled(long integrationInstanceConfigurationId, String workflowId) {
         throw new UnsupportedOperationException();
     }
 

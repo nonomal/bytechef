@@ -12,113 +12,107 @@ tasks:
   type: "condition/v1"
   parameters:
     conditions:
-    - number:
+    - - type: "number"
         value1: "${value1}"
         operation: "EQUALS"
         value2: "${value2}"
-    combineOperation: "any"
     caseTrue:
     - name: "equalsResult"
-      type: "var"
+      type: "var/v1/set"
       parameters:
         value: "true branch"
     caseFalse:
     - name: "equalsResult"
-      type: "var"
+      type: "var/v1/set"
       parameters:
         value: "false branch"
 - name: "condition_2"
   type: "condition/v1"
   parameters:
     conditions:
-    - number:
+    - - type: "number"
         value1: "${value1}"
         operation: "NOT_EQUALS"
         value2: "${value2}"
-    combineOperation: "any"
     caseTrue:
     - name: "notEqualsResult"
-      type: "var"
+      type: "var/v1/set"
       parameters:
         value: "true branch"
     caseFalse:
     - name: "notEqualsResult"
-      type: "var"
+      type: "var/v1/set"
       parameters:
         value: "false branch"
 - name: "condition_3"
   type: "condition/v1"
   parameters:
     conditions:
-    - number:
+    - - type: "number"
         value1: "${value1}"
         operation: "GREATER"
         value2: "${value2}"
-    combineOperation: "any"
     caseTrue:
     - name: "greaterResult"
-      type: "var"
+      type: "var/v1/set"
       parameters:
         value: "true branch"
     caseFalse:
     - name: "greaterResult"
-      type: "var"
+      type: "var/v1/set"
       parameters:
         value: "false branch"
 - name: "condition_4"
   type: "condition/v1"
   parameters:
     conditions:
-    - number:
+    - - type: "number"
         value1: "${value1}"
         operation: "LESS"
         value2: "${value2}"
-    combineOperation: "any"
     caseTrue:
     - name: "lessResult"
-      type: "var"
+      type: "var/v1/set"
       parameters:
         value: "true branch"
     caseFalse:
     - name: "lessResult"
-      type: "var"
+      type: "var/v1/set"
       parameters:
         value: "false branch"
 - name: "condition_5"
   type: "condition/v1"
   parameters:
     conditions:
-    - number:
+    - - type: "number"
         value1: "${value1}"
         operation: "GREATER_EQUALS"
         value2: "${value2}"
-    combineOperation: "ANY"
     caseTrue:
     - name: "greaterEqualsResult"
-      type: "var"
+      type: "var/v1/set"
       parameters:
         value: "true branch"
     caseFalse:
     - name: "greaterEqualsResult"
-      type: "var"
+      type: "var/v1/set"
       parameters:
         value: "false branch"
 - name: "condition_6"
   type: "condition/v1"
   parameters:
     conditions:
-    - number:
+    - - type: "number"
         value1: "${value1}"
         operation: "LESS_EQUALS"
         value2: "${value2}"
-    combineOperation: "ANY"
     caseTrue:
     - name: "lessEqualsResult"
-      type: "var"
+      type: "var/v1/set"
       parameters:
         value: "true branch"
     caseFalse:
     - name: "lessEqualsResult"
-      type: "var"
+      type: "var/v1/set"
       parameters:
         value: "false branch"

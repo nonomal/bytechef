@@ -7,6 +7,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import java.util.Arrays;
 import org.openapitools.jackson.nullable.JsonNullable;
+import org.springframework.lang.Nullable;
 import java.util.NoSuchElementException;
 import org.openapitools.jackson.nullable.JsonNullable;
 import java.time.OffsetDateTime;
@@ -24,16 +25,16 @@ import jakarta.annotation.Generated;
 
 @Schema(name = "Option", description = "Defines valid property value.")
 @JsonTypeName("Option")
-@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2024-06-30T07:20:54.243996+02:00[Europe/Zagreb]", comments = "Generator version: 7.5.0")
+@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2026-07-03T17:58:15.504637+02:00[Europe/Zagreb]", comments = "Generator version: 7.22.0")
 public class OptionModel {
 
-  private String description;
+  private @Nullable String description;
 
-  private String label;
+  private @Nullable String label;
 
   private JsonNullable<Object> value = JsonNullable.<Object>undefined();
 
-  public OptionModel description(String description) {
+  public OptionModel description(@Nullable String description) {
     this.description = description;
     return this;
   }
@@ -41,19 +42,20 @@ public class OptionModel {
   /**
    * Description of the option.
    * @return description
-  */
+   */
   
   @Schema(name = "description", description = "Description of the option.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("description")
-  public String getDescription() {
+  public @Nullable String getDescription() {
     return description;
   }
 
-  public void setDescription(String description) {
+  @JsonProperty("description")
+  public void setDescription(@Nullable String description) {
     this.description = description;
   }
 
-  public OptionModel label(String label) {
+  public OptionModel label(@Nullable String label) {
     this.label = label;
     return this;
   }
@@ -61,15 +63,16 @@ public class OptionModel {
   /**
    * The label of an option.
    * @return label
-  */
+   */
   
   @Schema(name = "label", description = "The label of an option.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("label")
-  public String getLabel() {
+  public @Nullable String getLabel() {
     return label;
   }
 
-  public void setLabel(String label) {
+  @JsonProperty("label")
+  public void setLabel(@Nullable String label) {
     this.label = label;
   }
 
@@ -81,7 +84,7 @@ public class OptionModel {
   /**
    * Can be anything: string, number, array, object, etc. (except `null`)
    * @return value
-  */
+   */
   
   @Schema(name = "value", description = "Can be anything: string, number, array, object, etc. (except `null`)", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("value")
@@ -138,11 +141,8 @@ public class OptionModel {
    * Convert the given object to string with each line indented by 4 spaces
    * (except the first line).
    */
-  private String toIndentedString(Object o) {
-    if (o == null) {
-      return "null";
-    }
-    return o.toString().replace("\n", "\n    ");
+  private String toIndentedString(@Nullable Object o) {
+    return o == null ? "null" : o.toString().replace("\n", "\n    ");
   }
 }
 

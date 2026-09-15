@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,39 +20,46 @@ import com.bytechef.commons.data.jdbc.converter.EncryptedMapWrapperToStringConve
 import com.bytechef.commons.data.jdbc.converter.EncryptedStringToMapWrapperConverter;
 import com.bytechef.component.ComponentHandler;
 import com.bytechef.component.definition.ActionDefinition;
+import com.bytechef.component.definition.ClusterElementDefinition;
 import com.bytechef.component.definition.ComponentCategory;
 import com.bytechef.component.definition.ComponentDefinition;
 import com.bytechef.component.definition.ConnectionDefinition;
-import com.bytechef.component.definition.DataStreamItemReader;
-import com.bytechef.component.definition.DataStreamItemWriter;
 import com.bytechef.component.definition.Help;
 import com.bytechef.component.definition.Resources;
 import com.bytechef.component.definition.TriggerDefinition;
+import com.bytechef.component.definition.UnifiedApiDefinition;
 import com.bytechef.encryption.Encryption;
 import com.bytechef.encryption.EncryptionKey;
+import com.bytechef.jackson.config.JacksonConfiguration;
 import com.bytechef.liquibase.config.LiquibaseConfiguration;
+import com.bytechef.platform.workflow.execution.accessor.JobPrincipalAccessor;
+import com.bytechef.platform.workflow.execution.accessor.JobPrincipalAccessorRegistry;
 import com.bytechef.test.config.jdbc.AbstractIntTestJdbcConfiguration;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import org.jspecify.annotations.NonNull;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
-import org.springframework.data.jdbc.repository.config.EnableJdbcRepositories;
+import org.springframework.data.jdbc.repository.config.EnableJdbcAuditing;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * @author Ivica Cardic
  */
-@ComponentScan(basePackages = {
-    "com.bytechef.encryption", "com.bytechef.platform.connection"
-})
+@ComponentScan(
+    basePackages = {
+        "com.bytechef.encryption", "com.bytechef.platform.connection"
+    })
 @EnableAutoConfiguration
-@Import(LiquibaseConfiguration.class)
+@Import({
+    JacksonConfiguration.class, LiquibaseConfiguration.class
+})
 @Configuration
 public class ConnectionIntTestConfiguration {
 
@@ -60,12 +67,17 @@ public class ConnectionIntTestConfiguration {
     ComponentHandler componentHandler() {
         return () -> new ComponentDefinition() {
             @Override
-            public Optional<List<? extends ActionDefinition>> getActions() {
+            public Optional<List<ActionDefinition>> getActions() {
                 return Optional.empty();
             }
 
             @Override
-            public Optional<List<ComponentCategory>> getCategories() {
+            public Optional<List<ComponentCategory>> getComponentCategories() {
+                return Optional.empty();
+            }
+
+            @Override
+            public Optional<List<ClusterElementDefinition<?>>> getClusterElements() {
                 return Optional.empty();
             }
 
@@ -85,12 +97,7 @@ public class ConnectionIntTestConfiguration {
             }
 
             @Override
-            public Optional<DataStreamItemReader> getDataStreamItemReader() {
-                return Optional.empty();
-            }
-
-            @Override
-            public Optional<DataStreamItemWriter> getDataStreamItemWriter() {
+            public Optional<List<? extends com.bytechef.component.definition.PropertyGroup>> getInputs() {
                 return Optional.empty();
             }
 
@@ -130,7 +137,12 @@ public class ConnectionIntTestConfiguration {
             }
 
             @Override
-            public Optional<List<? extends TriggerDefinition>> getTriggers() {
+            public Optional<List<TriggerDefinition>> getTriggers() {
+                return Optional.empty();
+            }
+
+            @Override
+            public Optional<UnifiedApiDefinition> getUnifiedApi() {
                 return Optional.empty();
             }
 
@@ -142,18 +154,18 @@ public class ConnectionIntTestConfiguration {
     }
 
     @Bean
+    JobPrincipalAccessorRegistry jobPrincipalAccessorRegistry(
+        List<JobPrincipalAccessor> jobPrincipalAccessors) {
+
+        return new JobPrincipalAccessorRegistry(jobPrincipalAccessors);
+    }
+
+    @Bean
     EncryptionKey encryptionKey() {
         return () -> "tTB1/UBIbYLuCXVi4PPfzA==";
     }
 
-    @Bean
-    ObjectMapper objectMapper() {
-        return new ObjectMapper();
-    }
-
-    @EnableJdbcRepositories(basePackages = {
-        "com.bytechef.platform.connection.repository", "com.bytechef.platform.tag.repository"
-    })
+    @EnableJdbcAuditing(auditorAwareRef = "auditorProvider", dateTimeProviderRef = "auditingDateTimeProvider")
     public static class ConnectionIntTestJdbcConfiguration extends AbstractIntTestJdbcConfiguration {
 
         private final Encryption encryption;
@@ -166,7 +178,7 @@ public class ConnectionIntTestConfiguration {
         }
 
         @Override
-        protected List<?> userConverters() {
+        protected @NonNull List<?> userConverters() {
             return Arrays.asList(
                 new EncryptedMapWrapperToStringConverter(encryption, objectMapper),
                 new EncryptedStringToMapWrapperConverter(encryption, objectMapper));

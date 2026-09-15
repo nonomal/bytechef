@@ -1,0 +1,612 @@
+/*
+ * Copyright 2025 ByteChef
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.bytechef.platform.component.context;
+
+import com.bytechef.atlas.coordinator.event.TaskProgressedApplicationEvent;
+import com.bytechef.component.definition.ActionContext;
+import com.bytechef.component.definition.ActionContext.Approval.Links;
+import com.bytechef.component.definition.ClusterElementContext;
+import com.bytechef.platform.component.ComponentConnection;
+import com.bytechef.platform.component.definition.ActionContextAware;
+import com.bytechef.platform.component.log.LogFileStorageWriter;
+import com.bytechef.platform.constant.PlatformType;
+import com.bytechef.platform.data.storage.DataStorage;
+import com.bytechef.platform.data.storage.domain.DataStorageScope;
+import com.bytechef.platform.file.storage.TempFileStorage;
+import com.bytechef.platform.workflow.execution.ApprovalId;
+import com.bytechef.platform.workflow.execution.JobResumeId;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import io.micrometer.tracing.TraceContext;
+import io.micrometer.tracing.Tracer;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.function.Consumer;
+import org.apache.commons.lang3.Validate;
+import org.jspecify.annotations.Nullable;
+import org.springframework.cache.CacheManager;
+import org.springframework.context.ApplicationEventPublisher;
+
+/**
+ * @author Ivica Cardic
+ */
+class ActionContextImpl extends ContextImpl implements ActionContext, ActionContextAware {
+
+    private final String actionName;
+    private @Nullable Approval approval;
+    private final CacheManager cacheManager;
+    private final Data data;
+    private final DataStorage dataStorage;
+    private final boolean editorEnvironment;
+    private final Event event;
+    private final ApplicationEventPublisher eventPublisher;
+    private final HttpClientExecutor httpClientExecutor;
+    private final @Nullable Long jobPrincipalId;
+    private final @Nullable Long jobPrincipalWorkflowId;
+    private final @Nullable Long jobId;
+    private final @Nullable LogFileStorageWriter logFileStorageWriter;
+    private @Nullable String jobResumeId;
+    private @Nullable Suspend suspend;
+    private final @Nullable PlatformType type;
+    private final @Nullable String publicUrl;
+    private final long taskExecutionId;
+    private final TempFileStorage tempFileStorage;
+    private final @Nullable Tracer tracer;
+    private final @Nullable String workflowId;
+    private final @Nullable Long environmentId;
+
+    @SuppressFBWarnings("EI")
+    private ActionContextImpl(Builder builder) {
+        super(
+            builder.componentName, builder.componentVersion, builder.actionName, builder.componentConnection,
+            builder.jobId, builder.taskExecutionId, builder.editorEnvironment, builder.httpClientExecutor,
+            builder.tempFileStorage, builder.logFileStorageWriter, true, null);
+
+        this.actionName = builder.actionName;
+        this.cacheManager = builder.cacheManager;
+        this.dataStorage = builder.dataStorage;
+        this.editorEnvironment = builder.editorEnvironment;
+        this.eventPublisher = builder.eventPublisher;
+        this.httpClientExecutor = builder.httpClientExecutor;
+        this.logFileStorageWriter = builder.logFileStorageWriter;
+        this.taskExecutionId = builder.taskExecutionId;
+        this.tempFileStorage = builder.tempFileStorage;
+        this.tracer = builder.tracer;
+
+        if (builder.jobId != null && builder.publicUrl != null) {
+            this.approval = new ApprovalImpl(builder.jobId, builder.publicUrl);
+        }
+
+        this.data = new DataImpl(
+            builder.dataStorage, builder.componentName, builder.componentVersion, builder.actionName,
+            builder.jobPrincipalId, builder.jobPrincipalWorkflowId, builder.jobId, builder.workflowId,
+            builder.cacheManager, builder.environmentId, builder.type, builder.editorEnvironment);
+        this.environmentId = builder.environmentId;
+        this.event = builder.jobId == null
+            ? progress -> {}
+            : new EventImpl(builder.eventPublisher, builder.jobId);
+        this.jobPrincipalId = builder.jobPrincipalId;
+        this.jobPrincipalWorkflowId = builder.jobPrincipalWorkflowId;
+        this.jobId = builder.jobId;
+        this.publicUrl = builder.publicUrl;
+        this.type = builder.type;
+        this.workflowId = builder.workflowId;
+    }
+
+    static Builder builder(
+        String componentName, int componentVersion, String actionName, boolean editorEnvironment,
+        CacheManager cacheManager, DataStorage dataStorage, ApplicationEventPublisher eventPublisher,
+        HttpClientExecutor httpClientExecutor, TempFileStorage tempFileStorage) {
+
+        return new Builder(
+            componentName, componentVersion, actionName, editorEnvironment, cacheManager, dataStorage, eventPublisher,
+            httpClientExecutor, tempFileStorage);
+    }
+
+    @Override
+    public ActionContext toActionContext(
+        String componentName, int componentVersion, String actionName,
+        @Nullable ComponentConnection componentConnection) {
+
+        return builder(
+            componentName, componentVersion, actionName, editorEnvironment, cacheManager, dataStorage,
+            eventPublisher, httpClientExecutor, tempFileStorage)
+                .componentConnection(componentConnection)
+                .environmentId(environmentId)
+                .jobId(jobId)
+                .jobPrincipalId(jobPrincipalId)
+                .jobPrincipalWorkflowId(jobPrincipalWorkflowId)
+                .logFileStorageWriter(logFileStorageWriter)
+                .publicUrl(publicUrl)
+                .taskExecutionId(taskExecutionId)
+                .type(type)
+                .workflowId(workflowId)
+                .build();
+    }
+
+    static final class Builder {
+
+        private final String actionName;
+        private final CacheManager cacheManager;
+        private @Nullable ComponentConnection componentConnection;
+        private final String componentName;
+        private final int componentVersion;
+        private final DataStorage dataStorage;
+        private final boolean editorEnvironment;
+        private @Nullable Long environmentId;
+        private final ApplicationEventPublisher eventPublisher;
+        private final HttpClientExecutor httpClientExecutor;
+        private @Nullable Long jobId;
+        private @Nullable Long jobPrincipalId;
+        private @Nullable Long jobPrincipalWorkflowId;
+        private @Nullable LogFileStorageWriter logFileStorageWriter;
+        private @Nullable String publicUrl;
+        private long taskExecutionId;
+        private @Nullable Tracer tracer;
+        private final TempFileStorage tempFileStorage;
+        private @Nullable PlatformType type;
+        private @Nullable String workflowId;
+
+        private Builder(
+            String componentName, int componentVersion, String actionName, boolean editorEnvironment,
+            CacheManager cacheManager, DataStorage dataStorage, ApplicationEventPublisher eventPublisher,
+            HttpClientExecutor httpClientExecutor, TempFileStorage tempFileStorage) {
+
+            this.componentName = componentName;
+            this.componentVersion = componentVersion;
+            this.actionName = actionName;
+            this.editorEnvironment = editorEnvironment;
+            this.cacheManager = cacheManager;
+            this.dataStorage = dataStorage;
+            this.eventPublisher = eventPublisher;
+            this.httpClientExecutor = httpClientExecutor;
+            this.tempFileStorage = tempFileStorage;
+        }
+
+        Builder componentConnection(@Nullable ComponentConnection componentConnection) {
+            this.componentConnection = componentConnection;
+
+            return this;
+        }
+
+        Builder tracer(@Nullable Tracer tracer) {
+            this.tracer = tracer;
+
+            return this;
+        }
+
+        Builder environmentId(@Nullable Long environmentId) {
+            this.environmentId = environmentId;
+
+            return this;
+        }
+
+        Builder jobId(@Nullable Long jobId) {
+            this.jobId = jobId;
+
+            return this;
+        }
+
+        Builder jobPrincipalId(@Nullable Long jobPrincipalId) {
+            this.jobPrincipalId = jobPrincipalId;
+
+            return this;
+        }
+
+        Builder jobPrincipalWorkflowId(@Nullable Long jobPrincipalWorkflowId) {
+            this.jobPrincipalWorkflowId = jobPrincipalWorkflowId;
+
+            return this;
+        }
+
+        Builder logFileStorageWriter(@Nullable LogFileStorageWriter logFileStorageWriter) {
+            this.logFileStorageWriter = logFileStorageWriter;
+
+            return this;
+        }
+
+        Builder publicUrl(@Nullable String publicUrl) {
+            this.publicUrl = publicUrl;
+
+            return this;
+        }
+
+        Builder taskExecutionId(long taskExecutionId) {
+            this.taskExecutionId = taskExecutionId;
+
+            return this;
+        }
+
+        Builder type(@Nullable PlatformType type) {
+            this.type = type;
+
+            return this;
+        }
+
+        Builder workflowId(@Nullable String workflowId) {
+            this.workflowId = workflowId;
+
+            return this;
+        }
+
+        ActionContextImpl build() {
+            return new ActionContextImpl(this);
+        }
+    }
+
+    @Override
+    public String getTraceId() {
+        if (tracer == null) {
+            return UUID.randomUUID()
+                .toString();
+        }
+
+        TraceContext context = tracer.currentTraceContext()
+            .context();
+
+        if (context == null) {
+            return UUID.randomUUID()
+                .toString();
+        }
+
+        return context.traceId();
+    }
+
+    @Override
+    public Links approval(ContextFunction<Approval, Links> approvalFunction) {
+        try {
+            return approvalFunction.apply(approval);
+        } catch (Exception e) {
+            throw new RuntimeException(e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public <R> R data(ContextFunction<Data, R> dataFunction) {
+        try {
+            return dataFunction.apply(data);
+        } catch (Exception e) {
+            throw new RuntimeException(e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public void event(Consumer<Event> eventConsumer) {
+        eventConsumer.accept(event);
+    }
+
+    @Override
+    public String getActionName() {
+        return actionName;
+    }
+
+    @Override
+    @Nullable
+    public String getResumeUrl() {
+        if (publicUrl == null || jobId == null) {
+            return null;
+        }
+
+        if (this.jobResumeId == null) {
+            JobResumeId jobResumeId = JobResumeId.of(jobId);
+
+            this.jobResumeId = jobResumeId.toString();
+        }
+
+        return publicUrl + "/job/resume/" + this.jobResumeId;
+    }
+
+    @Override
+    @Nullable
+    public String getJobResumeId() {
+        return jobResumeId;
+    }
+
+    @Override
+    @Nullable
+    public Suspend getSuspend() {
+        return suspend;
+    }
+
+    @Override
+    public void suspend(Suspend suspend) {
+        this.suspend = suspend;
+    }
+
+    @Override
+    @Nullable
+    public Long getJobPrincipalId() {
+        return jobPrincipalId;
+    }
+
+    @Override
+    @Nullable
+    public Long getJobPrincipalWorkflowId() {
+        return jobPrincipalWorkflowId;
+    }
+
+    @Override
+    @Nullable
+    public Long getJobId() {
+        return jobId;
+    }
+
+    @Override
+    @Nullable
+    public PlatformType getPlatformType() {
+        return type;
+    }
+
+    @Override
+    @Nullable
+    public String getPublicUrl() {
+        return publicUrl;
+    }
+
+    @Override
+    @Nullable
+    public String getWorkflowId() {
+        return workflowId;
+    }
+
+    @Override
+    @Nullable
+    public Long getEnvironmentId() {
+        return environmentId;
+    }
+
+    @Override
+    public boolean isEditorEnvironment() {
+        return editorEnvironment;
+    }
+
+    @Override
+    public ClusterElementContext toClusterElementContext(
+        String componentName, int componentVersion, String clusterElementName,
+        @Nullable ComponentConnection componentConnection) {
+
+        return ClusterElementContextImpl
+            .builder(
+                componentName, componentVersion, clusterElementName, editorEnvironment, cacheManager, dataStorage,
+                eventPublisher, httpClientExecutor, tempFileStorage)
+            .componentConnection(componentConnection)
+            .environmentId(environmentId)
+            .jobId(jobId)
+            .jobPrincipalId(jobPrincipalId)
+            .jobPrincipalWorkflowId(jobPrincipalWorkflowId)
+            .logFileStorageWriter(logFileStorageWriter)
+            .publicUrl(publicUrl)
+            .taskExecutionId(taskExecutionId)
+            .type(type)
+            .workflowId(workflowId)
+            .build();
+    }
+
+    private record ApprovalImpl(long jobId, String publicUrl) implements Approval {
+
+        @Override
+        public Links generateLinks() {
+            String url = "%s/approvals/%s";
+
+            return new Links(
+                url.formatted(publicUrl, ApprovalId.of(jobId, true)),
+                url.formatted(publicUrl, ApprovalId.of(jobId, false)));
+        }
+    }
+
+    private static final class DataImpl implements Data {
+
+        private final String actionName;
+        private final String componentName;
+        private final Integer componentVersion;
+        private final DataStorage dataStorage;
+        private final boolean editorEnvironment;
+        private final @Nullable Long environmentId;
+        private final InMemoryDataStorage inMemoryDataStorage;
+        private final @Nullable Long jobPrincipalId;
+        private final @Nullable Long jobPrincipalWorkflowId;
+        private final @Nullable Long jobId;
+        private final @Nullable PlatformType type;
+
+        private DataImpl(
+            DataStorage dataStorage, String componentName, Integer componentVersion, String actionName,
+            @Nullable Long jobPrincipalId, @Nullable Long jobPrincipalWorkflowId, @Nullable Long jobId,
+            @Nullable String workflowId, CacheManager cacheManager, @Nullable Long environmentId,
+            @Nullable PlatformType type, boolean editorEnvironment) {
+
+            this.actionName = actionName;
+            this.componentName = componentName;
+            this.componentVersion = componentVersion;
+            this.dataStorage = dataStorage;
+            this.editorEnvironment = editorEnvironment;
+            this.environmentId = environmentId;
+            this.inMemoryDataStorage = new InMemoryDataStorage(workflowId, cacheManager);
+            this.jobId = jobId;
+            this.jobPrincipalId = jobPrincipalId;
+            this.jobPrincipalWorkflowId = jobPrincipalWorkflowId;
+            this.type = type;
+        }
+
+        @Override
+        public <T> Optional<T> fetch(Scope scope, String key) {
+            if (editorEnvironment) {
+                return inMemoryDataStorage.fetch(componentName, getDataStorageScope(scope), getScopeId(scope), key);
+            }
+
+            return dataStorage.fetch(
+                componentName, getDataStorageScope(scope), getScopeId(scope), key,
+                Objects.requireNonNull(environmentId), Objects.requireNonNull(type));
+        }
+
+        @Override
+        public <T> T get(Scope scope, String key) {
+            if (editorEnvironment) {
+                return inMemoryDataStorage.get(componentName, getDataStorageScope(scope), getScopeId(scope), key);
+            }
+
+            return dataStorage.get(
+                componentName, getDataStorageScope(scope), getScopeId(scope), key,
+                Objects.requireNonNull(environmentId), Objects.requireNonNull(type));
+        }
+
+        @Override
+        public <T> Map<String, T> getAll(Scope scope) {
+            if (editorEnvironment) {
+                return inMemoryDataStorage.getAll(componentName, getDataStorageScope(scope), getScopeId(scope));
+            }
+
+            return dataStorage.getAll(
+                componentName, getDataStorageScope(scope), getScopeId(scope), Objects.requireNonNull(environmentId),
+                Objects.requireNonNull(type));
+        }
+
+        @Override
+        public Void put(Scope scope, String key, Object value) {
+            if (editorEnvironment) {
+                inMemoryDataStorage.put(componentName, getDataStorageScope(scope), getScopeId(scope), key, value);
+            } else {
+                dataStorage.put(
+                    componentName, getDataStorageScope(scope), getScopeId(scope), key, value,
+                    Objects.requireNonNull(environmentId), Objects.requireNonNull(type));
+            }
+
+            return null;
+        }
+
+        @Override
+        public Void remove(Scope scope, String key) {
+            if (editorEnvironment) {
+                inMemoryDataStorage.delete(componentName, getDataStorageScope(scope), getScopeId(scope), key);
+            } else {
+                dataStorage.delete(
+                    componentName, getDataStorageScope(scope), getScopeId(scope), key,
+                    Objects.requireNonNull(environmentId), Objects.requireNonNull(type));
+            }
+
+            return null;
+        }
+
+        private DataStorageScope getDataStorageScope(Scope scope) {
+            return switch (scope) {
+                case CURRENT_EXECUTION -> DataStorageScope.CURRENT_EXECUTION;
+                case WORKFLOW -> DataStorageScope.WORKFLOW;
+                case PRINCIPAL -> DataStorageScope.PRINCIPAL;
+                case ACCOUNT -> DataStorageScope.ACCOUNT;
+            };
+        }
+
+        private String getScopeId(Scope scope) {
+            return Validate.notNull(
+                switch (scope) {
+                    case CURRENT_EXECUTION -> String.valueOf(jobId);
+                    case WORKFLOW -> String.valueOf(jobPrincipalWorkflowId);
+                    case PRINCIPAL -> String.valueOf(jobPrincipalId);
+                    case ACCOUNT -> "";
+                }, "scope");
+        }
+
+        public DataStorage dataStorage() {
+            return dataStorage;
+        }
+
+        public String componentName() {
+            return componentName;
+        }
+
+        public Integer componentVersion() {
+            return componentVersion;
+        }
+
+        public String actionName() {
+            return actionName;
+        }
+
+        public @Nullable Long jobPrincipalId() {
+            return jobPrincipalId;
+        }
+
+        public @Nullable Long jobPrincipalWorkflowId() {
+            return jobPrincipalWorkflowId;
+        }
+
+        public @Nullable Long jobId() {
+            return jobId;
+        }
+
+        public @Nullable Long environmentId() {
+            return environmentId;
+        }
+
+        public @Nullable PlatformType type() {
+            return type;
+        }
+
+        public boolean editorEnvironment() {
+            return editorEnvironment;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (obj == this)
+                return true;
+            if (obj == null || obj.getClass() != this.getClass())
+                return false;
+            var that = (DataImpl) obj;
+            return Objects.equals(this.dataStorage, that.dataStorage) &&
+                Objects.equals(this.componentName, that.componentName) &&
+                Objects.equals(this.componentVersion, that.componentVersion) &&
+                Objects.equals(this.actionName, that.actionName) &&
+                Objects.equals(this.jobPrincipalId, that.jobPrincipalId) &&
+                Objects.equals(this.jobPrincipalWorkflowId, that.jobPrincipalWorkflowId) &&
+                Objects.equals(this.jobId, that.jobId) &&
+                Objects.equals(this.environmentId, that.environmentId) &&
+                Objects.equals(this.type, that.type) &&
+                this.editorEnvironment == that.editorEnvironment;
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(dataStorage, componentName, componentVersion, actionName, jobPrincipalId,
+                jobPrincipalWorkflowId, jobId, environmentId, type, editorEnvironment);
+        }
+
+        @Override
+        public String toString() {
+            return "DataImpl[" +
+                "dataStorage=" + dataStorage + ", " +
+                "componentName=" + componentName + ", " +
+                "componentVersion=" + componentVersion + ", " +
+                "actionName=" + actionName + ", " +
+                "jobPrincipalId=" + jobPrincipalId + ", " +
+                "jobPrincipalWorkflowId=" + jobPrincipalWorkflowId + ", " +
+                "jobId=" + jobId + ", " +
+                "environmentId=" + environmentId + ", " +
+                "type=" + type + ", " +
+                "editorEnvironment=" + editorEnvironment + ']';
+        }
+
+    }
+
+    private record EventImpl(ApplicationEventPublisher eventPublisher, long taskExecutionId) implements Event {
+
+        @Override
+        public void publishActionProgressEvent(int progress) {
+            eventPublisher.publishEvent(new TaskProgressedApplicationEvent(taskExecutionId, progress));
+        }
+    }
+}

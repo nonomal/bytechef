@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,8 +16,7 @@
 
 package com.bytechef.component.aitable;
 
-import static com.bytechef.component.aitable.constant.AITableConstants.AI_TABLE;
-import static com.bytechef.component.definition.ComponentDSL.component;
+import static com.bytechef.component.definition.ComponentDsl.component;
 
 import com.bytechef.component.ComponentHandler;
 import com.bytechef.component.aitable.action.AITableCreateRecordAction;
@@ -34,18 +33,21 @@ import com.google.auto.service.AutoService;
 @AutoService(ComponentHandler.class)
 public class AITableComponentHandler implements ComponentHandler {
 
-    private static final ComponentDefinition COMPONENT_DEFINITION = component(AI_TABLE)
-        .title("AITable")
+    private static final ComponentDefinition COMPONENT_DEFINITION = component("aitable")
+        .title("AITable.ai")
         .description(
             "AITable is an AI-powered platform that enables users to create interactive and dynamic tables for data " +
                 "visualization and analysis without requiring coding skills.")
         .icon("path:assets/aitable.svg")
+        .customAction(true)
+        .customActionHelp("", "https://developers.aitable.ai/api/reference/")
         .categories(ComponentCategory.PRODUCTIVITY_AND_COLLABORATION)
         .connection(AITableConnection.CONNECTION_DEFINITION)
         .actions(
+            AITableCreateRecordAction.ACTION_DEFINITION,
             AITableFindRecordsAction.ACTION_DEFINITION,
-            AITableUpdateRecordAction.ACTION_DEFINITION,
-            AITableCreateRecordAction.ACTION_DEFINITION);
+            AITableUpdateRecordAction.ACTION_DEFINITION)
+        .version(1);
 
     @Override
     public ComponentDefinition getDefinition() {

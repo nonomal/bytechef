@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,15 +16,17 @@
 
 package com.bytechef.component.filesystem.action;
 
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.bool;
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.bool;
+import static com.bytechef.component.definition.ComponentDsl.outputSchema;
+import static com.bytechef.component.definition.ComponentDsl.sampleOutput;
+import static com.bytechef.component.definition.ComponentDsl.string;
 import static com.bytechef.component.filesystem.constant.FilesystemConstants.PATH;
-import static com.bytechef.component.filesystem.constant.FilesystemConstants.RM;
 
-import com.bytechef.component.definition.ActionContext;
-import com.bytechef.component.definition.ComponentDSL.ModifiableActionDefinition;
+import com.bytechef.component.definition.ComponentDsl.ModifiableActionDefinition;
+import com.bytechef.component.definition.Context;
 import com.bytechef.component.definition.Parameters;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.FileVisitResult;
@@ -34,11 +36,13 @@ import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 
 /**
+ * Filesystem remove action for workflow automation. Deletes files and directories at a specified path.
+ *
  * @author Ivica Cardic
  */
 public class FilesystemRmAction {
 
-    public static final ModifiableActionDefinition ACTION_DEFINITION = action(RM)
+    public static final ModifiableActionDefinition ACTION_DEFINITION = action("rm")
         .title("Remove")
         .description("Permanently removes the content of a directory.")
         .properties(
@@ -46,22 +50,22 @@ public class FilesystemRmAction {
                 .label("Path")
                 .description("The path of a directory.")
                 .required(true))
-        .outputSchema(bool())
-        .sampleOutput(true)
+        .output(
+            outputSchema(bool().description("Indicates whether the directory was removed or not.")),
+            sampleOutput(true))
         .perform(FilesystemRmAction::perform);
 
     private FilesystemRmAction() {
     }
 
     /**
-     * Deletes a file, never throwing an exception. If a file is a directory, delete it and all subdirectories.
-     *
-     * <p>
-     * A directory to be deleted does not have to be empty.
-     * </p>
+     * Security Note: PATH_TRAVERSAL_IN - Path traversal is intentional. The Filesystem component allows workflow
+     * creators to delete files/directories. Access is controlled through workflow-level permissions. The path is
+     * provided by the workflow creator, not end users.
      */
+    @SuppressFBWarnings("PATH_TRAVERSAL_IN")
     protected static Boolean perform(
-        Parameters inputParameters, Parameters connectionParameters, ActionContext context) {
+        Parameters inputParameters, Parameters connectionParameters, Context context) {
 
         File file = new File(inputParameters.getRequiredString(PATH));
 

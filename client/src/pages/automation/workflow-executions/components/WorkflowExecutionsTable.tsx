@@ -1,107 +1,268 @@
+import Button from '@/components/Button/Button';
 import {Table, TableBody, TableCell, TableHead, TableHeader, TableRow} from '@/components/ui/table';
-import WorkflowExecutionBadge from '@/pages/platform/workflow-executions/components/WorkflowExecutionBadge';
-import {JobBasicModel, WorkflowExecutionModel} from '@/shared/middleware/automation/workflow/execution';
-import {CellContext, createColumnHelper, flexRender, getCoreRowModel, useReactTable} from '@tanstack/react-table';
+import WorkflowExecutionBadge from '@/shared/components/workflow-executions/WorkflowExecutionBadge';
+import {WorkflowExecution} from '@/shared/middleware/automation/workflow/execution';
+import {ChevronDownIcon, ChevronUpIcon} from 'lucide-react';
+import {Fragment, ReactNode} from 'react';
+import {twMerge} from 'tailwind-merge';
 
-import useWorkflowExecutionSheetStore from '../stores/useWorkflowExecutionSheetStore';
+import {useWorkflowExecutionsTable} from '../hooks/useWorkflowExecutionsTable';
+import {
+    MAX_SUBFLOW_DEPTH,
+    formatDateTime,
+    getProjectVersion,
+    getSubflowChildJobs,
+    hasExpandedSubflow,
+    wrapChildJob,
+} from '../utils/workflowExecutionsTable';
+import WorkflowExecutionsDropdownMenu from './WorkflowExecutionsDropdownMenu';
 
-const getDuration = (info: CellContext<WorkflowExecutionModel, JobBasicModel | undefined>) => {
-    const infoValue = info.getValue();
+interface ExecutionColumnI {
+    cell: (execution: WorkflowExecution) => ReactNode;
+    cellClassName?: string;
+    header: (depth: number) => string;
+    headerClassName?: string;
+    id: string;
+}
 
-    const startDate = infoValue?.startDate?.getTime();
-    const endDate = infoValue?.endDate?.getTime();
-
-    if (startDate && endDate) {
-        return `${Math.round(endDate - startDate)}ms`;
-    }
-};
-
-const columnHelper = createColumnHelper<WorkflowExecutionModel>();
-
-const columns = [
-    columnHelper.accessor((row) => row.job, {
-        cell: (info) => <WorkflowExecutionBadge status={info?.getValue()?.status || ''} />,
-        header: 'Status',
-    }),
-    columnHelper.accessor('workflow', {
-        cell: (info) => info.getValue()?.label,
-        header: 'Workflow',
-    }),
-    columnHelper.accessor('project', {
-        cell: (info) => info.getValue()?.name,
-        header: 'Project',
-    }),
-    columnHelper.accessor('projectInstance', {
-        cell: (info) => `${info.getValue()?.name} V${info.getValue()?.projectVersion}`,
-        header: 'Instance',
-    }),
-    columnHelper.accessor('projectInstance', {
-        cell: (info) => info.getValue()?.environment,
-        header: 'Environment',
-    }),
-    columnHelper.accessor((row) => row.job, {
-        cell: (info) => getDuration(info),
-        header: 'Duration',
-    }),
-    columnHelper.accessor((row) => row.job, {
-        cell: (info) => (
-            <>
-                {info.getValue()?.startDate &&
-                    `${info.getValue()?.startDate?.toLocaleDateString()} ${info
-                        .getValue()
-                        ?.startDate?.toLocaleTimeString()}`}
-            </>
+const columns: ExecutionColumnI[] = [
+    {
+        cell: (execution) => (
+            <WorkflowExecutionBadge status={execution.job?.status || execution.triggerExecution?.status || ''} />
         ),
-        header: 'Execution date',
-    }),
+        header: () => 'Status',
+        id: 'status',
+    },
+    {
+        cell: (execution) => execution.job?.label || execution.workflow?.label,
+        header: (depth) => (depth > 0 ? 'Subflow' : 'Workflow'),
+        id: 'workflow',
+    },
+    {
+        cell: (execution) => execution.project?.name,
+        cellClassName: 'max-w-40 truncate',
+        header: () => 'Project',
+        id: 'project',
+    },
+    {
+        cell: (execution) => execution.projectDeployment?.name,
+        cellClassName: 'max-w-40 truncate',
+        header: () => 'Deployment',
+        id: 'deployment',
+    },
+    {
+        cell: (execution) => {
+            const projectVersion = getProjectVersion(execution);
+
+            return projectVersion != null ? `V${projectVersion}` : '';
+        },
+        header: () => 'Version',
+        id: 'version',
+    },
+    {
+        cell: (execution) => {
+            const startDate = (execution.job?.startDate || execution.triggerExecution?.startDate)?.getTime();
+            const endDate = (execution.job?.endDate || execution.triggerExecution?.endDate)?.getTime();
+
+            if (startDate && endDate) {
+                return `${Math.round(endDate - startDate)}ms`;
+            }
+        },
+        header: () => 'Duration',
+        id: 'duration',
+    },
+    {
+        cell: (execution) => {
+            const startDate = execution.job?.startDate || execution.triggerExecution?.startDate;
+
+            return startDate ? formatDateTime(startDate) : null;
+        },
+        header: () => 'Start date',
+        id: 'startDate',
+    },
+    {
+        cell: (execution) => {
+            const endDate = execution.job?.endDate || execution.triggerExecution?.endDate;
+
+            return endDate ? formatDateTime(endDate) : null;
+        },
+        header: () => 'End date',
+        id: 'endDate',
+    },
+    {
+        cell: (execution) => <WorkflowExecutionsDropdownMenu execution={execution} />,
+        cellClassName: 'text-center',
+        header: () => 'Actions',
+        headerClassName: 'text-center',
+        id: 'actions',
+    },
 ];
 
-const WorkflowExecutionsTable = ({data}: {data: WorkflowExecutionModel[]}) => {
-    const reactTable = useReactTable<WorkflowExecutionModel>({
-        columns,
-        data,
-        getCoreRowModel: getCoreRowModel(),
-    });
+const ExecutionTableHeader = ({className, depth = 0}: {className?: string; depth?: number}) => (
+    <TableHeader
+        className={twMerge(
+            'border border-stroke-neutral-secondary bg-surface-main text-content-neutral-secondary',
+            className
+        )}
+    >
+        <TableRow>
+            <TableHead className="w-9" />
 
-    const {setWorkflowExecutionDetailsSheetOpen, setWorkflowExecutionId} = useWorkflowExecutionSheetStore();
+            {columns.map((column) => (
+                <TableHead
+                    className={twMerge('w-4 text-sm font-medium text-inherit', column.headerClassName)}
+                    key={column.id}
+                >
+                    {column.header(depth)}
+                </TableHead>
+            ))}
+        </TableRow>
+    </TableHeader>
+);
 
-    const headerGroups = reactTable.getHeaderGroups();
-    const rows = reactTable.getRowModel().rows;
+interface ExecutionRowsProps {
+    depth: number;
+    executions: WorkflowExecution[];
+    expandedJobIds: Set<string>;
+    onRowClick: (execution: WorkflowExecution) => void;
+    onToggleExpand: (jobId: string) => void;
+    seenJobIds: Set<string>;
+}
 
-    const handleRowClick = (index: number) => {
-        if (data[index].id) {
-            setWorkflowExecutionId(data[index].id!);
+const ExecutionRows = ({
+    depth,
+    executions,
+    expandedJobIds,
+    onRowClick,
+    onToggleExpand,
+    seenJobIds,
+}: ExecutionRowsProps) => (
+    <>
+        {executions.map((execution, index) => {
+            const jobId = execution.job?.id;
 
-            setWorkflowExecutionDetailsSheetOpen(true);
-        }
-    };
+            const nextSeenJobIds = jobId != null ? new Set(seenJobIds).add(jobId) : seenJobIds;
+
+            const childJobs = execution.job
+                ? getSubflowChildJobs({job: execution.job, seenJobIds: nextSeenJobIds})
+                : [];
+
+            const expandable = depth < MAX_SUBFLOW_DEPTH && childJobs.length > 0;
+            const expanded = jobId != null && expandedJobIds.has(jobId);
+
+            const rowKey = jobId ?? `trigger_${execution.triggerExecution?.id ?? index}`;
+
+            const isDeepestExpandedSubflow =
+                expandable &&
+                expanded &&
+                !hasExpandedSubflow({childJobs, depth: depth + 1, expandedJobIds, seenJobIds: nextSeenJobIds});
+
+            return (
+                <Fragment key={`${depth}_${rowKey}`}>
+                    <TableRow
+                        className={twMerge(
+                            'cursor-pointer border-0 hover:bg-surface-brand-secondary',
+                            !expandable && 'even:bg-surface-neutral-secondary',
+                            depth > 0 && 'border-b border-stroke-neutral-secondary',
+                            expandable && 'border-b-0'
+                        )}
+                        onClick={() => onRowClick(execution)}
+                    >
+                        <TableCell className="w-9 py-4">
+                            {expandable && (
+                                <Button
+                                    className={twMerge(
+                                        expanded
+                                            ? 'border-stroke-brand-secondary bg-surface-brand-secondary text-content-brand-primary'
+                                            : 'border-stroke-neutral-secondary bg-surface-neutral-primary text-content-neutral-primary'
+                                    )}
+                                    icon={expanded ? <ChevronUpIcon /> : <ChevronDownIcon />}
+                                    onClick={(event) => {
+                                        event.stopPropagation();
+
+                                        if (jobId != null) {
+                                            onToggleExpand(jobId);
+                                        }
+                                    }}
+                                    size="iconXxs"
+                                    variant="outline"
+                                />
+                            )}
+                        </TableCell>
+
+                        {columns.map((column) => (
+                            <TableCell
+                                className={twMerge('py-4 whitespace-nowrap', column.cellClassName)}
+                                key={column.id}
+                            >
+                                {column.cell(execution)}
+                            </TableCell>
+                        ))}
+                    </TableRow>
+
+                    {expandable && expanded && (
+                        <TableRow className="border-0 even:bg-surface-neutral-primary">
+                            <TableCell className="py-0 pr-0 pl-9" colSpan={columns.length + 1}>
+                                <Table
+                                    className={twMerge(
+                                        'border border-stroke-brand-secondary',
+                                        depth > 0 && 'border-r-0 border-b-0'
+                                    )}
+                                >
+                                    <ExecutionTableHeader
+                                        className={twMerge(
+                                            'border-stroke-brand-secondary text-content-neutral-secondary',
+                                            isDeepestExpandedSubflow && 'text-content-brand-primary',
+                                            expanded && 'border-r-0'
+                                        )}
+                                        depth={depth + 1}
+                                    />
+
+                                    <TableBody>
+                                        <ExecutionRows
+                                            depth={depth + 1}
+                                            executions={childJobs.map((childJob) => wrapChildJob(childJob, execution))}
+                                            expandedJobIds={expandedJobIds}
+                                            onRowClick={onRowClick}
+                                            onToggleExpand={onToggleExpand}
+                                            seenJobIds={nextSeenJobIds}
+                                        />
+                                    </TableBody>
+                                </Table>
+                            </TableCell>
+                        </TableRow>
+                    )}
+                </Fragment>
+            );
+        })}
+    </>
+);
+
+interface WorkflowExecutionsTableProps {
+    className?: string;
+    workflowExecutions: WorkflowExecution[];
+}
+
+const WorkflowExecutionsTable = ({className, workflowExecutions}: WorkflowExecutionsTableProps) => {
+    const {expandedJobIds, handleRowClick, handleToggleExpand} = useWorkflowExecutionsTable();
 
     return (
-        <div className="w-full px-4 2xl:mx-auto 2xl:w-4/5">
+        <div
+            className={twMerge('w-full self-start p-4 pt-0 3xl:mx-auto 3xl:w-full', className)}
+            data-testid="workflow-executions-table"
+        >
             <Table>
-                <TableHeader>
-                    {headerGroups.map((headerGroup) => (
-                        <TableRow key={headerGroup.id}>
-                            {headerGroup.headers.map((header, index) => (
-                                <TableHead key={`${headerGroup.id}_${header.id}_${index}`}>
-                                    {!header.isPlaceholder &&
-                                        flexRender(header.column.columnDef.header, header.getContext())}
-                                </TableHead>
-                            ))}
-                        </TableRow>
-                    ))}
-                </TableHeader>
+                <ExecutionTableHeader />
 
                 <TableBody>
-                    {rows.map((row) => (
-                        <TableRow className="cursor-pointer" key={row.id} onClick={() => handleRowClick(row.index)}>
-                            {row.getVisibleCells().map((cell, index) => (
-                                <TableCell className="whitespace-nowrap py-4" key={`${row.id}_${cell.id}_${index}`}>
-                                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                                </TableCell>
-                            ))}
-                        </TableRow>
-                    ))}
+                    <ExecutionRows
+                        depth={0}
+                        executions={workflowExecutions}
+                        expandedJobIds={expandedJobIds}
+                        onRowClick={handleRowClick}
+                        onToggleExpand={handleToggleExpand}
+                        seenJobIds={new Set()}
+                    />
                 </TableBody>
             </Table>
         </div>

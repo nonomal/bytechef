@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,7 +29,7 @@ public class RedisContainerConfiguration {
 
     @Bean
     public GenericContainer<?> redisContainer(DynamicPropertyRegistry registry) {
-        GenericContainer<?> container = new GenericContainer<>("redis:7.2-alpine")
+        GenericContainer<?> container = new GenericContainer<>("redis:8-alpine")
             .withExposedPorts(6379);
 
         registry.add("spring.data.redis.host=", container::getHost);

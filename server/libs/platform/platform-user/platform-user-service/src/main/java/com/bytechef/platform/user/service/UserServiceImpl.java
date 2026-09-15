@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,10 +17,9 @@
 package com.bytechef.platform.user.service;
 
 import com.bytechef.commons.util.LocalDateTimeUtils;
-import com.bytechef.commons.util.OptionalUtils;
 import com.bytechef.commons.util.RandomUtils;
+import com.bytechef.platform.security.constant.AuthorityConstants;
 import com.bytechef.platform.security.util.SecurityUtils;
-import com.bytechef.platform.user.constant.AuthorityConstants;
 import com.bytechef.platform.user.constant.UserConstants;
 import com.bytechef.platform.user.domain.Authority;
 import com.bytechef.platform.user.domain.User;
@@ -29,11 +28,16 @@ import com.bytechef.platform.user.exception.EmailAlreadyUsedException;
 import com.bytechef.platform.user.exception.InvalidEmailException;
 import com.bytechef.platform.user.exception.InvalidPasswordException;
 import com.bytechef.platform.user.exception.LoginAlreadyUsedException;
+import com.bytechef.platform.user.exception.UserNotFoundException;
 import com.bytechef.platform.user.repository.AuthorityRepository;
 import com.bytechef.platform.user.repository.PersistentTokenRepository;
 import com.bytechef.platform.user.repository.UserRepository;
-import com.bytechef.tenant.cache.TenantCacheKeyGenerator;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import com.bytechef.tenant.util.TenantCacheKeyUtils;
+import dev.samstevens.totp.code.DefaultCodeGenerator;
+import dev.samstevens.totp.code.DefaultCodeVerifier;
+import dev.samstevens.totp.secret.DefaultSecretGenerator;
+import dev.samstevens.totp.secret.SecretGenerator;
+import dev.samstevens.totp.time.SystemTimeProvider;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
@@ -60,7 +64,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 public class UserServiceImpl implements UserService {
 
-    private static final Logger logger = LoggerFactory.getLogger(UserServiceImpl.class);
+    private static final Logger log = LoggerFactory.getLogger(UserServiceImpl.class);
 
     private static final EmailValidator EMAIL_VALIDATOR = EmailValidator.getInstance();
 
@@ -68,6 +72,8 @@ public class UserServiceImpl implements UserService {
     private final CacheManager cacheManager;
     private final PasswordEncoder passwordEncoder;
     private final PersistentTokenRepository persistentTokenRepository;
+    private final SecretGenerator totpSecretGenerator = new DefaultSecretGenerator();
+    private final DefaultCodeVerifier totpCodeVerifier;
     private final UserRepository userRepository;
 
     public UserServiceImpl(
@@ -79,11 +85,15 @@ public class UserServiceImpl implements UserService {
         this.passwordEncoder = passwordEncoder;
         this.persistentTokenRepository = persistentTokenRepository;
         this.userRepository = userRepository;
+
+        totpCodeVerifier = new DefaultCodeVerifier(new DefaultCodeGenerator(), new SystemTimeProvider());
+
+        totpCodeVerifier.setAllowedTimePeriodDiscrepancy(1);
     }
 
     @Override
     public Optional<User> activateRegistration(String key) {
-        logger.debug("Activating user for activation key {}", key);
+        log.debug("Activating user for activation key {}", key);
 
         return userRepository.findByActivationKey(key)
             .map(user -> {
@@ -95,7 +105,7 @@ public class UserServiceImpl implements UserService {
 
                 this.clearUserCaches(user);
 
-                logger.debug("Activated user: {}", user);
+                log.debug("Activated user: {}", user);
 
                 return user;
             });
@@ -103,7 +113,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public Optional<User> completePasswordReset(String newPassword, String key) {
-        logger.debug("Reset user password for reset key {}", key);
+        log.debug("Reset user password for reset key {}", key);
 
         return userRepository.findByResetKey(key)
             .filter(user -> {
@@ -131,6 +141,288 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
+    public void changePassword(String currentClearTextPassword, String newPassword) {
+        SecurityUtils.fetchCurrentUserLogin()
+            .flatMap(userRepository::findByLogin)
+            .ifPresent(user -> {
+                String currentEncryptedPassword = user.getPassword();
+
+                if (!passwordEncoder.matches(currentClearTextPassword, currentEncryptedPassword)) {
+                    throw new InvalidPasswordException();
+                }
+
+                String encryptedPassword = passwordEncoder.encode(newPassword);
+
+                user.setPassword(encryptedPassword);
+
+                user = userRepository.save(user);
+
+                this.clearUserCaches(user);
+
+                log.debug("Changed password for User: {}", user);
+            });
+    }
+
+    @Override
+    public User create(AdminUserDTO userDTO) {
+        User user = new User();
+
+        String login = userDTO.getLogin();
+
+        user.setLogin(login.toLowerCase());
+        user.setFirstName(userDTO.getFirstName());
+        user.setLastName(userDTO.getLastName());
+
+        String email = userDTO.getEmail();
+
+        if (email != null) {
+            if (!EMAIL_VALIDATOR.isValid(userDTO.getEmail())) {
+                throw new InvalidEmailException(email.toLowerCase());
+            }
+
+            user.setEmail(email.toLowerCase());
+        }
+
+        user.setImageUrl(userDTO.getImageUrl());
+
+        if (userDTO.getLangKey() == null) {
+            user.setLangKey(UserConstants.DEFAULT_LANGUAGE); // default language
+        } else {
+            user.setLangKey(userDTO.getLangKey());
+        }
+
+        String encryptedPassword = passwordEncoder.encode(RandomUtils.generatePassword());
+
+        user.setPassword(encryptedPassword);
+        user.setResetKey(RandomUtils.generateResetKey());
+        user.setResetDate(Instant.now());
+        user.setActivated(true);
+
+        if (userDTO.getAuthorities() != null) {
+            Set<Authority> authorities = userDTO.getAuthorities()
+                .stream()
+                .map(authorityRepository::findByName)
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .collect(Collectors.toSet());
+
+            user.setAuthorities(authorities);
+        }
+
+        userRepository.save(user);
+
+        this.clearUserCaches(user);
+
+        log.debug("Created User: {}", user);
+
+        return user;
+    }
+
+    @Override
+    public void delete(String login) {
+        userRepository.findByLogin(login)
+            .ifPresent(user -> {
+                userRepository.delete(user);
+
+                this.clearUserCaches(user);
+
+                log.debug("Deleted User: {}", user);
+            });
+    }
+
+    @Override
+    @Transactional
+    public void disableTotp(String login) {
+        userRepository.findByLogin(login)
+            .ifPresent(user -> {
+                user.setTotpEnabled(false);
+                user.setTotpSecret(null);
+
+                userRepository.save(user);
+
+                clearUserCaches(user);
+            });
+    }
+
+    @Override
+    @Transactional
+    public void enableTotp(String login) {
+        userRepository.findByLogin(login)
+            .ifPresent(user -> {
+                user.setTotpEnabled(true);
+
+                userRepository.save(user);
+
+                clearUserCaches(user);
+            });
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<User> fetchCurrentUser() {
+        return SecurityUtils.fetchCurrentUserLogin()
+            .flatMap(userRepository::findByLogin);
+    }
+
+    @Override
+    public Optional<User> fetchUser(long id) {
+        return userRepository.findById(id);
+    }
+
+    @Override
+    public Optional<User> fetchUserByAuthProviderAndProviderId(String authProvider, String providerId) {
+        return userRepository.findByAuthProviderAndProviderId(authProvider, providerId);
+    }
+
+    @Override
+    public Optional<User> fetchUserByEmail(String email) {
+        return userRepository.findByEmailIgnoreCase(email);
+    }
+
+    @Override
+    public Optional<User> fetchUserByLogin(String login) {
+        return userRepository.findByLogin(login);
+    }
+
+    @Override
+    @Transactional
+    public User findOrCreateSocialUser(
+        String email, String firstName, String lastName, String imageUrl, String authProvider, String providerId,
+        boolean autoProvision, String defaultAuthority) {
+
+        Optional<User> existingUser = userRepository.findByAuthProviderAndProviderId(authProvider, providerId);
+
+        if (existingUser.isPresent()) {
+            User user = existingUser.get();
+
+            user.setFirstName(firstName);
+            user.setLastName(lastName);
+            user.setImageUrl(imageUrl);
+
+            user = userRepository.save(user);
+
+            clearUserCaches(user);
+
+            return user;
+        }
+
+        Optional<User> existingEmailUser = userRepository.findByEmailIgnoreCase(email);
+
+        if (existingEmailUser.isPresent()) {
+            User user = existingEmailUser.get();
+
+            user.setAuthProvider(authProvider);
+            user.setProviderId(providerId);
+            user.setFirstName(firstName);
+            user.setLastName(lastName);
+            user.setImageUrl(imageUrl);
+
+            if (!user.isActivated()) {
+                user.setActivated(true);
+                user.setActivationKey(null);
+            }
+
+            user = userRepository.save(user);
+
+            clearUserCaches(user);
+
+            return user;
+        }
+
+        if (!autoProvision) {
+            throw new IllegalStateException("Auto-provisioning is disabled for this identity provider");
+        }
+
+        User newUser = new User();
+
+        newUser.setLogin(email.toLowerCase());
+        newUser.setEmail(email.toLowerCase());
+        newUser.setFirstName(firstName);
+        newUser.setLastName(lastName);
+        newUser.setImageUrl(imageUrl);
+        newUser.setAuthProvider(authProvider);
+        newUser.setProviderId(providerId);
+        newUser.setActivated(true);
+        newUser.setLangKey(UserConstants.DEFAULT_LANGUAGE);
+        newUser.setPassword(passwordEncoder.encode(RandomUtils.generatePassword()));
+
+        Set<Authority> authorities = new HashSet<>();
+
+        authorityRepository.findByName(defaultAuthority)
+            .ifPresent(authorities::add);
+
+        newUser.setAuthorities(authorities);
+
+        userRepository.save(newUser);
+
+        clearUserCaches(newUser);
+
+        log.debug("Created social login user: {}", newUser);
+
+        return newUser;
+    }
+
+    @Override
+    @Transactional
+    public String generateTotpSecret(String login) {
+        Optional<User> optionalUser = userRepository.findByLogin(login);
+
+        if (optionalUser.isEmpty()) {
+            return totpSecretGenerator.generate();
+        }
+
+        User user = optionalUser.get();
+
+        String existingSecret = user.getTotpSecret();
+
+        if (existingSecret != null && user.isTotpEnabled()) {
+            return existingSecret;
+        }
+
+        String secret = totpSecretGenerator.generate();
+
+        user.setTotpSecret(secret);
+
+        userRepository.save(user);
+
+        clearUserCaches(user);
+
+        return secret;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<User> getAllManagedUsers(Pageable pageable) {
+        return userRepository.findAll(pageable);
+    }
+
+    @Override
+    public User getCurrentUser() {
+        return fetchCurrentUser()
+            .orElseThrow(UserNotFoundException::new);
+    }
+
+    /**
+     * Persistent Token are used for providing automatic authentication, they should be automatically deleted after 30
+     * days.
+     * <p>
+     * This is scheduled to get fired everyday, at midnight.
+     */
+    @Override
+    @Scheduled(cron = "0 0 0 * * ?")
+    public void removeOldPersistentTokens() {
+        LocalDate now = LocalDate.now();
+
+        persistentTokenRepository.findAllByTokenDateBefore(now.minusMonths(1))
+            .forEach(token -> {
+                log.debug("Deleting token {}", token.getSeries());
+
+                persistentTokenRepository.delete(token);
+            });
+    }
+
+    @Override
     public Optional<User> requestPasswordReset(String email) {
         return userRepository.findByEmailIgnoreCase(email)
             .filter(User::isActivated)
@@ -144,11 +436,6 @@ public class UserServiceImpl implements UserService {
 
                 return user;
             });
-    }
-
-    @Override
-    public void saveUser(User user) {
-        userRepository.save(user);
     }
 
     @Override
@@ -210,64 +497,9 @@ public class UserServiceImpl implements UserService {
 
         this.clearUserCaches(newUser);
 
-        logger.debug("Created User: {}", newUser);
+        log.debug("Created User: {}", newUser);
 
         return newUser;
-    }
-
-    @Override
-    public User createUser(AdminUserDTO userDTO) {
-        User user = new User();
-
-        String login = userDTO.getLogin();
-
-        user.setLogin(login.toLowerCase());
-        user.setFirstName(userDTO.getFirstName());
-        user.setLastName(userDTO.getLastName());
-
-        String email = userDTO.getEmail();
-
-        if (email != null) {
-            if (!EMAIL_VALIDATOR.isValid(userDTO.getEmail())) {
-                throw new InvalidEmailException(email.toLowerCase());
-            }
-
-            user.setEmail(email.toLowerCase());
-        }
-
-        user.setImageUrl(userDTO.getImageUrl());
-
-        if (userDTO.getLangKey() == null) {
-            user.setLangKey(UserConstants.DEFAULT_LANGUAGE); // default language
-        } else {
-            user.setLangKey(userDTO.getLangKey());
-        }
-
-        String encryptedPassword = passwordEncoder.encode(RandomUtils.generatePassword());
-
-        user.setPassword(encryptedPassword);
-        user.setResetKey(RandomUtils.generateResetKey());
-        user.setResetDate(Instant.now());
-        user.setActivated(true);
-
-        if (userDTO.getAuthorities() != null) {
-            Set<Authority> authorities = userDTO.getAuthorities()
-                .stream()
-                .map(authorityRepository::findByName)
-                .filter(Optional::isPresent)
-                .map(Optional::get)
-                .collect(Collectors.toSet());
-
-            user.setAuthorities(authorities);
-        }
-
-        userRepository.save(user);
-
-        this.clearUserCaches(user);
-
-        logger.debug("Created User: {}", user);
-
-        return user;
     }
 
     /**
@@ -277,7 +509,7 @@ public class UserServiceImpl implements UserService {
      * @return updated user.
      */
     @Override
-    public Optional<User> updateUser(AdminUserDTO userDTO) {
+    public Optional<User> update(AdminUserDTO userDTO) {
         return Optional.of(userRepository.findById(userDTO.getId()))
             .filter(Optional::isPresent)
             .map(Optional::get)
@@ -311,27 +543,10 @@ public class UserServiceImpl implements UserService {
 
                 this.clearUserCaches(user);
 
-                logger.debug("Changed Information for User: {}", user);
+                log.debug("Changed Information for User: {}", user);
 
                 return user;
             });
-    }
-
-    @Override
-    public void deleteUser(String login) {
-        userRepository.findByLogin(login)
-            .ifPresent(user -> {
-                userRepository.delete(user);
-
-                this.clearUserCaches(user);
-
-                logger.debug("Deleted User: {}", user);
-            });
-    }
-
-    @Override
-    public Optional<User> fetchUserByEmail(String email) {
-        return userRepository.findByEmailIgnoreCase(email);
     }
 
     /**
@@ -344,12 +559,12 @@ public class UserServiceImpl implements UserService {
      * @param imageUrl  image URL of user.
      */
     @Override
-    public void updateUser(String firstName, String lastName, String email, String langKey, String imageUrl) {
+    public void update(String firstName, String lastName, String email, String langKey, String imageUrl) {
         if (!EMAIL_VALIDATOR.isValid(email)) {
             throw new InvalidEmailException(email);
         }
 
-        SecurityUtils.getCurrentUserLogin()
+        SecurityUtils.fetchCurrentUserLogin()
             .flatMap(userRepository::findByLogin)
             .ifPresent(user -> {
                 user.setFirstName(firstName);
@@ -360,49 +575,15 @@ public class UserServiceImpl implements UserService {
                 }
 
                 user.setLangKey(langKey);
+                user.setLogin(user.getEmail());
                 user.setImageUrl(imageUrl);
 
                 userRepository.save(user);
 
                 this.clearUserCaches(user);
 
-                logger.debug("Changed Information for User: {}", user);
+                log.debug("Changed Information for User: {}", user);
             });
-    }
-
-    @Override
-    @Transactional
-    public void changePassword(String currentClearTextPassword, String newPassword) {
-        SecurityUtils.getCurrentUserLogin()
-            .flatMap(userRepository::findByLogin)
-            .ifPresent(user -> {
-                String currentEncryptedPassword = user.getPassword();
-
-                if (!passwordEncoder.matches(currentClearTextPassword, currentEncryptedPassword)) {
-                    throw new InvalidPasswordException();
-                }
-
-                String encryptedPassword = passwordEncoder.encode(newPassword);
-
-                user.setPassword(encryptedPassword);
-
-                user = userRepository.save(user);
-
-                this.clearUserCaches(user);
-
-                logger.debug("Changed password for User: {}", user);
-            });
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public Page<User> getAllManagedUsers(Pageable pageable) {
-        return userRepository.findAll(pageable);
-    }
-
-    @Override
-    public User getCurrentUser() {
-        return OptionalUtils.get(fetchCurrentUser());
     }
 
     @Override
@@ -412,33 +593,53 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    public User getUser(long id) {
+        return userRepository.findById(id)
+            .orElseThrow(UserNotFoundException::new);
+    }
+
+    @Override
+    public User getUser(String login) {
+        return userRepository.findByLogin(login)
+            .orElseThrow(UserNotFoundException::new);
+    }
+
+    @Override
+    public void save(User user) {
+        userRepository.save(user);
+    }
+
+    @Override
+    public void unlinkProvider(String login) {
+        User user = userRepository.findByLogin(login)
+            .orElseThrow(UserNotFoundException::new);
+
+        user.setAuthProvider(UserConstants.AUTH_PROVIDER_LOCAL);
+        user.setProviderId(null);
+
+        userRepository.save(user);
+
+        clearUserCaches(user);
+    }
+
+    @Override
     @Transactional(readOnly = true)
-    public Optional<User> fetchCurrentUser() {
-        return SecurityUtils.getCurrentUserLogin()
-            .flatMap(userRepository::findByLogin);
-    }
+    public boolean verifyTotpCode(String login, String code) {
+        if (code == null || code.isBlank()) {
+            return false;
+        }
 
-    @Override
-    public Optional<User> fetchUser(long id) {
-        return userRepository.findById(id);
-    }
+        return userRepository.findByLogin(login)
+            .map(user -> {
+                String secret = user.getTotpSecret();
 
-    /**
-     * Persistent Token are used for providing automatic authentication, they should be automatically deleted after 30
-     * days.
-     * <p>
-     * This is scheduled to get fired everyday, at midnight.
-     */
-    @Override
-    @Scheduled(cron = "0 0 0 * * ?")
-    public void removeOldPersistentTokens() {
-        LocalDate now = LocalDate.now();
-        persistentTokenRepository.findAllByTokenDateBefore(now.minusMonths(1))
-            .forEach(token -> {
-                logger.debug("Deleting token {}", token.getSeries());
+                if (secret == null) {
+                    return false;
+                }
 
-                persistentTokenRepository.delete(token);
-            });
+                return totpCodeVerifier.isValidCode(secret, code);
+            })
+            .orElse(false);
     }
 
     /**
@@ -455,7 +656,7 @@ public class UserServiceImpl implements UserService {
                     Instant.now()
                         .minus(3, ChronoUnit.DAYS)))
             .forEach(user -> {
-                logger.debug("Deleting not activated user {}", user.getLogin());
+                log.debug("Deleting not activated user {}", user.getLogin());
 
                 userRepository.delete(user);
 
@@ -463,25 +664,13 @@ public class UserServiceImpl implements UserService {
             });
     }
 
-    @Override
-    public Optional<User> fetchUserByLogin(String login) {
-        return userRepository.findByLogin(login);
-    }
-
-    @Override
-    public User getUser(long id) {
-        return userRepository.findById(id)
-            .orElseThrow();
-    }
-
-    @SuppressFBWarnings("NP")
     private void clearUserCaches(User user) {
         Objects.requireNonNull(cacheManager.getCache(UserRepository.USERS_BY_LOGIN_CACHE))
-            .evict(TenantCacheKeyGenerator.generateKey(user.getLogin()));
+            .evict(TenantCacheKeyUtils.getKey(user.getLogin()));
 
         if (user.getEmail() != null) {
             Objects.requireNonNull(cacheManager.getCache(UserRepository.USERS_BY_EMAIL_CACHE))
-                .evict(TenantCacheKeyGenerator.generateKey(user.getEmail()));
+                .evict(TenantCacheKeyUtils.getKey(user.getEmail()));
         }
     }
 

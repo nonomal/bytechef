@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,17 +16,22 @@
 
 package com.bytechef.platform.component.definition;
 
-import static com.bytechef.component.definition.ComponentDSL.object;
+import static com.bytechef.component.definition.ComponentDsl.object;
 
 import com.bytechef.commons.util.ConvertUtils;
-import com.bytechef.component.definition.ComponentDSL;
-import com.bytechef.component.definition.ComponentDSL.ModifiableArrayProperty;
-import com.bytechef.component.definition.ComponentDSL.ModifiableObjectProperty;
-import com.bytechef.component.definition.ComponentDSL.ModifiableValueProperty;
+import com.bytechef.component.definition.ComponentDsl;
+import com.bytechef.component.definition.ComponentDsl.ModifiableArrayProperty;
+import com.bytechef.component.definition.ComponentDsl.ModifiableObjectProperty;
+import com.bytechef.component.definition.ComponentDsl.ModifiableValueProperty;
 import com.bytechef.definition.BaseProperty;
 import com.bytechef.definition.BaseProperty.BaseValueProperty;
-import com.bytechef.platform.registry.util.SchemaUtils;
-import com.bytechef.platform.registry.util.SchemaUtils.SchemaPropertyFactory;
+import com.bytechef.exception.ConfigurationException;
+import com.bytechef.platform.component.domain.Property;
+import com.bytechef.platform.component.exception.ComponentErrorType;
+import com.bytechef.platform.domain.OutputResponse;
+import com.bytechef.platform.util.SchemaUtils;
+import com.bytechef.platform.util.SchemaUtils.JsonSchemaPropertyFactory;
+import com.bytechef.platform.util.SchemaUtils.SchemaPropertyFactory;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -34,63 +39,117 @@ import java.util.Map;
 /**
  * @author Ivica Cardic
  */
-public record PropertyFactory(Object value) implements SchemaPropertyFactory {
+public record PropertyFactory() implements SchemaPropertyFactory {
+
+    @SuppressWarnings("unchecked")
+    public static final JsonSchemaPropertyFactory JSON_SCHEMA_PROPERTY_FACTORY = new JsonSchemaPropertyFactory() {
+
+        @Override
+        public void addChildren(
+            BaseProperty.BaseValueProperty<?> property,
+            List<BaseProperty.BaseValueProperty<?>> children) {
+
+            if (property instanceof ModifiableArrayProperty modifiableArrayProperty) {
+                modifiableArrayProperty.items(
+                    children.stream()
+                        .map(child -> (ModifiableValueProperty<?, ?>) child)
+                        .toList());
+            } else {
+                ((ModifiableObjectProperty) property).properties(
+                    children.stream()
+                        .map(child -> (ModifiableValueProperty<?, ?>) child)
+                        .toList());
+            }
+        }
+
+        @Override
+        public BaseValueProperty<?> create(String name, String type) {
+            return switch (type) {
+                case "array" -> ComponentDsl.array(name);
+                case "boolean" -> ComponentDsl.bool(name);
+                case "integer" -> ComponentDsl.integer(name);
+                case "number" -> ComponentDsl.number(name);
+                case "object" -> object(name);
+                case "string" -> ComponentDsl.string(name);
+                default -> throw new ConfigurationException(
+                    "Unsupported JSON schema type: " + type, ComponentErrorType.UNSUPPORTED_PROPERTY_TYPE);
+            };
+        }
+
+        @Override
+        public List<BaseProperty.BaseValueProperty<?>> getChildren(BaseProperty.BaseValueProperty<?> property) {
+            if (property instanceof ModifiableArrayProperty modifiableArrayProperty) {
+                return (List<BaseProperty.BaseValueProperty<?>>) (List<?>) modifiableArrayProperty.getItems()
+                    .map(ArrayList::new)
+                    .orElseGet(ArrayList::new);
+            } else {
+                return (List<BaseProperty.BaseValueProperty<?>>) (List<?>) ((ModifiableObjectProperty) property)
+                    .getProperties()
+                    .map(ArrayList::new)
+                    .orElseGet(ArrayList::new);
+            }
+        }
+    };
+
+    public static final SchemaUtils.OutputFactoryFunction OUTPUT_FACTORY_FUNCTION =
+        (outputSchema, sampleOutput, placeholder) -> new OutputResponse(
+            Property.toProperty((com.bytechef.component.definition.Property) outputSchema), sampleOutput, placeholder);
+
+    public static final PropertyFactory PROPERTY_FACTORY = new PropertyFactory();
 
     @Override
-    public BaseValueProperty<?> create(String name, Class<? extends BaseProperty> baseValueProperty) {
+    public BaseValueProperty<?> create(String name, Object value, Class<? extends BaseProperty> baseValueProperty) {
         if (baseValueProperty == BaseProperty.BaseArrayProperty.class) {
-            return getArrayProperty(name);
+            return getArrayProperty(name, value);
         } else if (baseValueProperty == BaseProperty.BaseBooleanProperty.class) {
-            return ComponentDSL.bool(name);
+            return ComponentDsl.bool(name);
         } else if (baseValueProperty == BaseProperty.BaseDateProperty.class) {
-            return ComponentDSL.date(name);
+            return ComponentDsl.date(name);
         } else if (baseValueProperty == BaseProperty.BaseDateTimeProperty.class) {
-            return ComponentDSL.dateTime(name);
+            return ComponentDsl.dateTime(name);
         } else if (baseValueProperty == BaseProperty.BaseFileEntryProperty.class) {
-            return ComponentDSL.fileEntry(name);
+            return ComponentDsl.fileEntry(name);
         } else if (baseValueProperty == BaseProperty.BaseIntegerProperty.class) {
-            return ComponentDSL.integer(name);
+            return ComponentDsl.integer(name);
         } else if (baseValueProperty == BaseProperty.BaseNullProperty.class) {
-            return ComponentDSL.nullable(name);
+            return ComponentDsl.nullable(name);
         } else if (baseValueProperty == BaseProperty.BaseNumberProperty.class) {
-            return ComponentDSL.number(name);
+            return ComponentDsl.number(name);
         } else if (baseValueProperty == BaseProperty.BaseObjectProperty.class) {
-            return getObjectProperty(name);
+            return getObjectProperty(name, value);
         } else if (baseValueProperty == BaseProperty.BaseStringProperty.class) {
-            return ComponentDSL.string(name);
+            return ComponentDsl.string(name);
         } else if (baseValueProperty == BaseProperty.BaseTimeProperty.class) {
-            return ComponentDSL.time(name);
+            return ComponentDsl.time(name);
         } else {
             return object(name);
         }
     }
 
-    private ModifiableArrayProperty getArrayProperty(String name) {
+    private ModifiableArrayProperty getArrayProperty(String name, Object value) {
         ModifiableArrayProperty arrayProperty;
         Class<?> valueClass = value.getClass();
 
         if (valueClass.isArray()) {
-            arrayProperty = ComponentDSL.array(name);
+            arrayProperty = ComponentDsl.array(name);
         } else {
-            arrayProperty = ComponentDSL.array(name);
+            arrayProperty = ComponentDsl.array(name);
 
             List<?> list = (List<?>) value;
 
             if (!list.isEmpty()) {
                 arrayProperty.items(
                     (ModifiableValueProperty<?, ?>) SchemaUtils.getOutputSchema(
-                        null, list.getFirst(), new PropertyFactory(list.getFirst())));
+                        null, list.getFirst(), PROPERTY_FACTORY));
             }
         }
 
         return arrayProperty;
     }
 
-    private ModifiableObjectProperty getObjectProperty(String name) {
+    private ModifiableObjectProperty getObjectProperty(String name, Object value) {
         ModifiableObjectProperty objectProperty = object(name);
-
         List<ModifiableValueProperty<?, ?>> properties = new ArrayList<>();
-
         Map<?, ?> map;
 
         if (value instanceof Map<?, ?>) {
@@ -101,7 +160,7 @@ public record PropertyFactory(Object value) implements SchemaPropertyFactory {
 
         for (Map.Entry<?, ?> entry : map.entrySet()) {
             properties.add((ModifiableValueProperty<?, ?>) SchemaUtils.getOutputSchema(
-                (String) entry.getKey(), entry.getValue(), new PropertyFactory(entry.getValue())));
+                (String) entry.getKey(), entry.getValue(), PROPERTY_FACTORY));
         }
 
         return objectProperty.properties(properties);

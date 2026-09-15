@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,14 +16,14 @@
 
 package com.bytechef.component.resend;
 
-import static com.bytechef.component.definition.ComponentDSL.component;
-import static com.bytechef.component.resend.constant.ResendConstants.RESEND;
+import static com.bytechef.component.definition.ComponentDsl.component;
 
 import com.bytechef.component.ComponentHandler;
 import com.bytechef.component.definition.ComponentCategory;
 import com.bytechef.component.definition.ComponentDefinition;
 import com.bytechef.component.resend.action.ResendSendEmailAction;
 import com.bytechef.component.resend.connection.ResendConnection;
+import com.bytechef.component.resend.trigger.ResendEmailDeliveredTrigger;
 import com.google.auto.service.AutoService;
 
 /**
@@ -32,13 +32,17 @@ import com.google.auto.service.AutoService;
 @AutoService(ComponentHandler.class)
 public class ResendComponentHandler implements ComponentHandler {
 
-    private static final ComponentDefinition COMPONENT_DEFINITION = component(RESEND)
+    private static final ComponentDefinition COMPONENT_DEFINITION = component("resend")
         .title("Resend")
         .description("Resend is the email API for developers.")
+        .customAction(true)
+        .customActionHelp("Resend API Reference", "https://resend.com/docs/api-reference/introduction")
         .icon("path:assets/resend.svg")
         .categories(ComponentCategory.MARKETING_AUTOMATION)
         .connection(ResendConnection.CONNECTION_DEFINITION)
-        .actions(ResendSendEmailAction.ACTION_DEFINITION);
+        .actions(ResendSendEmailAction.ACTION_DEFINITION)
+        .triggers(ResendEmailDeliveredTrigger.TRIGGER_DEFINITION)
+        .version(1);
 
     @Override
     public ComponentDefinition getDefinition() {

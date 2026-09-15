@@ -1,0 +1,738 @@
+import {canInsertMentionForProperty} from '@/pages/platform/workflow-editor/components/datapills/DataPill';
+import FromAiToggleButton from '@/pages/platform/workflow-editor/components/properties/components/FromAiToggleButton';
+import PropertyMentionsInputBubbleMenu from '@/pages/platform/workflow-editor/components/properties/components/property-mentions-input/PropertyMentionsInputBubbleMenu';
+import {getSuggestionOptions} from '@/pages/platform/workflow-editor/components/properties/components/property-mentions-input/propertyMentionsInputEditorSuggestionOptions';
+import {useWorkflowEditor} from '@/pages/platform/workflow-editor/providers/workflowEditorProvider';
+import useWorkflowNodeDetailsPanelStore from '@/pages/platform/workflow-editor/stores/useWorkflowNodeDetailsPanelStore';
+import {transformValueForObjectAccess} from '@/pages/platform/workflow-editor/utils/encodingUtils';
+import saveProperty from '@/pages/platform/workflow-editor/utils/saveProperty';
+import {
+    ComponentDefinitionBasic,
+    TaskDispatcherDefinitionBasic,
+    Workflow,
+} from '@/shared/middleware/platform/configuration';
+import {DataPillDragPayloadType, DataPillType} from '@/shared/types';
+import {Extension, mergeAttributes} from '@tiptap/core';
+import Document from '@tiptap/extension-document';
+import {Mention} from '@tiptap/extension-mention';
+import {Paragraph} from '@tiptap/extension-paragraph';
+import {Placeholder} from '@tiptap/extension-placeholder';
+import {Text} from '@tiptap/extension-text';
+import {TextSelection} from '@tiptap/pm/state';
+import {EditorView} from '@tiptap/pm/view';
+import {Editor, EditorContent, ReactNodeViewRenderer, useEditor} from '@tiptap/react';
+import {StarterKit} from '@tiptap/starter-kit';
+import {decode} from 'html-entities';
+import {ForwardedRef, MutableRefObject, forwardRef, useCallback, useEffect, useMemo, useRef, useState} from 'react';
+import sanitizeHtml from 'sanitize-html';
+import {twMerge} from 'tailwind-merge';
+import {useDebouncedCallback} from 'use-debounce';
+import {useShallow} from 'zustand/react/shallow';
+
+import {FormulaMode} from './FormulaMode.extension';
+import {FunctionSignature} from './FunctionSignature.extension';
+import {FunctionSuggestion, FunctionSuggestionPluginKey} from './FunctionSuggestion.extension';
+import {MentionStorage} from './MentionStorage.extension';
+import PropertyMentionNodeView from './PropertyMentionNodeView';
+import {buildToolFunctionDefinitions} from './fromAiFunctionDefinition';
+import {getDataPillIconSource} from './getDataPillIconSource';
+import {getMentionsInputPlaceholder} from './mentionsInputPlaceholder';
+import {
+    PROPERTY_MENTION_CHIP_CLASS,
+    PROPERTY_MENTION_LABEL_CLASS,
+    PROPERTY_MENTION_ROOT_CLASS,
+    buildPropertyMentionsContent,
+    replaceMentionNodesInHtmlWithVariables,
+} from './propertyMentionDom';
+import {useEvaluatorFunctionDefinitions} from './useEvaluatorFunctionDefinitions';
+
+interface PropertyMentionsInputEditorProps {
+    autoFocus?: boolean;
+    className?: string;
+    componentDefinitions: ComponentDefinitionBasic[];
+    controlType?: string;
+    dataPills: DataPillType[];
+    disableAutoSave?: boolean;
+    elementId?: string;
+    expressionEnabled?: boolean;
+    handleFromAiClick?: (fromAi: boolean) => void;
+    isFormulaMode?: boolean;
+    isFromAi?: boolean;
+    labelId?: string;
+    path?: string;
+    onChange?: (value: string) => void;
+    onFocus?: (editor: Editor) => void;
+    onValueChange?: (value: string | number) => void;
+    placeholder?: string;
+    setIsFormulaMode?: (isFormulaMode: boolean) => void;
+    taskDispatcherDefinitions: TaskDispatcherDefinitionBasic[];
+    toolProperty?: boolean;
+    type: string;
+    value?: string | number;
+    validateBeforeSave?: (value: string | number) => boolean;
+    workflow: Workflow;
+}
+
+const PropertyMentionsInputEditor = forwardRef<Editor, PropertyMentionsInputEditorProps>(
+    (
+        {
+            autoFocus,
+            className,
+            componentDefinitions,
+            controlType,
+            dataPills,
+            disableAutoSave,
+            elementId,
+            expressionEnabled,
+            handleFromAiClick,
+            isFormulaMode,
+            isFromAi = false,
+            labelId,
+            onChange,
+            onFocus,
+            onValueChange,
+            path,
+            placeholder,
+            setIsFormulaMode,
+            taskDispatcherDefinitions,
+            toolProperty,
+            type,
+            validateBeforeSave,
+            value,
+            workflow,
+        },
+        ref: ForwardedRef<Editor>
+    ) => {
+        const [editorValue, setEditorValue] = useState<string | number | undefined>(
+            typeof value === 'string' && value.startsWith('=') ? value.substring(1) : value
+        );
+        const [isLocalUpdate, setIsLocalUpdate] = useState(false);
+        const [mentionOccurences, setMentionOccurences] = useState(0);
+
+        const lastSavedRef = useRef<string | number | null | undefined>(undefined);
+        const savingRef = useRef<Promise<void> | null>(null);
+        const pendingValueRef = useRef<string | number | null | undefined>(undefined);
+        const editorValueRef = useRef(editorValue);
+        const isFocusedRef = useRef(false);
+        const autoFocusAppliedRef = useRef(false);
+        const isFormulaModeRef = useRef(isFormulaMode);
+        const setIsFormulaModeRef = useRef(setIsFormulaMode);
+        const restoreFocusAfterExitRef = useRef(false);
+
+        editorValueRef.current = editorValue;
+        isFormulaModeRef.current = isFormulaMode;
+        setIsFormulaModeRef.current = setIsFormulaMode;
+
+        const {currentNode} = useWorkflowNodeDetailsPanelStore(
+            useShallow((state) => ({
+                currentNode: state.currentNode,
+            }))
+        );
+
+        const {updateClusterElementParameterMutation, updateWorkflowNodeParameterMutation} = useWorkflowEditor();
+
+        const getComponentIcon = useCallback(
+            (mentionValue: string) =>
+                getDataPillIconSource({
+                    componentDefinitions,
+                    mentionDisplay: mentionValue,
+                    taskDispatcherDefinitions,
+                    workflow,
+                }),
+            [componentDefinitions, taskDispatcherDefinitions, workflow]
+        );
+
+        const evaluatorFunctionDefinitions = useEvaluatorFunctionDefinitions();
+
+        const extensions = useMemo(() => {
+            const extensions = [
+                ...(controlType === 'RICH_TEXT' ? [StarterKit] : [Document, Paragraph, Text]),
+                FormulaMode.configure({
+                    getIsFormulaMode: () => isFormulaModeRef.current ?? false,
+                    initialFormulaMode: isFormulaModeRef.current ?? false,
+                    saveNullValue: () => {
+                        if (
+                            !workflow.id ||
+                            !(updateWorkflowNodeParameterMutation || updateClusterElementParameterMutation) ||
+                            !path
+                        ) {
+                            return;
+                        }
+
+                        const workflowId = workflow.id as string;
+
+                        saveProperty({
+                            includeInMetadata: true,
+                            path,
+                            type,
+                            updateClusterElementParameterMutation,
+                            updateWorkflowNodeParameterMutation,
+                            value: null,
+                            workflowId,
+                        });
+                    },
+                    setIsFormulaMode: (value: boolean) => {
+                        restoreFocusAfterExitRef.current = !value;
+
+                        setIsFormulaModeRef.current?.(value);
+                    },
+                }),
+                MentionStorage,
+                ...(expressionEnabled !== false ? [FunctionSuggestion, FunctionSignature] : []),
+                Mention.extend({
+                    addNodeView() {
+                        return ReactNodeViewRenderer(PropertyMentionNodeView);
+                    },
+                }).configure({
+                    HTMLAttributes: {},
+                    deleteTriggerWithBackspace: true,
+                    renderHTML({node, options}) {
+                        const svg = getComponentIcon(node.attrs.label ?? node.attrs.id);
+
+                        return [
+                            'span',
+                            mergeAttributes(options.HTMLAttributes, {
+                                class: twMerge(
+                                    PROPERTY_MENTION_ROOT_CLASS,
+                                    'not-prose inline-flex max-w-full items-stretch'
+                                ),
+                            }),
+                            [
+                                'span',
+                                {
+                                    class: twMerge(
+                                        PROPERTY_MENTION_CHIP_CLASS,
+                                        'relative inline-flex items-center gap-0.5 rounded-full bg-muted px-2 hover:bg-foreground/15',
+                                        controlType !== 'RICH_TEXT' &&
+                                            controlType !== 'TEXT_AREA' &&
+                                            controlType !== 'FORMULA_MODE' &&
+                                            'text-sm'
+                                    ),
+                                },
+                                [
+                                    'img',
+                                    {
+                                        class: 'size-4 absolute',
+                                        src: svg,
+                                    },
+                                ],
+                                [
+                                    'span',
+                                    {
+                                        class: twMerge(PROPERTY_MENTION_LABEL_CLASS, 'ml-5'),
+                                    },
+                                    `${node.attrs.label ?? node.attrs.id}`,
+                                ],
+                            ],
+                        ];
+                    },
+                    renderText({node}) {
+                        return `\${${node.attrs.label ?? node.attrs.id}}`;
+                    },
+                    ...(expressionEnabled !== false ? {suggestion: getSuggestionOptions()} : {}),
+                }),
+                Placeholder.configure({
+                    // Resolved per decoration rather than baked in, so toggling formula mode swaps the
+                    // hint. Recreating `extensions` instead would rebuild the editor and drop the
+                    // document, and this memo deliberately does not depend on isFormulaMode.
+                    placeholder: () =>
+                        getMentionsInputPlaceholder({
+                            expressionEnabled,
+                            formulaMode: isFormulaModeRef.current ?? false,
+                            placeholder,
+                            toolProperty,
+                        }),
+                }),
+            ];
+
+            if (controlType !== 'TEXT_AREA' && controlType !== 'RICH_TEXT' && controlType !== 'FORMULA_MODE') {
+                extensions.push(
+                    Extension.create({
+                        addKeyboardShortcuts() {
+                            return {
+                                // Single-line inputs swallow Enter to prevent newlines. But when the
+                                // function suggestion popup is open, defer to its keydown handler so Enter
+                                // accepts the highlighted function instead of being eaten here. Tiptap
+                                // reverses extensions when building plugins, so this keymap sits ahead of
+                                // the Suggestion plugin and would otherwise consume Enter first.
+                                Enter: ({editor}) => {
+                                    const functionSuggestionActive = FunctionSuggestionPluginKey.getState(
+                                        editor.state
+                                    )?.active;
+
+                                    if (functionSuggestionActive) {
+                                        return false;
+                                    }
+
+                                    return true;
+                                },
+                            };
+                        },
+                    })
+                );
+            }
+
+            return extensions;
+        }, [
+            controlType,
+            expressionEnabled,
+            getComponentIcon,
+            path,
+            placeholder,
+            toolProperty,
+            type,
+            updateClusterElementParameterMutation,
+            updateWorkflowNodeParameterMutation,
+            workflow.id,
+        ]);
+
+        const saveMentionInputValue = useDebouncedCallback((editorValue: string | number) => {
+            if (disableAutoSave) {
+                return;
+            }
+
+            if (
+                !workflow.id ||
+                !(updateWorkflowNodeParameterMutation || updateClusterElementParameterMutation) ||
+                !path
+            ) {
+                return;
+            }
+
+            const valueForValidation =
+                isFormulaMode && typeof editorValue === 'string' && !editorValue.startsWith('=')
+                    ? `=${editorValue}`
+                    : editorValue;
+
+            if (validateBeforeSave && editorValue !== '' && !validateBeforeSave(valueForValidation)) {
+                return;
+            }
+
+            const workflowId = workflow.id as string;
+
+            let transformedValue: string | number | null = editorValue;
+
+            if (
+                !isFormulaMode &&
+                (type === 'INTEGER' || type === 'NUMBER') &&
+                typeof transformedValue === 'string' &&
+                !transformedValue.includes('${')
+            ) {
+                transformedValue = parseInt(transformedValue);
+            }
+
+            if (typeof transformedValue === 'string') {
+                if (controlType !== 'RICH_TEXT') {
+                    transformedValue = decode(sanitizeHtml(transformedValue, {allowedTags: []}));
+                }
+
+                transformedValue = transformValueForObjectAccess(transformedValue);
+
+                // An empty formula field is NOT the expression `=`. Prefixing it anyway persisted a bare
+                // `=`, which reads downstream as a condition that is present but never true - a graph
+                // transition carrying one was skipped by the conditional pass for evaluating falsy and
+                // by the unconditional pass for having a condition at all, and its node quietly
+                // stranded. Nothing typed means nothing saved.
+                if (isFormulaMode && transformedValue !== '' && !transformedValue.startsWith('=')) {
+                    transformedValue = `=${transformedValue}`;
+                }
+            }
+
+            if (isFromAi) {
+                return;
+            }
+
+            const normalizedValue: string | number | null = transformedValue ? transformedValue : null;
+
+            if (normalizedValue === lastSavedRef.current || normalizedValue === pendingValueRef.current) {
+                return;
+            }
+
+            pendingValueRef.current = normalizedValue;
+
+            if (!savingRef.current) {
+                const runSaveProperty = () => {
+                    const valueToSave = pendingValueRef.current;
+
+                    pendingValueRef.current = undefined;
+
+                    if (valueToSave === undefined) {
+                        savingRef.current = null;
+
+                        return;
+                    }
+
+                    savingRef.current = Promise.resolve(
+                        saveProperty({
+                            includeInMetadata: true,
+                            path,
+                            type,
+                            updateClusterElementParameterMutation,
+                            updateWorkflowNodeParameterMutation,
+                            value: valueToSave,
+                            workflowId,
+                        })
+                    )
+                        .then(() => {
+                            lastSavedRef.current = valueToSave;
+                        })
+                        .catch(() => {})
+                        .finally(() => {
+                            savingRef.current = null;
+
+                            if (pendingValueRef.current !== undefined) {
+                                runSaveProperty();
+                            }
+                        });
+                };
+
+                runSaveProperty();
+            }
+        }, 600);
+
+        const onUpdate = useCallback(
+            ({editor}: {editor: Editor}) => {
+                setIsLocalUpdate(true);
+
+                let value = editor.getHTML();
+
+                value = value.replace(/\r\n/g, '\n');
+
+                const paragraphMatchRegex = /<p>(.*?)<\/p>/g;
+
+                const matchedParagraphs = value.match(paragraphMatchRegex);
+
+                if (matchedParagraphs) {
+                    value = matchedParagraphs.map((match) => match.replace(/<\/?p>/g, '')).join('\n');
+                }
+
+                value = replaceMentionNodesInHtmlWithVariables(value);
+
+                const valueChanged = value !== editorValue;
+
+                if (valueChanged) {
+                    setEditorValue(value);
+                    saveMentionInputValue(value);
+                }
+
+                if (onChange) {
+                    onChange(value);
+                }
+
+                if (onValueChange) {
+                    onValueChange(value);
+                }
+
+                const propertyMentions = value.match(/property-mention/g);
+
+                setMentionOccurences(propertyMentions?.length || 0);
+            },
+            [editorValue, onChange, onValueChange, saveMentionInputValue]
+        );
+
+        const getContent = useCallback(
+            (value?: string) => buildPropertyMentionsContent(value, controlType),
+            [controlType]
+        );
+
+        const moveCursorToEnd = useCallback((view: EditorView, pos: number) => {
+            const valueSize = view.state.doc.content.size;
+
+            if (valueSize > 0 && pos === 0) {
+                view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, valueSize)));
+            }
+        }, []);
+
+        const editorRef = useRef<Editor | null>(null);
+
+        const handleDrop = useCallback(
+            (view: EditorView, event: DragEvent, _slice: unknown, moved: boolean): boolean => {
+                if (moved) {
+                    return false;
+                }
+
+                if (isFromAi) {
+                    return false;
+                }
+
+                const rawPayload = event.dataTransfer?.getData('application/bytechef-datapill');
+
+                if (!rawPayload) {
+                    return false;
+                }
+
+                event.preventDefault();
+
+                let payload: DataPillDragPayloadType;
+
+                try {
+                    payload = JSON.parse(rawPayload);
+                } catch {
+                    return false;
+                }
+
+                if (!payload?.mentionId) {
+                    return false;
+                }
+
+                const attributes = view.props.attributes as Record<string, string>;
+                const parameters = currentNode?.parameters || {};
+
+                if (!canInsertMentionForProperty(attributes.type, parameters, attributes.path)) {
+                    return true;
+                }
+
+                const coordinates = view.posAtCoords({
+                    left: event.clientX,
+                    top: event.clientY,
+                });
+
+                const insertPosition = coordinates?.pos ?? view.state.doc.content.size;
+
+                editorRef.current
+                    ?.chain()
+                    .insertContentAt(insertPosition, {
+                        attrs: {id: payload.mentionId},
+                        type: 'mention',
+                    })
+                    .focus()
+                    .run();
+
+                return true;
+            },
+            [currentNode?.parameters, isFromAi]
+        );
+
+        const editor = useEditor({
+            coreExtensionOptions: {
+                clipboardTextSerializer: {
+                    blockSeparator: '\n',
+                },
+            },
+            editorProps: {
+                attributes: {
+                    ...(labelId ? {'aria-labelledby': labelId} : {}),
+                    'aria-multiline': 'true',
+                    class: twMerge(
+                        'w-full max-w-full min-w-0 border-none text-sm wrap-break-word break-all whitespace-pre-wrap ring-0 outline-hidden',
+                        controlType === 'RICH_TEXT' && 'prose prose-sm',
+                        isFormulaMode && 'font-mono text-[13px]/5',
+                        className
+                    ),
+                    id: elementId ?? '',
+                    path: path ?? '',
+                    role: 'textbox',
+                    type: type ?? '',
+                },
+                handleClick: (view, pos) => moveCursorToEnd(view, pos),
+                handleDrop,
+                handleKeyPress: (editor: EditorView, event: KeyboardEvent) => {
+                    const isEditorEmpty = editor.state.doc.textContent.length === 0;
+
+                    if ((event.key === '=' && isEditorEmpty) || isFormulaMode) {
+                        return;
+                    }
+
+                    if (type !== 'STRING' && (mentionOccurences || event.key !== '$')) {
+                        event.preventDefault();
+                    }
+                },
+            },
+            extensions,
+            immediatelyRender: false,
+            onBlur: () => {
+                isFocusedRef.current = false;
+            },
+            onFocus: () => {
+                isFocusedRef.current = true;
+
+                if (onFocus && editor) {
+                    onFocus(editor);
+                }
+            },
+            onUpdate,
+        });
+
+        const memoizedContent = useMemo(() => {
+            if (editorValue === undefined || typeof editorValue !== 'string') {
+                return '';
+            }
+
+            return getContent(editorValue);
+        }, [editorValue, getContent]);
+
+        // Sync value prop into editor state when it changes externally (e.g. from Sheet save).
+        // Skip sync while the editor is focused to prevent server responses from overwriting
+        // characters the user is actively typing (the debounced save fires mid-typing, and the
+        // server response carries the older value that was saved, not what the user has typed since).
+        useEffect(() => {
+            if (value === undefined || value === editorValueRef.current || isFocusedRef.current) {
+                return;
+            }
+
+            const strippedValue = typeof value === 'string' && value.startsWith('=') ? value.substring(1) : value;
+
+            setIsLocalUpdate(false);
+            setEditorValue(strippedValue);
+        }, [value]);
+
+        // Sync ref when editor changes - handle both callback and object refs
+        useEffect(() => {
+            editorRef.current = editor;
+        }, [editor]);
+
+        useEffect(() => {
+            if (!editor || !restoreFocusAfterExitRef.current) {
+                return;
+            }
+
+            restoreFocusAfterExitRef.current = false;
+
+            const timeoutId = setTimeout(() => {
+                editor.view.dom.focus({preventScroll: true});
+
+                editor.commands.focus('end');
+            }, 50);
+
+            return () => clearTimeout(timeoutId);
+        }, [editor, isFormulaMode]);
+
+        useEffect(() => {
+            if (!editor || !autoFocus || autoFocusAppliedRef.current) {
+                return;
+            }
+
+            autoFocusAppliedRef.current = true;
+
+            const timeoutId = setTimeout(() => {
+                editor.view.dom.focus({preventScroll: true});
+
+                editor.commands.focus('end');
+            }, 50);
+
+            return () => clearTimeout(timeoutId);
+        }, [autoFocus, editor]);
+
+        useEffect(() => {
+            if (!ref) {
+                return;
+            }
+
+            if (typeof ref === 'function') {
+                ref(editor);
+            } else if (ref && 'current' in ref) {
+                (ref as MutableRefObject<Editor | null>).current = editor;
+            }
+
+            return () => {
+                if (typeof ref === 'function') {
+                    ref(null);
+                } else if (ref && 'current' in ref) {
+                    (ref as MutableRefObject<Editor | null>).current = null;
+                }
+            };
+        }, [editor, ref]);
+
+        // MentionStorage: suggestion list + NodeView controlType (icon sizing); dataPills also drive NodeView via store
+        useEffect(() => {
+            if (!editor) {
+                return;
+            }
+
+            editor.storage.MentionStorage.dataPills = dataPills;
+            editor.storage.MentionStorage.controlType = controlType;
+        }, [controlType, dataPills, editor]);
+
+        // Keep the function suggestion catalog in editor storage so the suggestion items callback can read it
+        // without recreating the editor.
+        useEffect(() => {
+            if (editor?.storage.FunctionSuggestion === undefined) {
+                return;
+            }
+
+            editor.storage.FunctionSuggestion.functionDefinitions = buildToolFunctionDefinitions(
+                evaluatorFunctionDefinitions,
+                toolProperty ?? false
+            );
+        }, [editor, evaluatorFunctionDefinitions, toolProperty]);
+
+        // Applies what the sync effect above decided, and inherits its rule: never replace the
+        // document the user is working in.
+        //
+        // `setContent` rebuilds the doc from scratch, so it drops the match the `$` and `=` suggestion
+        // plugins track, taking the popup down mid-keystroke, and it repaints the field from
+        // `editorValue`, which is empty whenever this reruns against a value the panel has not caught
+        // up with yet. `isLocalUpdate` alone did not cover it: it says the last change came from here,
+        // not that the user is still in the field.
+        useEffect(() => {
+            if (!editor || isLocalUpdate || memoizedContent === undefined) {
+                return;
+            }
+
+            if (editor.isFocused || isFocusedRef.current || editor.storage.MentionStorage?.suggestionOpen) {
+                return;
+            }
+
+            editor.commands.setContent(memoizedContent, {
+                emitUpdate: false,
+                parseOptions: {preserveWhitespace: 'full'},
+            });
+        }, [editor, memoizedContent, isLocalUpdate]);
+
+        // Sync formula mode state with editor storage
+        useEffect(() => {
+            if (!editor) {
+                return;
+            }
+
+            if (isFormulaMode !== undefined) {
+                editor.commands.toggleFormulaMode(isFormulaMode);
+
+                editor.storage.FormulaMode.isFormulaMode = isFormulaMode;
+            }
+        }, [editor, isFormulaMode]);
+
+        // Set editable based on isFromAi
+        useEffect(() => {
+            if (path && !currentNode?.metadata?.ui?.fromAi?.includes(path)) {
+                return;
+            }
+
+            if (editor && isFromAi !== undefined) {
+                editor.setEditable(!isFromAi);
+            }
+        }, [currentNode?.metadata?.ui?.fromAi, editor, isFromAi, path]);
+
+        // Cleanup function to save mention input value on unmount
+        useEffect(() => {
+            return () => saveMentionInputValue.flush();
+        }, [saveMentionInputValue]);
+
+        return (
+            <>
+                {isFromAi ? (
+                    <div className="flex w-full items-center px-2 py-2 text-sm font-medium text-muted-foreground italic">
+                        Automatically defined by the model
+                    </div>
+                ) : (
+                    <EditorContent
+                        className="shadow-none"
+                        editor={editor}
+                        onChange={(event) => setEditorValue((event.target as HTMLInputElement).value)}
+                        value={editorValue}
+                    />
+                )}
+
+                {handleFromAiClick && expressionEnabled !== false && toolProperty && (
+                    <FromAiToggleButton isFromAi={isFromAi} onToggle={handleFromAiClick} />
+                )}
+
+                {controlType === 'RICH_TEXT' && editor && <PropertyMentionsInputBubbleMenu editor={editor} />}
+            </>
+        );
+    }
+);
+
+PropertyMentionsInputEditor.displayName = 'PropertyMentionsInputEditor';
+
+export default PropertyMentionsInputEditor;

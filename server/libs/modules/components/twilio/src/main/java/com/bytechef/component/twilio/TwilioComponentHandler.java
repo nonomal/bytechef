@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,31 +16,46 @@
 
 package com.bytechef.component.twilio;
 
-import static com.bytechef.component.definition.ComponentDSL.component;
-import static com.bytechef.component.twilio.constant.TwilioConstants.TWILIO;
+import static com.bytechef.component.definition.ComponentDsl.component;
+import static com.bytechef.component.definition.ComponentDsl.tool;
 
 import com.bytechef.component.ComponentHandler;
 import com.bytechef.component.definition.ComponentCategory;
 import com.bytechef.component.definition.ComponentDefinition;
+import com.bytechef.component.twilio.action.TwilioMakeCallAction;
 import com.bytechef.component.twilio.action.TwilioSendSMSAction;
+import com.bytechef.component.twilio.action.TwilioSendWhatsAppMessageAction;
 import com.bytechef.component.twilio.connection.TwilioConnection;
+import com.bytechef.component.twilio.trigger.TwilioInboundCallTrigger;
+import com.bytechef.component.twilio.trigger.TwilioNewWhatsappMessageTrigger;
 import com.google.auto.service.AutoService;
 
 /**
- * @author Monika Domiter
+ * @author Monika Kušter
  */
 @AutoService(ComponentHandler.class)
 public class TwilioComponentHandler implements ComponentHandler {
 
-    private static final ComponentDefinition COMPONENT_DEFINITION = component(TWILIO)
+    private static final ComponentDefinition COMPONENT_DEFINITION = component("twilio")
         .title("Twilio")
         .description(
-            "Twilio is a cloud communications platform that enables developers to integrate messaging, voice, and" +
-                " video capabilities into their applications.")
+            "Twilio is a cloud communications platform that enables developers to integrate messaging, voice, and " +
+                "video capabilities into their applications.")
+        .customAction(true)
         .icon("path:assets/twilio.svg")
         .categories(ComponentCategory.COMMUNICATION)
         .connection(TwilioConnection.CONNECTION_DEFINITION)
-        .actions(TwilioSendSMSAction.ACTION_DEFINITION);
+        .actions(
+            TwilioMakeCallAction.ACTION_DEFINITION,
+            TwilioSendSMSAction.ACTION_DEFINITION,
+            TwilioSendWhatsAppMessageAction.ACTION_DEFINITION)
+        .clusterElements(
+            tool(TwilioMakeCallAction.ACTION_DEFINITION),
+            tool(TwilioSendSMSAction.ACTION_DEFINITION),
+            tool(TwilioSendWhatsAppMessageAction.ACTION_DEFINITION))
+        .triggers(
+            TwilioInboundCallTrigger.TRIGGER_DEFINITION,
+            TwilioNewWhatsappMessageTrigger.TRIGGER_DEFINITION);
 
     @Override
     public ComponentDefinition getDefinition() {

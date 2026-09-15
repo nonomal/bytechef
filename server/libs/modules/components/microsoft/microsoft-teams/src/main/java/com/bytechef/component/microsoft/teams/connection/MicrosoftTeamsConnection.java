@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,47 +16,74 @@
 
 package com.bytechef.component.microsoft.teams.connection;
 
-import static com.bytechef.component.definition.Authorization.AuthorizationType;
-import static com.bytechef.component.definition.Authorization.CLIENT_ID;
-import static com.bytechef.component.definition.Authorization.CLIENT_SECRET;
-import static com.bytechef.component.definition.ComponentDSL.ModifiableConnectionDefinition;
-import static com.bytechef.component.definition.ComponentDSL.authorization;
-import static com.bytechef.component.definition.ComponentDSL.connection;
-import static com.bytechef.component.definition.ComponentDSL.string;
-import static com.bytechef.component.microsoft.teams.constant.MicrosoftTeamsConstants.TENANT_ID;
+import static com.bytechef.component.definition.ComponentDsl.ModifiableConnectionDefinition;
 
-import java.util.List;
+import com.bytechef.microsoft.commons.MicrosoftConnection;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 /**
- * @author Monika Domiter
+ * @author Monika Kušter
  */
 public class MicrosoftTeamsConnection {
 
-    public static final ModifiableConnectionDefinition CONNECTION_DEFINITION = connection()
-        .authorizations(
-            authorization(AuthorizationType.OAUTH2_AUTHORIZATION_CODE)
-                .title("OAuth2 Authorization Code")
-                .properties(
-                    string(CLIENT_ID)
-                        .label("Client Id")
-                        .required(true),
-                    string(CLIENT_SECRET)
-                        .label("Client Secret")
-                        .required(true),
-                    string(TENANT_ID)
-                        .label("Tenant Id")
-                        .defaultValue("common")
-                        .required(true))
-                .authorizationUrl(
-                    (parameters, context) -> "https://login.microsoftonline.com/"
-                        + parameters.getRequiredString(TENANT_ID) +
-                        "/oauth2/v2.0/authorize")
-                .tokenUrl(
-                    (parameters, context) -> "https://login.microsoftonline.com/"
-                        + parameters.getRequiredString(TENANT_ID) +
-                        "/oauth2/v2.0/token")
-                .scopes((connection, context) -> List.of("Channel.Create", "Channel.ReadBasic.All",
-                    "ChannelMessage.Send", "Chat.ReadWrite", "Team.ReadBasic.All")));
+    public static final ModifiableConnectionDefinition CONNECTION_DEFINITION = MicrosoftConnection.createConnection(
+        1,
+        "https://docs.bytechef.io/reference/components/microsoft-teams_v1#connection-setup",
+        (connection, context) -> {
+            Map<String, Boolean> map = new LinkedHashMap<>();
+
+            map.put("AgentIdUser.ReadWrite.All", false);
+            map.put("AgentIdUser.ReadWrite.IdentityParentedBy", false);
+            map.put("Channel.Create", true);
+            map.put("Channel.Delete.All", false);
+            map.put("Channel.ReadBasic.All", true);
+            map.put("ChannelMessage.Send", true);
+            map.put("ChannelMessage.Read.All", true);
+            map.put("ChannelSettings.Read.All", false);
+            map.put("ChannelSettings.Read.Group", false);
+            map.put("ChannelSettings.ReadWrite.All", false);
+            map.put("ChannelSettings.ReadWrite.Group", false);
+            map.put("Chat.ReadWrite", true);
+            map.put("Directory.Read.All", false);
+            map.put("Directory.ReadWrite.All", false);
+            map.put("Files.Read", true);
+            map.put("Files.Read.All", true);
+            map.put("Group.Read.All", false);
+            map.put("Group.ReadWrite.All", false);
+            map.put("Team.Create", false);
+            map.put("Team.ReadBasic.All", true);
+            map.put("TeamMember.Read.All", false);
+            map.put("TeamMember.Read.Group", false);
+            map.put("TeamMember.ReadWrite.All", false);
+            map.put("TeamMember.ReadWriteNonOwnerRole.All", false);
+            map.put("TeamSettings.Read.All", false);
+            map.put("TeamSettings.Read.Group", false);
+            map.put("TeamSettings.ReadWrite.All", false);
+            map.put("TeamSettings.ReadWrite.Group", false);
+            map.put("Teamwork.Migrate.All", false);
+            map.put("TeamsApp.Read.Group", false);
+            map.put("TeamsAppInstallation.ManageSelectedForTeam", false);
+            map.put("TeamsAppInstallation.ManageSelectedForTeam.All", false);
+            map.put("TeamsAppInstallation.Read.All", false);
+            map.put("TeamsAppInstallation.Read.Group", false);
+            map.put("TeamsAppInstallation.ReadForTeam", false);
+            map.put("TeamsAppInstallation.ReadForTeam.All", false);
+            map.put("TeamsAppInstallation.ReadForUser", false);
+            map.put("TeamsAppInstallation.ReadWriteAndConsentForTeam", false);
+            map.put("TeamsAppInstallation.ReadWriteAndConsentForTeam.All", false);
+            map.put("TeamsAppInstallation.ReadWriteAndConsentSelfForTeam", false);
+            map.put("TeamsAppInstallation.ReadWriteAndConsentSelfForTeam.All", false);
+            map.put("TeamsAppInstallation.ReadWriteForTeam", false);
+            map.put("TeamsAppInstallation.ReadWriteForTeam.All", false);
+            map.put("TeamsAppInstallation.ReadWriteSelfForTeam", false);
+            map.put("TeamsAppInstallation.ReadWriteSelfForTeam.All", false);
+            map.put("User.Read.All", false);
+            map.put("User.ReadWrite.All", false);
+            map.put("offline_access", true);
+
+            return map;
+        });
 
     private MicrosoftTeamsConnection() {
     }

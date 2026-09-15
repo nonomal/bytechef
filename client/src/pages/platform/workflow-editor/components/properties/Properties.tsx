@@ -1,0 +1,131 @@
+import Button from '@/components/Button/Button';
+import {Collapsible, CollapsibleContent, CollapsibleTrigger} from '@/components/ui/collapsible';
+import {FormDisplayConditionsProvider} from '@/pages/platform/workflow-editor/components/properties/FormDisplayConditionsContext';
+import Property from '@/pages/platform/workflow-editor/components/properties/Property';
+import {GetClusterElementParameterDisplayConditions200Response} from '@/shared/middleware/platform/configuration';
+import {PropertyAllType} from '@/shared/types';
+import {UseQueryResult} from '@tanstack/react-query';
+import {ChevronDownIcon} from 'lucide-react';
+import {Control, FieldValues, FormState} from 'react-hook-form';
+import {twMerge} from 'tailwind-merge';
+
+import useWorkflowNodeDetailsPanelStore from '../../stores/useWorkflowNodeDetailsPanelStore';
+
+interface PropertiesProps<T extends FieldValues = FieldValues> {
+    control?: Control<T>;
+    controlPath?: string;
+    displayConditionsQuery?: UseQueryResult<GetClusterElementParameterDisplayConditions200Response, Error>;
+    /**
+     * Evaluated display conditions for FORM mode, where there is no workflow node to read them off. Undefined
+     * while unevaluated or unsupported, which keeps every conditional property visible — see Property.tsx.
+     */
+    formDisplayConditions?: Record<string, boolean>;
+    customClassName?: string;
+    hideFromAi?: boolean;
+    operationName?: string;
+    formState?: FormState<FieldValues>;
+    path?: string;
+    properties: Array<PropertyAllType>;
+    toolsMode?: boolean;
+}
+
+const Properties = <T extends FieldValues = FieldValues>({
+    control,
+    controlPath,
+    customClassName,
+    displayConditionsQuery,
+    formDisplayConditions,
+    formState,
+    hideFromAi,
+    operationName,
+    path,
+    properties,
+    toolsMode,
+}: PropertiesProps<T>) => {
+    const currentNode = useWorkflowNodeDetailsPanelStore((state) => state.currentNode);
+
+    const advancedProperties = properties.filter((property) => {
+        const {advancedOption, hidden, name} = property;
+
+        if (!name || !advancedOption) {
+            return false;
+        }
+
+        if (!control && hidden) {
+            return false;
+        }
+
+        return true;
+    });
+
+    const simpleProperties = properties.filter((property) => {
+        const {advancedOption, hidden, name} = property;
+
+        if (!name || advancedOption) {
+            return false;
+        }
+
+        if (!control && hidden) {
+            return false;
+        }
+
+        return true;
+    });
+
+    return (
+        <FormDisplayConditionsProvider value={formDisplayConditions}>
+            <ul
+                className={twMerge('space-y-4', customClassName)}
+                key={`${currentNode?.workflowNodeName}_${currentNode?.operationName}_properties`}
+            >
+                {simpleProperties.map((property, index) => (
+                    <Property
+                        control={control as Control<FieldValues>}
+                        controlPath={controlPath}
+                        displayConditionsQuery={displayConditionsQuery}
+                        formState={formState}
+                        hideFromAi={hideFromAi}
+                        key={`${currentNode?.workflowNodeName}_${currentNode?.operationName}_${property.name}_${index}`}
+                        operationName={operationName}
+                        path={path}
+                        property={property}
+                        toolsMode={toolsMode}
+                    />
+                ))}
+            </ul>
+
+            {!!advancedProperties.length && (
+                <Collapsible className={twMerge('group mt-2 flex w-full flex-col justify-center', customClassName)}>
+                    <CollapsibleTrigger asChild>
+                        <Button variant="outline">
+                            <span>Show Advanced Properties</span>
+
+                            <ChevronDownIcon className="size-4 transition-all group-data-[state=open]:rotate-180" />
+                        </Button>
+                    </CollapsibleTrigger>
+
+                    <CollapsibleContent>
+                        <ul className="space-y-4 pt-4" key={`${currentNode?.operationName}_advancedProperties`}>
+                            {advancedProperties.map((property, index) => (
+                                <Property
+                                    control={control as Control<FieldValues>}
+                                    controlPath={controlPath}
+                                    displayConditionsQuery={displayConditionsQuery}
+                                    formState={formState}
+                                    hideFromAi={hideFromAi}
+                                    key={`${property.name}_${currentNode?.operationName}_${index}`}
+                                    operationName={operationName}
+                                    path={path}
+                                    property={property}
+                                    toolsMode={toolsMode}
+                                />
+                            ))}
+                        </ul>
+                    </CollapsibleContent>
+                </Collapsible>
+            )}
+        </FormDisplayConditionsProvider>
+    );
+};
+
+export default Properties;

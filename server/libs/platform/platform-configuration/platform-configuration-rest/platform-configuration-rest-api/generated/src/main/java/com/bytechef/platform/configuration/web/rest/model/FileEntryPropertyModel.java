@@ -15,7 +15,10 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.annotation.JsonValue;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import org.springframework.lang.Nullable;
 import org.openapitools.jackson.nullable.JsonNullable;
 import java.time.OffsetDateTime;
 import jakarta.validation.Valid;
@@ -32,7 +35,7 @@ import jakarta.annotation.Generated;
 
 @Schema(name = "FileEntryProperty", description = "An file entry property type.")
 
-@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2024-06-30T07:20:54.243996+02:00[Europe/Zagreb]", comments = "Generator version: 7.5.0")
+@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2026-07-03T17:58:15.504637+02:00[Europe/Zagreb]", comments = "Generator version: 7.22.0")
 public class FileEntryPropertyModel extends ValuePropertyModel {
 
   @Valid
@@ -65,7 +68,7 @@ public class FileEntryPropertyModel extends ValuePropertyModel {
   /**
    * The list of valid file entry property types.
    * @return properties
-  */
+   */
   @Valid 
   @Schema(name = "properties", description = "The list of valid file entry property types.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("properties")
@@ -73,6 +76,7 @@ public class FileEntryPropertyModel extends ValuePropertyModel {
     return properties;
   }
 
+  @JsonProperty("properties")
   public void setProperties(List<@Valid PropertyModel> properties) {
     this.properties = properties;
   }
@@ -115,6 +119,16 @@ public class FileEntryPropertyModel extends ValuePropertyModel {
 
   public FileEntryPropertyModel hidden(Boolean hidden) {
     super.hidden(hidden);
+    return this;
+  }
+
+  public FileEntryPropertyModel metadata(Map<String, Object> metadata) {
+    super.metadata(metadata);
+    return this;
+  }
+
+  public FileEntryPropertyModel putMetadataItem(String key, Object metadataItem) {
+    super.putMetadataItem(key, metadataItem);
     return this;
   }
 
@@ -164,11 +178,8 @@ public class FileEntryPropertyModel extends ValuePropertyModel {
    * Convert the given object to string with each line indented by 4 spaces
    * (except the first line).
    */
-  private String toIndentedString(Object o) {
-    if (o == null) {
-      return "null";
-    }
-    return o.toString().replace("\n", "\n    ");
+  private String toIndentedString(@Nullable Object o) {
+    return o == null ? "null" : o.toString().replace("\n", "\n    ");
   }
 }
 

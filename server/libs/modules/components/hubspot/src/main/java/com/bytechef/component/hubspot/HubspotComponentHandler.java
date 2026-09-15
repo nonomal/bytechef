@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,22 +16,24 @@
 
 package com.bytechef.component.hubspot;
 
+import static com.bytechef.component.definition.ComponentDsl.string;
+import static com.bytechef.component.hubspot.constant.HubspotConstants.HAPIKEY;
+
 import com.bytechef.component.OpenApiComponentHandler;
-import com.bytechef.component.definition.ActionDefinition;
+import com.bytechef.component.definition.Authorization;
 import com.bytechef.component.definition.ComponentCategory;
-import com.bytechef.component.definition.ComponentDSL.ModifiableComponentDefinition;
-import com.bytechef.component.definition.ComponentDSL.ModifiableObjectProperty;
-import com.bytechef.component.definition.ComponentDSL.ModifiableProperty;
-import com.bytechef.component.definition.ComponentDSL.ModifiableStringProperty;
-import com.bytechef.component.definition.ComponentDSL.ModifiableTriggerDefinition;
-import com.bytechef.component.definition.OptionsDataSource.ActionOptionsFunction;
-import com.bytechef.component.definition.Property.ValueProperty;
-import com.bytechef.component.hubspot.trigger.HubspotSubscribeTrigger;
-import com.bytechef.component.hubspot.util.HubspotUtils;
-import com.bytechef.definition.BaseProperty;
+import com.bytechef.component.definition.ComponentDsl.ModifiableAuthorization;
+import com.bytechef.component.definition.ComponentDsl.ModifiableComponentDefinition;
+import com.bytechef.component.definition.ComponentDsl.ModifiableConnectionDefinition;
+import com.bytechef.component.definition.ComponentDsl.ModifiableTriggerDefinition;
+import com.bytechef.component.definition.Property;
+import com.bytechef.component.hubspot.trigger.HubspotNewContactTrigger;
+import com.bytechef.component.hubspot.trigger.HubspotNewDealTrigger;
+import com.bytechef.component.hubspot.trigger.HubspotNewTicketTrigger;
+import com.bytechef.component.hubspot.unified.HubspotUnifiedApi;
 import com.google.auto.service.AutoService;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 
 /**
@@ -43,7 +45,9 @@ public class HubspotComponentHandler extends AbstractHubspotComponentHandler {
 
     @Override
     public List<ModifiableTriggerDefinition> getTriggers() {
-        return List.of(HubspotSubscribeTrigger.TRIGGER_DEFINITION);
+        return List.of(
+            HubspotNewContactTrigger.TRIGGER_DEFINITION, HubspotNewDealTrigger.TRIGGER_DEFINITION,
+            HubspotNewTicketTrigger.TRIGGER_DEFINITION);
     }
 
     @Override
@@ -51,43 +55,33 @@ public class HubspotComponentHandler extends AbstractHubspotComponentHandler {
         return modifiableComponentDefinition
             .customAction(true)
             .icon("path:assets/hubspot.svg")
-            .categories(ComponentCategory.MARKETING_AUTOMATION);
+            .categories(ComponentCategory.MARKETING_AUTOMATION)
+            .unifiedApi(HubspotUnifiedApi.UNIFIED_API_DEFINITION);
     }
 
     @Override
-    public ModifiableProperty<?> modifyProperty(
-        ActionDefinition actionDefinition, ModifiableProperty<?> modifiableProperty) {
+    public ModifiableConnectionDefinition modifyConnection(
+        ModifiableConnectionDefinition modifiableConnectionDefinition) {
 
-        if (Objects.equals(modifiableProperty.getName(), "contactId")) {
-            ((ModifiableStringProperty) modifiableProperty)
-                .options((ActionOptionsFunction<String>) HubspotUtils::getContactsOptions);
-        } else if (Objects.equals(modifiableProperty.getName(), "__item")) {
-            Optional<List<? extends ValueProperty<?>>> propertiesOptional =
-                ((ModifiableObjectProperty) modifiableProperty).getProperties();
+        Optional<List<? extends Authorization>> optionalAuthorizations =
+            modifiableConnectionDefinition.getAuthorizations();
 
-            for (BaseProperty baseProperty : propertiesOptional.get()) {
+        if (optionalAuthorizations.isPresent()) {
+            List<? extends Authorization> authorizations = optionalAuthorizations.get();
+            ModifiableAuthorization modifiableAuthorization = (ModifiableAuthorization) authorizations.getFirst();
 
-                if (Objects.equals(baseProperty.getName(), "properties")) {
-                    Optional<List<? extends ValueProperty<?>>> propertiesOptional1 =
-                        ((ModifiableObjectProperty) baseProperty).getProperties();
+            Optional<List<? extends Property>> optionalProperties = modifiableAuthorization.getProperties();
+            List<Property> properties = new ArrayList<>(optionalProperties.orElse(List.of()));
 
-                    for (BaseProperty baseProperty1 : propertiesOptional1.get()) {
-                        if (Objects.equals(baseProperty1.getName(), "pipeline")) {
-                            ((ModifiableStringProperty) baseProperty1)
-                                .options((ActionOptionsFunction<String>) HubspotUtils::getPipelineDealOptions);
-                        } else if (Objects.equals(baseProperty1.getName(), "dealstage")) {
-                            ((ModifiableStringProperty) baseProperty1)
-                                .options((ActionOptionsFunction<String>) HubspotUtils::getDealStageOptions)
-                                .optionsLookupDependsOn("pipeline");
-                        } else if (Objects.equals(baseProperty1.getName(), "hubspot_owner_id")) {
-                            ((ModifiableStringProperty) baseProperty1)
-                                .options((ActionOptionsFunction<String>) HubspotUtils::getOwnerOptions);
-                        }
-                    }
-                }
-            }
+            properties.addLast(
+                string(HAPIKEY)
+                    .label("Hubspot API Key")
+                    .description("API Key is used for registering webhooks.")
+                    .required(false));
+
+            modifiableAuthorization.properties(properties);
         }
 
-        return modifiableProperty;
+        return modifiableConnectionDefinition;
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,11 +18,11 @@ package com.bytechef.platform.user.domain;
 
 import com.bytechef.commons.util.CollectionUtils;
 import java.time.Instant;
-import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.UUID;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.annotation.CreatedDate;
@@ -45,6 +45,9 @@ public class User {
     @Column("activation_key")
     private String activationKey;
 
+    @Column("auth_provider")
+    private String authProvider = "LOCAL";
+
     @MappedCollection(idColumn = "user_id")
     private Set<UserAuthority> authorities = new HashSet<>();
 
@@ -54,7 +57,7 @@ public class User {
 
     @Column("created_date")
     @CreatedDate
-    private LocalDateTime createdDate;
+    private Instant createdDate;
 
     @Column
     private String email;
@@ -77,7 +80,7 @@ public class User {
 
     @Column("last_modified_date")
     @LastModifiedDate
-    private LocalDateTime lastModifiedDate;
+    private Instant lastModifiedDate;
 
     @Column("last_name")
     private String lastName;
@@ -88,11 +91,23 @@ public class User {
     @Column("password_hash")
     private String password;
 
+    @Column("provider_id")
+    private String providerId;
+
     @Column("reset_date")
     private Instant resetDate = null;
 
     @Column("reset_key")
     private String resetKey;
+
+    @Column("totp_enabled")
+    private boolean totpEnabled;
+
+    @Column("totp_secret")
+    private String totpSecret;
+
+    @Column("uuid")
+    private UUID uuid;
 
     @Override
     public boolean equals(Object o) {
@@ -116,6 +131,10 @@ public class User {
         return activationKey;
     }
 
+    public String getAuthProvider() {
+        return authProvider;
+    }
+
     public List<Long> getAuthorityIds() {
         return authorities
             .stream()
@@ -127,7 +146,7 @@ public class User {
         return createdBy;
     }
 
-    public LocalDateTime getCreatedDate() {
+    public Instant getCreatedDate() {
         return createdDate;
     }
 
@@ -159,7 +178,7 @@ public class User {
         return lastModifiedBy;
     }
 
-    public LocalDateTime getLastModifiedDate() {
+    public Instant getLastModifiedDate() {
         return lastModifiedDate;
     }
 
@@ -171,6 +190,10 @@ public class User {
         return password;
     }
 
+    public String getProviderId() {
+        return providerId;
+    }
+
     public Instant getResetDate() {
         return resetDate;
     }
@@ -179,8 +202,24 @@ public class User {
         return resetKey;
     }
 
+    public String getTotpSecret() {
+        return totpSecret;
+    }
+
+    public UUID getUuid() {
+        return uuid;
+    }
+
+    public String getUuidAsString() {
+        return uuid == null ? null : uuid.toString();
+    }
+
     public boolean isActivated() {
         return activated;
+    }
+
+    public boolean isTotpEnabled() {
+        return totpEnabled;
     }
 
     public void setAuthorityIds(List<Long> authorityIds) {
@@ -201,13 +240,17 @@ public class User {
         this.activationKey = activationKey;
     }
 
+    public void setAuthProvider(String authProvider) {
+        this.authProvider = authProvider;
+    }
+
     public void setAuthorities(Set<Authority> authorities) {
         if (!CollectionUtils.isEmpty(authorities)) {
             setAuthorityIds(CollectionUtils.map(authorities, Authority::getId));
         }
     }
 
-    public void setCreatedDate(LocalDateTime createdDate) {
+    public void setCreatedDate(Instant createdDate) {
         this.createdDate = createdDate;
     }
 
@@ -243,12 +286,36 @@ public class User {
         this.password = password;
     }
 
+    public void setProviderId(String providerId) {
+        this.providerId = providerId;
+    }
+
     public void setResetKey(String resetKey) {
         this.resetKey = resetKey;
     }
 
     public void setResetDate(Instant resetDate) {
         this.resetDate = resetDate;
+    }
+
+    public void setTotpEnabled(boolean totpEnabled) {
+        this.totpEnabled = totpEnabled;
+    }
+
+    public void setTotpSecret(String totpSecret) {
+        this.totpSecret = totpSecret;
+    }
+
+    public void setUuid(String uuid) {
+        if (uuid == null) {
+            this.uuid = null;
+        } else {
+            this.uuid = UUID.fromString(uuid);
+        }
+    }
+
+    public void setUuid(UUID uuid) {
+        this.uuid = uuid;
     }
 
     @Override
@@ -263,6 +330,7 @@ public class User {
             ", activated='" + activated + '\'' +
             ", langKey='" + langKey + '\'' +
             ", activationKey='" + activationKey + '\'' +
+            ", authProvider='" + authProvider + '\'' +
             "}";
     }
 }

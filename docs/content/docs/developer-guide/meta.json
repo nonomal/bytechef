@@ -1,0 +1,14 @@
+{
+  "title": "Developer Guide",
+  "description": "The developer guide",
+  "icon": "Blocks",
+  "root": true,
+  "pages": [
+    "index",
+    "architecture",
+    "build-component",
+    "generate-component",
+    "working-with-triggers",
+    "component-specification"
+  ]
+}

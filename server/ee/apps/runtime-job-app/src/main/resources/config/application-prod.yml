@@ -1,0 +1,20 @@
+logging:
+  level:
+    ROOT: INFO
+    com.bytechef: INFO
+  structured:
+    format:
+      console: ecs
+
+management:
+  prometheus:
+    metrics:
+      export:
+        enabled: false
+
+spring:
+  devtools:
+    restart:
+      enabled: false
+    livereload:
+      enabled: false

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,29 +16,30 @@
 
 package com.bytechef.component.email;
 
-import static com.bytechef.component.email.constant.EmailConstants.EMAIL;
+import static com.bytechef.component.definition.ComponentDsl.component;
 
 import com.bytechef.component.ComponentHandler;
 import com.bytechef.component.definition.ComponentCategory;
-import com.bytechef.component.definition.ComponentDSL;
 import com.bytechef.component.definition.ComponentDefinition;
+import com.bytechef.component.email.action.ReadEmailAction;
 import com.bytechef.component.email.action.SendEmailAction;
 import com.bytechef.component.email.connection.EmailConnection;
 import com.google.auto.service.AutoService;
 
 /**
  * @author Ivica Cardic
+ * @author Igor Beslic
  */
 @AutoService(ComponentHandler.class)
 public class EmailComponentHandler implements ComponentHandler {
 
-    private static final ComponentDefinition COMPONENT_DEFINITION = ComponentDSL.component(EMAIL)
+    private static final ComponentDefinition COMPONENT_DEFINITION = component("email")
         .title("Email")
         .description("The Email connector sends emails using an SMTP email server.")
         .connection(EmailConnection.CONNECTION_DEFINITION)
         .icon("path:assets/email.svg")
         .categories(ComponentCategory.COMMUNICATION, ComponentCategory.HELPERS)
-        .actions(SendEmailAction.ACTION_DEFINITION);
+        .actions(SendEmailAction.ACTION_DEFINITION, ReadEmailAction.ACTION_DEFINITION);
 
     @Override
     public ComponentDefinition getDefinition() {

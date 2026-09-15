@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * Modifications copyright (C) 2023 ByteChef Inc.
+ * Modifications copyright (C) 2025 ByteChef
  */
 
 package com.bytechef.message.broker.kafka.config;
@@ -22,6 +22,7 @@ import com.bytechef.message.broker.annotation.ConditionalOnMessageBrokerKafka;
 import com.bytechef.message.broker.config.MessageBrokerConfigurer;
 import com.bytechef.message.broker.config.MessageBrokerListenerRegistrar;
 import com.bytechef.message.route.MessageRoute;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.lang.reflect.Method;
 import java.util.List;
 import java.util.stream.Stream;
@@ -32,6 +33,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.annotation.KafkaListenerConfigurer;
 import org.springframework.kafka.config.KafkaListenerEndpointRegistrar;
+import org.springframework.kafka.config.KafkaListenerEndpointRegistry;
 import org.springframework.kafka.config.MethodKafkaListenerEndpoint;
 import org.springframework.messaging.handler.annotation.support.MessageHandlerMethodFactory;
 
@@ -43,22 +45,26 @@ import org.springframework.messaging.handler.annotation.support.MessageHandlerMe
 public class KafkaMessageBrokerListenerRegistrarConfiguration
     implements KafkaListenerConfigurer, MessageBrokerListenerRegistrar<KafkaListenerEndpointRegistrar> {
 
-    private static final Logger logger = LoggerFactory.getLogger(
+    private static final Logger log = LoggerFactory.getLogger(
         KafkaMessageBrokerListenerRegistrarConfiguration.class);
 
     private final BeanFactory beanFactory;
     private final List<MessageBrokerConfigurer<KafkaListenerEndpointRegistrar>> messageBrokerConfigurers;
     private final MessageHandlerMethodFactory messageHandlerMethodFactory;
+    private final KafkaListenerEndpointRegistry kafkaListenerEndpointRegistry;
 
+    @SuppressFBWarnings("EI")
     public KafkaMessageBrokerListenerRegistrarConfiguration(
         BeanFactory beanFactory,
         @Autowired(
             required = false) List<MessageBrokerConfigurer<KafkaListenerEndpointRegistrar>> messageBrokerConfigurers,
-        MessageHandlerMethodFactory messageHandlerMethodFactory) {
+        MessageHandlerMethodFactory messageHandlerMethodFactory,
+        @Autowired(required = false) KafkaListenerEndpointRegistry kafkaListenerEndpointRegistry) {
 
         this.beanFactory = beanFactory;
         this.messageBrokerConfigurers = messageBrokerConfigurers == null ? List.of() : messageBrokerConfigurers;
         this.messageHandlerMethodFactory = messageHandlerMethodFactory;
+        this.kafkaListenerEndpointRegistry = kafkaListenerEndpointRegistry;
     }
 
     @Override
@@ -76,7 +82,9 @@ public class KafkaMessageBrokerListenerRegistrarConfiguration
 
         Class<?> delegateClass = delegate.getClass();
 
-        logger.info("Registering Kafka Listener: {} -> {}:{}", messageRoute, delegateClass.getName(), methodName);
+        if (log.isTraceEnabled()) {
+            log.trace("Registering Kafka Listener: {} -> {}:{}", messageRoute, delegateClass.getName(), methodName);
+        }
 
         Method listenerMethod = Stream.of(delegateClass.getMethods())
             .filter(it -> methodName.equals(it.getName()))
@@ -88,6 +96,28 @@ public class KafkaMessageBrokerListenerRegistrarConfiguration
             messageRoute.getName(), delegate, listenerMethod);
 
         listenerEndpointRegistrar.registerEndpoint(endpoint);
+    }
+
+    @Override
+    public void stopListenerEndpoints() {
+        try {
+            if (kafkaListenerEndpointRegistry != null) {
+                kafkaListenerEndpointRegistry.stop();
+            }
+        } catch (Exception e) {
+            log.warn("Failed to stop Kafka listener containers: {}", e.getMessage());
+        }
+    }
+
+    @Override
+    public void startListenerEndpoints() {
+        try {
+            if (kafkaListenerEndpointRegistry != null) {
+                kafkaListenerEndpointRegistry.start();
+            }
+        } catch (Exception e) {
+            log.warn("Failed to start Kafka listener containers: {}", e.getMessage());
+        }
     }
 
     private MethodKafkaListenerEndpoint<String, String> createListenerEndpoint(

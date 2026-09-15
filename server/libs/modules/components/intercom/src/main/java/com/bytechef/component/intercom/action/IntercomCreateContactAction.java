@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,34 +16,36 @@
 
 package com.bytechef.component.intercom.action;
 
-import static com.bytechef.component.definition.ComponentDSL.ModifiableActionDefinition;
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.object;
-import static com.bytechef.component.definition.ComponentDSL.option;
-import static com.bytechef.component.definition.ComponentDSL.string;
-import static com.bytechef.component.definition.Context.Http.Body;
+import static com.bytechef.component.definition.ComponentDsl.ModifiableActionDefinition;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.option;
+import static com.bytechef.component.definition.ComponentDsl.outputSchema;
+import static com.bytechef.component.definition.ComponentDsl.string;
 import static com.bytechef.component.definition.Context.Http.ResponseType;
 import static com.bytechef.component.definition.Context.Http.responseType;
-import static com.bytechef.component.definition.Context.TypeReference;
 import static com.bytechef.component.intercom.constant.IntercomConstants.AVATAR;
-import static com.bytechef.component.intercom.constant.IntercomConstants.BASE_URL;
+import static com.bytechef.component.intercom.constant.IntercomConstants.CONTACT_OUTPUT_PROPERTY;
 import static com.bytechef.component.intercom.constant.IntercomConstants.EMAIL;
-import static com.bytechef.component.intercom.constant.IntercomConstants.ID;
 import static com.bytechef.component.intercom.constant.IntercomConstants.LEAD;
 import static com.bytechef.component.intercom.constant.IntercomConstants.NAME;
 import static com.bytechef.component.intercom.constant.IntercomConstants.PHONE;
 import static com.bytechef.component.intercom.constant.IntercomConstants.ROLE;
 import static com.bytechef.component.intercom.constant.IntercomConstants.USER;
 
-import com.bytechef.component.definition.ActionContext;
+import com.bytechef.component.definition.Context;
 import com.bytechef.component.definition.Context.ContextFunction;
 import com.bytechef.component.definition.Context.Http;
+import com.bytechef.component.definition.Context.Http.Body;
 import com.bytechef.component.definition.Parameters;
-import com.bytechef.component.intercom.constant.IntercomConstants;
+import com.bytechef.component.definition.TypeReference;
 
+/**
+ * @author Luka Ljubić
+ * @author Monika Kušter
+ */
 public class IntercomCreateContactAction {
 
-    public static final ModifiableActionDefinition ACTION_DEFINITION = action(IntercomConstants.CREATE_CONTACT)
+    public static final ModifiableActionDefinition ACTION_DEFINITION = action("createContact")
         .title("Create Contact")
         .description("Create new contact")
         .properties(
@@ -73,24 +75,14 @@ public class IntercomCreateContactAction {
                 .description("Image of the contact")
                 .maxLength(500)
                 .required(false))
-        .outputSchema(
-            object()
-                .properties(
-                    string("type"),
-                    string(ID),
-                    string(ROLE),
-                    string(EMAIL),
-                    string(PHONE),
-                    string(NAME)))
+        .output(outputSchema(CONTACT_OUTPUT_PROPERTY))
         .perform(IntercomCreateContactAction::perform);
 
     protected static final ContextFunction<Http, Http.Executor> POST_CONTACTS_CONTEXT_FUNCTION =
-        http -> http.post(BASE_URL + "/contacts");
+        http -> http.post("/contacts");
 
-    public static Object perform(
-        Parameters inputParameters, Parameters connectionParameters, ActionContext actionContext) {
-
-        return actionContext.http(POST_CONTACTS_CONTEXT_FUNCTION)
+    public static Object perform(Parameters inputParameters, Parameters connectionParameters, Context context) {
+        return context.http(POST_CONTACTS_CONTEXT_FUNCTION)
             .body(
                 Body.of(
                     ROLE, inputParameters.getRequiredString(ROLE),

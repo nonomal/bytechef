@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * Modifications copyright (C) 2023 ByteChef Inc.
+ * Modifications copyright (C) 2025 ByteChef
  */
 
 package com.bytechef.atlas.execution.repository;
@@ -44,15 +44,21 @@ public interface JobRepository {
 
     Page<Job> findAll(Pageable pageable);
 
+    List<Job> findAllByIdIn(List<Long> ids);
+
+    List<Long> findAllIdsByParentJobId(Long parentJobId);
+
     List<Job> findAllByWorkflowId(String workflowId);
 
     Optional<Job> findById(Long id);
 
-    Job findByTaskExecutionId(Long taskExecutionId);
+    Optional<Job> findByTaskExecutionId(Long taskExecutionId);
 
     Optional<Job> findLastJob();
 
     Optional<Job> findTop1ByWorkflowIdOrderByIdDesc(String workflowId);
+
+    Optional<Job> findTop1ByWorkflowIdInOrderByIdDesc(List<String> workflowIds);
 
     Job save(Job job);
 }

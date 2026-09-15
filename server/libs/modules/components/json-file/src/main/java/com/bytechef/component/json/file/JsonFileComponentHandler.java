@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,14 +16,16 @@
 
 package com.bytechef.component.json.file;
 
-import static com.bytechef.component.definition.ComponentDSL.component;
-import static com.bytechef.component.json.file.constant.JsonFileConstants.JSON_FILE;
+import static com.bytechef.component.definition.ComponentDsl.component;
+import static com.bytechef.component.definition.ComponentDsl.tool;
 
 import com.bytechef.component.ComponentHandler;
 import com.bytechef.component.definition.ComponentCategory;
 import com.bytechef.component.definition.ComponentDefinition;
 import com.bytechef.component.json.file.action.JsonFileReadAction;
 import com.bytechef.component.json.file.action.JsonFileWriteAction;
+import com.bytechef.component.json.file.datastream.JsonFileItemReader;
+import com.bytechef.component.json.file.datastream.JsonFileItemWriter;
 import com.google.auto.service.AutoService;
 
 /**
@@ -32,14 +34,19 @@ import com.google.auto.service.AutoService;
 @AutoService(ComponentHandler.class)
 public class JsonFileComponentHandler implements ComponentHandler {
 
-    private static final ComponentDefinition COMPONENT_DEFINITION = component(JSON_FILE)
+    private static final ComponentDefinition COMPONENT_DEFINITION = component("jsonFile")
         .title("JSON File")
         .description("Reads and writes data from a JSON file.")
         .icon("path:assets/jsonfile.svg")
         .categories(ComponentCategory.HELPERS)
         .actions(
             JsonFileReadAction.ACTION_DEFINITION,
-            JsonFileWriteAction.ACTION_DEFINITION);
+            JsonFileWriteAction.ACTION_DEFINITION)
+        .clusterElements(
+            tool(JsonFileReadAction.ACTION_DEFINITION),
+            tool(JsonFileWriteAction.ACTION_DEFINITION),
+            JsonFileItemReader.CLUSTER_ELEMENT_DEFINITION,
+            JsonFileItemWriter.CLUSTER_ELEMENT_DEFINITION);
 
     @Override
     public ComponentDefinition getDefinition() {

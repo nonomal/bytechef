@@ -1,0 +1,866 @@
+---
+title: "Microsoft SharePoint"
+description: "Microsoft SharePoint is a web-based collaborative platform that integrates with Microsoft Office, providing document management, intranet, and content management features for organizations."
+---
+
+
+Categories: File Storage, Communication
+
+
+Type: microsoftSharePoint/v1
+
+<hr />
+
+
+
+
+## Connections
+
+Version: 1
+
+
+### OAuth2 Authorization Code
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| clientId | Client Id | STRING |  | true |
+| clientSecret | Client Secret | STRING |  | true |
+| tenantId | Tenant Id | STRING |  | true |
+
+
+
+## Connection Setup
+
+### Create OAuth 2.0 Application
+
+Creation of OAuth 2.0 application is documented [here](/reference/components/microsoft-graph-application-setup_v1).
+
+### Grant Necessary Permissions
+
+1. Open the Azure Portal: https://portal.azure.com/
+2. Click on **App registrations**.
+3. Click on **All applications**.
+4. Click on application you want to connect to Microsoft SharePoint.
+5. Click on **API permissions**.
+6. Click on **Microsoft Graph (1)**.
+7. Select following scopes:
+    - Sites.Manage.All
+    - Sites.ReadWrite.All
+    - offline_access
+8. After selecting all the scopes click on **Update permissions**
+
+<div style={{ position: 'relative', height:0, width: '100%', overflow: 'hidden', zIndex: 49, boxSizing: 'border-box', paddingBottom: 'calc(50.05219207% + 32px)'}}>
+    <iframe src="https://www.guidejar.com/embed/TVx0AVdJ8A1LFineEiDt?type=1&controls=on" width="100%" height="100%" style={{height:'100%', position:'absolute', inset:0}} allowFullScreen frameBorder="0"></iframe>
+</div>
+
+
+
+<hr />
+
+
+## Actions
+
+
+### Create Folder
+Name: createFolder
+
+`Creates a new folder at path you specify.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| siteId | Site ID | STRING | The ID of the SharePoint site. | true |
+| parentFolder | Parent Folder ID | STRING <details> <summary> Depends On </summary> siteId </details> | If no folder is selected, folder will be created in the root folder. | false |
+| name | Folder Name | STRING |  | true |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Create Folder",
+  "name" : "createFolder",
+  "parameters" : {
+    "siteId" : "",
+    "parentFolder" : "",
+    "name" : ""
+  },
+  "type" : "microsoftSharePoint/v1/createFolder"
+}
+```
+
+#### Output
+
+
+
+Type: OBJECT
+
+
+#### Properties
+
+|     Name     |     Type     |     Description     |
+|:------------:|:------------:|:-------------------:|
+| createdDateTime | DATE_TIME | The date and time when the folder was created. |
+| eTag | STRING |  |
+| id | STRING | ID of the folder. |
+| lastModifiedDateTime | DATE_TIME | The date and time when the folder was last modified. |
+| name | STRING | Name of the folder. |
+| size | INTEGER | Size of the folder in bytes. |
+| webUrl | STRING | URL to access the folder in a web browser. |
+| cTag | STRING |  |
+| commentSettings | OBJECT <details> <summary> Properties </summary> &#123;&#123;BOOLEAN\(isDisabled)&#125;\(commentingDisabled)&#125; </details> |  |
+| createdBy | OBJECT <details> <summary> Properties </summary> &#123;&#123;STRING\(id), STRING\(displayName)&#125;\(user)&#125; </details> |  |
+| lastModifiedBy | OBJECT <details> <summary> Properties </summary> &#123;&#123;STRING\(id), STRING\(displayName)&#125;\(user)&#125; </details> |  |
+| folder | OBJECT <details> <summary> Properties </summary> &#123;INTEGER\(childCount)&#125; </details> |  |
+| shared | OBJECT <details> <summary> Properties </summary> &#123;STRING\(scope)&#125; </details> |  |
+
+
+
+
+#### Output Example
+```json
+{
+  "createdDateTime" : "2021-01-01T00:00:00",
+  "eTag" : "",
+  "id" : "",
+  "lastModifiedDateTime" : "2021-01-01T00:00:00",
+  "name" : "",
+  "size" : 1,
+  "webUrl" : "",
+  "cTag" : "",
+  "commentSettings" : {
+    "commentingDisabled" : {
+      "isDisabled" : false
+    }
+  },
+  "createdBy" : {
+    "user" : {
+      "id" : "",
+      "displayName" : ""
+    }
+  },
+  "lastModifiedBy" : {
+    "user" : {
+      "id" : "",
+      "displayName" : ""
+    }
+  },
+  "folder" : {
+    "childCount" : 1
+  },
+  "shared" : {
+    "scope" : ""
+  }
+}
+```
+
+#### Find Site ID
+
+To find the Site ID, click [here](/reference/components/microsoft-share-point_v1#how-to-find-your-site-id).
+
+#### Find Folder ID
+
+To find the Folder ID, click [here](/reference/components/microsoft-share-point_v1#how-to-find-your-folder-or-file-id).
+
+
+
+### Create List
+Name: createList
+
+`Creates a new list`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| siteId | Site ID | STRING | The ID of the SharePoint site. | true |
+| displayName | List Name | STRING |  | true |
+| description | List Description | STRING |  | true |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Create List",
+  "name" : "createList",
+  "parameters" : {
+    "siteId" : "",
+    "displayName" : "",
+    "description" : ""
+  },
+  "type" : "microsoftSharePoint/v1/createList"
+}
+```
+
+#### Output
+
+
+
+Type: OBJECT
+
+
+#### Properties
+
+|     Name     |     Type     |     Description     |
+|:------------:|:------------:|:-------------------:|
+| createdDateTime | DATE_TIME | The date and time when the list was created. |
+| description | STRING | Description of the list. |
+| eTag | STRING |  |
+| id | STRING | ID of the list. |
+| lastModifiedDateTime | DATE_TIME | The date and time when the list was last modified. |
+| name | STRING | Name of the list. |
+| webUrl | STRING | URL to access the list in a web browser. |
+| displayName | STRING | The displayable title of the list. |
+| createdBy | OBJECT <details> <summary> Properties </summary> &#123;&#123;STRING\(id), STRING\(displayName)&#125;\(user)&#125; </details> |  |
+| list | OBJECT <details> <summary> Properties </summary> &#123;BOOLEAN\(contentTypesEnabled), BOOLEAN\(hidden), STRING\(template)&#125; </details> |  |
+
+
+
+
+#### Output Example
+```json
+{
+  "createdDateTime" : "2021-01-01T00:00:00",
+  "description" : "",
+  "eTag" : "",
+  "id" : "",
+  "lastModifiedDateTime" : "2021-01-01T00:00:00",
+  "name" : "",
+  "webUrl" : "",
+  "displayName" : "",
+  "createdBy" : {
+    "user" : {
+      "id" : "",
+      "displayName" : ""
+    }
+  },
+  "list" : {
+    "contentTypesEnabled" : false,
+    "hidden" : false,
+    "template" : ""
+  }
+}
+```
+
+#### Find Site ID
+
+To find the Site ID, click [here](/reference/components/microsoft-share-point_v1#how-to-find-your-site-id).
+
+
+
+### Create List Item
+Name: createListItem
+
+`Creates a new item in a list.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| siteId | Site ID | STRING | The ID of the SharePoint site. | true |
+| listId | List ID | STRING <details> <summary> Depends On </summary> siteId </details> |  | true |
+| columns | | DYNAMIC_PROPERTIES <details> <summary> Depends On </summary> siteId, listId </details> |  | false |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Create List Item",
+  "name" : "createListItem",
+  "parameters" : {
+    "siteId" : "",
+    "listId" : "",
+    "columns" : { }
+  },
+  "type" : "microsoftSharePoint/v1/createListItem"
+}
+```
+
+#### Output
+
+The output for this action is dynamic and may vary depending on the input parameters. To determine the exact structure of the output, you need to execute the action.
+
+
+
+#### Find Site ID
+
+To find the Site ID, click [here](/reference/components/microsoft-share-point_v1#how-to-find-your-site-id).
+
+#### Find List ID
+
+To find the List ID, click [here](/reference/components/microsoft-share-point_v1#how-to-find-your-list-id).
+
+
+
+### Delete File or Folder
+Name: deleteFileOrFolder
+
+`Deletes specified file or folder.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| siteId | Site ID | STRING | The ID of the SharePoint site. | true |
+| id | File or Folder ID | STRING <details> <summary> Depends On </summary> siteId </details> | The ID of the file or folder that will be deleted. | true |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Delete File or Folder",
+  "name" : "deleteFileOrFolder",
+  "parameters" : {
+    "siteId" : "",
+    "id" : ""
+  },
+  "type" : "microsoftSharePoint/v1/deleteFileOrFolder"
+}
+```
+
+#### Output
+
+This action does not produce any output.
+
+
+
+#### Find Site ID
+
+To find the Site ID, click [here](/reference/components/microsoft-share-point_v1#how-to-find-your-site-id).
+
+#### Find Folder ID
+
+To find the Folder ID, click [here](/reference/components/microsoft-share-point_v1#how-to-find-your-folder-or-file-id).
+
+
+
+### Download File
+Name: downloadFile
+
+`Download file from Microsoft SharePoint site.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| siteId | Site ID | STRING | The ID of the SharePoint site. | true |
+| fileId | File ID | STRING <details> <summary> Depends On </summary> siteId </details> | ID of the file that will be downloaded. | true |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Download File",
+  "name" : "downloadFile",
+  "parameters" : {
+    "siteId" : "",
+    "fileId" : ""
+  },
+  "type" : "microsoftSharePoint/v1/downloadFile"
+}
+```
+
+#### Output
+
+
+
+Type: FILE_ENTRY
+
+
+#### Properties
+
+|     Name     |     Type     |     Description     |
+|:------------:|:------------:|:-------------------:|
+| extension | STRING |  |
+| mimeType | STRING |  |
+| name | STRING |  |
+| url | STRING |  |
+
+
+
+
+#### Output Example
+```json
+{
+  "extension" : "",
+  "mimeType" : "",
+  "name" : "",
+  "url" : ""
+}
+```
+
+#### Find Site ID
+
+To find the Site ID, click [here](/reference/components/microsoft-share-point_v1#how-to-find-your-site-id).
+
+#### Find Folder ID
+
+To find the Folder ID, click [here](/reference/components/microsoft-share-point_v1#how-to-find-your-folder-or-file-id).
+
+
+
+### Get File or Folder by ID
+Name: getFileOrFolderById
+
+`Retrieves information about file or folder by its ID.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| siteId | Site ID | STRING | The ID of the SharePoint site. | true |
+| id | File or Folder ID | STRING <details> <summary> Depends On </summary> siteId </details> | The ID of the file or folder to retrieve. | true |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Get File or Folder by ID",
+  "name" : "getFileOrFolderById",
+  "parameters" : {
+    "siteId" : "",
+    "id" : ""
+  },
+  "type" : "microsoftSharePoint/v1/getFileOrFolderById"
+}
+```
+
+#### Output
+
+
+
+Type: OBJECT
+
+
+#### Properties
+
+|     Name     |     Type     |     Description     |
+|:------------:|:------------:|:-------------------:|
+| createdDateTime | DATE_TIME | The date and time when the folder was created. |
+| eTag | STRING |  |
+| id | STRING | ID of the folder. |
+| lastModifiedDateTime | DATE_TIME | The date and time when the folder was last modified. |
+| name | STRING | Name of the folder. |
+| size | INTEGER | Size of the folder in bytes. |
+| webUrl | STRING | URL to access the folder in a web browser. |
+| cTag | STRING |  |
+| commentSettings | OBJECT <details> <summary> Properties </summary> &#123;&#123;BOOLEAN\(isDisabled)&#125;\(commentingDisabled)&#125; </details> |  |
+| createdBy | OBJECT <details> <summary> Properties </summary> &#123;&#123;STRING\(id), STRING\(displayName)&#125;\(user)&#125; </details> |  |
+| lastModifiedBy | OBJECT <details> <summary> Properties </summary> &#123;&#123;STRING\(id), STRING\(displayName)&#125;\(user)&#125; </details> |  |
+| folder | OBJECT <details> <summary> Properties </summary> &#123;INTEGER\(childCount)&#125; </details> |  |
+| shared | OBJECT <details> <summary> Properties </summary> &#123;STRING\(scope)&#125; </details> |  |
+
+
+
+
+#### Output Example
+```json
+{
+  "createdDateTime" : "2021-01-01T00:00:00",
+  "eTag" : "",
+  "id" : "",
+  "lastModifiedDateTime" : "2021-01-01T00:00:00",
+  "name" : "",
+  "size" : 1,
+  "webUrl" : "",
+  "cTag" : "",
+  "commentSettings" : {
+    "commentingDisabled" : {
+      "isDisabled" : false
+    }
+  },
+  "createdBy" : {
+    "user" : {
+      "id" : "",
+      "displayName" : ""
+    }
+  },
+  "lastModifiedBy" : {
+    "user" : {
+      "id" : "",
+      "displayName" : ""
+    }
+  },
+  "folder" : {
+    "childCount" : 1
+  },
+  "shared" : {
+    "scope" : ""
+  }
+}
+```
+
+#### Find Site ID
+
+To find the Site ID, click [here](/reference/components/microsoft-share-point_v1#how-to-find-your-site-id).
+
+#### Find Folder ID
+
+To find the Folder ID, click [here](/reference/components/microsoft-share-point_v1#how-to-find-your-folder-or-file-id).
+
+
+
+### Get Folder Contents
+Name: getFolderContents
+
+`The folder whose contents you want to list.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| siteId | Site ID | STRING | The ID of the SharePoint site. | true |
+| parentFolder | Parent Folder ID | STRING <details> <summary> Depends On </summary> siteId </details> | ID of the folder whose contents you want to list. If no folder is selected, root folder will be listed. | false |
+| recursive | Include Subfolders | BOOLEAN <details> <summary> Options </summary> <span>true</span>, <span>false</span> </details> | Whether to include subfolders in the results. | false |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Get Folder Contents",
+  "name" : "getFolderContents",
+  "parameters" : {
+    "siteId" : "",
+    "parentFolder" : "",
+    "recursive" : false
+  },
+  "type" : "microsoftSharePoint/v1/getFolderContents"
+}
+```
+
+#### Output
+
+
+
+Type: OBJECT
+
+
+#### Properties
+
+|     Name     |     Type     |     Description     |
+|:------------:|:------------:|:-------------------:|
+| @odata.context | STRING |  |
+| value | ARRAY <details> <summary> Items </summary> [&#123;DATE_TIME\(createdDateTime), STRING\(eTag), STRING\(id), DATE_TIME\(lastModifiedDateTime), STRING\(name), INTEGER\(size), STRING\(webUrl), STRING\(cTag), &#123;&#123;BOOLEAN\(isDisabled)&#125;\(commentingDisabled)&#125;\(commentSettings), &#123;&#123;STRING\(id), STRING\(displayName)&#125;\(user)&#125;\(createdBy), &#123;&#123;STRING\(id), STRING\(displayName)&#125;\(user)&#125;\(lastModifiedBy), &#123;INTEGER\(childCount)&#125;\(folder), &#123;STRING\(scope)&#125;\(shared)&#125;] </details> |  |
+
+
+
+
+#### Output Example
+```json
+{
+  "@odata.context" : "",
+  "value" : [ {
+    "createdDateTime" : "2021-01-01T00:00:00",
+    "eTag" : "",
+    "id" : "",
+    "lastModifiedDateTime" : "2021-01-01T00:00:00",
+    "name" : "",
+    "size" : 1,
+    "webUrl" : "",
+    "cTag" : "",
+    "commentSettings" : {
+      "commentingDisabled" : {
+        "isDisabled" : false
+      }
+    },
+    "createdBy" : {
+      "user" : {
+        "id" : "",
+        "displayName" : ""
+      }
+    },
+    "lastModifiedBy" : {
+      "user" : {
+        "id" : "",
+        "displayName" : ""
+      }
+    },
+    "folder" : {
+      "childCount" : 1
+    },
+    "shared" : {
+      "scope" : ""
+    }
+  } ]
+}
+```
+
+
+
+
+### Replace File
+Name: replaceFile
+
+`Replace file in Microsoft SharePoint folder. You can replace two files that are of same type.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| siteId | Site ID | STRING | The ID of the SharePoint site. | true |
+| fileId | File ID | STRING <details> <summary> Depends On </summary> siteId </details> | ID of the file that will be replaced. | true |
+| file | File Entry | FILE_ENTRY | File that will be used to replace the existing file. | true |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Replace File",
+  "name" : "replaceFile",
+  "parameters" : {
+    "siteId" : "",
+    "fileId" : "",
+    "file" : {
+      "extension" : "",
+      "mimeType" : "",
+      "name" : "",
+      "url" : ""
+    }
+  },
+  "type" : "microsoftSharePoint/v1/replaceFile"
+}
+```
+
+#### Output
+
+
+
+Type: OBJECT
+
+
+#### Properties
+
+|     Name     |     Type     |     Description     |
+|:------------:|:------------:|:-------------------:|
+| createdDateTime | DATE_TIME | The date and time when the file was created. |
+| eTag | STRING | eTag for the entire item (metadata + content). |
+| id | STRING | ID of the file. |
+| lastModifiedDateTime | DATE_TIME | The date and time when the file was last modified. |
+| name | STRING | Name of the file. |
+| size | INTEGER | Size of the file in bytes. |
+| webUrl | STRING | URL to access the file in a web browser. |
+| createdBy | OBJECT <details> <summary> Properties </summary> &#123;&#123;STRING\(email), STRING\(id), STRING\(displayName)&#125;\(user)&#125; </details> |  |
+| lastModifiedBy | OBJECT <details> <summary> Properties </summary> &#123;&#123;STRING\(email), STRING\(id), STRING\(displayName)&#125;\(user)&#125; </details> |  |
+| file | OBJECT <details> <summary> Properties </summary> &#123;&#123;STRING\(quickXorHash)&#125;\(hashes), STRING\(mimeType)&#125; </details> |  |
+
+
+
+
+#### Output Example
+```json
+{
+  "createdDateTime" : "2021-01-01T00:00:00",
+  "eTag" : "",
+  "id" : "",
+  "lastModifiedDateTime" : "2021-01-01T00:00:00",
+  "name" : "",
+  "size" : 1,
+  "webUrl" : "",
+  "createdBy" : {
+    "user" : {
+      "email" : "",
+      "id" : "",
+      "displayName" : ""
+    }
+  },
+  "lastModifiedBy" : {
+    "user" : {
+      "email" : "",
+      "id" : "",
+      "displayName" : ""
+    }
+  },
+  "file" : {
+    "hashes" : {
+      "quickXorHash" : ""
+    },
+    "mimeType" : ""
+  }
+}
+```
+
+#### Find Site ID
+
+To find the Site ID, click [here](/reference/components/microsoft-share-point_v1#how-to-find-your-site-id).
+
+#### Find File ID
+
+To find the File ID, click [here](/reference/components/microsoft-share-point_v1#how-to-find-your-folder-or-file-id).
+
+
+
+### Upload File
+Name: uploadFile
+
+`Upload file to Microsoft SharePoint folder.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| siteId | Site ID | STRING | The ID of the SharePoint site. | true |
+| parentFolder | Parent Folder ID | STRING <details> <summary> Depends On </summary> siteId </details> | If no folder is selected, file will be uploaded to root folder. | false |
+| file | File Entry | FILE_ENTRY | File to upload. | true |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Upload File",
+  "name" : "uploadFile",
+  "parameters" : {
+    "siteId" : "",
+    "parentFolder" : "",
+    "file" : {
+      "extension" : "",
+      "mimeType" : "",
+      "name" : "",
+      "url" : ""
+    }
+  },
+  "type" : "microsoftSharePoint/v1/uploadFile"
+}
+```
+
+#### Output
+
+
+
+Type: OBJECT
+
+
+#### Properties
+
+|     Name     |     Type     |     Description     |
+|:------------:|:------------:|:-------------------:|
+| createdDateTime | DATE_TIME | The date and time when the file was created. |
+| eTag | STRING | eTag for the entire item (metadata + content). |
+| id | STRING | ID of the file. |
+| lastModifiedDateTime | DATE_TIME | The date and time when the file was last modified. |
+| name | STRING | Name of the file. |
+| size | INTEGER | Size of the file in bytes. |
+| webUrl | STRING | URL to access the file in a web browser. |
+| createdBy | OBJECT <details> <summary> Properties </summary> &#123;&#123;STRING\(email), STRING\(id), STRING\(displayName)&#125;\(user)&#125; </details> |  |
+| lastModifiedBy | OBJECT <details> <summary> Properties </summary> &#123;&#123;STRING\(email), STRING\(id), STRING\(displayName)&#125;\(user)&#125; </details> |  |
+| file | OBJECT <details> <summary> Properties </summary> &#123;&#123;STRING\(quickXorHash)&#125;\(hashes), STRING\(mimeType)&#125; </details> |  |
+
+
+
+
+#### Output Example
+```json
+{
+  "createdDateTime" : "2021-01-01T00:00:00",
+  "eTag" : "",
+  "id" : "",
+  "lastModifiedDateTime" : "2021-01-01T00:00:00",
+  "name" : "",
+  "size" : 1,
+  "webUrl" : "",
+  "createdBy" : {
+    "user" : {
+      "email" : "",
+      "id" : "",
+      "displayName" : ""
+    }
+  },
+  "lastModifiedBy" : {
+    "user" : {
+      "email" : "",
+      "id" : "",
+      "displayName" : ""
+    }
+  },
+  "file" : {
+    "hashes" : {
+      "quickXorHash" : ""
+    },
+    "mimeType" : ""
+  }
+}
+```
+
+#### Find Site ID
+
+To find the Site ID, click [here](/reference/components/microsoft-share-point_v1#how-to-find-your-site-id).
+
+#### Find Folder ID
+
+To find the Folder ID, click [here](/reference/components/microsoft-share-point_v1#how-to-find-your-folder-or-file-id).
+
+
+
+
+## Triggers
+
+
+### New File
+Name: newFile
+
+`Triggers when file is uploaded to folder.`
+
+Type: POLLING
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| siteId | Site ID | STRING | The ID of the SharePoint site. | true |
+| parentFolder | Parent Folder ID | STRING <details> <summary> Depends On </summary> siteId </details> | If no folder is selected, root folder will be monitored for new file. | false |
+| recursive | Recursive | BOOLEAN <details> <summary> Options </summary> <span>true</span>, <span>false</span> </details> | Whether to watch subfolders recursively. If false, only the specified folder will be watched. May return many results. | false |
+
+
+#### Output
+
+The output for this action is dynamic and may vary depending on the input parameters. To determine the exact structure of the output, you need to execute the action.
+
+#### JSON Example
+```json
+{
+  "label" : "New File",
+  "name" : "newFile",
+  "parameters" : {
+    "siteId" : "",
+    "parentFolder" : "",
+    "recursive" : false
+  },
+  "type" : "microsoftSharePoint/v1/newFile"
+}
+```
+#### Find Site ID
+
+To find the Site ID, click [here](/reference/components/microsoft-share-point_v1#how-to-find-your-site-id).
+
+#### Find Folder ID
+
+To find the Folder ID, click [here](/reference/components/microsoft-share-point_v1#how-to-find-your-folder-or-file-id).
+
+
+
+
+
+## What to do if your action is not listed here?
+
+If this component doesn't have the action you need, you can use **Custom Action** to create your own. Custom Actions empower you to define HTTP requests tailored to your specific requirements, allowing for greater flexibility in integrating with external services or APIs.
+
+To create a Custom Action, simply specify the desired HTTP method, path, and any necessary parameters. This way, you can extend the functionality of your component beyond the predefined actions, ensuring that you can meet all your integration needs effectively.
+
+<hr />
+
+# Additional Instructions
+
+### How to find your Site ID
+
+Only way of finding Site ID in Microsoft SharePoint is using Microsoft Graph API.
+
+1. Go to your Microsoft SharePoint site.
+2. If your URL is `https://company.sharepoint.com/sites/Finance` then your site name is `Finance`.
+3. Then use this Microsoft Graph API endpoint; `GET https://graph.microsoft.com/v1.0/sites/company.sharepoint.com:/sites/Finance`
+4. You will get your folder ID.
+
+### How to find your Folder or File ID
+
+Only way of finding Folder or File ID in Microsoft SharePoint is using Microsoft Graph API endpoint: `GET https://graph.microsoft.com/v1.0/sites/{site-id}/drives`.
+
+### How to find your List ID
+
+1. Open the SharePoint site.
+2. Go to the Site Contents.
+3. Find your list and click on 3 vertical dots (...)
+4. Click on Settings
+5. Look at the browser URL.
+6. If your URL is `https://6kqn7f.sharepoint.com/sites/Testsite/_layouts/15/listedit.aspx?List=2c8d8a57-10e1-43b7-b801-6cd5b328f55b`
+7. Then your List ID is `2c8d8a57-10e1-43b7-b801-6cd5b328f55b`

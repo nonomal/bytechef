@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,14 +16,13 @@
 
 package com.bytechef.component.active.campaign.util;
 
-import static com.bytechef.component.definition.Authorization.USERNAME;
-import static com.bytechef.component.definition.ComponentDSL.option;
+import static com.bytechef.component.definition.ComponentDsl.option;
 
 import com.bytechef.component.definition.ActionContext;
 import com.bytechef.component.definition.Context.Http;
-import com.bytechef.component.definition.Context.TypeReference;
 import com.bytechef.component.definition.Option;
 import com.bytechef.component.definition.Parameters;
+import com.bytechef.component.definition.TypeReference;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -40,7 +39,7 @@ public class ActiveCampaignUtils {
         Parameters inputParameters, Parameters connectionParameters, Map<String, String> dependencyPaths,
         String searchText, ActionContext context) {
 
-        Map<String, ?> body = context.http(http -> http.get(getUrl(connectionParameters, "contacts")))
+        Map<String, ?> body = context.http(http -> http.get("/contacts"))
             .configuration(Http.responseType(Http.ResponseType.JSON))
             .execute()
             .getBody(new TypeReference<>() {});
@@ -62,7 +61,7 @@ public class ActiveCampaignUtils {
         Parameters inputParameters, Parameters connectionParameters, Map<String, String> dependencyPaths,
         String searchText, ActionContext context) {
 
-        Map<String, ?> body = context.http(http -> http.get(getUrl(connectionParameters, "dealTasktypes")))
+        Map<String, ?> body = context.http(http -> http.get("/dealTasktypes"))
             .configuration(Http.responseType(Http.ResponseType.JSON))
             .execute()
             .getBody(new TypeReference<>() {});
@@ -80,7 +79,4 @@ public class ActiveCampaignUtils {
         return options;
     }
 
-    private static String getUrl(Parameters connectionParameters, String resource) {
-        return "https://" + connectionParameters.getRequiredString(USERNAME) + ".api-us1.com/api/3/" + resource;
-    }
 }

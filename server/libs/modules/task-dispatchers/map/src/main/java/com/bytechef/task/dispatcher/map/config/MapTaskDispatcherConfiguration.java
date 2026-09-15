@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import com.bytechef.atlas.execution.service.ContextService;
 import com.bytechef.atlas.execution.service.CounterService;
 import com.bytechef.atlas.execution.service.TaskExecutionService;
 import com.bytechef.atlas.file.storage.TaskFileStorage;
+import com.bytechef.evaluator.Evaluator;
 import com.bytechef.task.dispatcher.map.MapTaskDispatcher;
 import com.bytechef.task.dispatcher.map.completion.MapTaskCompletionHandler;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,6 +37,9 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 @ConditionalOnBean(ContextService.class)
 public class MapTaskDispatcherConfiguration {
+
+    @Autowired
+    private Evaluator evaluator;
 
     @Autowired
     private ApplicationEventPublisher eventPublisher;
@@ -54,14 +58,15 @@ public class MapTaskDispatcherConfiguration {
 
     @Bean("mapTaskCompletionHandlerFactory_v1")
     TaskCompletionHandlerFactory mapTaskCompletionHandlerFactory() {
-        return (taskCompletionHandler, taskDispatcher) -> new MapTaskCompletionHandler(taskExecutionService,
-            taskCompletionHandler, counterService, taskFileStorage);
+        return (taskCompletionHandler, taskDispatcher) -> new MapTaskCompletionHandler(
+            contextService, counterService, evaluator, taskDispatcher, taskCompletionHandler, taskExecutionService,
+            taskFileStorage);
     }
 
     @Bean("mapTaskDispatcherFactory_v1")
     TaskDispatcherResolverFactory mapTaskDispatcherResolverFactory() {
         return (taskDispatcher) -> new MapTaskDispatcher(
-            eventPublisher, contextService, counterService, taskDispatcher, taskExecutionService,
+            contextService, counterService, evaluator, eventPublisher, taskDispatcher, taskExecutionService,
             taskFileStorage);
     }
 }

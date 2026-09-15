@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * Modifications copyright (C) 2023 ByteChef Inc.
+ * Modifications copyright (C) 2025 ByteChef
  */
 
 package com.bytechef.atlas.execution.repository;
@@ -24,10 +24,17 @@ import java.util.Optional;
 
 /**
  * @author Arik Cohen
+ * @author Igor Beslic
  */
 public interface TaskExecutionRepository {
 
-    void deleteById(Long id);
+    void deleteById(long id);
+
+    /**
+     *
+     * @return
+     */
+    List<TaskExecution> findAll();
 
     /**
      * Returns the execution steps of the given job
@@ -35,7 +42,15 @@ public interface TaskExecutionRepository {
      * @param jobId
      * @return List<TaskExecution>
      */
-    List<TaskExecution> findAllByJobIdOrderByCreatedDate(Long jobId);
+    List<TaskExecution> findAllByJobIdOrderByCreatedDate(long jobId);
+
+    /**
+     * Returns the execution steps of the given job ordered by id in descending order
+     *
+     * @param jobId
+     * @return List<TaskExecution>
+     */
+    List<TaskExecution> findAllByJobIdOrderByIdDesc(long jobId);
 
     /**
      * Returns a collection of {@link TaskExecution} instances which belong to the job of the given id.
@@ -43,7 +58,7 @@ public interface TaskExecutionRepository {
      * @param jobId
      * @return
      */
-    List<TaskExecution> findAllByJobIdOrderByTaskNumber(Long jobId);
+    List<TaskExecution> findAllByJobIdOrderByTaskNumber(long jobId);
 
     /**
      * Returns a collection of {@link TaskExecution} instances which are the children of the given parent id.
@@ -51,7 +66,7 @@ public interface TaskExecutionRepository {
      * @param parentId
      * @return
      */
-    List<TaskExecution> findAllByParentId(Long parentId);
+    List<TaskExecution> findAllByParentIdOrderByTaskNumber(long parentId);
 
     /**
      * Find a single {@link TaskExecution} instance by its id.
@@ -63,10 +78,21 @@ public interface TaskExecutionRepository {
 
     Optional<TaskExecution> findByIdForUpdate(long id);
 
+    Optional<TaskExecution> findLastByJobId(long jobId);
+
     /**
      * Creates a new persistent represenation of the given {@link TaskExecution}.
      *
      * @param taskExecution
      */
     TaskExecution save(TaskExecution taskExecution);
+
+    /**
+     * Release the lock acquired by {@link #findByIdForUpdate(long)} for the given id, if held by the current
+     * thread/context. Implementations that rely on transactional database locks may no-op here.
+     *
+     * @param id the id of the task execution
+     */
+    default void unlockForUpdate(long id) {
+    }
 }

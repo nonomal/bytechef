@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,17 +21,13 @@ import com.bytechef.message.broker.annotation.ConditionalOnMessageBrokerRedis;
 import com.bytechef.message.broker.redis.RedisMessageBroker;
 import com.bytechef.message.broker.redis.serializer.RedisMessageDeserializer;
 import com.bytechef.message.broker.redis.serializer.RedisMessageSerializer;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.oblac.jrsmq.RedisSMQ;
-import com.oblac.jrsmq.RedisSMQConfig;
-import java.time.Duration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.boot.autoconfigure.data.redis.RedisProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * @author Ivica Cardic
@@ -40,19 +36,19 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 @ConditionalOnMessageBrokerRedis
 public class RedisMessageBrokerConfiguration {
 
-    private static final Logger logger = LoggerFactory.getLogger(RedisMessageBrokerConfiguration.class);
+    private static final Logger log = LoggerFactory.getLogger(RedisMessageBrokerConfiguration.class);
 
     public RedisMessageBrokerConfiguration() {
-        if (logger.isInfoEnabled()) {
-            logger.info("Message broker provider type enabled: redis");
+        if (log.isDebugEnabled()) {
+            log.debug("Message broker provider type enabled: redis");
         }
     }
 
     @Bean
     MessageBroker redisMessageBroker(
-        RedisMessageSerializer redisMessageSerializer, RedisSMQ redisSMQ, StringRedisTemplate stringRedisTemplate) {
+        RedisMessageSerializer redisMessageSerializer, StringRedisTemplate stringRedisTemplate) {
 
-        return new RedisMessageBroker(redisMessageSerializer, redisSMQ, stringRedisTemplate);
+        return new RedisMessageBroker(redisMessageSerializer, stringRedisTemplate);
     }
 
     @Bean
@@ -68,21 +64,5 @@ public class RedisMessageBrokerConfiguration {
     @Bean
     StringRedisTemplate stringRedisTemplate(RedisConnectionFactory redisConnectionFactory) {
         return new StringRedisTemplate(redisConnectionFactory);
-    }
-
-    @Bean
-    RedisSMQ redisSMQ(RedisProperties redisProperties) {
-        return new RedisSMQ(
-            RedisSMQConfig.createDefaultConfig()
-                .database(redisProperties.getDatabase())
-                .host(redisProperties.getHost())
-                .password(redisProperties.getPassword())
-                .port(redisProperties.getPort())
-//                .ssl(redisProperties.isSsl())
-                .timeout(getTimeout(redisProperties.getTimeout())));
-    }
-
-    private static int getTimeout(Duration timeout) {
-        return timeout == null ? 5000 : (int) timeout.toMillis();
     }
 }

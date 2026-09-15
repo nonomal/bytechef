@@ -12,6 +12,7 @@ import com.fasterxml.jackson.annotation.JsonValue;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import org.springframework.lang.Nullable;
 import org.openapitools.jackson.nullable.JsonNullable;
 import java.time.OffsetDateTime;
 import jakarta.validation.Valid;
@@ -28,31 +29,33 @@ import jakarta.annotation.Generated;
 
 @Schema(name = "TriggerDefinition", description = "A trigger definition defines ways to trigger workflows from the outside services.")
 @JsonTypeName("TriggerDefinition")
-@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2024-06-30T07:20:54.243996+02:00[Europe/Zagreb]", comments = "Generator version: 7.5.0")
+@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2026-07-03T17:58:15.504637+02:00[Europe/Zagreb]", comments = "Generator version: 7.22.0")
 public class TriggerDefinitionModel {
 
-  private String componentName;
+  private @Nullable String componentName;
 
-  private Integer componentVersion;
+  private @Nullable Integer componentVersion;
 
-  private Boolean dynamicOutput;
+  private @Nullable String description;
 
-  private String description;
-
-  private HelpModel help;
+  private @Nullable HelpModel help;
 
   private String name;
 
   private Boolean outputDefined;
 
+  private Boolean outputFunctionDefined;
+
+  private @Nullable Boolean outputSchemaDefined;
+
   @Valid
   private List<@Valid PropertyModel> properties = new ArrayList<>();
 
-  private String title;
+  private @Nullable String title;
 
   private TriggerTypeModel type;
 
-  private Boolean workflowNodeDescriptionDefined;
+  private @Nullable Boolean workflowNodeDescriptionDefined;
 
   public TriggerDefinitionModel() {
     super();
@@ -61,14 +64,14 @@ public class TriggerDefinitionModel {
   /**
    * Constructor with only required parameters
    */
-  public TriggerDefinitionModel(Boolean dynamicOutput, String name, Boolean outputDefined, TriggerTypeModel type) {
-    this.dynamicOutput = dynamicOutput;
+  public TriggerDefinitionModel(String name, Boolean outputDefined, Boolean outputFunctionDefined, TriggerTypeModel type) {
     this.name = name;
     this.outputDefined = outputDefined;
+    this.outputFunctionDefined = outputFunctionDefined;
     this.type = type;
   }
 
-  public TriggerDefinitionModel componentName(String componentName) {
+  public TriggerDefinitionModel componentName(@Nullable String componentName) {
     this.componentName = componentName;
     return this;
   }
@@ -76,19 +79,20 @@ public class TriggerDefinitionModel {
   /**
    * The component name.
    * @return componentName
-  */
+   */
   
   @Schema(name = "componentName", description = "The component name.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("componentName")
-  public String getComponentName() {
+  public @Nullable String getComponentName() {
     return componentName;
   }
 
-  public void setComponentName(String componentName) {
+  @JsonProperty("componentName")
+  public void setComponentName(@Nullable String componentName) {
     this.componentName = componentName;
   }
 
-  public TriggerDefinitionModel componentVersion(Integer componentVersion) {
+  public TriggerDefinitionModel componentVersion(@Nullable Integer componentVersion) {
     this.componentVersion = componentVersion;
     return this;
   }
@@ -96,39 +100,20 @@ public class TriggerDefinitionModel {
   /**
    * The component version.
    * @return componentVersion
-  */
+   */
   
   @Schema(name = "componentVersion", description = "The component version.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("componentVersion")
-  public Integer getComponentVersion() {
+  public @Nullable Integer getComponentVersion() {
     return componentVersion;
   }
 
-  public void setComponentVersion(Integer componentVersion) {
+  @JsonProperty("componentVersion")
+  public void setComponentVersion(@Nullable Integer componentVersion) {
     this.componentVersion = componentVersion;
   }
 
-  public TriggerDefinitionModel dynamicOutput(Boolean dynamicOutput) {
-    this.dynamicOutput = dynamicOutput;
-    return this;
-  }
-
-  /**
-   * Does trigger define dynamic output schema.
-   * @return dynamicOutput
-  */
-  @NotNull 
-  @Schema(name = "dynamicOutput", description = "Does trigger define dynamic output schema.", requiredMode = Schema.RequiredMode.REQUIRED)
-  @JsonProperty("dynamicOutput")
-  public Boolean getDynamicOutput() {
-    return dynamicOutput;
-  }
-
-  public void setDynamicOutput(Boolean dynamicOutput) {
-    this.dynamicOutput = dynamicOutput;
-  }
-
-  public TriggerDefinitionModel description(String description) {
+  public TriggerDefinitionModel description(@Nullable String description) {
     this.description = description;
     return this;
   }
@@ -136,19 +121,20 @@ public class TriggerDefinitionModel {
   /**
    * The description.
    * @return description
-  */
+   */
   
   @Schema(name = "description", description = "The description.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("description")
-  public String getDescription() {
+  public @Nullable String getDescription() {
     return description;
   }
 
-  public void setDescription(String description) {
+  @JsonProperty("description")
+  public void setDescription(@Nullable String description) {
     this.description = description;
   }
 
-  public TriggerDefinitionModel help(HelpModel help) {
+  public TriggerDefinitionModel help(@Nullable HelpModel help) {
     this.help = help;
     return this;
   }
@@ -156,15 +142,16 @@ public class TriggerDefinitionModel {
   /**
    * Get help
    * @return help
-  */
+   */
   @Valid 
   @Schema(name = "help", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("help")
-  public HelpModel getHelp() {
+  public @Nullable HelpModel getHelp() {
     return help;
   }
 
-  public void setHelp(HelpModel help) {
+  @JsonProperty("help")
+  public void setHelp(@Nullable HelpModel help) {
     this.help = help;
   }
 
@@ -176,7 +163,7 @@ public class TriggerDefinitionModel {
   /**
    * The action name.
    * @return name
-  */
+   */
   @NotNull 
   @Schema(name = "name", description = "The action name.", requiredMode = Schema.RequiredMode.REQUIRED)
   @JsonProperty("name")
@@ -184,6 +171,7 @@ public class TriggerDefinitionModel {
     return name;
   }
 
+  @JsonProperty("name")
   public void setName(String name) {
     this.name = name;
   }
@@ -194,18 +182,61 @@ public class TriggerDefinitionModel {
   }
 
   /**
-   * Does trigger define output schema.
+   * Does trigger defines output.
    * @return outputDefined
-  */
+   */
   @NotNull 
-  @Schema(name = "outputDefined", description = "Does trigger define output schema.", requiredMode = Schema.RequiredMode.REQUIRED)
+  @Schema(name = "outputDefined", description = "Does trigger defines output.", requiredMode = Schema.RequiredMode.REQUIRED)
   @JsonProperty("outputDefined")
   public Boolean getOutputDefined() {
     return outputDefined;
   }
 
+  @JsonProperty("outputDefined")
   public void setOutputDefined(Boolean outputDefined) {
     this.outputDefined = outputDefined;
+  }
+
+  public TriggerDefinitionModel outputFunctionDefined(Boolean outputFunctionDefined) {
+    this.outputFunctionDefined = outputFunctionDefined;
+    return this;
+  }
+
+  /**
+   * Does trigger defines output function.
+   * @return outputFunctionDefined
+   */
+  @NotNull 
+  @Schema(name = "outputFunctionDefined", description = "Does trigger defines output function.", requiredMode = Schema.RequiredMode.REQUIRED)
+  @JsonProperty("outputFunctionDefined")
+  public Boolean getOutputFunctionDefined() {
+    return outputFunctionDefined;
+  }
+
+  @JsonProperty("outputFunctionDefined")
+  public void setOutputFunctionDefined(Boolean outputFunctionDefined) {
+    this.outputFunctionDefined = outputFunctionDefined;
+  }
+
+  public TriggerDefinitionModel outputSchemaDefined(@Nullable Boolean outputSchemaDefined) {
+    this.outputSchemaDefined = outputSchemaDefined;
+    return this;
+  }
+
+  /**
+   * Does trigger defines output schema.
+   * @return outputSchemaDefined
+   */
+  
+  @Schema(name = "outputSchemaDefined", description = "Does trigger defines output schema.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+  @JsonProperty("outputSchemaDefined")
+  public @Nullable Boolean getOutputSchemaDefined() {
+    return outputSchemaDefined;
+  }
+
+  @JsonProperty("outputSchemaDefined")
+  public void setOutputSchemaDefined(@Nullable Boolean outputSchemaDefined) {
+    this.outputSchemaDefined = outputSchemaDefined;
   }
 
   public TriggerDefinitionModel properties(List<@Valid PropertyModel> properties) {
@@ -224,7 +255,7 @@ public class TriggerDefinitionModel {
   /**
    * The list of action properties.
    * @return properties
-  */
+   */
   @Valid 
   @Schema(name = "properties", description = "The list of action properties.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("properties")
@@ -232,11 +263,12 @@ public class TriggerDefinitionModel {
     return properties;
   }
 
+  @JsonProperty("properties")
   public void setProperties(List<@Valid PropertyModel> properties) {
     this.properties = properties;
   }
 
-  public TriggerDefinitionModel title(String title) {
+  public TriggerDefinitionModel title(@Nullable String title) {
     this.title = title;
     return this;
   }
@@ -244,15 +276,16 @@ public class TriggerDefinitionModel {
   /**
    * The title
    * @return title
-  */
+   */
   
   @Schema(name = "title", description = "The title", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("title")
-  public String getTitle() {
+  public @Nullable String getTitle() {
     return title;
   }
 
-  public void setTitle(String title) {
+  @JsonProperty("title")
+  public void setTitle(@Nullable String title) {
     this.title = title;
   }
 
@@ -264,7 +297,7 @@ public class TriggerDefinitionModel {
   /**
    * Get type
    * @return type
-  */
+   */
   @NotNull @Valid 
   @Schema(name = "type", requiredMode = Schema.RequiredMode.REQUIRED)
   @JsonProperty("type")
@@ -272,11 +305,12 @@ public class TriggerDefinitionModel {
     return type;
   }
 
+  @JsonProperty("type")
   public void setType(TriggerTypeModel type) {
     this.type = type;
   }
 
-  public TriggerDefinitionModel workflowNodeDescriptionDefined(Boolean workflowNodeDescriptionDefined) {
+  public TriggerDefinitionModel workflowNodeDescriptionDefined(@Nullable Boolean workflowNodeDescriptionDefined) {
     this.workflowNodeDescriptionDefined = workflowNodeDescriptionDefined;
     return this;
   }
@@ -284,15 +318,16 @@ public class TriggerDefinitionModel {
   /**
    * Does trigger define dynamic node description.
    * @return workflowNodeDescriptionDefined
-  */
+   */
   
   @Schema(name = "workflowNodeDescriptionDefined", description = "Does trigger define dynamic node description.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("workflowNodeDescriptionDefined")
-  public Boolean getWorkflowNodeDescriptionDefined() {
+  public @Nullable Boolean getWorkflowNodeDescriptionDefined() {
     return workflowNodeDescriptionDefined;
   }
 
-  public void setWorkflowNodeDescriptionDefined(Boolean workflowNodeDescriptionDefined) {
+  @JsonProperty("workflowNodeDescriptionDefined")
+  public void setWorkflowNodeDescriptionDefined(@Nullable Boolean workflowNodeDescriptionDefined) {
     this.workflowNodeDescriptionDefined = workflowNodeDescriptionDefined;
   }
 
@@ -307,11 +342,12 @@ public class TriggerDefinitionModel {
     TriggerDefinitionModel triggerDefinition = (TriggerDefinitionModel) o;
     return Objects.equals(this.componentName, triggerDefinition.componentName) &&
         Objects.equals(this.componentVersion, triggerDefinition.componentVersion) &&
-        Objects.equals(this.dynamicOutput, triggerDefinition.dynamicOutput) &&
         Objects.equals(this.description, triggerDefinition.description) &&
         Objects.equals(this.help, triggerDefinition.help) &&
         Objects.equals(this.name, triggerDefinition.name) &&
         Objects.equals(this.outputDefined, triggerDefinition.outputDefined) &&
+        Objects.equals(this.outputFunctionDefined, triggerDefinition.outputFunctionDefined) &&
+        Objects.equals(this.outputSchemaDefined, triggerDefinition.outputSchemaDefined) &&
         Objects.equals(this.properties, triggerDefinition.properties) &&
         Objects.equals(this.title, triggerDefinition.title) &&
         Objects.equals(this.type, triggerDefinition.type) &&
@@ -320,7 +356,7 @@ public class TriggerDefinitionModel {
 
   @Override
   public int hashCode() {
-    return Objects.hash(componentName, componentVersion, dynamicOutput, description, help, name, outputDefined, properties, title, type, workflowNodeDescriptionDefined);
+    return Objects.hash(componentName, componentVersion, description, help, name, outputDefined, outputFunctionDefined, outputSchemaDefined, properties, title, type, workflowNodeDescriptionDefined);
   }
 
   @Override
@@ -329,11 +365,12 @@ public class TriggerDefinitionModel {
     sb.append("class TriggerDefinitionModel {\n");
     sb.append("    componentName: ").append(toIndentedString(componentName)).append("\n");
     sb.append("    componentVersion: ").append(toIndentedString(componentVersion)).append("\n");
-    sb.append("    dynamicOutput: ").append(toIndentedString(dynamicOutput)).append("\n");
     sb.append("    description: ").append(toIndentedString(description)).append("\n");
     sb.append("    help: ").append(toIndentedString(help)).append("\n");
     sb.append("    name: ").append(toIndentedString(name)).append("\n");
     sb.append("    outputDefined: ").append(toIndentedString(outputDefined)).append("\n");
+    sb.append("    outputFunctionDefined: ").append(toIndentedString(outputFunctionDefined)).append("\n");
+    sb.append("    outputSchemaDefined: ").append(toIndentedString(outputSchemaDefined)).append("\n");
     sb.append("    properties: ").append(toIndentedString(properties)).append("\n");
     sb.append("    title: ").append(toIndentedString(title)).append("\n");
     sb.append("    type: ").append(toIndentedString(type)).append("\n");
@@ -346,11 +383,8 @@ public class TriggerDefinitionModel {
    * Convert the given object to string with each line indented by 4 spaces
    * (except the first line).
    */
-  private String toIndentedString(Object o) {
-    if (o == null) {
-      return "null";
-    }
-    return o.toString().replace("\n", "\n    ");
+  private String toIndentedString(@Nullable Object o) {
+    return o == null ? "null" : o.toString().replace("\n", "\n    ");
   }
 }
 

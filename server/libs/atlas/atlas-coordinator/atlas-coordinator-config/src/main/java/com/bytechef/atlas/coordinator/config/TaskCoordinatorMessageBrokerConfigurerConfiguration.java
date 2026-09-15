@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,10 @@
 
 package com.bytechef.atlas.coordinator.config;
 
+import static com.bytechef.tenant.TenantContext.CURRENT_TENANT_ID;
+
 import com.bytechef.atlas.coordinator.TaskCoordinator;
+import com.bytechef.atlas.coordinator.annotation.ConditionalOnCoordinator;
 import com.bytechef.atlas.coordinator.event.ApplicationEvent;
 import com.bytechef.atlas.coordinator.event.ErrorEvent;
 import com.bytechef.atlas.coordinator.event.ResumeJobEvent;
@@ -29,6 +32,8 @@ import com.bytechef.config.ApplicationProperties.Coordinator.Task.Subscriptions;
 import com.bytechef.message.broker.config.MessageBrokerConfigurer;
 import com.bytechef.message.event.MessageEvent;
 import com.bytechef.message.event.MessageEventPostReceiveProcessor;
+import com.bytechef.message.event.tracing.MessageEventTracing;
+import com.bytechef.tenant.TenantContext;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.List;
 import org.springframework.context.annotation.Bean;
@@ -38,6 +43,7 @@ import org.springframework.context.annotation.Configuration;
  * @author Ivica Cardic
  */
 @Configuration
+@ConditionalOnCoordinator
 public class TaskCoordinatorMessageBrokerConfigurerConfiguration {
 
     private final List<MessageEventPostReceiveProcessor> messageEventPostReceiveProcessors;
@@ -51,13 +57,13 @@ public class TaskCoordinatorMessageBrokerConfigurerConfiguration {
 
     @Bean
     MessageBrokerConfigurer<?> taskCoordinatorMessageBrokerConfigurer(
-        TaskCoordinator taskCoordinator, ApplicationProperties applicationProperties) {
+        MessageEventTracing messageEventTracing, TaskCoordinator taskCoordinator,
+        ApplicationProperties applicationProperties) {
 
         TaskCoordinatorDelegate taskCoordinatorDelegate = new TaskCoordinatorDelegate(
-            messageEventPostReceiveProcessors, taskCoordinator);
+            messageEventPostReceiveProcessors, messageEventTracing, taskCoordinator);
 
         return (listenerEndpointRegistrar, messageBrokerListenerRegistrar) -> {
-
             Subscriptions subscriptions = applicationProperties.getCoordinator()
                 .getTask()
                 .getSubscriptions();
@@ -85,48 +91,64 @@ public class TaskCoordinatorMessageBrokerConfigurerConfiguration {
     }
 
     private record TaskCoordinatorDelegate(
-        List<MessageEventPostReceiveProcessor> messageEventPostReceiveProcessors, TaskCoordinator taskCoordinator) {
+        List<MessageEventPostReceiveProcessor> messageEventPostReceiveProcessors,
+        MessageEventTracing messageEventTracing, TaskCoordinator taskCoordinator) {
 
         public void onApplicationEvent(ApplicationEvent applicationEvent) {
-            process(applicationEvent);
-
-            taskCoordinator.onApplicationEvent(applicationEvent);
+            TenantContext.runWithTenantId(
+                (String) applicationEvent.getMetadata(CURRENT_TENANT_ID),
+                () -> messageEventTracing.runWithTraceContext(
+                    applicationEvent, "task.application",
+                    () -> taskCoordinator.onApplicationEvent((ApplicationEvent) process(applicationEvent))));
         }
 
         public void onErrorEvent(ErrorEvent errorEvent) {
-            process(errorEvent);
-
-            taskCoordinator.onErrorEvent(errorEvent);
+            TenantContext.runWithTenantId(
+                (String) errorEvent.getMetadata(CURRENT_TENANT_ID),
+                () -> messageEventTracing.runWithTraceContext(
+                    errorEvent, "task.error",
+                    () -> taskCoordinator.onErrorEvent((ErrorEvent) process(errorEvent))));
         }
 
         public void onResumeJobEvent(ResumeJobEvent resumeJobEvent) {
-            process(resumeJobEvent);
-
-            taskCoordinator.onResumeJobEvent(resumeJobEvent);
+            TenantContext.runWithTenantId(
+                (String) resumeJobEvent.getMetadata(CURRENT_TENANT_ID),
+                () -> messageEventTracing.runWithTraceContext(
+                    resumeJobEvent, "job.resume",
+                    () -> taskCoordinator.onResumeJobEvent((ResumeJobEvent) process(resumeJobEvent))));
         }
 
         public void onStartJobEvent(StartJobEvent startJobEvent) {
-            process(startJobEvent);
-
-            taskCoordinator.onStartJobEvent(startJobEvent);
+            TenantContext.runWithTenantId(
+                (String) startJobEvent.getMetadata(CURRENT_TENANT_ID),
+                () -> messageEventTracing.runWithTraceContext(
+                    startJobEvent, "job.start",
+                    () -> taskCoordinator.onStartJobEvent((StartJobEvent) process(startJobEvent))));
         }
 
         public void onStopJobEvent(StopJobEvent stopJobEvent) {
-            process(stopJobEvent);
-
-            taskCoordinator.onStopJobEvent(stopJobEvent);
+            TenantContext.runWithTenantId(
+                (String) stopJobEvent.getMetadata(CURRENT_TENANT_ID),
+                () -> messageEventTracing.runWithTraceContext(
+                    stopJobEvent, "job.stop",
+                    () -> taskCoordinator.onStopJobEvent((StopJobEvent) process(stopJobEvent))));
         }
 
         public void onTaskExecutionCompleteEvent(TaskExecutionCompleteEvent taskExecutionCompleteEvent) {
-            process(taskExecutionCompleteEvent);
-
-            taskCoordinator.onTaskExecutionCompleteEvent(taskExecutionCompleteEvent);
+            TenantContext.runWithTenantId(
+                (String) taskExecutionCompleteEvent.getMetadata(CURRENT_TENANT_ID),
+                () -> messageEventTracing.runWithTraceContext(
+                    taskExecutionCompleteEvent, "task.complete",
+                    () -> taskCoordinator.onTaskExecutionCompleteEvent(
+                        (TaskExecutionCompleteEvent) process(taskExecutionCompleteEvent))));
         }
 
-        private void process(MessageEvent<?> messageEvent) {
+        private MessageEvent<?> process(MessageEvent<?> messageEvent) {
             for (MessageEventPostReceiveProcessor messageEventPostReceiveProcessor : messageEventPostReceiveProcessors) {
-                messageEventPostReceiveProcessor.process(messageEvent);
+                messageEvent = messageEventPostReceiveProcessor.process(messageEvent);
             }
+
+            return messageEvent;
         }
     }
 }

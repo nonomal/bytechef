@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,123 +16,135 @@
 
 package com.bytechef.automation.configuration.config;
 
-import com.bytechef.atlas.execution.facade.JobFacade;
-import com.bytechef.atlas.execution.service.JobService;
-import com.bytechef.commons.util.MapUtils;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.mock;
+
+import com.bytechef.atlas.configuration.repository.WorkflowCrudRepository;
+import com.bytechef.atlas.configuration.repository.WorkflowRepository;
+import com.bytechef.atlas.configuration.service.WorkflowService;
+import com.bytechef.atlas.configuration.service.WorkflowServiceImpl;
+import com.bytechef.commons.data.jdbc.converter.FileEntryToStringConverter;
+import com.bytechef.commons.data.jdbc.converter.MapWrapperToStringConverter;
+import com.bytechef.commons.data.jdbc.converter.StringToFileEntryConverter;
+import com.bytechef.commons.data.jdbc.converter.StringToMapWrapperConverter;
 import com.bytechef.config.ApplicationProperties;
+import com.bytechef.evaluator.Evaluator;
+import com.bytechef.evaluator.SpelEvaluator;
+import com.bytechef.file.storage.domain.FileEntry;
 import com.bytechef.liquibase.config.LiquibaseConfiguration;
-import com.bytechef.platform.component.registry.service.TriggerDefinitionService;
-import com.bytechef.platform.configuration.facade.WorkflowConnectionFacade;
+import com.bytechef.platform.component.service.ComponentDefinitionService;
+import com.bytechef.platform.configuration.facade.ComponentConnectionFacade;
 import com.bytechef.platform.configuration.facade.WorkflowFacade;
-import com.bytechef.platform.configuration.facade.WorkflowNodeParameterFacade;
-import com.bytechef.platform.configuration.service.WorkflowNodeTestOutputService;
-import com.bytechef.platform.configuration.service.WorkflowTestConfigurationService;
-import com.bytechef.platform.connection.service.ConnectionService;
-import com.bytechef.platform.user.service.AuthorityService;
-import com.bytechef.platform.user.service.UserService;
-import com.bytechef.platform.workflow.execution.facade.InstanceJobFacade;
-import com.bytechef.platform.workflow.execution.facade.TriggerLifecycleFacade;
-import com.bytechef.platform.workflow.execution.service.InstanceJobService;
-import com.bytechef.platform.workflow.execution.service.TriggerExecutionService;
+import com.bytechef.platform.configuration.facade.WorkflowFacadeImpl;
+import com.bytechef.platform.file.storage.SharedTemplateFileStorage;
+import com.bytechef.platform.workflow.validator.WorkflowValidatorFacade;
 import com.bytechef.test.config.jdbc.AbstractIntTestJdbcConfiguration;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import java.io.InputStream;
+import java.util.Arrays;
+import java.util.List;
+import java.util.UUID;
+import org.mockito.Mockito;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
-import org.springframework.data.jdbc.repository.config.EnableJdbcRepositories;
+import org.springframework.data.jdbc.repository.config.EnableJdbcAuditing;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * @author Ivica Cardic
  */
 @ComponentScan(
     basePackages = {
-        "com.bytechef.atlas.configuration.repository.jdbc", "com.bytechef.platform.category",
-        "com.bytechef.automation.configuration", "com.bytechef.platform.connection", "com.bytechef.platform.tag"
+        "com.bytechef.commons.util", "com.bytechef.jackson.config",
+        "com.bytechef.platform.category", "com.bytechef.automation.configuration", "com.bytechef.platform.connection",
+        "com.bytechef.platform.tag", "com.bytechef.platform.configuration.service"
     })
 @EnableAutoConfiguration
 @EnableCaching
 @EnableConfigurationProperties(ApplicationProperties.class)
 @Import(LiquibaseConfiguration.class)
 @Configuration
-@SuppressFBWarnings("ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD")
 public class ProjectIntTestConfiguration {
 
-    @MockBean
-    private AuthorityService authorityService;
+    @Autowired
+    private ComponentConnectionFacade componentConnectionFacade;
 
-    @MockBean
-    private ConnectionService connectionService;
-
-    @MockBean
-    private InstanceJobFacade instanceJobFacade;
-
-    @MockBean
-    private InstanceJobService instanceJobService;
-
-    @MockBean
-    private JobFacade jobFacade;
-
-    @MockBean
-    private JobService jobService;
-
-    @MockBean
-    private TriggerDefinitionService triggerDefinitionService;
-
-    @MockBean
-    private TriggerExecutionService triggerExecutionService;
-
-    @MockBean
-    private TriggerLifecycleFacade triggerLifecycleFacade;
-
-    @MockBean
-    private UserService userService;
-
-    @MockBean
-    private WorkflowConnectionFacade workflowConnectionFacade;
-
-    @MockBean
-    private WorkflowNodeParameterFacade workflowNodeParameterFacade;
-
-    @MockBean
-    private WorkflowNodeTestOutputService workflowNodeTestOutputService;
-
-    @MockBean
-    private WorkflowTestConfigurationService workflowTestConfigurationService;
-
-    @MockBean
-    private WorkflowFacade workflowFacade;
+    @Autowired
+    private ComponentDefinitionService componentDefinitionService;
 
     @Bean
-    MapUtils mapUtils() {
-        return new MapUtils() {
-            {
-                objectMapper = objectMapper();
-            }
-        };
+    Evaluator evaluator() {
+        return SpelEvaluator.create();
     }
 
     @Bean
-    ObjectMapper objectMapper() {
-        return new ObjectMapper()
-            .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
-            .registerModule(new JavaTimeModule())
-            .registerModule(new Jdk8Module());
+    SharedTemplateFileStorage sharedFileStorage() {
+        SharedTemplateFileStorage sharedTemplateFileStorage = mock(SharedTemplateFileStorage.class);
+
+        Mockito.when(
+            sharedTemplateFileStorage.storeFileContent(anyString(), any(InputStream.class)))
+            .thenAnswer(invocation -> {
+                String name = invocation.getArgument(0);
+
+                FileEntry fileEntry = mock(FileEntry.class);
+
+                Mockito.when(fileEntry.getName())
+                    .thenReturn(name);
+                Mockito.when(fileEntry.toId())
+                    .thenReturn(String.valueOf(UUID.randomUUID()));
+
+                return fileEntry;
+            });
+
+        return sharedTemplateFileStorage;
     }
 
-    @EnableJdbcRepositories(
-        basePackages = {
-            "com.bytechef.atlas.configuration.repository.jdbc", "com.bytechef.platform.category.repository",
-            "com.bytechef.automation.configuration.repository", "com.bytechef.platform.tag.repository"
-        })
+    @Bean
+    WorkflowFacade workflowFacade(
+        WorkflowValidatorFacade workflowValidatorFacade, WorkflowService workflowService) {
+
+        return new WorkflowFacadeImpl(
+            componentConnectionFacade, componentDefinitionService, workflowValidatorFacade, workflowService);
+    }
+
+    @Bean
+    WorkflowValidatorFacade workflowValidatorFacade() {
+        return mock(WorkflowValidatorFacade.class);
+    }
+
+    @Bean
+    WorkflowService workflowService(
+        CacheManager cacheManager, List<WorkflowCrudRepository> workflowCrudRepositories,
+        List<WorkflowRepository> workflowRepositories) {
+
+        return new WorkflowServiceImpl(cacheManager, workflowCrudRepositories, workflowRepositories);
+    }
+
+    @EnableJdbcAuditing(auditorAwareRef = "auditorProvider", dateTimeProviderRef = "auditingDateTimeProvider")
     public static class ProjectIntTestJdbcConfiguration extends AbstractIntTestJdbcConfiguration {
+
+        private final ObjectMapper objectMapper;
+
+        @SuppressFBWarnings("EI2")
+        public ProjectIntTestJdbcConfiguration(ObjectMapper objectMapper) {
+            this.objectMapper = objectMapper;
+        }
+
+        @Override
+        protected List<?> userConverters() {
+            return Arrays.asList(
+                new FileEntryToStringConverter(objectMapper),
+                new MapWrapperToStringConverter(objectMapper),
+                new StringToFileEntryConverter(objectMapper),
+                new StringToMapWrapperConverter(objectMapper));
+        }
     }
 }

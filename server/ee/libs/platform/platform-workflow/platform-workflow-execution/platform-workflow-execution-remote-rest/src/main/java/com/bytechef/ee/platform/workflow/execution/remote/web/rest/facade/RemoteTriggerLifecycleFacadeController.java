@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the ByteChef Enterprise license (the "Enterprise License");
  * you may not use this file except in compliance with the Enterprise License.
@@ -8,7 +8,7 @@
 package com.bytechef.ee.platform.workflow.execution.remote.web.rest.facade;
 
 import com.bytechef.platform.definition.WorkflowNodeType;
-import com.bytechef.platform.workflow.execution.WorkflowExecutionId;
+import com.bytechef.platform.workflow.WorkflowExecutionId;
 import com.bytechef.platform.workflow.execution.facade.TriggerLifecycleFacade;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.swagger.v3.oas.annotations.Hidden;
@@ -49,12 +49,13 @@ public class RemoteTriggerLifecycleFacadeController {
     public void executeTriggerEnable(TriggerRequest triggerRequest) {
         triggerLifecycleFacade.executeTriggerEnable(
             triggerRequest.workflowId, triggerRequest.workflowExecutionId, triggerRequest.triggerWorkflowNodeType,
-            triggerRequest.triggerParameters, triggerRequest.connectionId, triggerRequest.webhookUrl);
+            triggerRequest.triggerParameters, triggerRequest.connectionId, triggerRequest.webhookUrl,
+            triggerRequest.environmentId);
     }
 
     @SuppressFBWarnings("EI")
     public record TriggerRequest(
         String workflowId, WorkflowExecutionId workflowExecutionId, WorkflowNodeType triggerWorkflowNodeType,
-        Map<String, ?> triggerParameters, long connectionId, String webhookUrl) {
+        Map<String, ?> triggerParameters, long connectionId, String webhookUrl, long environmentId) {
     }
 }

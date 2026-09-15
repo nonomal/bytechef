@@ -12,20 +12,28 @@
  * Do not edit the class manually.
  */
 
-
 import * as runtime from '../runtime';
-import type {
-  PropertyModel,
-} from '../models/index';
 import {
-    PropertyModelFromJSON,
-    PropertyModelToJSON,
-} from '../models/index';
+    type Property,
+    PropertyFromJSON,
+    PropertyToJSON,
+} from '../models/Property';
+
+export interface GetClusterElementNodeDynamicPropertiesRequest {
+    id: string;
+    workflowNodeName: string;
+    clusterElementType: string;
+    clusterElementWorkflowNodeName: string;
+    propertyName: string;
+    environmentId: number;
+    lookupDependsOnPaths?: Array<string>;
+}
 
 export interface GetWorkflowNodeDynamicPropertiesRequest {
     id: string;
     workflowNodeName: string;
     propertyName: string;
+    environmentId: number;
     lookupDependsOnPaths?: Array<string>;
 }
 
@@ -35,10 +43,103 @@ export interface GetWorkflowNodeDynamicPropertiesRequest {
 export class WorkflowNodeDynamicPropertiesApi extends runtime.BaseAPI {
 
     /**
+     * Creates request options for getClusterElementNodeDynamicProperties without sending the request
+     */
+    async getClusterElementNodeDynamicPropertiesRequestOpts(requestParameters: GetClusterElementNodeDynamicPropertiesRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['id'] == null) {
+            throw new runtime.RequiredError(
+                'id',
+                'Required parameter "id" was null or undefined when calling getClusterElementNodeDynamicProperties().'
+            );
+        }
+
+        if (requestParameters['workflowNodeName'] == null) {
+            throw new runtime.RequiredError(
+                'workflowNodeName',
+                'Required parameter "workflowNodeName" was null or undefined when calling getClusterElementNodeDynamicProperties().'
+            );
+        }
+
+        if (requestParameters['clusterElementType'] == null) {
+            throw new runtime.RequiredError(
+                'clusterElementType',
+                'Required parameter "clusterElementType" was null or undefined when calling getClusterElementNodeDynamicProperties().'
+            );
+        }
+
+        if (requestParameters['clusterElementWorkflowNodeName'] == null) {
+            throw new runtime.RequiredError(
+                'clusterElementWorkflowNodeName',
+                'Required parameter "clusterElementWorkflowNodeName" was null or undefined when calling getClusterElementNodeDynamicProperties().'
+            );
+        }
+
+        if (requestParameters['propertyName'] == null) {
+            throw new runtime.RequiredError(
+                'propertyName',
+                'Required parameter "propertyName" was null or undefined when calling getClusterElementNodeDynamicProperties().'
+            );
+        }
+
+        if (requestParameters['environmentId'] == null) {
+            throw new runtime.RequiredError(
+                'environmentId',
+                'Required parameter "environmentId" was null or undefined when calling getClusterElementNodeDynamicProperties().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        if (requestParameters['lookupDependsOnPaths'] != null) {
+            queryParameters['lookupDependsOnPaths'] = requestParameters['lookupDependsOnPaths'];
+        }
+
+        if (requestParameters['environmentId'] != null) {
+            queryParameters['environmentId'] = requestParameters['environmentId'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+
+        let urlPath = `/workflows/{id}/workflow-nodes/{workflowNodeName}/cluster-elements/{clusterElementType}/{clusterElementWorkflowNodeName}/dynamic-properties/{propertyName}`;
+        urlPath = urlPath.replace('{id}', encodeURIComponent(String(requestParameters['id'])));
+        urlPath = urlPath.replace('{workflowNodeName}', encodeURIComponent(String(requestParameters['workflowNodeName'])));
+        urlPath = urlPath.replace('{clusterElementType}', encodeURIComponent(String(requestParameters['clusterElementType'])));
+        urlPath = urlPath.replace('{clusterElementWorkflowNodeName}', encodeURIComponent(String(requestParameters['clusterElementWorkflowNodeName'])));
+        urlPath = urlPath.replace('{propertyName}', encodeURIComponent(String(requestParameters['propertyName'])));
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
      * Get dynamic properties for an action or trigger property shown in the editor.
      * Get dynamic properties for an action or trigger property shown in the editor
      */
-    async getWorkflowNodeDynamicPropertiesRaw(requestParameters: GetWorkflowNodeDynamicPropertiesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<PropertyModel>>> {
+    async getClusterElementNodeDynamicPropertiesRaw(requestParameters: GetClusterElementNodeDynamicPropertiesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<Property>>> {
+        const requestOptions = await this.getClusterElementNodeDynamicPropertiesRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => jsonValue.map(PropertyFromJSON));
+    }
+
+    /**
+     * Get dynamic properties for an action or trigger property shown in the editor.
+     * Get dynamic properties for an action or trigger property shown in the editor
+     */
+    async getClusterElementNodeDynamicProperties(requestParameters: GetClusterElementNodeDynamicPropertiesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<Property>> {
+        const response = await this.getClusterElementNodeDynamicPropertiesRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for getWorkflowNodeDynamicProperties without sending the request
+     */
+    async getWorkflowNodeDynamicPropertiesRequestOpts(requestParameters: GetWorkflowNodeDynamicPropertiesRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['id'] == null) {
             throw new runtime.RequiredError(
                 'id',
@@ -60,29 +161,55 @@ export class WorkflowNodeDynamicPropertiesApi extends runtime.BaseAPI {
             );
         }
 
+        if (requestParameters['environmentId'] == null) {
+            throw new runtime.RequiredError(
+                'environmentId',
+                'Required parameter "environmentId" was null or undefined when calling getWorkflowNodeDynamicProperties().'
+            );
+        }
+
         const queryParameters: any = {};
 
         if (requestParameters['lookupDependsOnPaths'] != null) {
             queryParameters['lookupDependsOnPaths'] = requestParameters['lookupDependsOnPaths'];
         }
 
+        if (requestParameters['environmentId'] != null) {
+            queryParameters['environmentId'] = requestParameters['environmentId'];
+        }
+
         const headerParameters: runtime.HTTPHeaders = {};
 
-        const response = await this.request({
-            path: `/workflows/{id}/dynamic-properties/{workflowNodeName}/properties/{propertyName}`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))).replace(`{${"workflowNodeName"}}`, encodeURIComponent(String(requestParameters['workflowNodeName']))).replace(`{${"propertyName"}}`, encodeURIComponent(String(requestParameters['propertyName']))),
+
+        let urlPath = `/workflows/{id}/workflow-nodes/{workflowNodeName}/dynamic-properties/{propertyName}`;
+        urlPath = urlPath.replace('{id}', encodeURIComponent(String(requestParameters['id'])));
+        urlPath = urlPath.replace('{workflowNodeName}', encodeURIComponent(String(requestParameters['workflowNodeName'])));
+        urlPath = urlPath.replace('{propertyName}', encodeURIComponent(String(requestParameters['propertyName'])));
+
+        return {
+            path: urlPath,
             method: 'GET',
             headers: headerParameters,
             query: queryParameters,
-        }, initOverrides);
-
-        return new runtime.JSONApiResponse(response, (jsonValue) => jsonValue.map(PropertyModelFromJSON));
+        };
     }
 
     /**
      * Get dynamic properties for an action or trigger property shown in the editor.
      * Get dynamic properties for an action or trigger property shown in the editor
      */
-    async getWorkflowNodeDynamicProperties(requestParameters: GetWorkflowNodeDynamicPropertiesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<PropertyModel>> {
+    async getWorkflowNodeDynamicPropertiesRaw(requestParameters: GetWorkflowNodeDynamicPropertiesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<Property>>> {
+        const requestOptions = await this.getWorkflowNodeDynamicPropertiesRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => jsonValue.map(PropertyFromJSON));
+    }
+
+    /**
+     * Get dynamic properties for an action or trigger property shown in the editor.
+     * Get dynamic properties for an action or trigger property shown in the editor
+     */
+    async getWorkflowNodeDynamicProperties(requestParameters: GetWorkflowNodeDynamicPropertiesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<Property>> {
         const response = await this.getWorkflowNodeDynamicPropertiesRaw(requestParameters, initOverrides);
         return await response.value();
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,9 +21,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.bytechef.atlas.execution.domain.Job;
 import com.bytechef.atlas.file.storage.TaskFileStorage;
 import com.bytechef.atlas.worker.task.handler.TaskHandler;
-import com.bytechef.component.script.task.handler.PythonScriptTaskHandler;
-import com.bytechef.component.script.task.handler.RubyScriptTaskHandler;
 import com.bytechef.component.script.task.handler.ScriptJavaScriptTaskHandler;
+import com.bytechef.component.script.task.handler.ScriptPythonTaskHandler;
+import com.bytechef.component.script.task.handler.ScriptRubyTaskHandler;
 import com.bytechef.platform.component.test.ComponentJobTestExecutor;
 import com.bytechef.platform.component.test.config.ComponentTestIntConfiguration;
 import java.nio.charset.StandardCharsets;
@@ -49,6 +49,7 @@ import org.springframework.context.annotation.ComponentScan;
 public class ScriptComponentHandlerIntTest {
 
     private static final Base64.Encoder ENCODER = Base64.getEncoder();
+
     private final TaskHandler<Object> taskHandler = taskExecution -> {
         Map<String, ?> parameters = taskExecution.getParameters();
 
@@ -59,10 +60,10 @@ public class ScriptComponentHandlerIntTest {
     private ComponentJobTestExecutor componentJobTestExecutor;
 
     @Autowired
-    private PythonScriptTaskHandler pythonScriptTaskHandler;
+    private ScriptPythonTaskHandler scriptPythonTaskHandler;
 
     @Autowired
-    private RubyScriptTaskHandler rubyScriptTaskHandler;
+    private ScriptRubyTaskHandler scriptRubyTaskHandler;
 
     @Autowired
     private ScriptJavaScriptTaskHandler scriptJavaScriptTaskHandler;
@@ -95,7 +96,7 @@ public class ScriptComponentHandlerIntTest {
         Job job = componentJobTestExecutor.execute(
             ENCODER.encodeToString("script_v1_python".getBytes(StandardCharsets.UTF_8)),
             Map.of("factor", 3),
-            Map.of("var/v1/set", taskHandler, "python/v1/javascript", pythonScriptTaskHandler));
+            Map.of("var/v1/set", taskHandler, "script/v1/python", scriptPythonTaskHandler));
 
         assertThat(job.getStatus()).isEqualTo(Job.Status.COMPLETED);
 
@@ -123,7 +124,7 @@ public class ScriptComponentHandlerIntTest {
         Job job = componentJobTestExecutor.execute(
             ENCODER.encodeToString("script_v1_ruby".getBytes(StandardCharsets.UTF_8)),
             Map.of("factor", 3),
-            Map.of("var/v1/set", taskHandler, "ruby/v1/javascript", rubyScriptTaskHandler));
+            Map.of("var/v1/set", taskHandler, "script/v1/ruby", scriptRubyTaskHandler));
 
         assertThat(job.getStatus()).isEqualTo(Job.Status.COMPLETED);
 

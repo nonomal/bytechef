@@ -12,6 +12,9 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.annotation.JsonValue;
+import java.util.HashMap;
+import java.util.Map;
+import org.springframework.lang.Nullable;
 import org.openapitools.jackson.nullable.JsonNullable;
 import java.time.OffsetDateTime;
 import jakarta.validation.Valid;
@@ -48,14 +51,14 @@ import jakarta.annotation.Generated;
   @JsonSubTypes.Type(value = TimePropertyModel.class, name = "TIME")
 })
 
-@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2024-06-30T07:20:54.243996+02:00[Europe/Zagreb]", comments = "Generator version: 7.5.0")
+@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2026-07-03T17:58:15.504637+02:00[Europe/Zagreb]", comments = "Generator version: 7.22.0")
 public class ValuePropertyModel extends PropertyModel {
 
   private ControlTypeModel controlType;
 
-  private String label;
+  private @Nullable String label;
 
-  private String placeholder;
+  private @Nullable String placeholder;
 
   public ValuePropertyModel() {
     super();
@@ -77,7 +80,7 @@ public class ValuePropertyModel extends PropertyModel {
   /**
    * Get controlType
    * @return controlType
-  */
+   */
   @NotNull @Valid 
   @Schema(name = "controlType", requiredMode = Schema.RequiredMode.REQUIRED)
   @JsonProperty("controlType")
@@ -85,11 +88,12 @@ public class ValuePropertyModel extends PropertyModel {
     return controlType;
   }
 
+  @JsonProperty("controlType")
   public void setControlType(ControlTypeModel controlType) {
     this.controlType = controlType;
   }
 
-  public ValuePropertyModel label(String label) {
+  public ValuePropertyModel label(@Nullable String label) {
     this.label = label;
     return this;
   }
@@ -97,19 +101,20 @@ public class ValuePropertyModel extends PropertyModel {
   /**
    * The property label.
    * @return label
-  */
+   */
   
   @Schema(name = "label", description = "The property label.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("label")
-  public String getLabel() {
+  public @Nullable String getLabel() {
     return label;
   }
 
-  public void setLabel(String label) {
+  @JsonProperty("label")
+  public void setLabel(@Nullable String label) {
     this.label = label;
   }
 
-  public ValuePropertyModel placeholder(String placeholder) {
+  public ValuePropertyModel placeholder(@Nullable String placeholder) {
     this.placeholder = placeholder;
     return this;
   }
@@ -117,15 +122,16 @@ public class ValuePropertyModel extends PropertyModel {
   /**
    * The property placeholder.
    * @return placeholder
-  */
+   */
   
   @Schema(name = "placeholder", description = "The property placeholder.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("placeholder")
-  public String getPlaceholder() {
+  public @Nullable String getPlaceholder() {
     return placeholder;
   }
 
-  public void setPlaceholder(String placeholder) {
+  @JsonProperty("placeholder")
+  public void setPlaceholder(@Nullable String placeholder) {
     this.placeholder = placeholder;
   }
 
@@ -152,6 +158,16 @@ public class ValuePropertyModel extends PropertyModel {
 
   public ValuePropertyModel hidden(Boolean hidden) {
     super.hidden(hidden);
+    return this;
+  }
+
+  public ValuePropertyModel metadata(Map<String, Object> metadata) {
+    super.metadata(metadata);
+    return this;
+  }
+
+  public ValuePropertyModel putMetadataItem(String key, Object metadataItem) {
+    super.putMetadataItem(key, metadataItem);
     return this;
   }
 
@@ -205,11 +221,8 @@ public class ValuePropertyModel extends PropertyModel {
    * Convert the given object to string with each line indented by 4 spaces
    * (except the first line).
    */
-  private String toIndentedString(Object o) {
-    if (o == null) {
-      return "null";
-    }
-    return o.toString().replace("\n", "\n    ");
+  private String toIndentedString(@Nullable Object o) {
+    return o == null ? "null" : o.toString().replace("\n", "\n    ");
   }
 }
 

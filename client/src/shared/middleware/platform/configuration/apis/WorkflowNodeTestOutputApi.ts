@@ -12,29 +12,41 @@
  * Do not edit the class manually.
  */
 
-
 import * as runtime from '../runtime';
-import type {
-  WorkflowNodeTestOutputModel,
-} from '../models/index';
 import {
-    WorkflowNodeTestOutputModelFromJSON,
-    WorkflowNodeTestOutputModelToJSON,
-} from '../models/index';
+    type CheckWorkflowNodeTestOutputExists200Response,
+    CheckWorkflowNodeTestOutputExists200ResponseFromJSON,
+    CheckWorkflowNodeTestOutputExists200ResponseToJSON,
+} from '../models/CheckWorkflowNodeTestOutputExists200Response';
+import {
+    type WorkflowNodeTestOutput,
+    WorkflowNodeTestOutputFromJSON,
+    WorkflowNodeTestOutputToJSON,
+} from '../models/WorkflowNodeTestOutput';
+
+export interface CheckWorkflowNodeTestOutputExistsRequest {
+    id: string;
+    workflowNodeName: string;
+    environmentId: number;
+    createdDate?: Date;
+}
 
 export interface DeleteWorkflowNodeTestOutputRequest {
     id: string;
     workflowNodeName: string;
+    environmentId: number;
 }
 
 export interface SaveWorkflowNodeTestOutputRequest {
     id: string;
     workflowNodeName: string;
+    environmentId: number;
 }
 
 export interface UploadWorkflowNodeSampleOutputRequest {
     id: string;
     workflowNodeName: string;
+    environmentId: number;
     body: object;
 }
 
@@ -44,10 +56,79 @@ export interface UploadWorkflowNodeSampleOutputRequest {
 export class WorkflowNodeTestOutputApi extends runtime.BaseAPI {
 
     /**
-     * Delete existing workflow node test output.
-     * Delete existing workflow node test output
+     * Creates request options for checkWorkflowNodeTestOutputExists without sending the request
      */
-    async deleteWorkflowNodeTestOutputRaw(requestParameters: DeleteWorkflowNodeTestOutputRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+    async checkWorkflowNodeTestOutputExistsRequestOpts(requestParameters: CheckWorkflowNodeTestOutputExistsRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['id'] == null) {
+            throw new runtime.RequiredError(
+                'id',
+                'Required parameter "id" was null or undefined when calling checkWorkflowNodeTestOutputExists().'
+            );
+        }
+
+        if (requestParameters['workflowNodeName'] == null) {
+            throw new runtime.RequiredError(
+                'workflowNodeName',
+                'Required parameter "workflowNodeName" was null or undefined when calling checkWorkflowNodeTestOutputExists().'
+            );
+        }
+
+        if (requestParameters['environmentId'] == null) {
+            throw new runtime.RequiredError(
+                'environmentId',
+                'Required parameter "environmentId" was null or undefined when calling checkWorkflowNodeTestOutputExists().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        if (requestParameters['createdDate'] != null) {
+            queryParameters['createdDate'] = (requestParameters['createdDate'] as any).toISOString();
+        }
+
+        if (requestParameters['environmentId'] != null) {
+            queryParameters['environmentId'] = requestParameters['environmentId'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+
+        let urlPath = `/workflows/{id}/workflow-nodes/{workflowNodeName}/test-outputs/exists`;
+        urlPath = urlPath.replace('{id}', encodeURIComponent(String(requestParameters['id'])));
+        urlPath = urlPath.replace('{workflowNodeName}', encodeURIComponent(String(requestParameters['workflowNodeName'])));
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     * Check if a workflow node test output exists.
+     * Check if a workflow node test output exists
+     */
+    async checkWorkflowNodeTestOutputExistsRaw(requestParameters: CheckWorkflowNodeTestOutputExistsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<CheckWorkflowNodeTestOutputExists200Response>> {
+        const requestOptions = await this.checkWorkflowNodeTestOutputExistsRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => CheckWorkflowNodeTestOutputExists200ResponseFromJSON(jsonValue));
+    }
+
+    /**
+     * Check if a workflow node test output exists.
+     * Check if a workflow node test output exists
+     */
+    async checkWorkflowNodeTestOutputExists(requestParameters: CheckWorkflowNodeTestOutputExistsRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<CheckWorkflowNodeTestOutputExists200Response> {
+        const response = await this.checkWorkflowNodeTestOutputExistsRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for deleteWorkflowNodeTestOutput without sending the request
+     */
+    async deleteWorkflowNodeTestOutputRequestOpts(requestParameters: DeleteWorkflowNodeTestOutputRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['id'] == null) {
             throw new runtime.RequiredError(
                 'id',
@@ -62,16 +143,41 @@ export class WorkflowNodeTestOutputApi extends runtime.BaseAPI {
             );
         }
 
+        if (requestParameters['environmentId'] == null) {
+            throw new runtime.RequiredError(
+                'environmentId',
+                'Required parameter "environmentId" was null or undefined when calling deleteWorkflowNodeTestOutput().'
+            );
+        }
+
         const queryParameters: any = {};
+
+        if (requestParameters['environmentId'] != null) {
+            queryParameters['environmentId'] = requestParameters['environmentId'];
+        }
 
         const headerParameters: runtime.HTTPHeaders = {};
 
-        const response = await this.request({
-            path: `/workflows/{id}/test-outputs/{workflowNodeName}`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))).replace(`{${"workflowNodeName"}}`, encodeURIComponent(String(requestParameters['workflowNodeName']))),
+
+        let urlPath = `/workflows/{id}/workflow-nodes/{workflowNodeName}/test-outputs`;
+        urlPath = urlPath.replace('{id}', encodeURIComponent(String(requestParameters['id'])));
+        urlPath = urlPath.replace('{workflowNodeName}', encodeURIComponent(String(requestParameters['workflowNodeName'])));
+
+        return {
+            path: urlPath,
             method: 'DELETE',
             headers: headerParameters,
             query: queryParameters,
-        }, initOverrides);
+        };
+    }
+
+    /**
+     * Delete existing workflow node test output.
+     * Delete existing workflow node test output
+     */
+    async deleteWorkflowNodeTestOutputRaw(requestParameters: DeleteWorkflowNodeTestOutputRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        const requestOptions = await this.deleteWorkflowNodeTestOutputRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
 
         return new runtime.VoidApiResponse(response);
     }
@@ -85,10 +191,9 @@ export class WorkflowNodeTestOutputApi extends runtime.BaseAPI {
     }
 
     /**
-     * Create a new or update existing workflow node test output.
-     * Create a new or update existing workflow node test output
+     * Creates request options for saveWorkflowNodeTestOutput without sending the request
      */
-    async saveWorkflowNodeTestOutputRaw(requestParameters: SaveWorkflowNodeTestOutputRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<WorkflowNodeTestOutputModel>> {
+    async saveWorkflowNodeTestOutputRequestOpts(requestParameters: SaveWorkflowNodeTestOutputRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['id'] == null) {
             throw new runtime.RequiredError(
                 'id',
@@ -103,34 +208,58 @@ export class WorkflowNodeTestOutputApi extends runtime.BaseAPI {
             );
         }
 
+        if (requestParameters['environmentId'] == null) {
+            throw new runtime.RequiredError(
+                'environmentId',
+                'Required parameter "environmentId" was null or undefined when calling saveWorkflowNodeTestOutput().'
+            );
+        }
+
         const queryParameters: any = {};
+
+        if (requestParameters['environmentId'] != null) {
+            queryParameters['environmentId'] = requestParameters['environmentId'];
+        }
 
         const headerParameters: runtime.HTTPHeaders = {};
 
-        const response = await this.request({
-            path: `/workflows/{id}/test-outputs/{workflowNodeName}`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))).replace(`{${"workflowNodeName"}}`, encodeURIComponent(String(requestParameters['workflowNodeName']))),
+
+        let urlPath = `/workflows/{id}/workflow-nodes/{workflowNodeName}/test-outputs`;
+        urlPath = urlPath.replace('{id}', encodeURIComponent(String(requestParameters['id'])));
+        urlPath = urlPath.replace('{workflowNodeName}', encodeURIComponent(String(requestParameters['workflowNodeName'])));
+
+        return {
+            path: urlPath,
             method: 'PUT',
             headers: headerParameters,
             query: queryParameters,
-        }, initOverrides);
-
-        return new runtime.JSONApiResponse(response, (jsonValue) => WorkflowNodeTestOutputModelFromJSON(jsonValue));
+        };
     }
 
     /**
      * Create a new or update existing workflow node test output.
      * Create a new or update existing workflow node test output
      */
-    async saveWorkflowNodeTestOutput(requestParameters: SaveWorkflowNodeTestOutputRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<WorkflowNodeTestOutputModel> {
+    async saveWorkflowNodeTestOutputRaw(requestParameters: SaveWorkflowNodeTestOutputRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<WorkflowNodeTestOutput>> {
+        const requestOptions = await this.saveWorkflowNodeTestOutputRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => WorkflowNodeTestOutputFromJSON(jsonValue));
+    }
+
+    /**
+     * Create a new or update existing workflow node test output.
+     * Create a new or update existing workflow node test output
+     */
+    async saveWorkflowNodeTestOutput(requestParameters: SaveWorkflowNodeTestOutputRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<WorkflowNodeTestOutput> {
         const response = await this.saveWorkflowNodeTestOutputRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
     /**
-     * Upload a sample output to create a new or update existing workflow node test output.
-     * Upload a sample output to create a new or update existing workflow node test output
+     * Creates request options for uploadWorkflowNodeSampleOutput without sending the request
      */
-    async uploadWorkflowNodeSampleOutputRaw(requestParameters: UploadWorkflowNodeSampleOutputRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<WorkflowNodeTestOutputModel>> {
+    async uploadWorkflowNodeSampleOutputRequestOpts(requestParameters: UploadWorkflowNodeSampleOutputRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['id'] == null) {
             throw new runtime.RequiredError(
                 'id',
@@ -145,6 +274,13 @@ export class WorkflowNodeTestOutputApi extends runtime.BaseAPI {
             );
         }
 
+        if (requestParameters['environmentId'] == null) {
+            throw new runtime.RequiredError(
+                'environmentId',
+                'Required parameter "environmentId" was null or undefined when calling uploadWorkflowNodeSampleOutput().'
+            );
+        }
+
         if (requestParameters['body'] == null) {
             throw new runtime.RequiredError(
                 'body',
@@ -154,26 +290,44 @@ export class WorkflowNodeTestOutputApi extends runtime.BaseAPI {
 
         const queryParameters: any = {};
 
+        if (requestParameters['environmentId'] != null) {
+            queryParameters['environmentId'] = requestParameters['environmentId'];
+        }
+
         const headerParameters: runtime.HTTPHeaders = {};
 
         headerParameters['Content-Type'] = 'application/json';
 
-        const response = await this.request({
-            path: `/workflows/{id}/test-outputs/{workflowNodeName}/sample-output`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))).replace(`{${"workflowNodeName"}}`, encodeURIComponent(String(requestParameters['workflowNodeName']))),
+
+        let urlPath = `/workflows/{id}/workflow-nodes/{workflowNodeName}/test-outputs/sample-output`;
+        urlPath = urlPath.replace('{id}', encodeURIComponent(String(requestParameters['id'])));
+        urlPath = urlPath.replace('{workflowNodeName}', encodeURIComponent(String(requestParameters['workflowNodeName'])));
+
+        return {
+            path: urlPath,
             method: 'PUT',
             headers: headerParameters,
             query: queryParameters,
             body: requestParameters['body'] as any,
-        }, initOverrides);
-
-        return new runtime.JSONApiResponse(response, (jsonValue) => WorkflowNodeTestOutputModelFromJSON(jsonValue));
+        };
     }
 
     /**
      * Upload a sample output to create a new or update existing workflow node test output.
      * Upload a sample output to create a new or update existing workflow node test output
      */
-    async uploadWorkflowNodeSampleOutput(requestParameters: UploadWorkflowNodeSampleOutputRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<WorkflowNodeTestOutputModel> {
+    async uploadWorkflowNodeSampleOutputRaw(requestParameters: UploadWorkflowNodeSampleOutputRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<WorkflowNodeTestOutput>> {
+        const requestOptions = await this.uploadWorkflowNodeSampleOutputRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => WorkflowNodeTestOutputFromJSON(jsonValue));
+    }
+
+    /**
+     * Upload a sample output to create a new or update existing workflow node test output.
+     * Upload a sample output to create a new or update existing workflow node test output
+     */
+    async uploadWorkflowNodeSampleOutput(requestParameters: UploadWorkflowNodeSampleOutputRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<WorkflowNodeTestOutput> {
         const response = await this.uploadWorkflowNodeSampleOutputRaw(requestParameters, initOverrides);
         return await response.value();
     }

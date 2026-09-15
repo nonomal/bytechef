@@ -1,0 +1,154 @@
+/*
+ * Copyright 2025 ByteChef
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.bytechef.platform.ai.llm;
+
+import java.util.EnumSet;
+import java.util.Set;
+
+/**
+ * @author Ivica Cardic
+ */
+public enum Provider {
+
+//    AMAZON_BEDROCK_ANTHROPIC2(
+//        1, "amazonBedrockAnthropic2", "ai.provider.amazonBedrockAnthropic2", "Amazon Bedrock: Anthropic 2"),
+//    AMAZON_BEDROCK_ANTHROPIC3(
+//        2, "amazonBedrockAnthropic3", "ai.provider.amazonBedrockAnthropic3", "Amazon Bedrock: Anthropic 3"),
+//    AMAZON_BEDROCK_COHERE(3, "amazonBedrockCohere", "ai.provider.amazonBedrockCohere", "Amazon Bedrock: Cohere"),
+//    AMAZON_BEDROCK_JURASSIC2(
+//        4, "amazonBedrockJurassic2", "ai.provider.amazonBedrockJurassic2", "Amazon Bedrock: Jurassic 2"),
+//    AMAZON_BEDROCK_LLAMA(5, "amazonBedrockLlama", "ai.provider.amazonBedrockLlama", "Amazon Bedrock: Llama"),
+//    AMAZON_BEDROCK_TITAN(6, "amazonBedrockTitan", "ai.provider.amazonBedrockTitan", "Amazon Bedrock: Titan"),
+    ANTHROPIC(7, "anthropic", "ai.provider.anthropic", "Anthropic"),
+    AZURE_OPEN_AI(8, "azureOpenAi", "ai.provider.azureOpenAi", "Azure Open AI"),
+    GROQ(9, "groq", "ai.provider.groq", "Groq"),
+    HUGGING_FACE(10, "huggingFace", "ai.provider.huggingFace", "Hugging Face"),
+    MISTRAL(11, "mistral", "ai.provider.mistral", "Mistral"),
+    NVIDIA(12, "nvidia", "ai.provider.nvidia", "NVIDIA"),
+    OPEN_AI(13, "openAi", "ai.provider.openAi", "Open AI"),
+    STABILITY(15, "stability", "ai.provider.stability", "Stability"),
+    VERTEX_GEMINI(14, "vertexGemini", "ai.provider.vertexGemini", "Vertex Gemini"),
+    PERPLEXITY(16, "perplexity", "ai.provider.perplexity", "Perplexity"),
+    DEEPSEEK(17, "deepseek", "ai.provider.deepseek", "DeepSeek"),
+    OLLAMA(18, "ollama", "ai.provider.ollama", "Ollama");
+
+    public static final Set<Provider> EMBEDDING_PROVIDERS = EnumSet.of(
+        MISTRAL,
+        OLLAMA,
+        OPEN_AI);
+
+    public static final Set<Provider> CHAT_PROVIDERS = EnumSet.of(
+        ANTHROPIC,
+        AZURE_OPEN_AI,
+        DEEPSEEK,
+        GROQ,
+        MISTRAL,
+        NVIDIA,
+        OLLAMA,
+        OPEN_AI,
+        PERPLEXITY,
+        VERTEX_GEMINI);
+
+    public static final Set<Provider> IMAGE_PROVIDERS = EnumSet.of(
+        AZURE_OPEN_AI,
+        OPEN_AI,
+        STABILITY,
+        VERTEX_GEMINI);
+
+    // Providers that authenticate against a self-hosted server rather than an API key.
+    public static final Set<Provider> KEYLESS_PROVIDERS = EnumSet.of(OLLAMA);
+
+    // Providers that require a per-deployment endpoint URL in addition to their credentials.
+    public static final Set<Provider> ENDPOINT_PROVIDERS = EnumSet.of(AZURE_OPEN_AI);
+
+    private final int id;
+    private final String label;
+    private final String key;
+    private final String name;
+
+    Provider(int id, String name, String key, String label) {
+        this.id = id;
+        this.label = label;
+        this.key = key;
+        this.name = name;
+    }
+
+    /**
+     * Resolves a provider from either its short name (e.g. {@code anthropic}) or its full catalog key (e.g.
+     * {@code ai.provider.anthropic}), case-insensitively. Returns {@code null} when the value matches no provider, so
+     * callers can fall back instead of failing.
+     */
+    public static Provider fetchByNameOrKey(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+
+        for (Provider provider : values()) {
+            if (provider.key.equalsIgnoreCase(value) || provider.name.equalsIgnoreCase(value)) {
+                return provider;
+            }
+        }
+
+        return null;
+    }
+
+    public int getId() {
+        return id;
+    }
+
+    public String getLabel() {
+        return label;
+    }
+
+    public String getKey() {
+        return key;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public boolean isEmbeddingSupported() {
+        return EMBEDDING_PROVIDERS.contains(this);
+    }
+
+    public boolean isChatSupported() {
+        return CHAT_PROVIDERS.contains(this);
+    }
+
+    public boolean isImageSupported() {
+        return IMAGE_PROVIDERS.contains(this);
+    }
+
+    public boolean requiresApiKey() {
+        return !KEYLESS_PROVIDERS.contains(this);
+    }
+
+    public boolean requiresEndpoint() {
+        return ENDPOINT_PROVIDERS.contains(this);
+    }
+
+    public static Provider valueOfKey(String key) {
+        for (Provider provider : values()) {
+            if (provider.key.equals(key)) {
+                return provider;
+            }
+        }
+
+        throw new IllegalArgumentException("No provider found for key: " + key);
+    }
+}

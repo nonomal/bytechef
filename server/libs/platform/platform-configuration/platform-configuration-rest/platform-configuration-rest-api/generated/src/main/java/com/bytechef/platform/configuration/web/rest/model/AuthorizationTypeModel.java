@@ -17,10 +17,10 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 
 /**
- * Authorization type.
+ * The authorization type.
  */
 
-@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2024-06-30T07:20:54.243996+02:00[Europe/Zagreb]", comments = "Generator version: 7.5.0")
+@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2026-07-03T17:58:15.504637+02:00[Europe/Zagreb]", comments = "Generator version: 7.22.0")
 public enum AuthorizationTypeModel {
   
   API_KEY("API_KEY"),
@@ -33,8 +33,6 @@ public enum AuthorizationTypeModel {
   
   DIGEST_AUTH("DIGEST_AUTH"),
   
-  NONE("NONE"),
-  
   OAUTH2_AUTHORIZATION_CODE("OAUTH2_AUTHORIZATION_CODE"),
   
   OAUTH2_AUTHORIZATION_CODE_PKCE("OAUTH2_AUTHORIZATION_CODE_PKCE"),
@@ -45,7 +43,7 @@ public enum AuthorizationTypeModel {
   
   OAUTH2_RESOURCE_OWNER_PASSWORD("OAUTH2_RESOURCE_OWNER_PASSWORD");
 
-  private String value;
+  private final String value;
 
   AuthorizationTypeModel(String value) {
     this.value = value;

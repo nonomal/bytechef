@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,12 +19,13 @@ package com.bytechef.component.pipedrive.connection;
 import static com.bytechef.component.definition.Authorization.AuthorizationType;
 import static com.bytechef.component.definition.Authorization.CLIENT_ID;
 import static com.bytechef.component.definition.Authorization.CLIENT_SECRET;
-import static com.bytechef.component.definition.ComponentDSL.authorization;
-import static com.bytechef.component.definition.ComponentDSL.connection;
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.definition.ComponentDsl.authorization;
+import static com.bytechef.component.definition.ComponentDsl.connection;
+import static com.bytechef.component.definition.ComponentDsl.string;
 
-import com.bytechef.component.definition.ComponentDSL;
-import java.util.List;
+import com.bytechef.component.definition.ComponentDsl;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 /**
  * Provides the component connection definition.
@@ -32,7 +33,7 @@ import java.util.List;
  * @generated
  */
 public class PipedriveConnection {
-    public static final ComponentDSL.ModifiableConnectionDefinition CONNECTION_DEFINITION = connection()
+    public static final ComponentDsl.ModifiableConnectionDefinition CONNECTION_DEFINITION = connection()
         .baseUri((connectionParameters, context) -> "https://api.pipedrive.com/v1")
         .authorizations(authorization(AuthorizationType.OAUTH2_AUTHORIZATION_CODE)
             .title("OAuth2 Authorization Code")
@@ -44,10 +45,40 @@ public class PipedriveConnection {
                     .label("Client Secret")
                     .required(true))
             .authorizationUrl((connectionParameters, context) -> "https://oauth.pipedrive.com/oauth/authorize")
-            .scopes((connection, context) -> List.of("deals:read", "deals:full", "goals:read", "goals:full",
-                "leads:read", "leads:full", "activities:read", "activities:full", "contacts:read", "contacts:full",
-                "admin", "recents:read", "search:read", "mail:read", "mail:full", "products:read", "products:full",
-                "users:read", "base", "phone-integration"))
+            .scopes((connectionParameters, context) -> {
+                Map<String, Boolean> scopeMap = new LinkedHashMap<>();
+
+                scopeMap.put("admin", false);
+                scopeMap.put("activities:full", false);
+                scopeMap.put("activities:read", false);
+                scopeMap.put("base", false);
+                scopeMap.put("contact-fields:full", false);
+                scopeMap.put("contacts:full", true);
+                scopeMap.put("contacts:read", true);
+                scopeMap.put("deal-fields:full", false);
+                scopeMap.put("deals:full", true);
+                scopeMap.put("deals:read", true);
+                scopeMap.put("goals:full", false);
+                scopeMap.put("goals:read", false);
+                scopeMap.put("leads:full", true);
+                scopeMap.put("leads:read", true);
+                scopeMap.put("mail:full", false);
+                scopeMap.put("mail:read", false);
+                scopeMap.put("messengers-integration", false);
+                scopeMap.put("phone-integration", false);
+                scopeMap.put("products:full", false);
+                scopeMap.put("products:read", false);
+                scopeMap.put("projects:full", false);
+                scopeMap.put("projects:read", false);
+                scopeMap.put("recents:read", false);
+                scopeMap.put("search:read", false);
+                scopeMap.put("users:read", true);
+                scopeMap.put("video-calls", false);
+                scopeMap.put("webhooks:full", false);
+                scopeMap.put("webhooks:read", false);
+
+                return scopeMap;
+            })
             .tokenUrl((connectionParameters, context) -> "https://oauth.pipedrive.com/oauth/token")
             .refreshUrl((connectionParameters, context) -> "https://oauth.pipedrive.com/oauth/token"));
 

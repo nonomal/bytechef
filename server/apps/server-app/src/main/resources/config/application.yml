@@ -7,21 +7,82 @@ spring:
 springdoc:
   api-docs:
     enabled: false
+  swagger-ui:
+    enabled: false
 ---
+billing:
+  enabled: false
+  stripe:
+    customer-portal-url: https://billing.stripe.com/p/login/test_8x214mfs66RX9fP6BV3Je00
+    secret-key:
+    product-starter-id: prod_UQkzkfmlljRg3J
+    product-usage-id: prod_UQlAqLdV50vcMc
+    product-growth-id: prod_UQl6ZIubWx3VS4
+    meter-event-name: tenant_task_executions
+    webhook-secret:
+    success-url: ${bytechef.public-url}/automation/settings/billing?checkout=success
+    cancel-url: ${bytechef.public-url}/automation/settings/billing
+
+github-proxy:
+  baseUrl: https://github-proxy.bytechef.io/
 
 info:
+  ai:
+    copilot:
+      enabled: ${bytechef.ai.copilot.enabled}
+    knowledgeBase:
+      enabled: ${bytechef.ai.knowledge-base.enabled:false}
+  analytics:
+    enabled: ${bytechef.analytics.enabled}
+    postHog:
+      apiKey: ${post-hog.api-key:}
+      host: ${post-hog.host:}
+  billing:
+    enabled: ${billing.enabled}
+    customerPortalUrl: ${billing.stripe.customer-portal-url:}
   application:
-    edition: ${bytechef.edition}
+    edition: ${bytechef.edition:}
+  featureFlags: ${bytechef.feature-flags}
+  helpHub:
+    enabled: ${bytechef.help-hub.enabled}
+    commandBar:
+      orgId: ${command-bar.org-id:}
+  signUp:
+    activationRequired: ${bytechef.sign-up.activation-required}
+    enabled: ${bytechef.sign-up.enabled}
+  socialLogin:
+    enabled: ${bytechef.security.social-login.enabled}
+  userGuiding:
+    containerId: ${bytechef.user-guiding.container-id:}
+    enabled: ${bytechef.user-guiding.enabled}
+
+logging:
+  level:
+    ROOT: INFO
+    org.quartz: WARN
+    org.jline: ERROR
+    com.bytechef.ee.platform.scheduler.tenant: ERROR
 
 management:
   endpoints:
     web:
       exposure:
-        include: '*'
+        include:
+          - configprops
+          - env
+          - health
+          - info
+          - logfile
+          - loggers
+          - prometheus
+          - threaddump
+          - caches
+          - liquibase
   endpoint:
+    env:
+      show-values: when_authorized
     health:
-      show-details: when_authorized
-      roles: 'ROLE_ADMIN'
+      showDetails: always
       probes:
         enabled: true
       group:
@@ -29,6 +90,11 @@ management:
           include: livenessState
         readiness:
           include: readinessState,db
+  health:
+    neo4j:
+      enabled: false
+    redis:
+      enabled: false
   info:
     git:
       mode: full
@@ -51,12 +117,29 @@ management:
   observations:
     key-values:
       application: ${spring.application.name}
-  # Prometheus is the default metrics backend
-  prometheus:
+  opentelemetry:
+    tracing:
+      export:
+        otlp:
+          endpoint: ${bytechef.observability.tracing.endpoint}
+    logging:
+      export:
+        otlp:
+          endpoint: ${bytechef.observability.logging.endpoint}
+  logging:
+    export:
+      enabled: ${bytechef.observability.logging.enabled}
+  tracing:
+    export:
+      enabled: ${bytechef.observability.tracing.enabled}
+    sampling:
+      probability: 1.0
+  otlp:
     metrics:
       export:
-        enabled: true
-        step: 60
+        enabled: ${bytechef.observability.metrics.enabled}
+        step: 10s
+        url: ${bytechef.observability.metrics.endpoint}
 
 openapi:
   openAPIDefinition:
@@ -65,29 +148,108 @@ openapi:
       embedded: /api/embedded
       platform: /api/platform
 
-
 spring:
+  config:
+    import: classpath:config/application-bytechef.yml
+  ai:
+    chat:
+      client:
+        enabled: ${bytechef.ai.copilot.enabled}
+    model:
+      audio:
+        speech: none
+        transcription: none
+      chat: none
+      embedding: none
+      image: none
+      moderation: none
+    vectorstore:
+      type: none
+      pgvector:
+        index-type: hnsw
+        distance-type: cosine_distance
+        dimensions: 1536
+        max-document-batch-size: 10000
+        initialize-schema: true
   application:
     name: server-app
+  autoconfigure:
+    exclude:
+      org.springframework.ai.model.anthropic.autoconfigure.AnthropicChatAutoConfiguration,
+      org.springframework.ai.model.openai.autoconfigure.OpenAiChatAutoConfiguration,
+      org.springframework.ai.vectorstore.pgvector.autoconfigure.PgVectorStoreAutoConfiguration,
+      org.springframework.boot.data.redis.autoconfigure.DataRedisAutoConfiguration,
+      org.springframework.boot.neo4j.autoconfigure.Neo4jAutoConfiguration
+  batch:
+    job:
+      enabled: false
   cache:
     type: ${bytechef.cache.provider}
+  cloud:
+    aws:
+      s3:
+        enabled: false
+        vector:
+          enabled: false
+      sqs:
+        enabled: false
+  data:
+    redis:
+      database: ${bytechef.redis.database}
+      host: ${bytechef.redis.host}
+      port: ${bytechef.redis.port}
+      password: ${bytechef.redis.password}
+      timeout: ${bytechef.redis.timeout}
   datasource:
     type: com.zaxxer.hikari.HikariDataSource
     url: ${bytechef.datasource.url}
     username: ${bytechef.datasource.username}
     password: ${bytechef.datasource.password}
     hikari:
+      connection-test-query: SELECT 1
+      maximum-pool-size: ${bytechef.datasource.maximum-pool-size}
       poolName: Hikari
   h2:
     console:
       enabled: false
+  graphql:
+    schema:
+      locations: classpath*:graphql/**/
   jmx:
     enabled: false
+  kafka:
+    bootstrap-servers: ${bytechef.kafka.bootstrap-servers}
+    consumer:
+      group-id: ${bytechef.kafka.consumer.group-id}
+  mail:
+    host: ${bytechef.mail.host}
+    port: ${bytechef.mail.port}
+    username: ${bytechef.mail.username}
+    password: ${bytechef.mail.password}
+    properties:
+      mail:
+        debug: ${bytechef.mail.debug}
+        smtp:
+          auth: ${bytechef.mail.auth}
+          starttls:
+            enable: ${bytechef.mail.starttls.enable}
+            required: ${bytechef.mail.starttls.required}
+        transport:
+          protocol: ${bytechef.mail.protocol}
+    protocol: ${bytechef.mail.protocol}
+    ssl:
+      enabled: ${bytechef.mail.ssl.enabled}
+  mvc:
+    async:
+      request-timeout: 10m
   liquibase:
-    contexts: mono
+    contexts: mono, #spring.profiles.active#
+    enabled: ${bytechef.upgrade.enabled:true}
+    parameters:
+      billing.enabled: ${billing.enabled:false}
   output:
     ansi:
-      console-available: true
+      enabled: always
   profiles:
     active: #spring.profiles.active#
     group:
@@ -95,10 +257,22 @@ spring:
         - dev
         - api-docs
   rabbitmq:
+    host: ${bytechef.rabbitmq.host}
     listener:
       direct:
         prefetch: 1
+    password: ${bytechef.rabbitmq.password}
+    port: ${bytechef.rabbitmq.port}
+    username: ${bytechef.rabbitmq.username}
+  shell:
+    interactive:
+      enabled: false
+    history:
+      enabled: false
+    noninteractive:
+      enabled: false
   quartz:
+    auto-startup: false
     job-store-type: jdbc
     jdbc:
       initialize-schema: never
@@ -107,17 +281,15 @@ spring:
   task:
     execution:
       thread-name-prefix: server-app-task-
-      pool:
-        core-size: 2
-        max-size: 50
-        queue-capacity: 10000
+      simple:
+        concurrency-limit: ${bytechef.async.concurrency-limit}
     scheduling:
       thread-name-prefix: server-app-scheduling-
       pool:
         size: 2
   threads:
     virtual:
-#      enabled: true
+      enabled: true
 
 server:
   servlet:
@@ -131,67 +303,10 @@ springdoc:
     operationsSorter: method
     tags-sorter: alpha
 
-#####
-
-bytechef:
-  cache:
-    # Cache provider (redis | simple) default: simple
-    provider: simple
-  component:
-    registry:
-      # The list of component names to exclude from runtime
-      exclude:
-  data-storage:
-    provider: jdbc
-  # Edition (ce - Community Edition | ee - Enterprise Edition) default: ee
-  edition: ee
-  email:
-    temp-domain-list-url: #https://gist.githubusercontent.com/SimonHoiberg/f5a23b1fa3762330c8af1e9090918b63/raw/53963d0dbdd93c594fbc067cee95966156ee066b/temp-email-list.txt
-  # Encryption key provider (filesystem - the key generated on filesystem) default: filesystem
-  encryption:
-    provider: filesystem
-  file-storage:
-    # File storage provider for files (base64 | filesystem) default: filesystem
-    provider: filesystem
-    filesystem:
-      basedir: ${user.home}/bytechef/data/file-storage
-  mail:
-    base-url: ${bytechef.public-url}
-    from: noreply@bytechef.io
-  message-broker:
-    # Messaging provider between Coordinator and Workers (amqp | jms | kafka | redis) default: jms
-    provider: jms
-  oauth2:
-#    predefinedApps:
-#      mailchimp:
-#        clientId: 123456789
-#        clientSecret: 123456789
-    redirect-uri: ${bytechef.public-url}/callback
-  public-url: http://127.0.0.1:5173
-  resources:
-    web: file:///opt/bytechef/client
-  security:
-    content-security-policy: "default-src 'self'; frame-src 'self' data:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://storage.googleapis.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; img-src 'self' data:; font-src 'self' data:"
-    remember-me:
-      key: remember_me
-  # Tenant support mode (single | multi - ee only) default: single
-  tenant:
-    mode: single
-  webhook-url: http://127.0.0.1:9555/webhooks/{id}
-  # When the worker is enabled, subscribe to the default "default" queue with 10 concurrent consumers.
-  # You may also route workflow tasks to other arbitrarily named task queues by specifying the "node"
-  # property on any given task.
-  # E.g. node: captions will route to the captions queue which a worker would subscribe to with workflow.worker.subscriptions.captions.
-  # Note: queue must be created before tasks can be routed to it. ByteChef will create the queue if it isn't already there when the worker
-  # bootstraps.
-  worker:
-    task:
-      subscriptions:
-        default: "10"
-  workflow:
-    output-storage:
-      # Output storage provider for workflow output data (base64 | filesystem) default: base64
-      provider: base64
-    repository:
-      jdbc:
-        enabled: true
+templates:
+  owner: bytechefhq
+  ref: master
+  repo: bytechef-workflows
+  submission-form:
+    projects: https://forms.gle/W6zsUuwd7qPtoE836
+    workflows: https://forms.gle/xA8yyUSzKkHYajHx5

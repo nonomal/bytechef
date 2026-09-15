@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,22 +17,15 @@
 package com.bytechef.component.airtable.action;
 
 import static com.bytechef.component.OpenApiComponentHandler.PropertyType;
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.array;
-import static com.bytechef.component.definition.ComponentDSL.bool;
-import static com.bytechef.component.definition.ComponentDSL.date;
-import static com.bytechef.component.definition.ComponentDSL.dateTime;
-import static com.bytechef.component.definition.ComponentDSL.dynamicProperties;
-import static com.bytechef.component.definition.ComponentDSL.integer;
-import static com.bytechef.component.definition.ComponentDSL.nullable;
-import static com.bytechef.component.definition.ComponentDSL.number;
-import static com.bytechef.component.definition.ComponentDSL.object;
-import static com.bytechef.component.definition.ComponentDSL.string;
-import static com.bytechef.component.definition.ComponentDSL.time;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.dynamicProperties;
+import static com.bytechef.component.definition.ComponentDsl.string;
 import static com.bytechef.component.definition.Context.Http.BodyContentType;
 import static com.bytechef.component.definition.Context.Http.ResponseType;
 
-import com.bytechef.component.definition.ComponentDSL;
+import com.bytechef.component.airtable.util.AirtableUtils;
+import com.bytechef.component.definition.ActionDefinition;
+import com.bytechef.component.definition.ComponentDsl;
 import java.util.Map;
 
 /**
@@ -41,37 +34,40 @@ import java.util.Map;
  * @generated
  */
 public class AirtableCreateRecordAction {
-    public static final ComponentDSL.ModifiableActionDefinition ACTION_DEFINITION = action("createRecord")
-        .title("Creates a record")
+    public static final ComponentDsl.ModifiableActionDefinition ACTION_DEFINITION = action("createRecord")
+        .title("Create Record")
         .description("Adds a record into an Airtable table.")
         .metadata(
             Map.of(
                 "method", "POST",
-                "path", "/{baseId}/{tableId}", "bodyContentType", BodyContentType.JSON, "mimeType", "application/json"
+                "path", "/{baseId}/{tableId}", "bodyContentType", BodyContentType.JSON, "mimeType", "application/json",
+                "responseType", ResponseType.JSON
 
             ))
-        .properties(string("baseId").label("Base Id")
-            .description("The base id.")
+        .properties(string("baseId").label("Base ID")
+            .description("ID of the base where table is located.")
             .required(true)
+            .options((ActionDefinition.OptionsFunction<String>) AirtableUtils::getBaseIdOptions)
             .metadata(
                 Map.of(
                     "type", PropertyType.PATH)),
-            string("tableId").label("Table Id")
-                .description("The table id.")
+            string("tableId").label("Table ID")
+                .description("The table where the record will be created.")
                 .required(true)
+                .options((ActionDefinition.OptionsFunction<String>) AirtableUtils::getTableIdOptions)
+                .optionsLookupDependsOn("baseId")
                 .metadata(
                     Map.of(
                         "type", PropertyType.PATH)),
-            dynamicProperties("__item").metadata(
-                Map.of(
-                    "type", PropertyType.BODY)))
-        .outputSchema(object()
-            .properties(dateTime("createdTime").required(false), object("fields").additionalProperties(
-                array(), bool(), date(), dateTime(), integer(), nullable(), number(), object(), string(), time())
-                .required(false))
-            .metadata(
-                Map.of(
-                    "responseType", ResponseType.JSON)));
+            dynamicProperties("fields")
+                .properties((ActionDefinition.PropertiesFunction) AirtableUtils::getFieldsProperties)
+                .propertiesLookupDependsOn("baseId", "tableId")
+                .required(false)
+                .metadata(
+                    Map.of(
+                        "type", PropertyType.BODY)))
+        .output()
+        .help("", "https://docs.bytechef.io/reference/components/airtable_v1#create-record");
 
     private AirtableCreateRecordAction() {
     }

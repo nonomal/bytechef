@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,14 +16,16 @@
 
 package com.bytechef.component.bash.action;
 
-import static com.bytechef.component.bash.constant.BashConstants.EXECUTE;
 import static com.bytechef.component.bash.constant.BashConstants.SCRIPT;
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.outputSchema;
+import static com.bytechef.component.definition.ComponentDsl.sampleOutput;
+import static com.bytechef.component.definition.ComponentDsl.string;
 
 import com.bytechef.component.definition.ActionContext;
-import com.bytechef.component.definition.ComponentDSL.ModifiableActionDefinition;
+import com.bytechef.component.definition.ComponentDsl.ModifiableActionDefinition;
 import com.bytechef.component.definition.Parameters;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
@@ -38,22 +40,40 @@ import java.util.concurrent.TimeoutException;
 import org.zeroturnaround.exec.ProcessExecutor;
 
 /**
+ * Bash script execution action for workflow automation. Allows workflows to execute arbitrary bash commands.
+ *
  * @author Ivica Cardic
  */
 public class BashExecuteAction {
 
-    public static final ModifiableActionDefinition ACTION_DEFINITION = action(EXECUTE)
+    public static final ModifiableActionDefinition ACTION_DEFINITION = action("execute")
         .title("Execute")
         .description("Creates a temporary script that executes bash commands. The script is afterwards deleted.")
-        .properties(string(SCRIPT)
-            .label("Script")
-            .description("Script written in bash. Multiple commands are possible with the ';' separator.")
-            .placeholder("ls -la")
-            .required(true))
-        .outputSchema(string())
-        .sampleOutput("Sample result")
+        .properties(
+            string(SCRIPT)
+                .label("Script")
+                .description("Script written in bash. Multiple commands are possible with the ';' separator.")
+                .placeholder("ls -la")
+                .required(true))
+        .output(
+            outputSchema(
+                string()
+                    .description(
+                        "The output of the executed bash commands, including any standard output or error messages " +
+                            "generated during execution.")),
+            sampleOutput("Sample result"))
         .perform(BashExecuteAction::perform);
 
+    /**
+     * Executes the bash script.
+     *
+     * <p>
+     * <b>Security Note:</b> Command injection is intentional for this component. The Bash component is designed to
+     * allow workflow creators to execute arbitrary shell scripts as part of their automation workflows. Access to this
+     * component should be restricted through workflow-level permissions and proper access control. The script content
+     * is provided by the workflow creator, not end users.
+     */
+    @SuppressFBWarnings("COMMAND_INJECTION")
     protected static String perform(
         Parameters inputParameters, Parameters connectionParameters, ActionContext actionContext)
         throws IOException, InterruptedException, TimeoutException {

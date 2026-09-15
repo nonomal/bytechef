@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,14 +16,13 @@
 
 package com.bytechef.component.xml.file;
 
-import static com.bytechef.component.definition.ComponentDSL.component;
+import static com.bytechef.component.definition.ComponentDsl.component;
 
 import com.bytechef.component.ComponentHandler;
 import com.bytechef.component.definition.ComponentCategory;
 import com.bytechef.component.definition.ComponentDefinition;
 import com.bytechef.component.xml.file.action.XmlFileReadAction;
 import com.bytechef.component.xml.file.action.XmlFileWriteAction;
-import com.bytechef.component.xml.file.constant.XmlFileConstants;
 import com.google.auto.service.AutoService;
 
 /**
@@ -32,7 +31,7 @@ import com.google.auto.service.AutoService;
 @AutoService(ComponentHandler.class)
 public class XmlFileComponentHandler implements ComponentHandler {
 
-    private static final ComponentDefinition COMPONENT_DEFINITION = component(XmlFileConstants.XML_FILE)
+    private static final ComponentDefinition COMPONENT_DEFINITION = component("xmlFile")
         .title("XML File")
         .description("Reads and writes data from a XML file.")
         .icon("path:assets/xml-file.svg")

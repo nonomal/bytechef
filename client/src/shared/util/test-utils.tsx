@@ -1,16 +1,70 @@
+import {QueryClient, QueryClientProvider} from '@tanstack/react-query';
 import {cleanup, render} from '@testing-library/react';
-import {afterEach} from 'vitest';
+import {ReactElement, ReactNode} from 'react';
+import {afterEach, vi} from 'vitest';
 
 afterEach(() => {
     cleanup();
 });
 
-const customRender = (ui: React.ReactElement, options = {}) =>
-    render(ui, {
-        // wrap provider(s) here if needed
-        wrapper: ({children}) => <>{children}</>,
+const createTestQueryClient = () =>
+    new QueryClient({
+        defaultOptions: {
+            mutations: {
+                retry: false,
+            },
+            queries: {
+                retry: false,
+            },
+        },
+    });
+
+export const createTestQueryClientWrapper = () => {
+    const testQueryClient = createTestQueryClient();
+
+    return ({children}: {children: ReactNode}) => (
+        <QueryClientProvider client={testQueryClient}>{children}</QueryClientProvider>
+    );
+};
+
+const customRender = (ui: ReactElement, options = {}) => {
+    const testQueryClient = createTestQueryClient();
+
+    return render(ui, {
+        wrapper: ({children}) => <QueryClientProvider client={testQueryClient}>{children}</QueryClientProvider>,
         ...options,
     });
+};
+
+export const windowResizeObserver = () => {
+    class MockResizeObserver {
+        disconnect() {}
+        /* eslint-disable @typescript-eslint/no-unused-vars */
+        observe(_target?: Element, _options?: ResizeObserverOptions) {}
+        /* eslint-disable @typescript-eslint/no-unused-vars */
+        unobserve(_target?: Element) {}
+    }
+
+    // Assign as constructor-compatible classes
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (window as any).ResizeObserver = MockResizeObserver as unknown as typeof ResizeObserver;
+};
+
+export const resetAll = () => {
+    cleanup();
+
+    vi.clearAllMocks();
+
+    if (window.ResizeObserver) {
+        delete (window as unknown as {ResizeObserver?: ResizeObserver}).ResizeObserver;
+    }
+
+    vi.resetModules();
+};
+
+export function mockScrollIntoView() {
+    Element.prototype.scrollIntoView = vi.fn();
+}
 
 export * from '@testing-library/react';
 export {default as userEvent} from '@testing-library/user-event';

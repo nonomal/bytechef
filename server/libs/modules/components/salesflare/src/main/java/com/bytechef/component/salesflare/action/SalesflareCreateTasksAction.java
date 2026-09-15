@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,16 +17,17 @@
 package com.bytechef.component.salesflare.action;
 
 import static com.bytechef.component.OpenApiComponentHandler.PropertyType;
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.array;
-import static com.bytechef.component.definition.ComponentDSL.date;
-import static com.bytechef.component.definition.ComponentDSL.integer;
-import static com.bytechef.component.definition.ComponentDSL.object;
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.array;
+import static com.bytechef.component.definition.ComponentDsl.date;
+import static com.bytechef.component.definition.ComponentDsl.integer;
+import static com.bytechef.component.definition.ComponentDsl.object;
+import static com.bytechef.component.definition.ComponentDsl.outputSchema;
+import static com.bytechef.component.definition.ComponentDsl.string;
 import static com.bytechef.component.definition.Context.Http.BodyContentType;
 import static com.bytechef.component.definition.Context.Http.ResponseType;
 
-import com.bytechef.component.definition.ComponentDSL;
+import com.bytechef.component.definition.ComponentDsl;
 import java.util.Map;
 
 /**
@@ -35,9 +36,9 @@ import java.util.Map;
  * @generated
  */
 public class SalesflareCreateTasksAction {
-    public static final ComponentDSL.ModifiableActionDefinition ACTION_DEFINITION = action("createTasks")
-        .title("Create tasks")
-        .description("Creates new tasks")
+    public static final ComponentDsl.ModifiableActionDefinition ACTION_DEFINITION = action("createTasks")
+        .title("Create Tasks")
+        .description("Creates new tasks.")
         .metadata(
             Map.of(
                 "method", "POST",
@@ -45,21 +46,23 @@ public class SalesflareCreateTasksAction {
 
             ))
         .properties(array("__items").items(object().properties(string("description").label("Description")
-            .description("Description of new task")
+            .description("Description of new task.")
             .required(true),
-            date("reminder_date").label("Reminder Date")
+            date("reminder_date").label("Reminder Data")
                 .required(false)))
             .placeholder("Add to Items")
+            .metadata(
+                Map.of(
+                    "type", PropertyType.BODY))
             .label("Tasks")
-            .required(true)
-            .metadata(
-                Map.of(
-                    "type", PropertyType.BODY)))
-        .outputSchema(object().properties(array("body").items(object().properties(integer("id").required(false)))
+            .required(true))
+        .output(outputSchema(array().items(object().properties(integer("id").description("ID of the task.")
             .required(false))
+            .description("List of created tasks."))
+            .description("List of created tasks.")
             .metadata(
                 Map.of(
-                    "responseType", ResponseType.JSON)));
+                    "responseType", ResponseType.JSON))));
 
     private SalesflareCreateTasksAction() {
     }

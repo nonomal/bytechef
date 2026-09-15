@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,33 +18,65 @@ package com.bytechef.component.microsoft.share.point.action;
 
 import static com.bytechef.component.microsoft.share.point.constant.MicrosoftSharePointConstants.DESCRIPTION;
 import static com.bytechef.component.microsoft.share.point.constant.MicrosoftSharePointConstants.DISPLAY_NAME;
+import static com.bytechef.component.microsoft.share.point.constant.MicrosoftSharePointConstants.SITE_ID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.mockito.ArgumentCaptor.forClass;
 import static org.mockito.Mockito.when;
 
+import com.bytechef.component.definition.ActionContext;
+import com.bytechef.component.definition.Context.ContextFunction;
 import com.bytechef.component.definition.Context.Http;
+import com.bytechef.component.definition.Context.Http.Body;
+import com.bytechef.component.definition.Context.Http.Configuration;
+import com.bytechef.component.definition.Context.Http.Configuration.ConfigurationBuilder;
+import com.bytechef.component.definition.Context.Http.Executor;
+import com.bytechef.component.definition.Context.Http.Response;
+import com.bytechef.component.definition.Parameters;
+import com.bytechef.component.test.definition.MockParametersFactory;
+import com.bytechef.component.test.definition.extension.MockContextSetupExtension;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 
 /**
  * @author Monika Domiter
  */
-class MicrosoftSharePointCreateListActionTest extends AbstractMicrosoftSharePointActionTest {
+@ExtendWith(MockContextSetupExtension.class)
+class MicrosoftSharePointCreateListActionTest {
+
+    private final ArgumentCaptor<Body> bodyArgumentCaptor = forClass(Http.Body.class);
+    private final Parameters mockedParameters = MockParametersFactory.create(
+        Map.of(DISPLAY_NAME, "displayName", SITE_ID, "siteId", DESCRIPTION, "description"));
+    private final Map<String, Object> responseMap = Map.of("key", "value");
+    private final ArgumentCaptor<String> stringArgumentCaptor = forClass(String.class);
 
     @Test
-    void testPerform() {
-        when(mockedParameters.getRequiredString(DISPLAY_NAME))
-            .thenReturn("New list");
-        when(mockedParameters.getRequiredString(DESCRIPTION))
-            .thenReturn("List description");
+    void testPerform(
+        ActionContext mockedContext, Response mockedResponse, Executor mockedExecutor, Http mockedHttp,
+        ArgumentCaptor<ContextFunction<Http, Executor>> httpFunctionArgumentCaptor,
+        ArgumentCaptor<ConfigurationBuilder> configurationBuilderArgumentCaptor) {
 
-        Object result =
-            MicrosoftSharePointCreateListAction.perform(mockedParameters, mockedParameters, mockedContext);
+        when(mockedHttp.post(stringArgumentCaptor.capture()))
+            .thenReturn(mockedExecutor);
+        when(mockedExecutor.body(bodyArgumentCaptor.capture()))
+            .thenReturn(mockedExecutor);
+        when(mockedResponse.getBody())
+            .thenReturn(responseMap);
+
+        Object result = MicrosoftSharePointCreateListAction.perform(mockedParameters, mockedParameters, mockedContext);
 
         assertEquals(responseMap, result);
+        assertNotNull(httpFunctionArgumentCaptor.getValue());
 
-        Http.Body body = bodyArgumentCaptor.getValue();
+        ConfigurationBuilder configurationBuilder = configurationBuilderArgumentCaptor.getValue();
+        Configuration configuration = configurationBuilder.build();
 
-        assertEquals(Map.of(DISPLAY_NAME, "New list", DESCRIPTION, "List description"), body.getContent());
+        assertEquals(Http.ResponseType.JSON, configuration.getResponseType());
+        assertEquals(
+            Body.of(Map.of(DISPLAY_NAME, "displayName", DESCRIPTION, "description"), Http.BodyContentType.JSON),
+            bodyArgumentCaptor.getValue());
+        assertEquals("/sites/siteId/lists", stringArgumentCaptor.getValue());
     }
-
 }

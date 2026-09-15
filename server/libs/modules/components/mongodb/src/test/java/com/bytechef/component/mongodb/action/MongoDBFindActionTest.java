@@ -1,0 +1,96 @@
+/*
+ * Copyright 2025 ByteChef
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.bytechef.component.mongodb.action;
+
+import static com.bytechef.component.mongodb.constant.MongoDBConstants.COLLECTION;
+import static com.bytechef.component.mongodb.constant.MongoDBConstants.FILTER;
+import static com.bytechef.component.mongodb.constant.MongoDBConstants.LIMIT;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.CALLS_REAL_METHODS;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import com.bytechef.component.definition.ActionContext;
+import com.bytechef.component.definition.Parameters;
+import com.bytechef.component.mongodb.util.MongoDBUtils;
+import com.bytechef.component.test.definition.MockParametersFactory;
+import com.mongodb.client.FindIterable;
+import com.mongodb.client.MongoClient;
+import com.mongodb.client.MongoCollection;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import org.bson.Document;
+import org.bson.types.ObjectId;
+import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
+import org.mockito.MockedStatic;
+
+class MongoDBFindActionTest {
+
+    private final ActionContext mockedActionContext = mock(ActionContext.class);
+    private final Parameters mockedConnectionParameters = MockParametersFactory.create(Map.of());
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void testPerform() {
+        Parameters inputParameters = MockParametersFactory.create(
+            Map.of(COLLECTION, "users", FILTER, Map.of("active", true), LIMIT, 5));
+
+        MongoClient mockedMongoClient = mock(MongoClient.class);
+        MongoCollection<Document> mockedCollection = mock(MongoCollection.class);
+        FindIterable<Document> mockedFindIterable = mock(FindIterable.class);
+
+        ObjectId objectId = new ObjectId("507f1f77bcf86cd799439011");
+
+        List<Document> foundDocuments = List.of(new Document("_id", objectId).append("name", "Joe"));
+
+        ArgumentCaptor<Document> filterArgumentCaptor = ArgumentCaptor.forClass(Document.class);
+
+        when(mockedCollection.find(filterArgumentCaptor.capture()))
+            .thenReturn(mockedFindIterable);
+        when(mockedFindIterable.limit(anyInt()))
+            .thenReturn(mockedFindIterable);
+        when(mockedFindIterable.into(any()))
+            .thenReturn(new ArrayList<>(foundDocuments));
+
+        try (MockedStatic<MongoDBUtils> mongoDBUtilsMockedStatic = mockStatic(MongoDBUtils.class, CALLS_REAL_METHODS)) {
+            mongoDBUtilsMockedStatic.when(() -> MongoDBUtils.getMongoClient(any()))
+                .thenReturn(mockedMongoClient);
+            mongoDBUtilsMockedStatic.when(() -> MongoDBUtils.getCollection(any(), any(), anyString()))
+                .thenReturn(mockedCollection);
+
+            List<Map<String, Object>> result = MongoDBFindAction.perform(
+                inputParameters, mockedConnectionParameters, mockedActionContext);
+
+            // The ObjectId _id is normalized to its hex string for clean workflow output
+            assertEquals(
+                List.of(Map.of("_id", "507f1f77bcf86cd799439011", "name", "Joe")), result);
+            assertEquals(new Document("active", true), filterArgumentCaptor.getValue());
+
+            verify(mockedFindIterable).limit(5);
+            verify(mockedFindIterable, never()).projection(any());
+            verify(mockedFindIterable, never()).sort(any());
+        }
+    }
+}

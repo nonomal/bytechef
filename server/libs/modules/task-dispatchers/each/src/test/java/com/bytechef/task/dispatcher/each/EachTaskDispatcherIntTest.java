@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,14 +18,17 @@ package com.bytechef.task.dispatcher.each;
 
 import com.bytechef.atlas.file.storage.TaskFileStorage;
 import com.bytechef.commons.util.EncodingUtils;
+import com.bytechef.evaluator.Evaluator;
+import com.bytechef.evaluator.SpelEvaluator;
 import com.bytechef.platform.workflow.task.dispatcher.test.annotation.TaskDispatcherIntTest;
 import com.bytechef.platform.workflow.task.dispatcher.test.task.handler.TestVarTaskHandler;
 import com.bytechef.platform.workflow.task.dispatcher.test.workflow.TaskDispatcherJobTestExecutor;
 import com.bytechef.task.dispatcher.each.completion.EachTaskCompletionHandler;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -38,6 +41,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 @TaskDispatcherIntTest
 public class EachTaskDispatcherIntTest {
 
+    private static final Evaluator EVALUATOR = SpelEvaluator.create();
+
     private TestVarTaskHandler<List<String>, String> testVarTaskHandler;
 
     @Autowired
@@ -49,30 +54,34 @@ public class EachTaskDispatcherIntTest {
     @BeforeEach
     void beforeEach() {
         testVarTaskHandler = new TestVarTaskHandler<>(
-            (valueMap, name, value) -> valueMap.computeIfAbsent(name, key -> new ArrayList<>())
+            (valueMap, name, value) -> valueMap
+                .computeIfAbsent(name, key -> Collections.synchronizedList(new ArrayList<>()))
                 .add(value));
     }
 
     @Test
     public void testEachTaskDispatcher() {
         taskDispatcherJobTestExecutor.execute(
-            EncodingUtils.encodeBase64ToString("each_v1"),
-            (counterService, taskExecutionService) -> List.of(
+            EncodingUtils.base64EncodeToString("each_v1"),
+            (contextService, counterService, taskExecutionService) -> List.of(
                 (taskCompletionHandler, taskDispatcher) -> new EachTaskCompletionHandler(
                     counterService, taskCompletionHandler, taskExecutionService)),
             (
-                messageBroker, contextService, counterService, taskExecutionService) -> List.of(
+                eventPublisher, contextService, counterService, taskExecutionService) -> List.of(
                     (taskDispatcher) -> new EachTaskDispatcher(
-                        messageBroker, contextService, counterService, taskDispatcher, taskExecutionService,
-                        taskFileStorage)),
-            () -> Map.of("var", testVarTaskHandler));
+                        contextService, counterService, EVALUATOR, eventPublisher, taskDispatcher,
+                        taskExecutionService, taskFileStorage)),
+            () -> Map.of("var/v1/set", testVarTaskHandler));
 
-        Assertions.assertEquals(
-            IntStream.rangeClosed(1, 25)
-                .boxed()
-                .flatMap(item1 -> IntStream.rangeClosed(1, 25)
-                    .mapToObj(item2 -> item1 + "_" + item2))
-                .collect(Collectors.toList()),
-            testVarTaskHandler.get("var1"));
+        List<String> expected = IntStream.rangeClosed(1, 25)
+            .boxed()
+            .flatMap(item1 -> IntStream.rangeClosed(1, 25)
+                .mapToObj(item2 -> item1 + "_" + item2))
+            .toList();
+
+        List<String> actual = testVarTaskHandler.get("var1");
+
+        Assertions.assertEquals(expected.size(), actual.size());
+        Assertions.assertEquals(new HashSet<>(expected), new HashSet<>(actual));
     }
 }

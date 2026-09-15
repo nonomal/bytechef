@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,19 +16,17 @@
 
 package com.bytechef.commons.util;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.type.TypeFactory;
-import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringWriter;
 import java.lang.reflect.Type;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
+import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.transform.OutputKeys;
 import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerFactory;
@@ -38,34 +36,40 @@ import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathFactory;
 import org.apache.commons.lang3.Validate;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.type.TypeFactory;
+import tools.jackson.dataformat.xml.XmlMapper;
 
 /**
+ * XML utility class with secure parsing configuration to prevent XXE attacks.
+ *
  * @author Ivica Cardic
  */
-@Component
 public class XmlUtils {
 
-    private static final DocumentBuilderFactory DOCUMENT_BUILDER_FACTORY = DocumentBuilderFactory.newInstance();
-    private static final XPathFactory X_PATH_FACTORY = XPathFactory.newInstance();
-    private static final TransformerFactory TRANSFORMER_FACTORY = TransformerFactory.newInstance();
+    private static final Logger log = LoggerFactory.getLogger(XmlUtils.class);
 
-    @SuppressFBWarnings("MS_PKGPROTECT")
-    protected static XmlMapper xmlMapper;
+    private static final DocumentBuilderFactory DOCUMENT_BUILDER_FACTORY;
+    private static final XPathFactory X_PATH_FACTORY = XPathFactory.newInstance();
+    private static final TransformerFactory TRANSFORMER_FACTORY;
+
+    static {
+        DOCUMENT_BUILDER_FACTORY = createSecureDocumentBuilderFactory();
+        TRANSFORMER_FACTORY = createSecureTransformerFactory();
+    }
+
+    private static XmlMapper xmlMapper;
 
     public static Map<String, ?> read(InputStream inputStream) {
         TypeFactory typeFactory = xmlMapper.getTypeFactory();
 
-        try {
-            return xmlMapper.readValue(
-                inputStream, typeFactory.constructMapType(Map.class, String.class, Object.class));
-        } catch (IOException ioException) {
-            throw new RuntimeException(ioException);
-        }
+        return xmlMapper.readValue(
+            inputStream, typeFactory.constructMapType(Map.class, String.class, Object.class));
     }
 
     public static <T> Map<String, T> read(InputStream inputStream, Class<T> valueType) {
@@ -174,6 +178,11 @@ public class XmlUtils {
         }
     }
 
+    @SuppressFBWarnings("EI")
+    public static void setXmlMapper(XmlMapper xmlMapper) {
+        XmlUtils.xmlMapper = xmlMapper;
+    }
+
     public static Stream<Map<String, ?>> stream(InputStream inputStream) {
         Validate.notNull(inputStream, "Non null stream reference expected");
 
@@ -198,12 +207,73 @@ public class XmlUtils {
         }
     }
 
-    @Autowired
-    @SuppressFBWarnings("ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD")
-    void setXmlMapper(XmlMapper xmlMapper) {
-        XmlUtils.xmlMapper = xmlMapper;
+    /**
+     * Creates a secure DocumentBuilderFactory with XXE protections enabled. Disables DTD processing, external entities,
+     * and external DTDs.
+     */
+    private static DocumentBuilderFactory createSecureDocumentBuilderFactory() {
+        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+
+        try {
+            // Disable DTD processing entirely (strongest protection)
+            factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+        } catch (ParserConfigurationException e) {
+            log.warn("Could not disable DOCTYPE declaration, applying fallback XXE protections", e);
+
+            // Fallback: disable external entities if DOCTYPE cannot be disabled
+            try {
+                factory.setFeature("http://xml.org/sax/features/external-general-entities", false);
+                factory.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
+                factory.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false);
+            } catch (ParserConfigurationException ex) {
+                log.warn("Could not configure all XXE protections", ex);
+            }
+        }
+
+        // Set additional security attributes
+        try {
+            factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, "");
+            factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_SCHEMA, "");
+        } catch (IllegalArgumentException e) {
+            // Some parsers may not support these attributes
+            log.debug("Parser does not support ACCESS_EXTERNAL_DTD/SCHEMA attributes", e);
+        }
+
+        factory.setXIncludeAware(false);
+        factory.setExpandEntityReferences(false);
+
+        return factory;
     }
 
+    /**
+     * Creates a secure TransformerFactory with XXE protections enabled.
+     */
+    private static TransformerFactory createSecureTransformerFactory() {
+        TransformerFactory factory = TransformerFactory.newInstance();
+
+        try {
+            factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, "");
+            factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_STYLESHEET, "");
+        } catch (IllegalArgumentException e) {
+            // Some transformers may not support these attributes
+            log.debug("Transformer does not support ACCESS_EXTERNAL_DTD/STYLESHEET attributes", e);
+        }
+
+        return factory;
+    }
+
+    /**
+     * Parses an XML input stream and extracts nodes matching the given XPath.
+     *
+     * <p>
+     * <b>Security Note:</b> The XXE_DOCUMENT suppression is safe because the DocumentBuilderFactory is configured with
+     * DTD and external entity processing disabled via {@link #createSecureDocumentBuilderFactory()}. The
+     * XPATH_INJECTION suppression is appropriate because XPath expressions are internal implementation details, not
+     * user input.
+     */
+    @SuppressFBWarnings({
+        "XXE_DOCUMENT", "XPATH_INJECTION"
+    })
     private static String parse(InputStream inputStream, String path) {
         StringBuffer sb = new StringBuffer();
 

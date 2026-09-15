@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the ByteChef Enterprise license (the "Enterprise License");
  * you may not use this file except in compliance with the Enterprise License.
@@ -10,7 +10,6 @@ package com.bytechef.ee.discovery.util;
 import com.bytechef.commons.util.CollectionUtils;
 import com.bytechef.commons.util.JsonUtils;
 import com.bytechef.commons.util.MapUtils;
-import com.fasterxml.jackson.core.type.TypeReference;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -21,6 +20,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.cloud.client.ServiceInstance;
+import tools.jackson.core.type.TypeReference;
 
 /**
  * @version ee
@@ -44,7 +44,7 @@ public class WorkerDiscoveryUtils {
             }
         }
 
-        throw new IllegalArgumentException("None od worker instances contains component=%s ".formatted(componentName));
+        throw new IllegalArgumentException("None od worker instances contains component: %s".formatted(componentName));
     }
 
     public static Set<ServiceInstance> filterServiceInstances(List<ServiceInstance> serviceInstances) {

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,9 +16,8 @@
 
 package com.bytechef.component.whatsapp;
 
-import static com.bytechef.component.definition.ComponentDSL.component;
+import static com.bytechef.component.definition.ComponentDsl.component;
 import static com.bytechef.component.whatsapp.connection.WhatsAppConnection.CONNECTION_DEFINITION;
-import static com.bytechef.component.whatsapp.constant.WhatsAppConstants.WHATS_APP;
 
 import com.bytechef.component.ComponentHandler;
 import com.bytechef.component.definition.ComponentCategory;
@@ -33,7 +32,7 @@ import com.google.auto.service.AutoService;
 @AutoService(ComponentHandler.class)
 public class WhatsAppComponentHandler implements ComponentHandler {
 
-    private static final ComponentDefinition COMPONENT_DEFINITION = component(WHATS_APP)
+    private static final ComponentDefinition COMPONENT_DEFINITION = component("whatsApp")
         .title("WhatsApp")
         .description(
             "WhatsApp is a free-to-use messaging app offering end-to-end encrypted chat, voice, and " +

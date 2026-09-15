@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,13 +18,13 @@ package com.bytechef.component.aws.s3.action;
 
 import static com.bytechef.component.aws.s3.constant.AwsS3Constants.BUCKET_NAME;
 import static com.bytechef.component.aws.s3.constant.AwsS3Constants.KEY;
-import static com.bytechef.component.aws.s3.constant.AwsS3Constants.PRESIGN_GET_OBJECT;
 import static com.bytechef.component.aws.s3.constant.AwsS3Constants.SIGNATURE_DURATION;
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.outputSchema;
+import static com.bytechef.component.definition.ComponentDsl.string;
 
 import com.bytechef.component.aws.s3.util.AwsS3Utils;
-import com.bytechef.component.definition.ComponentDSL.ModifiableActionDefinition;
+import com.bytechef.component.definition.ComponentDsl.ModifiableActionDefinition;
 import com.bytechef.component.definition.Context;
 import com.bytechef.component.definition.Parameters;
 import java.net.URL;
@@ -37,7 +37,7 @@ import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequ
  */
 public class AwsS3PresignGetObjectAction {
 
-    public static final ModifiableActionDefinition ACTION_DEFINITION = action(PRESIGN_GET_OBJECT)
+    public static final ModifiableActionDefinition ACTION_DEFINITION = action("presignGetObject")
         .title("Get Pre-signed Object")
         .description("You can share an object with a pre-signed URL for up to 12 hours or until your session expires.")
         .properties(
@@ -51,7 +51,7 @@ public class AwsS3PresignGetObjectAction {
                 .description("Time interval until the pre-signed URL expires")
                 .placeholder("15M, 10H, PT-6H3M, etc.")
                 .required(true))
-        .outputSchema(string())
+        .output(outputSchema(string()))
         .perform(AwsS3PresignGetObjectAction::perform);
 
     protected static String perform(

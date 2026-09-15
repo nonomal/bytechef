@@ -1,0 +1,5 @@
+README.md
+pom.xml
+src/main/java/com/bytechef/ee/platform/configuration/web/rest/ApiUtil.java
+src/main/java/com/bytechef/ee/platform/configuration/web/rest/GitConfigurationApi.java
+src/main/java/com/bytechef/ee/platform/configuration/web/rest/model/GitConfigurationModel.java

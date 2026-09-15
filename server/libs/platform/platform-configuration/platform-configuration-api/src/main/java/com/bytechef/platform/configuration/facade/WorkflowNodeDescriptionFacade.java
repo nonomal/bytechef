@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,5 +21,8 @@ package com.bytechef.platform.configuration.facade;
  */
 public interface WorkflowNodeDescriptionFacade {
 
-    String getWorkflowNodeDescription(String workflowId, String workflowNodeName);
+    String getClusterElementWorkflowNodeDescription(
+        String workflowId, String workflowNodeName, String clusterElementName, Long environmentId);
+
+    String getWorkflowNodeDescription(String workflowId, String workflowNodeName, long environmentId);
 }

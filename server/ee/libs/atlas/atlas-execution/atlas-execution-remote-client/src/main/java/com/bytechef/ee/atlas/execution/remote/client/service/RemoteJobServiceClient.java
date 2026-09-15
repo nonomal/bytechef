@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the ByteChef Enterprise license (the "Enterprise License");
  * you may not use this file except in compliance with the Enterprise License.
@@ -9,7 +9,7 @@ package com.bytechef.ee.atlas.execution.remote.client.service;
 
 import com.bytechef.atlas.configuration.domain.Workflow;
 import com.bytechef.atlas.execution.domain.Job;
-import com.bytechef.atlas.execution.dto.JobParameters;
+import com.bytechef.atlas.execution.dto.JobParametersDTO;
 import com.bytechef.atlas.execution.service.JobService;
 import com.bytechef.ee.remote.client.LoadBalancedRestClient;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
@@ -36,17 +36,22 @@ public class RemoteJobServiceClient implements JobService {
     }
 
     @Override
-    public Job create(JobParameters jobParameters, Workflow workflow) {
+    public Job create(JobParametersDTO jobParametersDTO, Workflow workflow) {
         return loadBalancedRestClient.post(
             uriBuilder -> uriBuilder
                 .host(EXECUTION_APP)
                 .path(JOB_SERVICE + "/create")
                 .build(),
-            new JobCreateRequest(jobParameters, workflow), Job.class);
+            new JobCreateRequest(jobParametersDTO, workflow), Job.class);
     }
 
     @Override
     public void deleteJob(long id) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Optional<Job> fetchJob(Long id) {
         throw new UnsupportedOperationException();
     }
 
@@ -64,6 +69,21 @@ public class RemoteJobServiceClient implements JobService {
                     .path(JOB_SERVICE + "/fetch-last-workflow-job/{workflowId}")
                     .build(workflowId),
                 Job.class));
+    }
+
+    @Override
+    public Optional<Job> fetchLastWorkflowJob(List<String> workflowIds) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public List<Long> getChildJobIds(long parentJobId) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public List<Job> getJobs(List<Long> ids) {
+        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -89,11 +109,6 @@ public class RemoteJobServiceClient implements JobService {
                 .path(JOB_SERVICE + "/get-task-execution-job/{taskExecutionId}")
                 .build(taskExecutionId),
             Job.class);
-    }
-
-    @Override
-    public List<Job> getWorkflowJobs(String workflowId) {
-        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -136,6 +151,6 @@ public class RemoteJobServiceClient implements JobService {
             job, Job.class);
     }
 
-    private record JobCreateRequest(JobParameters jobParameters, Workflow workflow) {
+    private record JobCreateRequest(JobParametersDTO jobParameters, Workflow workflow) {
     }
 }

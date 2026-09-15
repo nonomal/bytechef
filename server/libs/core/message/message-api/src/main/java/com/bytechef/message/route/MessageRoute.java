@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -44,6 +44,15 @@ public interface MessageRoute {
 
     default boolean isMessageExchange() {
         return Exchange.MESSAGE == getExchange();
+    }
+
+    /**
+     * Whether messages on this route must be delivered in strict FIFO order to receivers. In-memory broker
+     * implementations may dispatch unordered routes on a shared thread pool for throughput; ordered routes require
+     * per-route serial dispatch so tokens (e.g., SSE stream events) reach the receiver in the sequence they were sent.
+     */
+    default boolean isOrdered() {
+        return false;
     }
 
     Exchange getExchange();

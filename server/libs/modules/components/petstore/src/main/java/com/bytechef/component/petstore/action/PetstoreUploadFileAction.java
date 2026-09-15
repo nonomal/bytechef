@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,15 +17,16 @@
 package com.bytechef.component.petstore.action;
 
 import static com.bytechef.component.OpenApiComponentHandler.PropertyType;
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.fileEntry;
-import static com.bytechef.component.definition.ComponentDSL.integer;
-import static com.bytechef.component.definition.ComponentDSL.object;
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.fileEntry;
+import static com.bytechef.component.definition.ComponentDsl.integer;
+import static com.bytechef.component.definition.ComponentDsl.object;
+import static com.bytechef.component.definition.ComponentDsl.outputSchema;
+import static com.bytechef.component.definition.ComponentDsl.string;
 import static com.bytechef.component.definition.Context.Http.BodyContentType;
 import static com.bytechef.component.definition.Context.Http.ResponseType;
 
-import com.bytechef.component.definition.ComponentDSL;
+import com.bytechef.component.definition.ComponentDsl;
 import com.bytechef.component.petstore.property.PetstoreApiResponseProperties;
 import java.util.Map;
 
@@ -35,7 +36,7 @@ import java.util.Map;
  * @generated
  */
 public class PetstoreUploadFileAction {
-    public static final ComponentDSL.ModifiableActionDefinition ACTION_DEFINITION = action("uploadFile")
+    public static final ComponentDsl.ModifiableActionDefinition ACTION_DEFINITION = action("uploadFile")
         .title("uploads an image")
         .description("")
         .metadata(
@@ -60,10 +61,10 @@ public class PetstoreUploadFileAction {
             fileEntry("fileEntry").metadata(
                 Map.of(
                     "type", PropertyType.BODY)))
-        .outputSchema(object().properties(PetstoreApiResponseProperties.PROPERTIES)
+        .output(outputSchema(object().properties(PetstoreApiResponseProperties.PROPERTIES)
             .metadata(
                 Map.of(
-                    "responseType", ResponseType.JSON)));
+                    "responseType", ResponseType.JSON))));
 
     private PetstoreUploadFileAction() {
     }

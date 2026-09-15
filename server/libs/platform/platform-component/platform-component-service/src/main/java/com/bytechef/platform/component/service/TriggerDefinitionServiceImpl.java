@@ -1,0 +1,904 @@
+/*
+ * Copyright 2025 ByteChef
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.bytechef.platform.component.service;
+
+import com.bytechef.commons.util.CollectionUtils;
+import com.bytechef.commons.util.ConvertUtils;
+import com.bytechef.commons.util.MapUtils;
+import com.bytechef.component.definition.ComponentDefinition;
+import com.bytechef.component.definition.DynamicOptionsProperty;
+import com.bytechef.component.definition.HttpStatus;
+import com.bytechef.component.definition.OptionsDataSource;
+import com.bytechef.component.definition.OutputDefinition;
+import com.bytechef.component.definition.Parameters;
+import com.bytechef.component.definition.PropertiesDataSource;
+import com.bytechef.component.definition.Property.DynamicPropertiesProperty;
+import com.bytechef.component.definition.TriggerContext;
+import com.bytechef.component.definition.TriggerDefinition.DynamicWebhookRefreshFunction;
+import com.bytechef.component.definition.TriggerDefinition.ListenerDisableConsumer;
+import com.bytechef.component.definition.TriggerDefinition.ListenerEnableConsumer;
+import com.bytechef.component.definition.TriggerDefinition.PollFunction;
+import com.bytechef.component.definition.TriggerDefinition.PollOutput;
+import com.bytechef.component.definition.TriggerDefinition.TriggerType;
+import com.bytechef.component.definition.TriggerDefinition.WebhookDisableConsumer;
+import com.bytechef.component.definition.TriggerDefinition.WebhookEnableFunction;
+import com.bytechef.component.definition.TriggerDefinition.WebhookEnableOutput;
+import com.bytechef.component.definition.TriggerDefinition.WebhookRequestFunction;
+import com.bytechef.component.definition.TriggerDefinition.WebhookValidateResponse;
+import com.bytechef.component.exception.ProviderException;
+import com.bytechef.definition.BaseOutputDefinition;
+import com.bytechef.definition.BaseProperty;
+import com.bytechef.exception.ConfigurationException;
+import com.bytechef.exception.ExecutionException;
+import com.bytechef.platform.component.ComponentConnection;
+import com.bytechef.platform.component.ComponentDefinitionRegistry;
+import com.bytechef.platform.component.annotation.WithTokenRefresh;
+import com.bytechef.platform.component.annotation.WithTokenRefresh.ComponentNameParam;
+import com.bytechef.platform.component.annotation.WithTokenRefresh.ConnectionParam;
+import com.bytechef.platform.component.context.ContextFactory;
+import com.bytechef.platform.component.definition.HttpHeadersImpl;
+import com.bytechef.platform.component.definition.HttpParametersImpl;
+import com.bytechef.platform.component.definition.LogEntryBufferAware;
+import com.bytechef.platform.component.definition.ParametersFactory;
+import com.bytechef.platform.component.definition.PropertyFactory;
+import com.bytechef.platform.component.domain.Option;
+import com.bytechef.platform.component.domain.OptionsDataSourceAware;
+import com.bytechef.platform.component.domain.Property;
+import com.bytechef.platform.component.domain.TriggerDefinition;
+import com.bytechef.platform.component.domain.ValueProperty;
+import com.bytechef.platform.component.domain.WebhookTriggerFlags;
+import com.bytechef.platform.component.exception.ActionDefinitionErrorType;
+import com.bytechef.platform.component.exception.ComponentErrorType;
+import com.bytechef.platform.component.exception.TriggerDefinitionErrorType;
+import com.bytechef.platform.component.trigger.TriggerOutput;
+import com.bytechef.platform.component.trigger.WebhookRequest;
+import com.bytechef.platform.constant.PlatformType;
+import com.bytechef.platform.domain.OutputResponse;
+import com.bytechef.platform.util.PropertyUtils;
+import com.bytechef.platform.util.SchemaUtils;
+import com.bytechef.platform.util.WorkflowNodeDescriptionUtils;
+import com.bytechef.platform.workflow.WorkflowExecutionId;
+import com.bytechef.platform.workflow.coordinator.event.TriggerListenerEvent;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import org.jspecify.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.stereotype.Service;
+
+/**
+ * @author Ivica Cardic
+ * @author Igor Beslic
+ */
+@Service("triggerDefinitionService")
+public class TriggerDefinitionServiceImpl implements TriggerDefinitionService {
+
+    private static final int MAX_POLLING_TRIGGER_ITERATIONS = 100;
+    private static final int MAX_POLLING_TRIGGER_RECORDS = 10_000;
+
+    private static final Logger log = LoggerFactory.getLogger(TriggerDefinitionServiceImpl.class);
+
+    private final ComponentDefinitionRegistry componentDefinitionRegistry;
+    private final ContextFactory contextFactory;
+    private final ApplicationEventPublisher eventPublisher;
+
+    public TriggerDefinitionServiceImpl(
+        @Lazy ComponentDefinitionRegistry componentDefinitionRegistry, ContextFactory contextFactory,
+        ApplicationEventPublisher eventPublisher) {
+
+        this.componentDefinitionRegistry = componentDefinitionRegistry;
+        this.contextFactory = contextFactory;
+        this.eventPublisher = eventPublisher;
+    }
+
+    @Override
+    public List<Property> executeDynamicProperties(
+        String componentName, int componentVersion, String triggerName, Map<String, ?> inputParameters,
+        String propertyName, List<String> lookupDependsOnPaths, @Nullable ComponentConnection componentConnection) {
+
+        try {
+            WrapResult wrapResult = wrap(inputParameters, lookupDependsOnPaths, componentConnection);
+            TriggerContext triggerContext = contextFactory.createTriggerContext(
+                componentName, componentVersion, triggerName, null, null, componentConnection, null, null, true);
+
+            com.bytechef.component.definition.TriggerDefinition.PropertiesFunction propertiesFunction =
+                getComponentPropertiesFunction(
+                    componentName, componentVersion, triggerName, propertyName, wrapResult.inputParameters,
+                    wrapResult.connectionParameters, wrapResult.lookupDependsOnPathsMap, triggerContext);
+
+            return CollectionUtils.map(
+                propertiesFunction.apply(
+                    wrapResult.inputParameters, wrapResult.connectionParameters, wrapResult.lookupDependsOnPathsMap,
+                    triggerContext),
+                valueProperty -> (ValueProperty<?>) Property.toProperty(valueProperty));
+        } catch (Exception e) {
+            throw new ConfigurationException(
+                e, inputParameters, TriggerDefinitionErrorType.DYNAMIC_PROPERTIES_FAILED);
+        }
+    }
+
+    @Override
+    public WebhookEnableOutput executeDynamicWebhookRefresh(
+        String componentName, int componentVersion, String triggerName,
+        @Nullable ComponentConnection componentConnection, Map<String, ?> outputParameters) {
+
+        DynamicWebhookRefreshFunction dynamicWebhookRefreshFunction = getDynamicWebhookRefreshFunction(
+            componentName, componentVersion, triggerName);
+
+        return dynamicWebhookRefreshFunction.apply(
+            ParametersFactory
+                .create(componentConnection == null ? Map.of() : componentConnection.parameters()),
+            ParametersFactory.create(outputParameters),
+            contextFactory.createTriggerContext(
+                componentName, componentVersion, triggerName, null, null, null, null, null, false));
+    }
+
+    @Override
+    public void executeListenerDisable(
+        String componentName, int componentVersion, String triggerName, Map<String, ?> inputParameters,
+        String workflowExecutionId, @Nullable ComponentConnection componentConnection) {
+
+        ListenerDisableConsumer listenerDisableConsumer = getListenerDisableConsumer(
+            componentName, componentVersion, triggerName);
+
+        try {
+            listenerDisableConsumer.accept(
+                ParametersFactory.create(inputParameters),
+                ParametersFactory.create(
+                    componentConnection == null ? Map.of() : componentConnection.parameters()),
+                workflowExecutionId,
+                contextFactory.createTriggerContext(
+                    componentName, componentVersion, triggerName, null, null, componentConnection, null, null, false));
+        } catch (Exception e) {
+            throw new ExecutionException(
+                e, inputParameters, TriggerDefinitionErrorType.LISTENER_DISABLE_FAILED);
+        }
+    }
+
+    @Override
+    public void executeListenerEnable(
+        String componentName, int componentVersion, String triggerName, Map<String, ?> inputParameters,
+        String workflowExecutionId, @Nullable ComponentConnection componentConnection) {
+
+        ListenerEnableConsumer listenerEnableConsumer = getListenerEnableConsumer(
+            componentName, componentVersion, triggerName);
+
+        try {
+            listenerEnableConsumer.accept(
+                ParametersFactory.create(inputParameters), ParametersFactory.create(componentConnection),
+                workflowExecutionId,
+                output -> eventPublisher.publishEvent(
+                    new TriggerListenerEvent(
+                        new TriggerListenerEvent.ListenerParameters(
+                            WorkflowExecutionId.parse(workflowExecutionId), Instant.now(), output))),
+                contextFactory.createTriggerContext(
+                    componentName, componentVersion, triggerName, null, null, componentConnection, null, null, false));
+        } catch (Exception e) {
+            throw new ExecutionException(e, inputParameters,
+                TriggerDefinitionErrorType.LISTENER_ENABLE_FAILED);
+        }
+    }
+
+    @Override
+    @WithTokenRefresh(
+        errorTypeClass = TriggerDefinitionErrorType.class,
+        errorTypeField = "OPTIONS_FAILED")
+    public List<Option> executeOptions(
+        @ComponentNameParam String componentName, int componentVersion, String triggerName,
+        String propertyName,
+        Map<String, ?> inputParameters, List<String> lookupDependsOnPaths, @Nullable String searchText,
+        @ConnectionParam @Nullable ComponentConnection componentConnection) {
+
+        TriggerContext triggerContext = contextFactory.createTriggerContext(
+            componentName, componentVersion, triggerName, null, null, componentConnection, null, null, true);
+
+        return doExecuteOptions(
+            componentName, componentVersion, triggerName, inputParameters,
+            propertyName, lookupDependsOnPaths, searchText, componentConnection, triggerContext);
+    }
+
+    @Override
+    @WithTokenRefresh
+    public @Nullable OutputResponse executeOutput(
+        @ComponentNameParam String componentName, int componentVersion, String triggerName,
+        Map<String, ?> inputParameters, @ConnectionParam @Nullable ComponentConnection componentConnection) {
+
+        TriggerContext triggerContext = contextFactory.createTriggerContext(
+            componentName, componentVersion, triggerName, null, null, componentConnection, null, null, true);
+
+        return doExecuteOutput(
+            componentName, componentVersion, triggerName, inputParameters, componentConnection, triggerContext);
+    }
+
+    @Override
+    public ProviderException executeProcessErrorResponse(
+        String componentName, int componentVersion, int connectionVersion, String componentOperationName,
+        int statusCode, Object body, Map<String, List<String>> headers) {
+
+        com.bytechef.component.definition.TriggerDefinition triggerDefinition =
+            componentDefinitionRegistry.getTriggerDefinition(componentName, componentVersion, componentOperationName);
+        TriggerContext triggerContext = contextFactory.createTriggerContext(
+            componentName, componentVersion, componentOperationName, null, null, null, null, null, false);
+
+        try {
+            return triggerDefinition.getProcessErrorResponse()
+                .orElseGet(() -> (statusCode1, body1, headers1, context1) -> ProviderException.getProviderException(
+                    statusCode1, body1, headers1))
+                .apply(statusCode, body, headers, triggerContext);
+        } catch (Exception e) {
+            throw new ExecutionException(e, ActionDefinitionErrorType.EXECUTE_PROCESS_ERROR_RESPONSE);
+        }
+    }
+
+    @Override
+    @WithTokenRefresh(
+        errorTypeClass = TriggerDefinitionErrorType.class,
+        errorTypeField = "TRIGGER_TEST_FAILED")
+    public TriggerOutput executeTrigger(
+        @ComponentNameParam String componentName, int componentVersion, String triggerName,
+        @Nullable Long jobPrincipalId, @Nullable String workflowUuid, @Nullable Long triggerExecutionId,
+        Map<String, ?> inputParameters, @Nullable Object triggerState, @Nullable WebhookRequest webhookRequest,
+        @ConnectionParam @Nullable ComponentConnection componentConnection, @Nullable Long environmentId,
+        PlatformType type, boolean editorEnvironment) {
+
+        TriggerContext triggerContext = contextFactory.createTriggerContext(
+            componentName, componentVersion, triggerName, jobPrincipalId, workflowUuid, componentConnection,
+            environmentId, type, editorEnvironment, triggerExecutionId);
+
+        try {
+            return doExecuteTrigger(
+                componentName, componentVersion, triggerName, inputParameters, triggerState, webhookRequest,
+                componentConnection, triggerContext);
+        } finally {
+            if (triggerContext instanceof LogEntryBufferAware logEntryBufferAware) {
+                logEntryBufferAware.flushLogEntries();
+            }
+        }
+    }
+
+    @Override
+    @WithTokenRefresh(
+        errorTypeClass = TriggerDefinitionErrorType.class,
+        errorTypeField = "DYNAMIC_WEBHOOK_DISABLE_FAILED")
+    public void executeWebhookDisable(
+        @ComponentNameParam String componentName, int componentVersion, String triggerName,
+        Map<String, ?> inputParameters, String workflowExecutionId, Map<String, ?> outputParameters,
+        @ConnectionParam @Nullable ComponentConnection componentConnection) {
+
+        TriggerContext triggerContext = contextFactory.createTriggerContext(
+            componentName, componentVersion, triggerName, null, null, componentConnection, null, null, false);
+
+        doExecuteWebhookDisable(
+            componentName, componentVersion, triggerName, inputParameters, workflowExecutionId,
+            outputParameters, componentConnection, triggerContext);
+    }
+
+    @Override
+    @WithTokenRefresh(
+        errorTypeClass = TriggerDefinitionErrorType.class,
+        errorTypeField = "DYNAMIC_WEBHOOK_ENABLE_FAILED")
+    public @Nullable WebhookEnableOutput executeWebhookEnable(
+        @ComponentNameParam String componentName, int componentVersion, String triggerName,
+        Map<String, ?> inputParameters, String workflowExecutionId, String webhookUrl,
+        @ConnectionParam @Nullable ComponentConnection componentConnection, long environmentId) {
+
+        TriggerContext triggerContext = contextFactory.createTriggerContext(
+            componentName, componentVersion, triggerName, null, null, componentConnection, environmentId, null, false);
+
+        return doExecuteWebhookEnable(
+            componentName, componentVersion, triggerName, inputParameters,
+            webhookUrl, workflowExecutionId, componentConnection, triggerContext);
+    }
+
+    @Override
+    @WithTokenRefresh
+    public WebhookValidateResponse executeWebhookValidate(
+        @ComponentNameParam String componentName, int componentVersion, String triggerName,
+        Map<String, ?> inputParameters, WebhookRequest webhookRequest,
+        @ConnectionParam @Nullable ComponentConnection componentConnection) {
+
+        TriggerContext triggerContext = contextFactory.createTriggerContext(
+            componentName, componentVersion, triggerName, null, null, componentConnection, null, null, false);
+
+        return doExecuteWebhookValidate(
+            componentName, componentVersion, triggerName, inputParameters, webhookRequest, triggerContext);
+    }
+
+    @Override
+    public WebhookValidateResponse executeWebhookValidateOnEnable(
+        String componentName, int componentVersion, String triggerName, Map<String, ?> inputParameters,
+        WebhookRequest webhookRequest, @Nullable ComponentConnection componentConnection) {
+
+        com.bytechef.component.definition.TriggerDefinition triggerDefinition =
+            componentDefinitionRegistry.getTriggerDefinition(componentName, componentVersion, triggerName);
+
+        return executeWebhookValidateOnEnable(
+            triggerDefinition, ParametersFactory.create(inputParameters), webhookRequest,
+            contextFactory.createTriggerContext(
+                componentName, componentVersion, triggerName, null, null, componentConnection, null, null, false));
+    }
+
+    @Override
+    public String executeWorkflowNodeDescription(
+        String componentName, int componentVersion, String triggerName, Map<String, ?> inputParameters) {
+
+        com.bytechef.component.definition.TriggerDefinition.WorkflowNodeDescriptionFunction workflowNodeDescriptionFunction =
+            getWorkflowNodeDescriptionFunction(componentName, componentVersion, triggerName);
+
+        try {
+            return workflowNodeDescriptionFunction.apply(
+                ParametersFactory.create(inputParameters),
+                contextFactory.createTriggerContext(
+                    componentName, componentVersion, triggerName, null, null, null, null, null, true));
+        } catch (Exception e) {
+            throw new ConfigurationException(
+                e, inputParameters, TriggerDefinitionErrorType.WORKFLOW_NODE_DESCRIPTION_FAILED);
+        }
+    }
+
+    @Override
+    public List<String> getPropertyLookupDependsOn(
+        String componentName, int componentVersion, String triggerName, String propertyName) {
+
+        if (!componentDefinitionRegistry.hasComponentDefinition(componentName, componentVersion)) {
+            return List.of();
+        }
+
+        Property property = findTriggerProperty(componentName, componentVersion, triggerName, propertyName);
+
+        if (!(property instanceof OptionsDataSourceAware optionsDataSourceAware)) {
+            return List.of();
+        }
+
+        com.bytechef.platform.component.domain.OptionsDataSource optionsDataSource =
+            optionsDataSourceAware.getOptionsDataSource();
+
+        if (optionsDataSource == null) {
+            return List.of();
+        }
+
+        return optionsDataSource.getOptionsLookupDependsOn();
+    }
+
+    @Override
+    public TriggerDefinition getTriggerDefinition(
+        String componentName, int componentVersion, String triggerName) {
+
+        return new TriggerDefinition(
+            doGetTriggerDefinition(componentName, componentVersion, triggerName), componentName, componentVersion);
+    }
+
+    @Override
+    public List<TriggerDefinition> getTriggerDefinitions(String componentName, int componentVersion) {
+        return componentDefinitionRegistry.getTriggerDefinitions(componentName, componentVersion)
+            .stream()
+            .map(triggerDefinition -> new TriggerDefinition(triggerDefinition, componentName, componentVersion))
+            .toList();
+    }
+
+    @Override
+    public WebhookTriggerFlags getWebhookTriggerFlags(
+        String componentName, int componentVersion, String triggerName) {
+
+        TriggerDefinition triggerDefinition = getTriggerDefinition(componentName, componentVersion, triggerName);
+
+        return new WebhookTriggerFlags(
+            triggerDefinition.isWebhookRawBody(), triggerDefinition.isWorkflowSyncExecution(),
+            triggerDefinition.isWorkflowSyncValidation(), triggerDefinition.isWorkflowSyncOnEnableValidation());
+    }
+
+    @Override
+    public boolean isDynamicOutputDefined(String componentName, int componentVersion, String actionName) {
+        TriggerDefinition triggerDefinition = getTriggerDefinition(componentName, componentVersion, actionName);
+
+        return triggerDefinition.isOutputFunctionDefined();
+    }
+
+    @Override
+    public boolean triggerDefinesConnection(String componentName, int componentVersion, String triggerName) {
+        if (!componentDefinitionRegistry.hasComponentDefinition(componentName, componentVersion)) {
+            return false;
+        }
+
+        ComponentDefinition componentDefinition = componentDefinitionRegistry.getComponentDefinition(
+            componentName, componentVersion);
+
+        return componentDefinition.getConnection()
+            .isPresent();
+    }
+
+    @Override
+    public boolean propertyHasOptionsDataSource(
+        String componentName, int componentVersion, String triggerName, String propertyName) {
+
+        if (!componentDefinitionRegistry.hasComponentDefinition(componentName, componentVersion)) {
+            return false;
+        }
+
+        Property property = findTriggerProperty(componentName, componentVersion, triggerName, propertyName);
+
+        if (!(property instanceof OptionsDataSourceAware optionsDataSourceAware)) {
+            return false;
+        }
+
+        return optionsDataSourceAware.getOptionsDataSource() != null;
+    }
+
+    private com.bytechef.component.definition.TriggerDefinition doGetTriggerDefinition(
+        String componentName, int componentVersion, String triggerName) {
+
+        return componentDefinitionRegistry.getTriggerDefinition(componentName, componentVersion, triggerName);
+    }
+
+    private @Nullable Property findTriggerProperty(
+        String componentName, int componentVersion, String triggerName, String propertyName) {
+
+        if (!componentDefinitionRegistry.hasComponentDefinition(componentName, componentVersion)) {
+            return null;
+        }
+
+        com.bytechef.component.definition.TriggerDefinition triggerDefinition = doGetTriggerDefinition(
+            componentName, componentVersion, triggerName);
+
+        List<? extends BaseProperty> properties = triggerDefinition.getProperties()
+            .orElse(List.of());
+
+        BaseProperty property = PropertyUtils.findPropertyByPath(properties, propertyName);
+
+        return Property.toProperty((com.bytechef.component.definition.Property) property);
+    }
+
+    private List<Option> doExecuteOptions(
+        String componentName, int componentVersion, String triggerName, Map<String, ?> inputParameters,
+        String propertyName, List<String> lookupDependsOnPaths, @Nullable String searchText,
+        ComponentConnection componentConnection, TriggerContext context) {
+
+        try {
+            WrapResult wrapResult = wrap(inputParameters, lookupDependsOnPaths, componentConnection);
+
+            com.bytechef.component.definition.TriggerDefinition.OptionsFunction<?> optionsFunction =
+                getComponentOptionsFunction(
+                    componentName, componentVersion, triggerName, propertyName, wrapResult.inputParameters(),
+                    wrapResult.connectionParameters(), wrapResult.lookupDependsOnPathsMap(), context);
+
+            return CollectionUtils.map(
+                optionsFunction.apply(
+                    wrapResult.inputParameters(), wrapResult.connectionParameters(),
+                    wrapResult.lookupDependsOnPathsMap(), searchText, context),
+                Option::new);
+        } catch (Exception e) {
+            throw new ConfigurationException(e, inputParameters, TriggerDefinitionErrorType.OPTIONS_FAILED);
+        }
+    }
+
+    private @Nullable OutputResponse doExecuteOutput(
+        String componentName, int componentVersion, String triggerName, Map<String, ?> inputParameters,
+        @Nullable ComponentConnection componentConnection, TriggerContext context) {
+
+        com.bytechef.component.definition.TriggerDefinition triggerDefinition =
+            componentDefinitionRegistry.getTriggerDefinition(componentName, componentVersion, triggerName);
+
+        return triggerDefinition
+            .getOutputDefinition()
+            .flatMap(OutputDefinition::getOutput)
+            .map(f -> (com.bytechef.component.definition.TriggerDefinition.OutputFunction) f)
+            .map(outputFunction -> {
+                try {
+                    BaseOutputDefinition.OutputResponse outputResponse = outputFunction.apply(
+                        ParametersFactory.create(inputParameters), ParametersFactory.create(componentConnection),
+                        context);
+
+                    if (outputResponse == null) {
+                        return null;
+                    }
+
+                    return SchemaUtils.toOutput(
+                        outputResponse, PropertyFactory.OUTPUT_FACTORY_FUNCTION, PropertyFactory.PROPERTY_FACTORY);
+                } catch (Exception e) {
+                    if (e instanceof ProviderException) {
+                        throw (ProviderException) e;
+                    }
+
+                    throw new ConfigurationException(
+                        e, inputParameters, ActionDefinitionErrorType.EXECUTE_OUTPUT);
+                }
+            })
+            .orElse(null);
+    }
+
+    private static TriggerOutput executePollingTrigger(
+        String componentName, String triggerName, com.bytechef.component.definition.TriggerDefinition triggerDefinition,
+        Map<String, ?> inputParameterMap, @Nullable ComponentConnection componentConnection,
+        Map<String, ?> closureParameterMap, TriggerContext triggerContext, PollFunction pollFunction) {
+
+        Parameters inputParameters = ParametersFactory.create(inputParameterMap);
+        Parameters connectionParameters = ParametersFactory.create(componentConnection);
+
+        List<Object> records = new ArrayList<>();
+
+        Object closureParameters = closureParameterMap;
+
+        try {
+            PollOutput pollOutput = pollFunctionApply(
+                pollFunction, inputParameters, connectionParameters, ParametersFactory.create(closureParameterMap),
+                triggerContext);
+
+            closureParameters = pollOutput.closureParameters();
+
+            List<?> polledRecords = pollOutput.records();
+            int pollFunctionApplyCount = 1;
+
+            while (!polledRecords.isEmpty() || pollFunctionApplyCount >= MAX_POLLING_TRIGGER_ITERATIONS) {
+                int remainingCapacity = MAX_POLLING_TRIGGER_RECORDS - records.size();
+
+                records.addAll(polledRecords.subList(0, Math.min(remainingCapacity, polledRecords.size())));
+
+                if (pollOutput.pollImmediately() || records.size() >= MAX_POLLING_TRIGGER_RECORDS
+                    || pollFunctionApplyCount >= MAX_POLLING_TRIGGER_ITERATIONS) {
+                    break;
+                }
+
+                pollOutput = pollFunctionApply(
+                    pollFunction, inputParameters, connectionParameters,
+                    ParametersFactory.create(pollOutput.closureParameters()), triggerContext);
+
+                closureParameters = pollOutput.closureParameters();
+                polledRecords = pollOutput.records();
+
+                pollFunctionApplyCount++;
+            }
+
+            if (pollFunctionApplyCount >= MAX_POLLING_TRIGGER_ITERATIONS
+                || records.size() >= MAX_POLLING_TRIGGER_RECORDS) {
+
+                log.warn(
+                    "Polling trigger '{}.{}' hit safety limit (iterations={}, records={}); next scheduled poll will " +
+                        "resume. Likely cause: component keeps requesting immediate re-poll without completing " +
+                        "pagination.",
+                    componentName, triggerName, pollFunctionApplyCount, records.size());
+            }
+
+            if (pollOutput.pollImmediately()) {
+                log.warn("Polling trigger '{}.{}' configured to poll immediately", componentName, triggerName);
+            }
+        } catch (ProviderException providerException) {
+            if (!providerException.isRetryable()) {
+                throw providerException;
+            }
+
+            log.warn(
+                "Polling trigger '{}.{}' skipped: provider signalled a transient error (HTTP {}, Retry-After {}). " +
+                    "State preserved; the next scheduled poll will retry. Provider message: {}",
+                componentName, triggerName, providerException.getStatusCode(), providerException.getRetryAfter(),
+                providerException.getMessage());
+        }
+
+        Optional<Boolean> triggerDefinitionBatch = triggerDefinition.getBatch();
+
+        return new TriggerOutput(records, closureParameters, triggerDefinitionBatch.orElse(false));
+    }
+
+    @SuppressWarnings("unchecked")
+    private TriggerOutput doExecuteTrigger(
+        String componentName, int componentVersion, String triggerName, Map<String, ?> inputParameters,
+        @Nullable Object triggerState, @Nullable WebhookRequest webhookRequest,
+        @Nullable ComponentConnection componentConnection, TriggerContext context) {
+
+        TriggerOutput triggerOutput;
+        com.bytechef.component.definition.TriggerDefinition triggerDefinition =
+            componentDefinitionRegistry.getTriggerDefinition(componentName, componentVersion, triggerName);
+
+        TriggerType triggerType = triggerDefinition.getType();
+
+        if (TriggerType.DYNAMIC_WEBHOOK == triggerType || TriggerType.STATIC_WEBHOOK == triggerType) {
+            WebhookValidateResponse response = executeWebhookValidate(
+                triggerDefinition, ParametersFactory.create(inputParameters), Objects.requireNonNull(webhookRequest),
+                context);
+
+            if (response.status() != HttpStatus.OK.getValue()) {
+                throw new IllegalStateException("Invalid trigger signature.");
+            }
+        }
+
+        if (TriggerType.DYNAMIC_WEBHOOK == triggerType || TriggerType.STATIC_WEBHOOK == triggerType) {
+            triggerOutput = triggerDefinition.getWebhookRequest()
+                .map(webhookRequestFunction -> executeWebhookTrigger(
+                    triggerDefinition, inputParameters, toWebhookEnabledOutputParameters(triggerState),
+                    webhookRequest, componentConnection, context, webhookRequestFunction))
+                .orElseThrow();
+        } else if (TriggerType.POLLING == triggerType || TriggerType.HYBRID == triggerType) {
+            triggerOutput = triggerDefinition.getPoll()
+                .map(pollFunction -> executePollingTrigger(
+                    componentName, triggerName, triggerDefinition, inputParameters, componentConnection,
+                    triggerState == null ? Map.of() : (Map<String, ?>) triggerState, context, pollFunction))
+                .orElseThrow();
+        } else {
+            throw new ConfigurationException(
+                "Unknown trigger type: " + triggerType, ComponentErrorType.UNKNOWN_TRIGGER_TYPE);
+        }
+
+        return triggerOutput;
+    }
+
+    private void doExecuteWebhookDisable(
+        String componentName, int componentVersion, String triggerName, Map<String, ?> inputParameters,
+        String workflowExecutionId, Map<String, ?> outputParameters, @Nullable ComponentConnection componentConnection,
+        TriggerContext context) {
+
+        WebhookDisableConsumer webhookDisableConsumer = getWebhookDisableConsumer(
+            componentName, componentVersion, triggerName);
+
+        if (webhookDisableConsumer == null) {
+            return;
+        }
+
+        try {
+            webhookDisableConsumer.accept(
+                ParametersFactory.create(inputParameters), ParametersFactory.create(componentConnection),
+                ParametersFactory.create(outputParameters), workflowExecutionId, context);
+        } catch (Exception e) {
+            if (e instanceof ProviderException pe) {
+                throw pe;
+            }
+
+            throw new ExecutionException(
+                e, inputParameters, TriggerDefinitionErrorType.DYNAMIC_WEBHOOK_DISABLE_FAILED);
+        }
+    }
+
+    private @Nullable WebhookEnableOutput doExecuteWebhookEnable(
+        String componentName, int componentVersion, String triggerName, Map<String, ?> inputParameters,
+        String webhookUrl, String workflowExecutionId, @Nullable ComponentConnection componentConnection,
+        TriggerContext context) {
+
+        WebhookEnableFunction webhookEnableFunction = getWebhookEnableFunction(
+            componentName, componentVersion, triggerName);
+
+        if (webhookEnableFunction == null) {
+            return null;
+        }
+
+        try {
+            return webhookEnableFunction.apply(
+                ParametersFactory.create(inputParameters), ParametersFactory.create(componentConnection),
+                webhookUrl, workflowExecutionId, context);
+        } catch (Exception e) {
+            if (e instanceof ProviderException pe) {
+                throw pe;
+            }
+
+            throw new ExecutionException(
+                e, inputParameters, TriggerDefinitionErrorType.DYNAMIC_WEBHOOK_ENABLE_FAILED);
+        }
+    }
+
+    private WebhookValidateResponse doExecuteWebhookValidate(
+        String componentName, int componentVersion, String triggerName,
+        Map<String, ?> inputParameters, WebhookRequest webhookRequest, TriggerContext context) {
+
+        com.bytechef.component.definition.TriggerDefinition triggerDefinition =
+            componentDefinitionRegistry.getTriggerDefinition(componentName, componentVersion, triggerName);
+
+        return executeWebhookValidate(triggerDefinition, ParametersFactory.create(inputParameters),
+            webhookRequest, context);
+    }
+
+    private WebhookValidateResponse executeWebhookValidate(
+        com.bytechef.component.definition.TriggerDefinition triggerDefinition, Parameters inputParameters,
+        WebhookRequest webhookRequest, TriggerContext context) {
+
+        return triggerDefinition.getWebhookValidate()
+            .map(webhookValidateFunction -> webhookValidateFunction.apply(
+                inputParameters, new HttpHeadersImpl(webhookRequest.headers()),
+                new HttpParametersImpl(webhookRequest.parameters()), webhookRequest.body(), webhookRequest.method(),
+                context))
+            .orElse(WebhookValidateResponse.ok());
+    }
+
+    private WebhookValidateResponse executeWebhookValidateOnEnable(
+        com.bytechef.component.definition.TriggerDefinition triggerDefinition, Parameters inputParameters,
+        WebhookRequest webhookRequest, TriggerContext context) {
+
+        return triggerDefinition.getWebhookValidateOnEnable()
+            .map(webhookValidateFunction -> webhookValidateFunction.apply(
+                inputParameters, new HttpHeadersImpl(webhookRequest.headers()),
+                new HttpParametersImpl(webhookRequest.parameters()), webhookRequest.body(), webhookRequest.method(),
+                context))
+            .orElse(WebhookValidateResponse.ok());
+    }
+
+    private static TriggerOutput executeWebhookTrigger(
+        com.bytechef.component.definition.TriggerDefinition triggerDefinition,
+        Map<String, ?> inputParameters, Map<String, ?> webhookEnabledOutputParameters, WebhookRequest webhookRequest,
+        @Nullable ComponentConnection componentConnection, TriggerContext triggerContext,
+        WebhookRequestFunction webhookRequestFunction) {
+
+        Object webhookOutput;
+
+        try {
+            webhookOutput = webhookRequestFunction.apply(
+                ParametersFactory.create(inputParameters), ParametersFactory.create(componentConnection),
+                new HttpHeadersImpl(webhookRequest.headers()), new HttpParametersImpl(webhookRequest.parameters()),
+                webhookRequest.body(), webhookRequest.method(),
+                ParametersFactory.create(webhookEnabledOutputParameters), triggerContext);
+        } catch (Exception e) {
+            if (e instanceof ProviderException pe) {
+                throw pe;
+            }
+
+            throw new ExecutionException(
+                e, inputParameters, TriggerDefinitionErrorType.DYNAMIC_WEBHOOK_TRIGGER_FAILED);
+        }
+
+        Optional<Boolean> triggerDefinitionBatch = triggerDefinition.getBatch();
+
+        return new TriggerOutput(webhookOutput, null, triggerDefinitionBatch.orElse(false));
+    }
+
+    private com.bytechef.component.definition.TriggerDefinition.OptionsFunction<?> getComponentOptionsFunction(
+        String componentName, int componentVersion, String triggerName, String propertyName,
+        Parameters inputParameters, Parameters connectionParameters, Map<String, String> lookupDependsOnPaths,
+        TriggerContext context) throws Exception {
+
+        DynamicOptionsProperty<?> dynamicOptionsProperty = (DynamicOptionsProperty<?>) componentDefinitionRegistry
+            .getTriggerProperty(
+                componentName, componentVersion, triggerName, propertyName, inputParameters, connectionParameters,
+                lookupDependsOnPaths, context);
+
+        OptionsDataSource<?> optionsDataSource = dynamicOptionsProperty.getOptionsDataSource()
+            .orElseThrow(() -> new IllegalArgumentException("Options data source is not defined."));
+
+        return (com.bytechef.component.definition.TriggerDefinition.OptionsFunction<?>) optionsDataSource.getOptions();
+    }
+
+    private com.bytechef.component.definition.TriggerDefinition.PropertiesFunction getComponentPropertiesFunction(
+        String componentName, int componentVersion, String triggerName, String propertyName,
+        Parameters inputParameters, Parameters connectionParameters, Map<String, String> lookupDependsOnPaths,
+        TriggerContext context) throws Exception {
+
+        DynamicPropertiesProperty property =
+            (DynamicPropertiesProperty) componentDefinitionRegistry.getTriggerProperty(
+                componentName, componentVersion, triggerName, propertyName, inputParameters, connectionParameters,
+                lookupDependsOnPaths, context);
+
+        PropertiesDataSource<?> propertiesDataSource = property.getDynamicPropertiesDataSource();
+
+        return (com.bytechef.component.definition.TriggerDefinition.PropertiesFunction) propertiesDataSource
+            .getProperties();
+    }
+
+    private DynamicWebhookRefreshFunction getDynamicWebhookRefreshFunction(
+        String componentName, int componentVersion, String triggerName) {
+
+        com.bytechef.component.definition.TriggerDefinition triggerDefinition =
+            componentDefinitionRegistry.getTriggerDefinition(componentName, componentVersion, triggerName);
+
+        return triggerDefinition.getDynamicWebhookRefresh()
+            .orElseThrow(() -> new IllegalArgumentException("Dynamic webhook refresh function is not defined."));
+    }
+
+    private static Map<String, String> getLookupDependsOnPathsMap(List<String> lookupDependsOnPaths) {
+        return MapUtils.toMap(lookupDependsOnPaths, item -> item.substring(item.lastIndexOf(".") + 1), item -> item);
+    }
+
+    private @Nullable WebhookDisableConsumer getWebhookDisableConsumer(
+        String componentName, int componentVersion, String triggerName) {
+
+        com.bytechef.component.definition.TriggerDefinition triggerDefinition =
+            componentDefinitionRegistry.getTriggerDefinition(componentName, componentVersion, triggerName);
+
+        return triggerDefinition.getWebhookDisable()
+            .orElse(null);
+    }
+
+    private @Nullable WebhookEnableFunction getWebhookEnableFunction(
+        String componentName, int componentVersion, String triggerName) {
+
+        com.bytechef.component.definition.TriggerDefinition triggerDefinition =
+            componentDefinitionRegistry.getTriggerDefinition(componentName, componentVersion, triggerName);
+
+        return triggerDefinition.getWebhookEnable()
+            .orElse(null);
+    }
+
+    private com.bytechef.component.definition.TriggerDefinition.WorkflowNodeDescriptionFunction
+        getWorkflowNodeDescriptionFunction(
+            String componentName, int componentVersion, String triggerName) {
+
+        ComponentDefinition componentDefinition = componentDefinitionRegistry.getComponentDefinition(
+            componentName, componentVersion);
+
+        com.bytechef.component.definition.TriggerDefinition triggerDefinition =
+            componentDefinitionRegistry.getTriggerDefinition(componentName, componentVersion, triggerName);
+
+        return triggerDefinition.getWorkflowNodeDescription()
+            .orElse((inputParameters, context) -> {
+                Optional<String> componentDefinitionTitle = componentDefinition.getTitle();
+                Optional<String> triggerDefinitionTitle = triggerDefinition.getTitle();
+                Optional<String> triggerDefinitionDescription = triggerDefinition.getDescription();
+
+                return WorkflowNodeDescriptionUtils.renderComponentProperties(
+                    inputParameters, componentDefinitionTitle.orElse(componentDefinition.getName()),
+                    triggerDefinitionTitle.orElse(triggerDefinition.getName()),
+                    triggerDefinitionDescription.orElse(null));
+            });
+    }
+
+    private ListenerDisableConsumer getListenerDisableConsumer(
+        String componentName, int componentVersion, String triggerName) {
+
+        com.bytechef.component.definition.TriggerDefinition triggerDefinition =
+            componentDefinitionRegistry.getTriggerDefinition(componentName, componentVersion, triggerName);
+
+        return triggerDefinition.getListenerDisable()
+            .orElseThrow(() -> new IllegalArgumentException("Listener disable function is not defined."));
+    }
+
+    private ListenerEnableConsumer getListenerEnableConsumer(
+        String componentName, int componentVersion, String triggerName) {
+
+        com.bytechef.component.definition.TriggerDefinition triggerDefinition =
+            componentDefinitionRegistry.getTriggerDefinition(componentName, componentVersion, triggerName);
+
+        return triggerDefinition.getListenerEnable()
+            .orElseThrow(() -> new IllegalArgumentException("Listener enable function is not defined."));
+    }
+
+    private Map<String, ?> toWebhookEnabledOutputParameters(@Nullable Object triggerState) {
+        if (triggerState == null) {
+            return Map.of();
+        }
+
+        WebhookEnableOutput webhookEnableOutput = ConvertUtils.convertValue(triggerState, WebhookEnableOutput.class);
+
+        return webhookEnableOutput.parameters();
+    }
+
+    private static PollOutput pollFunctionApply(
+        PollFunction pollFunction, Parameters inputParameters, Parameters connectionParameters,
+        Parameters closureParameters, TriggerContext triggerContext) {
+
+        try {
+            return pollFunction.apply(inputParameters, connectionParameters, closureParameters, triggerContext);
+        } catch (Exception exception) {
+            if (exception instanceof ProviderException pe) {
+                throw pe;
+            }
+
+            throw new ExecutionException(exception, inputParameters, TriggerDefinitionErrorType.POLLING_TRIGGER_FAILED);
+        }
+    }
+
+    private static WrapResult wrap(
+        Map<String, ?> inputParameters, List<String> lookupDependsOnPaths,
+        @Nullable ComponentConnection componentConnection) {
+
+        return new WrapResult(
+            ParametersFactory.create(inputParameters), ParametersFactory.create(componentConnection),
+            getLookupDependsOnPathsMap(lookupDependsOnPaths));
+    }
+
+    private record WrapResult(
+        Parameters inputParameters, Parameters connectionParameters, Map<String, String> lookupDependsOnPathsMap) {
+    }
+}

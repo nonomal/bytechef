@@ -1,0 +1,12 @@
+{
+  "title": "API Reference",
+  "description": "The API reference docs",
+  "icon": "Play",
+  "root": true,
+  "pages": [
+    "index",
+    "--- Embedded ---",
+    "backend",
+    "frontend"
+  ]
+}

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,23 +19,23 @@ package com.bytechef.platform.component.definition;
 import com.bytechef.component.definition.ActionContext;
 import com.bytechef.component.definition.ActionDefinition;
 import com.bytechef.component.definition.Parameters;
+import com.bytechef.platform.component.ComponentConnection;
 import java.util.Map;
 
 /**
  * @author Ivica Cardic
  */
 @FunctionalInterface
-public interface MultipleConnectionsPerformFunction extends ActionDefinition.PerformFunction {
+public interface MultipleConnectionsPerformFunction extends ActionDefinition.BasePerformFunction {
 
     /**
      *
      * @param inputParameters
-     * @param parameterConnections
+     * @param componentConnections
      * @param context
      * @return
      */
     Object apply(
-        Parameters inputParameters, Map<String, ? extends ParameterConnection> parameterConnections,
-        ActionContext context)
-        throws Exception;
+        Parameters inputParameters, Map<String, ComponentConnection> componentConnections, Parameters extensions,
+        ActionContext context) throws Exception;
 }

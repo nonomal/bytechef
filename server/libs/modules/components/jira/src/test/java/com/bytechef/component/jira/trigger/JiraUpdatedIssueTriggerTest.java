@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,14 +19,13 @@ package com.bytechef.component.jira.trigger;
 import static com.bytechef.component.jira.constant.JiraConstants.ID;
 import static com.bytechef.component.jira.constant.JiraConstants.ISSUE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
-import com.bytechef.component.definition.Context.TypeReference;
-import com.bytechef.component.definition.TriggerDefinition.DynamicWebhookEnableOutput;
+import com.bytechef.component.definition.TriggerDefinition.WebhookEnableOutput;
+import com.bytechef.component.definition.TypeReference;
 import com.bytechef.component.jira.util.JiraUtils;
-import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
@@ -36,35 +35,45 @@ import org.junit.jupiter.api.Test;
 class JiraUpdatedIssueTriggerTest extends AbstractJiraTriggerTest {
 
     @Test
-    void testDynamicWebhookEnable() {
+    void testWebhookEnable() {
         String webhookUrl = "testWebhookUrl";
 
         jiraUtilsMockedStatic.when(
-            () -> JiraUtils.subscribeWebhook(mockedParameters, webhookUrl, mockedTriggerContext, "jira:issue_updated"))
+            () -> JiraUtils.subscribeWebhook(
+                parametersArgumentCaptor.capture(), stringArgumentCaptor.capture(),
+                triggerContextArgumentCaptor.capture(), stringArgumentCaptor.capture()))
             .thenReturn(123);
 
-        DynamicWebhookEnableOutput dynamicWebhookEnableOutput = JiraUpdatedIssueTrigger.dynamicWebhookEnable(
-            mockedParameters, mockedParameters, webhookUrl, workflowExecutionId, mockedTriggerContext);
+        WebhookEnableOutput webhookEnableOutput = JiraUpdatedIssueTrigger.webhookEnable(
+            mockedParameters, null, webhookUrl, null, mockedTriggerContext);
 
-        Map<String, ?> parameters = dynamicWebhookEnableOutput.parameters();
-        LocalDateTime webhookExpirationDate = dynamicWebhookEnableOutput.webhookExpirationDate();
+        WebhookEnableOutput expectedWebhookEnableOutput = new WebhookEnableOutput(Map.of(ID, 123), null);
 
-        Map<String, Object> expectedParameters = Map.of(ID, 123);
-
-        assertEquals(expectedParameters, parameters);
-        assertNull(webhookExpirationDate);
+        assertEquals(expectedWebhookEnableOutput, webhookEnableOutput);
+        assertEquals(mockedParameters, parametersArgumentCaptor.getValue());
+        assertEquals(mockedTriggerContext, triggerContextArgumentCaptor.getValue());
+        assertEquals(List.of(webhookUrl, "jira:issue_updated"), stringArgumentCaptor.getAllValues());
     }
 
     @Test
-    void testDynamicWebhookRequest() {
+    void testWebhookDisable() {
+        JiraUpdatedIssueTrigger.webhookDisable(
+            null, null, mockedParameters, null, mockedTriggerContext);
+
+        jiraUtilsMockedStatic
+            .verify(() -> JiraUtils.unsubscribeWebhook(mockedParameters, mockedTriggerContext));
+    }
+
+    @Test
+    void testWebhookRequest() {
         Map<String, ?> issueMap = Map.of(ISSUE, mockedObject);
 
         when(mockedWebhookBody.getContent(any(TypeReference.class)))
             .thenReturn(issueMap);
 
-        Object result = JiraUpdatedIssueTrigger.dynamicWebhookRequest(
-            mockedParameters, mockedParameters, mockedHttpHeaders, mockedHttpParameters, mockedWebhookBody,
-            mockedWebhookMethod, mockedDynamicWebhookEnableOutput, mockedTriggerContext);
+        Object result = JiraUpdatedIssueTrigger.webhookRequest(
+            null, null, null, null, mockedWebhookBody,
+            null, null, null);
 
         assertEquals(mockedObject, result);
     }

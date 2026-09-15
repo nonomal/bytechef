@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,14 +17,17 @@
 package com.bytechef.component.pipedrive.action;
 
 import static com.bytechef.component.OpenApiComponentHandler.PropertyType;
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.integer;
-import static com.bytechef.component.definition.ComponentDSL.object;
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.integer;
+import static com.bytechef.component.definition.ComponentDsl.object;
+import static com.bytechef.component.definition.ComponentDsl.outputSchema;
+import static com.bytechef.component.definition.ComponentDsl.string;
 import static com.bytechef.component.definition.Context.Http.BodyContentType;
 import static com.bytechef.component.definition.Context.Http.ResponseType;
 
-import com.bytechef.component.definition.ComponentDSL;
+import com.bytechef.component.definition.ActionDefinition;
+import com.bytechef.component.definition.ComponentDsl;
+import com.bytechef.component.pipedrive.util.PipedriveUtils;
 import java.util.Map;
 
 /**
@@ -33,8 +36,8 @@ import java.util.Map;
  * @generated
  */
 public class PipedriveAddOrganizationAction {
-    public static final ComponentDSL.ModifiableActionDefinition ACTION_DEFINITION = action("addOrganization")
-        .title("Add an organization")
+    public static final ComponentDsl.ModifiableActionDefinition ACTION_DEFINITION = action("addOrganization")
+        .title("Add Organization")
         .description("Adds a new organization.")
         .metadata(
             Map.of(
@@ -42,30 +45,31 @@ public class PipedriveAddOrganizationAction {
                 "path", "/organizations", "bodyContentType", BodyContentType.JSON, "mimeType", "application/json"
 
             ))
-        .properties(object("__item").properties(string("name").label("Name")
+        .properties(string("name").metadata(
+            Map.of(
+                "type", PropertyType.BODY))
+            .label("Name")
             .description("The name of the organization.")
             .required(true),
-            integer("owner_id").label("Owner Id")
-                .description("User who will be marked as the owner of this organization.")
-                .required(false))
-            .label("Organization")
-            .metadata(
+            integer("owner_id").metadata(
                 Map.of(
-                    "type", PropertyType.BODY)))
-        .outputSchema(object()
-            .properties(object("body")
-                .properties(object("data")
-                    .properties(integer("id").required(false), integer("company_id").required(false),
-                        object("owner_id")
-                            .properties(integer("id").required(false), string("name").required(false),
-                                string("email").required(false))
-                            .required(false),
-                        string("name").required(false))
-                    .required(false))
+                    "type", PropertyType.BODY))
+                .label("Owner ID")
+                .description("ID of the user who will be marked as the owner of this organization.")
+                .required(false)
+                .options((ActionDefinition.OptionsFunction<Long>) PipedriveUtils::getOwnerIdOptions))
+        .output(outputSchema(object()
+            .properties(object("data")
+                .properties(integer("id").required(false), integer("company_id").required(false),
+                    object("owner_id")
+                        .properties(integer("id").required(false), string("name").required(false),
+                            string("email").required(false))
+                        .required(false),
+                    string("name").required(false))
                 .required(false))
             .metadata(
                 Map.of(
-                    "responseType", ResponseType.JSON)));
+                    "responseType", ResponseType.JSON))));
 
     private PipedriveAddOrganizationAction() {
     }

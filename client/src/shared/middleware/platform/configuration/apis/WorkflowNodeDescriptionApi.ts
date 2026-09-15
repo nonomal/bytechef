@@ -12,19 +12,24 @@
  * Do not edit the class manually.
  */
 
-
 import * as runtime from '../runtime';
-import type {
-  GetWorkflowNodeDescription200ResponseModel,
-} from '../models/index';
 import {
-    GetWorkflowNodeDescription200ResponseModelFromJSON,
-    GetWorkflowNodeDescription200ResponseModelToJSON,
-} from '../models/index';
+    type GetWorkflowNodeDescription200Response,
+    GetWorkflowNodeDescription200ResponseFromJSON,
+    GetWorkflowNodeDescription200ResponseToJSON,
+} from '../models/GetWorkflowNodeDescription200Response';
+
+export interface GetClusterElementWorkflowNodeDescriptionRequest {
+    id: string;
+    workflowNodeName: string;
+    clusterElementName: string;
+    environmentId: number;
+}
 
 export interface GetWorkflowNodeDescriptionRequest {
     id: string;
     workflowNodeName: string;
+    environmentId: number;
 }
 
 /**
@@ -33,10 +38,83 @@ export interface GetWorkflowNodeDescriptionRequest {
 export class WorkflowNodeDescriptionApi extends runtime.BaseAPI {
 
     /**
+     * Creates request options for getClusterElementWorkflowNodeDescription without sending the request
+     */
+    async getClusterElementWorkflowNodeDescriptionRequestOpts(requestParameters: GetClusterElementWorkflowNodeDescriptionRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['id'] == null) {
+            throw new runtime.RequiredError(
+                'id',
+                'Required parameter "id" was null or undefined when calling getClusterElementWorkflowNodeDescription().'
+            );
+        }
+
+        if (requestParameters['workflowNodeName'] == null) {
+            throw new runtime.RequiredError(
+                'workflowNodeName',
+                'Required parameter "workflowNodeName" was null or undefined when calling getClusterElementWorkflowNodeDescription().'
+            );
+        }
+
+        if (requestParameters['clusterElementName'] == null) {
+            throw new runtime.RequiredError(
+                'clusterElementName',
+                'Required parameter "clusterElementName" was null or undefined when calling getClusterElementWorkflowNodeDescription().'
+            );
+        }
+
+        if (requestParameters['environmentId'] == null) {
+            throw new runtime.RequiredError(
+                'environmentId',
+                'Required parameter "environmentId" was null or undefined when calling getClusterElementWorkflowNodeDescription().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        if (requestParameters['environmentId'] != null) {
+            queryParameters['environmentId'] = requestParameters['environmentId'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+
+        let urlPath = `/workflows/{id}/workflow-nodes/{workflowNodeName}/cluster-element-definition/{clusterElementName}/descriptions`;
+        urlPath = urlPath.replace('{id}', encodeURIComponent(String(requestParameters['id'])));
+        urlPath = urlPath.replace('{workflowNodeName}', encodeURIComponent(String(requestParameters['workflowNodeName'])));
+        urlPath = urlPath.replace('{clusterElementName}', encodeURIComponent(String(requestParameters['clusterElementName'])));
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
      * Get an action description shown in the editor.
      * Get an action description shown in the editor
      */
-    async getWorkflowNodeDescriptionRaw(requestParameters: GetWorkflowNodeDescriptionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<GetWorkflowNodeDescription200ResponseModel>> {
+    async getClusterElementWorkflowNodeDescriptionRaw(requestParameters: GetClusterElementWorkflowNodeDescriptionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<GetWorkflowNodeDescription200Response>> {
+        const requestOptions = await this.getClusterElementWorkflowNodeDescriptionRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => GetWorkflowNodeDescription200ResponseFromJSON(jsonValue));
+    }
+
+    /**
+     * Get an action description shown in the editor.
+     * Get an action description shown in the editor
+     */
+    async getClusterElementWorkflowNodeDescription(requestParameters: GetClusterElementWorkflowNodeDescriptionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<GetWorkflowNodeDescription200Response> {
+        const response = await this.getClusterElementWorkflowNodeDescriptionRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for getWorkflowNodeDescription without sending the request
+     */
+    async getWorkflowNodeDescriptionRequestOpts(requestParameters: GetWorkflowNodeDescriptionRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['id'] == null) {
             throw new runtime.RequiredError(
                 'id',
@@ -51,25 +129,50 @@ export class WorkflowNodeDescriptionApi extends runtime.BaseAPI {
             );
         }
 
+        if (requestParameters['environmentId'] == null) {
+            throw new runtime.RequiredError(
+                'environmentId',
+                'Required parameter "environmentId" was null or undefined when calling getWorkflowNodeDescription().'
+            );
+        }
+
         const queryParameters: any = {};
+
+        if (requestParameters['environmentId'] != null) {
+            queryParameters['environmentId'] = requestParameters['environmentId'];
+        }
 
         const headerParameters: runtime.HTTPHeaders = {};
 
-        const response = await this.request({
-            path: `/workflows/{id}/descriptions/{workflowNodeName}`.replace(`{${"id"}}`, encodeURIComponent(String(requestParameters['id']))).replace(`{${"workflowNodeName"}}`, encodeURIComponent(String(requestParameters['workflowNodeName']))),
+
+        let urlPath = `/workflows/{id}/workflow-nodes/{workflowNodeName}/descriptions`;
+        urlPath = urlPath.replace('{id}', encodeURIComponent(String(requestParameters['id'])));
+        urlPath = urlPath.replace('{workflowNodeName}', encodeURIComponent(String(requestParameters['workflowNodeName'])));
+
+        return {
+            path: urlPath,
             method: 'GET',
             headers: headerParameters,
             query: queryParameters,
-        }, initOverrides);
-
-        return new runtime.JSONApiResponse(response, (jsonValue) => GetWorkflowNodeDescription200ResponseModelFromJSON(jsonValue));
+        };
     }
 
     /**
      * Get an action description shown in the editor.
      * Get an action description shown in the editor
      */
-    async getWorkflowNodeDescription(requestParameters: GetWorkflowNodeDescriptionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<GetWorkflowNodeDescription200ResponseModel> {
+    async getWorkflowNodeDescriptionRaw(requestParameters: GetWorkflowNodeDescriptionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<GetWorkflowNodeDescription200Response>> {
+        const requestOptions = await this.getWorkflowNodeDescriptionRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => GetWorkflowNodeDescription200ResponseFromJSON(jsonValue));
+    }
+
+    /**
+     * Get an action description shown in the editor.
+     * Get an action description shown in the editor
+     */
+    async getWorkflowNodeDescription(requestParameters: GetWorkflowNodeDescriptionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<GetWorkflowNodeDescription200Response> {
         const response = await this.getWorkflowNodeDescriptionRaw(requestParameters, initOverrides);
         return await response.value();
     }

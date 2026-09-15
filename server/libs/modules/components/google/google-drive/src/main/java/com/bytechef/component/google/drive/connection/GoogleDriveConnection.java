@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,9 +16,9 @@
 
 package com.bytechef.component.google.drive.connection;
 
-import com.bytechef.component.definition.ComponentDSL.ModifiableConnectionDefinition;
+import com.bytechef.component.definition.ComponentDsl.ModifiableConnectionDefinition;
 import com.bytechef.google.commons.GoogleConnection;
-import java.util.List;
+import java.util.Map;
 
 /**
  * @author Mario Cvjetojevic
@@ -30,5 +30,18 @@ public class GoogleDriveConnection {
     }
 
     public static final ModifiableConnectionDefinition CONNECTION_DEFINITION = GoogleConnection.createConnection(
-        (connection, context) -> List.of("https://www.googleapis.com/auth/drive"));
+        null,
+        1,
+        "https://docs.bytechef.io/reference/components/google-drive_v1#connection-setup",
+        (connection, context) -> Map.of(
+            "https://www.googleapis.com/auth/drive", true,
+            "https://www.googleapis.com/auth/drive.appdata", false,
+            "https://www.googleapis.com/auth/drive.apps.readonly", false,
+            "https://www.googleapis.com/auth/drive.file", false,
+            "https://www.googleapis.com/auth/drive.meet.readonly", false,
+            "https://www.googleapis.com/auth/drive.metadata", false,
+            "https://www.googleapis.com/auth/drive.metadata.readonly", false,
+            "https://www.googleapis.com/auth/drive.photos.readonly", false,
+            "https://www.googleapis.com/auth/drive.readonly", false,
+            "https://www.googleapis.com/auth/drive.scripts", false));
 }

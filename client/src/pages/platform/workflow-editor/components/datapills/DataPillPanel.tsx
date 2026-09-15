@@ -1,0 +1,174 @@
+import {Input} from '@/components/Input/Input';
+import {Skeleton} from '@/components/ui/skeleton';
+import {Tooltip, TooltipContent, TooltipTrigger} from '@/components/ui/tooltip';
+import DataPillPanelBody, {
+    OperationType,
+} from '@/pages/platform/workflow-editor/components/datapills/DataPillPanelBody';
+import useWorkflowDataStore from '@/pages/platform/workflow-editor/stores/useWorkflowDataStore';
+import useCopilotLayoutShifted from '@/shared/components/copilot/hooks/useCopilotLayoutShifted';
+import {ComponentDefinitionBasic, WorkflowNodeOutput} from '@/shared/middleware/platform/configuration';
+import {InfoIcon, XIcon} from 'lucide-react';
+import {useEffect, useState} from 'react';
+import {twMerge} from 'tailwind-merge';
+import {useShallow} from 'zustand/react/shallow';
+
+import useDataPillPanelStore from '../../stores/useDataPillPanelStore';
+import useWorkflowNodeDetailsPanelStore from '../../stores/useWorkflowNodeDetailsPanelStore';
+
+interface DataPillPanelProps {
+    className?: string;
+    loading?: boolean;
+    previousComponentDefinitions: Array<ComponentDefinitionBasic>;
+    workflowNodeOutputs: Array<WorkflowNodeOutput>;
+}
+
+const DataPillPanel = ({className, loading, previousComponentDefinitions, workflowNodeOutputs}: DataPillPanelProps) => {
+    const [dataPillFilterQuery, setDataPillFilterQuery] = useState('');
+
+    const {setDataPillPanelOpen} = useDataPillPanelStore(
+        useShallow((state) => ({
+            setDataPillPanelOpen: state.setDataPillPanelOpen,
+        }))
+    );
+
+    const workflow = useWorkflowDataStore((state) => state.workflow);
+
+    const copilotLayoutShifted = useCopilotLayoutShifted();
+
+    const {aiAgentNodeDetailsPanelOpen, currentNode, workflowNodeDetailsPanelOpen} = useWorkflowNodeDetailsPanelStore(
+        useShallow((state) => ({
+            aiAgentNodeDetailsPanelOpen: state.aiAgentNodeDetailsPanelOpen,
+            currentNode: state.currentNode,
+            workflowNodeDetailsPanelOpen: state.workflowNodeDetailsPanelOpen,
+        }))
+    );
+
+    const validWorkflowNodeOutputs = workflowNodeOutputs.filter((workflowNodeOutput) => {
+        const {actionDefinition, taskDispatcherDefinition, triggerDefinition, workflowNodeName} = workflowNodeOutput;
+
+        if (workflowNodeName === currentNode?.name) {
+            return false;
+        }
+
+        return (
+            actionDefinition?.outputDefined ||
+            triggerDefinition?.outputDefined ||
+            taskDispatcherDefinition?.outputDefined ||
+            taskDispatcherDefinition?.variablePropertiesDefined
+        );
+    });
+
+    const operations = validWorkflowNodeOutputs.map((workflowNodeOutput) => {
+        const {actionDefinition, triggerDefinition} = workflowNodeOutput;
+
+        const componentDefinition = previousComponentDefinitions?.find(
+            (currentComponentDefinition) =>
+                currentComponentDefinition.name === actionDefinition?.componentName ||
+                currentComponentDefinition.name === triggerDefinition?.componentName
+        );
+
+        return {
+            ...actionDefinition,
+            componentDefinition,
+            outputSchema:
+                workflowNodeOutput.outputResponse?.outputSchema ||
+                workflowNodeOutput.variableOutputResponse?.outputSchema,
+            sampleOutput:
+                workflowNodeOutput.outputResponse?.sampleOutput ||
+                workflowNodeOutput.variableOutputResponse?.sampleOutput,
+            taskDispatcherDefinition: workflowNodeOutput.taskDispatcherDefinition,
+            workflowNodeName: workflowNodeOutput.workflowNodeName,
+        } as OperationType;
+    });
+
+    useEffect(() => {
+        if (!workflowNodeDetailsPanelOpen && !aiAgentNodeDetailsPanelOpen) {
+            setDataPillPanelOpen(false);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [aiAgentNodeDetailsPanelOpen, workflowNodeDetailsPanelOpen]);
+
+    const sharedClasses =
+        'z-10 w-screen max-w-data-pill-panel-width overflow-hidden border border-stroke-neutral-secondary bg-background';
+    const defaultPositionClasses = twMerge(
+        'absolute top-2 bottom-6 animate-[slideInFromRight_300ms_ease-out] rounded-md',
+        copilotLayoutShifted ? 'right-[524px]' : 'right-[536px]'
+    );
+
+    return (
+        <div className={twMerge(sharedClasses, className || defaultPositionClasses)}>
+            <div className="flex h-full flex-col divide-y divide-gray-100 bg-white">
+                <header className="flex content-center items-center p-4 text-lg font-medium">
+                    <span>Data Pill Panel</span>
+
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <InfoIcon className="ml-1 size-4" />
+                        </TooltipTrigger>
+
+                        <TooltipContent>
+                            To use data from the previous step drag its data pill into a field, or click on the data
+                            pill.
+                        </TooltipContent>
+                    </Tooltip>
+
+                    <button
+                        aria-label="Close the data pill panel"
+                        className="ml-auto pr-0"
+                        onClick={() => setDataPillPanelOpen(false)}
+                    >
+                        <XIcon aria-hidden="true" className="size-4 cursor-pointer" />
+                    </button>
+                </header>
+
+                <main className="flex grow flex-col overflow-hidden">
+                    <div className="mb-0 border-b border-b-border/50 p-4">
+                        <Input
+                            name="dataPillFilter"
+                            onChange={(event) => setDataPillFilterQuery(event.target.value)}
+                            placeholder="Filter Data Pills..."
+                            value={dataPillFilterQuery}
+                        />
+                    </div>
+
+                    <div className="flex min-h-0 flex-1 overflow-hidden bg-surface-main">
+                        {loading ? (
+                            <div className="w-full">
+                                {Array.from({length: 4}).map((_, index) => (
+                                    <div
+                                        className="flex items-center justify-between border-b border-border/50 p-4"
+                                        key={index}
+                                    >
+                                        <div className="flex items-center space-x-4">
+                                            <Skeleton className="size-8 shrink-0 rounded" />
+
+                                            <div className="flex flex-col gap-1.5">
+                                                <Skeleton className="h-4 w-24" />
+
+                                                <Skeleton className="h-3 w-16" />
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-center gap-4">
+                                            <Skeleton className="h-5 w-16 rounded" />
+
+                                            <Skeleton className="size-5 shrink-0 rounded" />
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <DataPillPanelBody
+                                dataPillFilterQuery={dataPillFilterQuery}
+                                operations={operations}
+                                workflowInputs={workflow.inputs}
+                            />
+                        )}
+                    </div>
+                </main>
+            </div>
+        </div>
+    );
+};
+
+export default DataPillPanel;

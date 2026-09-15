@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,13 +36,16 @@ public interface Property extends BaseProperty {
      *
      */
     enum ControlType implements BaseControlType {
+        ARRAY_BUILDER,
         DATE,
         DATE_TIME,
         EMAIL,
         FILE_ENTRY,
+        FORMULA_MODE,
         INTEGER,
         MULTI_SELECT,
         NUMBER,
+        OBJECT_BUILDER,
         PASSWORD,
         PHONE,
         SELECT,
@@ -60,6 +63,7 @@ public interface Property extends BaseProperty {
         BOOLEAN,
         DATE,
         DATE_TIME,
+        DYNAMIC_PROPERTIES,
         FILE_ENTRY,
         INTEGER,
         NULL,
@@ -97,6 +101,16 @@ public interface Property extends BaseProperty {
      *
      */
     interface DateProperty extends BaseDateProperty, OptionsProperty<LocalDate>, ValueProperty<LocalDate> {
+    }
+
+    /**
+     *
+     */
+    interface DynamicPropertiesProperty extends Property {
+
+        Optional<String> getHeader();
+
+        Optional<PropertiesDataSource> getDynamicPropertiesDataSource();
     }
 
     /**
@@ -159,6 +173,8 @@ public interface Property extends BaseProperty {
      *
      */
     interface StringProperty extends BaseStringProperty, OptionsProperty<String>, ValueProperty<String> {
+
+        Optional<TaskDispatcherDefinition.OptionsFunction> getOptionsFunction();
     }
 
     /**

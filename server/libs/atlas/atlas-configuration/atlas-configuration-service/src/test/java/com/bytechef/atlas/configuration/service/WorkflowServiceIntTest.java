@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,27 +19,26 @@ package com.bytechef.atlas.configuration.service;
 import com.bytechef.atlas.configuration.domain.Workflow;
 import com.bytechef.atlas.configuration.repository.WorkflowCrudRepository;
 import com.bytechef.atlas.configuration.repository.WorkflowRepository;
-import com.bytechef.commons.util.MapUtils;
 import com.bytechef.commons.util.OptionalUtils;
+import com.bytechef.jackson.config.JacksonConfiguration;
 import com.bytechef.liquibase.config.LiquibaseConfiguration;
 import com.bytechef.test.config.jdbc.AbstractIntTestJdbcConfiguration;
 import com.bytechef.test.config.testcontainers.PostgreSQLContainerConfiguration;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.List;
 import org.apache.commons.lang3.Validate;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
-import org.springframework.data.jdbc.repository.config.EnableJdbcRepositories;
+import org.springframework.data.jdbc.repository.config.EnableJdbcAuditing;
 
 /**
  * @author Ivica Cardic
@@ -48,15 +47,28 @@ import org.springframework.data.jdbc.repository.config.EnableJdbcRepositories;
     properties = {
         "bytechef.workflow.repository.jdbc.enabled=true"
     })
-@Import(PostgreSQLContainerConfiguration.class)
+@Import({
+    JacksonConfiguration.class, LiquibaseConfiguration.class, PostgreSQLContainerConfiguration.class
+})
 @EnableCaching
 public class WorkflowServiceIntTest {
+
+    @Autowired
+    private CacheManager cacheManager;
 
     @Autowired
     private WorkflowCrudRepository workflowCrudRepository;
 
     @Autowired
     private WorkflowService workflowService;
+
+    @BeforeEach
+    public void beforeEach() {
+        Cache cache = org.mockito.Mockito.mock(Cache.class);
+
+        org.mockito.Mockito.when(cacheManager.getCache(org.mockito.ArgumentMatchers.anyString()))
+            .thenReturn(cache);
+    }
 
     @Test
     public void testCreate() {
@@ -103,28 +115,13 @@ public class WorkflowServiceIntTest {
         return workflow;
     }
 
-    @ComponentScan(
-        basePackages = {
-            "com.bytechef.atlas.configuration.repository.jdbc"
-        })
     @EnableAutoConfiguration
-    @Import(LiquibaseConfiguration.class)
     @Configuration
-    @SuppressFBWarnings("ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD")
     public static class WorkflowConfigurationIntTestConfiguration {
 
         @Bean
-        ObjectMapper objectMapper() {
-            return new ObjectMapper();
-        }
-
-        @Bean
-        MapUtils mapUtils() {
-            return new MapUtils() {
-                {
-                    objectMapper = objectMapper();
-                }
-            };
+        CacheManager cacheManager() {
+            return org.mockito.Mockito.mock(CacheManager.class);
         }
 
         @Bean
@@ -135,7 +132,7 @@ public class WorkflowServiceIntTest {
             return new WorkflowServiceImpl(cacheManager, workflowCrudRepositories, workflowRepositories);
         }
 
-        @EnableJdbcRepositories(basePackages = "com.bytechef.atlas.configuration.repository.jdbc")
+        @EnableJdbcAuditing(auditorAwareRef = "auditorProvider", dateTimeProviderRef = "auditingDateTimeProvider")
         public static class WorkflowIntTestJdbcConfiguration extends AbstractIntTestJdbcConfiguration {
         }
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,28 +16,27 @@
 
 package com.bytechef.component.box.trigger;
 
+import static org.mockito.ArgumentCaptor.forClass;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 
 import com.bytechef.component.box.util.BoxUtils;
 import com.bytechef.component.definition.Parameters;
 import com.bytechef.component.definition.TriggerContext;
-import com.bytechef.component.definition.TriggerDefinition;
-import com.bytechef.component.definition.TriggerDefinition.DynamicWebhookEnableOutput;
 import com.bytechef.component.definition.TriggerDefinition.HttpHeaders;
 import com.bytechef.component.definition.TriggerDefinition.HttpParameters;
 import com.bytechef.component.definition.TriggerDefinition.WebhookBody;
 import com.bytechef.component.definition.TriggerDefinition.WebhookMethod;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.mockito.ArgumentCaptor;
 import org.mockito.MockedStatic;
 
 /**
- * @author Monika Domiter
+ * @author Monika Kušter
  */
-public abstract class AbstractBoxTriggerTest {
-    protected DynamicWebhookEnableOutput mockedDynamicWebhookEnableOutput =
-        mock(TriggerDefinition.DynamicWebhookEnableOutput.class);
+abstract class AbstractBoxTriggerTest {
+
     protected WebhookBody mockedWebhookBody = mock(WebhookBody.class);
     protected HttpHeaders mockedHttpHeaders = mock(HttpHeaders.class);
     protected HttpParameters mockedHttpParameters = mock(HttpParameters.class);
@@ -47,14 +46,16 @@ public abstract class AbstractBoxTriggerTest {
     protected TriggerContext mockedTriggerContext = mock(TriggerContext.class);
     protected MockedStatic<BoxUtils> boxUtilsMockedStatic;
     protected String workflowExecutionId = "testWorkflowExecutionId";
+    protected ArgumentCaptor<String> stringArgumentCaptor = forClass(String.class);
+    protected ArgumentCaptor<TriggerContext> triggerContextArgumentCaptor = forClass(TriggerContext.class);
 
     @BeforeEach
-    public void beforeEach() {
+    void beforeEach() {
         boxUtilsMockedStatic = mockStatic(BoxUtils.class);
     }
 
     @AfterEach
-    public void afterEach() {
+    void afterEach() {
         boxUtilsMockedStatic.close();
     }
 }

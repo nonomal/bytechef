@@ -1,0 +1,52 @@
+/*
+ * Copyright 2025 ByteChef
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.bytechef.component.definition.approval;
+
+import com.bytechef.component.definition.ClusterElementContext;
+import com.bytechef.component.definition.ClusterElementDefinition.ClusterElementType;
+import com.bytechef.component.definition.Parameters;
+
+/**
+ * @author Ivica Cardic
+ */
+@FunctionalInterface
+public interface ApprovalChannelFunction {
+
+    ClusterElementType APPROVAL_CHANNELS =
+        new ClusterElementType("APPROVAL_CHANNELS", "approvalChannels", "Channels", true, false);
+
+    /**
+     * Key under which the calling approval action publishes the form description.
+     */
+    String FORM_DESCRIPTION = "formDescription";
+
+    /**
+     * Key under which the calling approval action publishes the form title.
+     */
+    String FORM_TITLE = "formTitle";
+
+    /**
+     * Key under which the calling approval action publishes its form-input definitions. Channels can consult this list
+     * to decide between rendering a single "open form" link (when the form has fields the user must fill in) and a pair
+     * of one-click Approve/Discard actions (when the list is empty).
+     */
+    String INPUTS = "inputs";
+
+    Object apply(
+        Parameters inputParameters, Parameters connectionParameters, String formUrl, ClusterElementContext context)
+        throws Exception;
+}

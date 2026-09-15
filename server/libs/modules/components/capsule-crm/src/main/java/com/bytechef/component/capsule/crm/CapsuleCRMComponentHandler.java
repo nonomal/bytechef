@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,8 +17,7 @@
 package com.bytechef.component.capsule.crm;
 
 import static com.bytechef.component.capsule.crm.connection.CapsuleCRMConnection.CONNECTION_DEFINITION;
-import static com.bytechef.component.capsule.crm.constant.CapsuleCRMConstants.CAPSULE_CRM;
-import static com.bytechef.component.definition.ComponentDSL.component;
+import static com.bytechef.component.definition.ComponentDsl.component;
 
 import com.bytechef.component.ComponentHandler;
 import com.bytechef.component.capsule.crm.action.CapsuleCRMCreateContactAction;
@@ -33,17 +32,20 @@ import com.google.auto.service.AutoService;
 @AutoService(ComponentHandler.class)
 public class CapsuleCRMComponentHandler implements ComponentHandler {
 
-    private static final ComponentDefinition COMPONENT_DEFINITION = component(CAPSULE_CRM)
+    private static final ComponentDefinition COMPONENT_DEFINITION = component("capsuleCRM")
         .title("Capsule CRM")
         .description(
             "Capsule CRM is a cloud-based customer relationship management platform designed to help businesses " +
                 "manage contacts, track sales opportunities, and collaborate with their teams efficiently.")
         .icon("path:assets/capsule-crm.svg")
+        .customAction(true)
+        .customActionHelp("", "https://developer.capsulecrm.com/v2/overview/getting-started")
         .connection(CONNECTION_DEFINITION)
         .categories(ComponentCategory.CRM)
         .actions(
             CapsuleCRMCreateContactAction.ACTION_DEFINITION,
-            CapsuleCRMCreateTaskAction.ACTION_DEFINITION);
+            CapsuleCRMCreateTaskAction.ACTION_DEFINITION)
+        .version(1);
 
     @Override
     public ComponentDefinition getDefinition() {

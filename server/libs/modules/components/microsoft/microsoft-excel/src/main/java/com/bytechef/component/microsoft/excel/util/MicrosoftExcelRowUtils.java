@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,38 +16,39 @@
 
 package com.bytechef.component.microsoft.excel.util;
 
-import static com.bytechef.component.microsoft.excel.constant.MicrosoftExcelConstants.BASE_URL;
+import static com.bytechef.component.definition.Context.Http.responseType;
 import static com.bytechef.component.microsoft.excel.constant.MicrosoftExcelConstants.VALUES;
 import static com.bytechef.component.microsoft.excel.constant.MicrosoftExcelConstants.WORKBOOK_ID;
-import static com.bytechef.component.microsoft.excel.constant.MicrosoftExcelConstants.WORKBOOK_WORKSHEETS_PATH;
 import static com.bytechef.component.microsoft.excel.constant.MicrosoftExcelConstants.WORKSHEET_NAME;
 
-import com.bytechef.component.definition.ActionContext;
-import com.bytechef.component.definition.Context.Http;
-import com.bytechef.component.definition.Context.TypeReference;
+import com.bytechef.component.definition.Context;
+import com.bytechef.component.definition.Context.Http.ResponseType;
 import com.bytechef.component.definition.Parameters;
+import com.bytechef.component.definition.TypeReference;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
 /**
- * @author Monika Domiter
+ * @author Monika Kušter
  */
 public class MicrosoftExcelRowUtils {
 
     private MicrosoftExcelRowUtils() {
     }
 
-    public static List<Object>
-        getRowFromWorksheet(Parameters inputParameters, ActionContext context, Integer rowNumber) {
+    public static List<Object> getRowFromWorksheet(Parameters inputParameters, Context context, Integer rowNumber) {
+
         String range =
             "A" + rowNumber + ":" + MicrosoftExcelUtils.getLastUsedColumnLabel(inputParameters, context) + rowNumber;
 
         Map<String, Object> body = context
-            .http(http -> http.get(BASE_URL + "/" +
-                inputParameters.getRequiredString(WORKBOOK_ID) + WORKBOOK_WORKSHEETS_PATH +
-                inputParameters.getRequiredString(WORKSHEET_NAME) + "/range(address='" + range + "')"))
-            .configuration(Http.responseType(Http.ResponseType.JSON))
+            .http(http -> http.get(
+                "/me/drive/items/%s/workbook/worksheets/%s/range(address='%s')"
+                    .formatted(
+                        inputParameters.getRequiredString(WORKBOOK_ID),
+                        inputParameters.getRequiredString(WORKSHEET_NAME), range)))
+            .configuration(responseType(ResponseType.JSON))
             .execute()
             .getBody(new TypeReference<>() {});
 
@@ -59,5 +60,4 @@ public class MicrosoftExcelRowUtils {
 
         return row;
     }
-
 }

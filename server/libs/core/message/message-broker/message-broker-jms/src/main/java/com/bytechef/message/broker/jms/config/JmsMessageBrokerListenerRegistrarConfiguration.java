@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * Modifications copyright (C) 2023 ByteChef Inc.
+ * Modifications copyright (C) 2025 ByteChef
  */
 
 package com.bytechef.message.broker.jms.config;
@@ -35,6 +35,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.jms.annotation.JmsListenerConfigurer;
 import org.springframework.jms.config.DefaultJmsListenerContainerFactory;
 import org.springframework.jms.config.JmsListenerEndpointRegistrar;
+import org.springframework.jms.config.JmsListenerEndpointRegistry;
 import org.springframework.jms.config.SimpleJmsListenerEndpoint;
 import org.springframework.jms.listener.adapter.MessageListenerAdapter;
 import org.springframework.jms.support.converter.MessageConverter;
@@ -48,22 +49,25 @@ import org.springframework.jms.support.converter.MessageConverter;
 public class JmsMessageBrokerListenerRegistrarConfiguration
     implements JmsListenerConfigurer, MessageBrokerListenerRegistrar<JmsListenerEndpointRegistrar> {
 
-    private static final Logger logger = LoggerFactory.getLogger(JmsMessageBrokerListenerRegistrarConfiguration.class);
+    private static final Logger log = LoggerFactory.getLogger(JmsMessageBrokerListenerRegistrarConfiguration.class);
 
     private final ConnectionFactory connectionFactory;
     private final MessageConverter jacksonJmsMessageConverter;
     private final List<MessageBrokerConfigurer<JmsListenerEndpointRegistrar>> messageBrokerConfigurers;
+    private final JmsListenerEndpointRegistry jmsListenerEndpointRegistry;
 
     @SuppressFBWarnings("EI")
     public JmsMessageBrokerListenerRegistrarConfiguration(
         ConnectionFactory connectionFactory,
         @Qualifier("jacksonJmsMessageConverter") MessageConverter jacksonJmsMessageConverter,
         @Autowired(
-            required = false) List<MessageBrokerConfigurer<JmsListenerEndpointRegistrar>> messageBrokerConfigurers) {
+            required = false) List<MessageBrokerConfigurer<JmsListenerEndpointRegistrar>> messageBrokerConfigurers,
+        @Autowired(required = false) JmsListenerEndpointRegistry jmsListenerEndpointRegistry) {
 
         this.connectionFactory = connectionFactory;
         this.jacksonJmsMessageConverter = jacksonJmsMessageConverter;
         this.messageBrokerConfigurers = messageBrokerConfigurers == null ? List.of() : messageBrokerConfigurers;
+        this.jmsListenerEndpointRegistry = jmsListenerEndpointRegistry;
     }
 
     @Override
@@ -80,7 +84,9 @@ public class JmsMessageBrokerListenerRegistrarConfiguration
 
         Class<?> delegateClass = delegate.getClass();
 
-        logger.info("Registering JMS Listener: {} -> {}:{}", messageRoute, delegateClass, methodName);
+        if (log.isTraceEnabled()) {
+            log.trace("Registering JMS Listener: {} -> {}:{}", messageRoute, delegateClass, methodName);
+        }
 
         MessageListenerAdapter messageListenerAdapter = new NoReplyMessageListenerAdapter(delegate);
 
@@ -94,6 +100,28 @@ public class JmsMessageBrokerListenerRegistrarConfiguration
         simpleJmsListenerEndpoint.setMessageListener(messageListenerAdapter);
 
         listenerEndpointRegistrar.registerEndpoint(simpleJmsListenerEndpoint, createContainerFactory(concurrency));
+    }
+
+    @Override
+    public void stopListenerEndpoints() {
+        try {
+            if (jmsListenerEndpointRegistry != null) {
+                jmsListenerEndpointRegistry.stop();
+            }
+        } catch (Exception e) {
+            log.warn("Failed to stop JMS listener containers: {}", e.getMessage());
+        }
+    }
+
+    @Override
+    public void startListenerEndpoints() {
+        try {
+            if (jmsListenerEndpointRegistry != null) {
+                jmsListenerEndpointRegistry.start();
+            }
+        } catch (Exception e) {
+            log.warn("Failed to start JMS listener containers: {}", e.getMessage());
+        }
     }
 
     private DefaultJmsListenerContainerFactory createContainerFactory(int concurrency) {

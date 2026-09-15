@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,40 +17,52 @@
 package com.bytechef.security.config;
 
 import static org.springframework.security.config.Customizer.withDefaults;
-import static org.springframework.security.web.util.matcher.AntPathRequestMatcher.antMatcher;
 
 import com.bytechef.config.ApplicationProperties;
 import com.bytechef.config.ApplicationProperties.Security;
-import com.bytechef.config.ApplicationProperties.Security.RememberMe;
-import com.bytechef.platform.security.web.authentication.AuthenticationProviderContributor;
-import com.bytechef.platform.security.web.filter.FilterAfterContributor;
-import com.bytechef.platform.security.web.filter.FilterBeforeContributor;
-import com.bytechef.platform.security.web.matcher.AuthenticatedRequestMatcherContributor;
-import com.bytechef.platform.user.constant.AuthorityConstants;
+import com.bytechef.platform.security.constant.AuthorityConstants;
+import com.bytechef.platform.security.web.config.AuthorizeHttpRequestContributor;
+import com.bytechef.platform.security.web.config.OAuth2LoginCustomizer;
+import com.bytechef.platform.security.web.config.Saml2LoginCustomizer;
+import com.bytechef.platform.security.web.config.SecurityConfigurerContributor;
+import com.bytechef.platform.security.web.config.SpaWebFilterContributor;
 import com.bytechef.security.web.filter.CookieCsrfFilter;
 import com.bytechef.security.web.filter.SpaWebFilter;
+import com.bytechef.security.web.filter.TwoFactorVerificationFilter;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.function.Supplier;
+import org.apache.commons.lang3.Strings;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
+import org.springframework.core.annotation.Order;
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.Profiles;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
+import org.springframework.security.authentication.AuthenticationProvider;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.configurers.AuthorizeHttpRequestsConfigurer;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.userdetails.User;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.AuthenticationFailureHandler;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.RememberMeServices;
 import org.springframework.security.web.authentication.logout.HttpStatusReturningLogoutSuccessHandler;
+import org.springframework.security.web.authentication.www.BasicAuthenticationEntryPoint;
 import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfToken;
@@ -58,183 +70,343 @@ import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 import org.springframework.security.web.csrf.CsrfTokenRequestHandler;
 import org.springframework.security.web.csrf.XorCsrfTokenRequestAttributeHandler;
 import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
-import org.springframework.security.web.servlet.util.matcher.MvcRequestMatcher;
+import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
 import org.springframework.security.web.util.matcher.OrRequestMatcher;
-import org.springframework.util.StringUtils;
-import org.springframework.web.servlet.handler.HandlerMappingIntrospector;
 
 /**
  * @author Ivica Cardic
  */
 @Configuration
 @EnableMethodSecurity(securedEnabled = true)
+@Profile("!liquibase")
 public class SecurityConfiguration {
 
     private final AuthenticationFailureHandler authenticationFailureHandler;
     private final AuthenticationSuccessHandler authenticationSuccessHandler;
+    private final List<OAuth2LoginCustomizer> oAuth2LoginCustomizers;
+    private final PasswordEncoder passwordEncoder;
+    private final RememberMeKey rememberMeKey;
     private final RememberMeServices rememberMeServices;
+    private final List<Saml2LoginCustomizer> saml2LoginCustomizers;
     private final Security security;
-    private final List<FilterAfterContributor> filterAfterContributors;
-    private final List<FilterBeforeContributor> filterBeforeContributors;
-    private final List<AuthenticatedRequestMatcherContributor> authenticatedRequestMatcherContributors;
+    private final ObjectProvider<TwoFactorVerificationFilter> twoFactorVerificationFilterProvider;
 
-    @SuppressFBWarnings("EI")
+    @SuppressFBWarnings("CT_CONSTRUCTOR_THROW")
     public SecurityConfiguration(
         ApplicationProperties applicationProperties, AuthenticationFailureHandler authenticationFailureHandler,
-        AuthenticationSuccessHandler authenticationSuccessHandler, RememberMeServices rememberMeServices,
-        List<FilterAfterContributor> filterAfterContributors, List<FilterBeforeContributor> filterBeforeContributors,
-        List<AuthenticatedRequestMatcherContributor> authenticatedRequestMatcherContributors) {
+        AuthenticationSuccessHandler authenticationSuccessHandler,
+        ObjectProvider<List<OAuth2LoginCustomizer>> oAuth2LoginCustomizersProvider, PasswordEncoder passwordEncoder,
+        RememberMeKey rememberMeKey, RememberMeServices rememberMeServices,
+        ObjectProvider<List<Saml2LoginCustomizer>> saml2LoginCustomizersProvider,
+        ObjectProvider<TwoFactorVerificationFilter> twoFactorVerificationFilterProvider) {
 
         this.authenticationFailureHandler = authenticationFailureHandler;
         this.authenticationSuccessHandler = authenticationSuccessHandler;
+        this.oAuth2LoginCustomizers = oAuth2LoginCustomizersProvider.getIfAvailable(List::of);
+        this.passwordEncoder = passwordEncoder;
+        this.rememberMeKey = rememberMeKey;
         this.rememberMeServices = rememberMeServices;
+        this.saml2LoginCustomizers = saml2LoginCustomizersProvider.getIfAvailable(List::of);
         this.security = applicationProperties.getSecurity();
-        this.filterAfterContributors = filterAfterContributors;
-        this.filterBeforeContributors = filterBeforeContributors;
-        this.authenticatedRequestMatcherContributors = authenticatedRequestMatcherContributors;
+        this.twoFactorVerificationFilterProvider = twoFactorVerificationFilterProvider;
     }
 
+    /**
+     * Configures the security filter chain for the actuator endpoints, specifying authorization rules, authentication
+     * mechanisms, and exception handling.
+     *
+     * @param http the {@link HttpSecurity} object used to customize security settings for the actuator endpoints
+     * @param mvc  a {@link PathPatternRequestMatcher.Builder} used to create matchers for specific URI patterns
+     * @return a configured {@link SecurityFilterChain} to handle security for actuator endpoints
+     * @throws Exception if an error occurs while configuring the security filter chain
+     */
     @Bean
-    public AuthenticationManager authenticationManager(
-        HttpSecurity http, List<AuthenticationProviderContributor> authenticationProviderContributors)
-        throws Exception {
-
-        AuthenticationManagerBuilder authenticationManagerBuilder = http.getSharedObject(
-            AuthenticationManagerBuilder.class);
-
-        for (AuthenticationProviderContributor authenticationProviderContributor : authenticationProviderContributors) {
-            http.authenticationProvider(authenticationProviderContributor.getAuthenticationProvider());
-        }
-
-        return authenticationManagerBuilder.build();
-    }
-
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
-
-    @Bean
-    public SecurityFilterChain filterChain(
-        HttpSecurity http, MvcRequestMatcher.Builder mvc, AuthenticationManager authenticationManager)
-        throws Exception {
+    @Order(2)
+    public SecurityFilterChain actuatorFilterChain(
+        HttpSecurity http, PathPatternRequestMatcher.Builder mvc) throws Exception {
 
         http
-            .authenticationManager(authenticationManager)
+            .securityMatcher("/actuator/**")
             .cors(withDefaults())
-            .csrf(csrf -> csrf
-                .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
-                // See https://stackoverflow.com/q/74447118/65681
-                .csrfTokenRequestHandler(new SpaCsrfTokenRequestHandler())
-                .ignoringRequestMatchers("/webhooks/**"));
+            .csrf(AbstractHttpConfigurer::disable)
+            .authorizeHttpRequests(authz -> authz
+                .requestMatchers(mvc.matcher("/actuator/health"))
+                .permitAll()
+                .requestMatchers(mvc.matcher("/actuator/health/**"))
+                .permitAll()
+                .requestMatchers(mvc.matcher("/actuator/info"))
+                .permitAll()
+                .requestMatchers(mvc.matcher("/actuator/metrics"))
+                .permitAll()
+                .requestMatchers(mvc.matcher("/actuator/metrics/**"))
+                .permitAll()
+                .requestMatchers(mvc.matcher("/actuator/prometheus"))
+                .permitAll()
+                .requestMatchers(mvc.matcher("/actuator/**"))
+                .hasAuthority(AuthorityConstants.SYSTEM_ADMIN))
+            .httpBasic(withDefaults())
+            .exceptionHandling(exceptions -> exceptions
+                .authenticationEntryPoint(new UnauthorizedBasicAuthenticationEntryPoint()));
 
-        for (FilterBeforeContributor filterBeforeContributor : filterBeforeContributors) {
-            http.addFilterBefore(
-                filterBeforeContributor.getFilter(authenticationManager), filterBeforeContributor.getBeforeFilter());
+        AuthenticationProvider authenticationProvider = getSystemAuthenticationProvider(security.getSystem());
+
+        if (authenticationProvider != null) {
+            http.authenticationProvider(authenticationProvider);
         }
-
-        http.addFilterAfter(new SpaWebFilter(), BasicAuthenticationFilter.class)
-            .addFilterAfter(new CookieCsrfFilter(), BasicAuthenticationFilter.class);
-
-        for (FilterAfterContributor filterAfterContributor : filterAfterContributors) {
-            http.addFilterAfter(filterAfterContributor.getFilter(), filterAfterContributor.getAfterFilter());
-        }
-
-        http.headers(
-            headers -> headers
-                .contentSecurityPolicy(csp -> csp.policyDirectives(security.getContentSecurityPolicy()))
-                .frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin)
-                .referrerPolicy(
-                    referrer -> referrer
-                        .policy(ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN))
-                .permissionsPolicy(
-                    permissions -> permissions.policy(
-                        "camera=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), sync-xhr=()")))
-            .authorizeHttpRequests(
-                authz -> requestMatchers(authz, mvc)
-                    .requestMatchers(mvc.pattern("/*.ico"), mvc.pattern("/*.png"), mvc.pattern("/*.svg"))
-                    .permitAll()
-                    .requestMatchers(mvc.pattern("/actuator/health"))
-                    .permitAll()
-                    .requestMatchers(mvc.pattern("/actuator/health/**"))
-                    .permitAll()
-                    .requestMatchers(mvc.pattern("/actuator/info"))
-                    .permitAll()
-                    .requestMatchers(mvc.pattern("/actuator/prometheus"))
-                    .permitAll()
-                    .requestMatchers(mvc.pattern("/actuator/**"))
-                    .hasAuthority(AuthorityConstants.ADMIN)
-                    .requestMatchers(mvc.pattern("/api/authenticate"))
-                    .permitAll()
-                    .requestMatchers(mvc.pattern("/api/register"))
-                    .permitAll()
-                    .requestMatchers(mvc.pattern("/api/activate"))
-                    .permitAll()
-                    .requestMatchers(mvc.pattern("/api/account/reset-password/init"))
-                    .permitAll()
-                    .requestMatchers(mvc.pattern("/api/account/reset-password/finish"))
-                    .permitAll()
-                    .requestMatchers(mvc.pattern("/api/**"))
-                    .authenticated()
-                    .requestMatchers(mvc.pattern("/assets/**"))
-                    .permitAll()
-                    .requestMatchers(mvc.pattern("/i18n/**"))
-                    .permitAll()
-                    .requestMatchers(mvc.pattern("/index.html"))
-                    .permitAll()
-                    .requestMatchers(mvc.pattern("/swagger-ui/**"))
-                    .permitAll()
-                    .requestMatchers(mvc.pattern("/swagger-ui.html"))
-                    .permitAll()
-                    .requestMatchers(mvc.pattern("/v3/api-docs/**"))
-                    .permitAll()
-                    .requestMatchers(mvc.pattern("/webhooks/**"))
-                    .permitAll())
-            .rememberMe(
-                rememberMe -> rememberMe
-                    .rememberMeServices(rememberMeServices)
-                    .rememberMeParameter("remember-me")
-                    .key(getRememberMeKey()))
-            .exceptionHandling(
-                exceptionHanding -> exceptionHanding.defaultAuthenticationEntryPointFor(
-                    new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED),
-                    new OrRequestMatcher(antMatcher("/api/**"))))
-            .formLogin(
-                formLogin -> formLogin
-                    .loginPage("/")
-                    .loginProcessingUrl("/api/authentication")
-                    .successHandler(authenticationSuccessHandler)
-                    .failureHandler(authenticationFailureHandler)
-                    .permitAll())
-            .logout(
-                logout -> logout.logoutUrl("/api/logout")
-                    .logoutSuccessHandler(new HttpStatusReturningLogoutSuccessHandler())
-                    .permitAll());
 
         return http.build();
     }
 
-    private AuthorizeHttpRequestsConfigurer<HttpSecurity>.AuthorizationManagerRequestMatcherRegistry requestMatchers(
-        AuthorizeHttpRequestsConfigurer<HttpSecurity>.AuthorizationManagerRequestMatcherRegistry authz,
-        MvcRequestMatcher.Builder mvc) {
+    /**
+     * Configures the security filter chain for API endpoints and GraphQL requests, defining authorization,
+     * authentication, CSRF settings, and headers for securing requests.
+     *
+     * @param http                             the {@link HttpSecurity} object used to customize the security settings
+     *                                         for the application.
+     * @param mvc                              a {@link PathPatternRequestMatcher.Builder} used to build request
+     *                                         matchers.
+     * @param authorizeHttpRequestContributors a list of {@link AuthorizeHttpRequestContributor} instances providing
+     *                                         paths to be configured as permit-all in the API security configuration.
+     * @param environment                      the {@link Environment} object used to retrieve profiles and environment
+     *                                         properties.
+     * @param spaWebFilterContributors         a list of {@link SpaWebFilterContributor} instances contributing to the
+     *                                         customization of SPA-specific filters.
+     * @return a configured {@link SecurityFilterChain} for securing API and GraphQL endpoints.
+     * @throws Exception if an error occurs while configuring the security filter chain.
+     */
+    @Bean
+    @Order(3)
+    public SecurityFilterChain apiFilterChain(
+        HttpSecurity http, PathPatternRequestMatcher.Builder mvc,
+        List<AuthorizeHttpRequestContributor> authorizeHttpRequestContributors, Environment environment,
+        List<SecurityConfigurerContributor> securityConfigurerContributors,
+        List<SpaWebFilterContributor> spaWebFilterContributors)
+        throws Exception {
 
-        for (AuthenticatedRequestMatcherContributor authenticatedRequestMatcherContributor : authenticatedRequestMatcherContributors) {
-            authz.requestMatchers(authenticatedRequestMatcherContributor.getRequestMatcher(mvc))
-                .authenticated();
+        if (!oAuth2LoginCustomizers.isEmpty() || !saml2LoginCustomizers.isEmpty()) {
+            List<String> matchers = new ArrayList<>(List.of("/api/**", "/graphql"));
+
+            if (!oAuth2LoginCustomizers.isEmpty()) {
+                matchers.addAll(List.of("/oauth2/**", "/login/oauth2/**"));
+            }
+
+            if (!saml2LoginCustomizers.isEmpty()) {
+                matchers.addAll(List.of("/saml2/**", "/login/saml2/**"));
+            }
+
+            http.securityMatcher(matchers.toArray(new String[0]));
+        } else {
+            http.securityMatcher("/api/**", "/graphql");
         }
 
-        return authz;
+        http
+            .cors(withDefaults())
+            .csrf(csrf -> {
+                csrf
+                    .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                    // See https://stackoverflow.com/q/74447118/65681
+                    .csrfTokenRequestHandler(new SpaCsrfTokenRequestHandler())
+                    // For CORS requests
+                    .ignoringRequestMatchers(request -> Objects.equals(request.getMethod(), "OPTIONS"))
+                    // For internal calls from the swagger UI in the dev profile
+                    .ignoringRequestMatchers(request -> environment.acceptsProfiles(Profiles.of("dev")) &&
+                        Strings.CS.contains(request.getHeader("Referer"), "/swagger-ui/"));
+            });
+
+        http.addFilterAfter(new SpaWebFilter(spaWebFilterContributors), BasicAuthenticationFilter.class)
+            .addFilterAfter(new CookieCsrfFilter(), BasicAuthenticationFilter.class);
+
+        TwoFactorVerificationFilter twoFactorVerificationFilter =
+            twoFactorVerificationFilterProvider.getIfAvailable();
+
+        if (twoFactorVerificationFilter != null) {
+            http.addFilterAfter(twoFactorVerificationFilter, BasicAuthenticationFilter.class);
+        }
+
+        http
+            .headers(headers -> headers
+                .contentSecurityPolicy(csp -> csp.policyDirectives(security.getContentSecurityPolicy()))
+                .frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin)
+                .referrerPolicy(referrer -> referrer
+                    .policy(ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN))
+                .permissionsPolicyHeader(permissions -> permissions
+                    .policy(
+                        "camera=(), fullscreen=(self), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), midi=(), payment=(), sync-xhr=()")))
+            .authorizeHttpRequests(authz -> {
+                for (AuthorizeHttpRequestContributor authorizeHttpRequestContributor : authorizeHttpRequestContributors) {
+                    for (String path : authorizeHttpRequestContributor.getApiPermitAllRequestMatcherPaths()) {
+                        authz
+                            .requestMatchers(mvc.matcher(path))
+                            .permitAll();
+                    }
+                }
+
+                authz
+                    .requestMatchers(mvc.matcher("/api/**"))
+                    .authenticated()
+                    .requestMatchers(mvc.matcher("/graphql"))
+                    .authenticated();
+            })
+            .rememberMe(rememberMe -> rememberMe
+                .rememberMeServices(rememberMeServices)
+                .rememberMeParameter("remember-me")
+                .key(rememberMeKey.getKey()))
+            .exceptionHandling(exceptionHanding -> exceptionHanding
+                .defaultAuthenticationEntryPointFor(
+                    new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED),
+                    new OrRequestMatcher(mvc.matcher("/api/**"), mvc.matcher("/graphql"))))
+            .formLogin(formLogin -> formLogin
+                .loginPage("/")
+                .loginProcessingUrl("/api/authentication")
+                .successHandler(authenticationSuccessHandler)
+                .failureHandler(authenticationFailureHandler)
+                .permitAll())
+            .logout(logout -> logout
+                .logoutUrl("/api/logout")
+                .logoutSuccessHandler(new HttpStatusReturningLogoutSuccessHandler())
+                .permitAll());
+
+        for (OAuth2LoginCustomizer oAuth2LoginCustomizer : oAuth2LoginCustomizers) {
+            oAuth2LoginCustomizer.customize(http);
+        }
+
+        for (Saml2LoginCustomizer saml2LoginCustomizer : saml2LoginCustomizers) {
+            saml2LoginCustomizer.customize(http);
+        }
+
+        for (SecurityConfigurerContributor securityConfigurerContributor : securityConfigurerContributors) {
+
+            http.with(securityConfigurerContributor.getSecurityConfigurerAdapter(), withDefaults());
+        }
+
+        return http.build();
+    }
+
+    /**
+     * Configures the security filter chain for the web application, defining authorization, authentication, and the
+     * integration of SPA-specific and permit-all contributors.
+     *
+     * @param http                             the {@link HttpSecurity} object used to customize security settings for
+     *                                         the application
+     * @param mvc                              a {@link PathPatternRequestMatcher.Builder} used to create request
+     *                                         matchers for specific URI patterns
+     * @param authorizeHttpRequestContributors a list of {@link AuthorizeHttpRequestContributor} instances providing
+     *                                         paths to be configured as permit-all in the security configuration
+     *
+     * @param spaWebFilterContributors         a list of {@link SpaWebFilterContributor} instances contributing to the
+     *                                         customization of SPA-specific filters
+     * @return a configured {@link SecurityFilterChain} for managing security in the application
+     * @throws Exception if an error occurs while configuring the security filter chain
+     */
+    @Bean
+    @Order(4)
+    public SecurityFilterChain filterChain(
+        HttpSecurity http, PathPatternRequestMatcher.Builder mvc,
+        List<AuthorizeHttpRequestContributor> authorizeHttpRequestContributors,
+        List<SpaWebFilterContributor> spaWebFilterContributors) throws Exception {
+
+        http
+            .addFilterAfter(new SpaWebFilter(spaWebFilterContributors), BasicAuthenticationFilter.class)
+            .cors(withDefaults())
+            .csrf(AbstractHttpConfigurer::disable)
+            .authorizeHttpRequests(authz -> {
+                for (AuthorizeHttpRequestContributor authorizeHttpRequestContributor : authorizeHttpRequestContributors) {
+                    for (String path : authorizeHttpRequestContributor.getPermitAllRequestMatcherPaths()) {
+                        authz
+                            .requestMatchers(mvc.matcher(path))
+                            .permitAll();
+                    }
+                }
+
+                authz
+                    .requestMatchers(mvc.matcher("/*.ico"), mvc.matcher("/*.png"), mvc.matcher("/*.svg"))
+                    .permitAll()
+                    .requestMatchers(mvc.matcher("/assets/**"))
+                    .permitAll()
+                    .requestMatchers(mvc.matcher("/i18n/**"))
+                    .permitAll()
+                    .requestMatchers(mvc.matcher("/icons/**"))
+                    .permitAll()
+                    .requestMatchers(mvc.matcher("/index.html"))
+                    .permitAll()
+                    .requestMatchers(mvc.matcher("/swagger-ui/**"))
+                    .permitAll()
+                    .requestMatchers(mvc.matcher("/swagger-ui.html"))
+                    .permitAll()
+                    .requestMatchers(mvc.matcher("/v3/api-docs/**"))
+                    .permitAll()
+                    .anyRequest()
+                    .denyAll();
+            });
+
+        return http.build();
+    }
+
+    /**
+     * Configures the security filter chain for the GraphiQL dev UI and HTTP-Basic-authenticated GraphiQL POSTs to
+     * {@code /graphql}. The chain intentionally does not match {@code /graphql} requests carrying a Bearer token or
+     * relying on session-cookie auth — those fall through to {@link #apiFilterChain} where the JWT contributor and
+     * form-login session handlers live.
+     *
+     * @param http the {@link HttpSecurity} object used to customize security settings for the GraphiQL endpoints
+     * @return a configured {@link SecurityFilterChain} for serving GraphiQL and accepting its Basic-auth GraphQL calls
+     */
+    @Bean
+    @Profile("dev")
+    @Order(1)
+    public SecurityFilterChain graphqlDevFilterChain(HttpSecurity http) {
+        http
+            .securityMatcher(SecurityConfiguration::isGraphiqlBasicAuthRequest)
+            .csrf(AbstractHttpConfigurer::disable)
+            .authorizeHttpRequests(auth -> auth.anyRequest()
+                .authenticated())
+            .httpBasic(withDefaults())
+            .exceptionHandling(exceptions -> exceptions
+                .authenticationEntryPoint(new UnauthorizedBasicAuthenticationEntryPoint()));
+
+        return http.build();
     }
 
     @Bean
-    MvcRequestMatcher.Builder mvc(HandlerMappingIntrospector introspector) {
-        return new MvcRequestMatcher.Builder(introspector);
+    PathPatternRequestMatcher.Builder mvc() {
+        return PathPatternRequestMatcher.withDefaults();
     }
 
-    private String getRememberMeKey() {
-        RememberMe rememberMe = security.getRememberMe();
+    private DaoAuthenticationProvider getSystemAuthenticationProvider(Security.System system) {
+        String password = system.getPassword();
+        String username = system.getUsername();
 
-        return rememberMe.getKey();
+        if (password == null || password.isBlank() || username == null || username.isBlank()) {
+            return null;
+        }
+
+        UserDetails user = User.withUsername(system.getUsername())
+            .password(passwordEncoder.encode(system.getPassword()))
+            .authorities(AuthorityConstants.SYSTEM_ADMIN)
+            .build();
+
+        DaoAuthenticationProvider daoAuthenticationProvider = new DaoAuthenticationProvider(
+            new InMemoryUserDetailsManager(user));
+
+        daoAuthenticationProvider.setPasswordEncoder(passwordEncoder);
+
+        return daoAuthenticationProvider;
+    }
+
+    private static boolean isGraphiqlBasicAuthRequest(HttpServletRequest request) {
+        String uri = request.getRequestURI();
+
+        if ("/graphiql".equals(uri)) {
+            return true;
+        }
+
+        if ("/graphql".equals(uri)) {
+            String authorization = request.getHeader("Authorization");
+
+            return authorization != null && authorization.regionMatches(true, 0, "Basic ", 0, 6);
+        }
+
+        return false;
     }
 
     /**
@@ -247,7 +419,7 @@ public class SecurityConfiguration {
      *      SpaCsrfTokenRequestHandler to handle CSRF token</a>
      * @see <a href="https://stackoverflow.com/q/74447118/65681">CSRF protection not working with Spring Security 6</a>
      */
-    static final class SpaCsrfTokenRequestHandler extends CsrfTokenRequestAttributeHandler {
+    private static final class SpaCsrfTokenRequestHandler extends CsrfTokenRequestAttributeHandler {
 
         private final CsrfTokenRequestHandler delegate = new XorCsrfTokenRequestAttributeHandler();
 
@@ -267,7 +439,7 @@ public class SecurityConfiguration {
              * This applies when a single-page application includes the header value automatically, which was obtained
              * via a cookie containing the raw CsrfToken.
              */
-            if (StringUtils.hasText(request.getHeader(csrfToken.getHeaderName()))) {
+            if (org.springframework.util.StringUtils.hasText(request.getHeader(csrfToken.getHeaderName()))) {
                 return super.resolveCsrfTokenValue(request, csrfToken);
             }
             /*
@@ -276,6 +448,27 @@ public class SecurityConfiguration {
              * form includes the _csrf request parameter as a hidden input.
              */
             return this.delegate.resolveCsrfTokenValue(request, csrfToken);
+        }
+    }
+
+    /**
+     * A custom implementation of {@link BasicAuthenticationEntryPoint} used to handle unauthorized access attempts when
+     * basic authentication is required. This class extends the default functionality of
+     * {@link BasicAuthenticationEntryPoint} to customize the behavior for responding to unauthorized requests. It
+     * specifically defines the response headers and status code returned to the client upon an authentication failure.
+     * Key functionality: - Sets the "WWW-Authenticate" response header to indicate the required basic authentication
+     * with a realm. - Responds with the HTTP 401 (Unauthorized) status code to indicate that the request requires
+     * authentication. Method: {@link #commence(HttpServletRequest, HttpServletResponse, AuthenticationException)}: -
+     * Handles the response when an {@link AuthenticationException} occurs, customizing the headers and status code.
+     */
+    private static final class UnauthorizedBasicAuthenticationEntryPoint extends BasicAuthenticationEntryPoint {
+
+        @Override
+        public void commence(
+            HttpServletRequest request, HttpServletResponse response, AuthenticationException authException) {
+
+            response.setHeader("WWW-Authenticate", "Basic realm=\"Protected Endpoints\"");
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
         }
     }
 }

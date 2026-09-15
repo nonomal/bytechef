@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * Modifications copyright (C) 2023 ByteChef Inc.
+ * Modifications copyright (C) 2025 ByteChef
  */
 
 package com.bytechef.atlas.execution.domain;
@@ -26,7 +26,7 @@ import com.bytechef.file.storage.domain.FileEntry;
 import com.bytechef.message.Prioritizable;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -63,13 +63,13 @@ public final class Job implements Errorable, Persistable<Long>, Prioritizable {
 
     @Column("created_date")
     @CreatedDate
-    private LocalDateTime createdDate;
+    private Instant createdDate;
 
     @Column("current_task")
     private int currentTask = -1;
 
     @Column("end_date")
-    private LocalDateTime endDate;
+    private Instant endDate;
 
     @Column("error")
     private ExecutionError error;
@@ -89,7 +89,7 @@ public final class Job implements Errorable, Persistable<Long>, Prioritizable {
 
     @Column("last_modified_date")
     @LastModifiedDate
-    private LocalDateTime lastModifiedDate;
+    private Instant lastModifiedDate;
 
     @Column
     private MapWrapper metadata = new MapWrapper();
@@ -103,7 +103,7 @@ public final class Job implements Errorable, Persistable<Long>, Prioritizable {
     private int priority;
 
     @Column("start_date")
-    private LocalDateTime startDate;
+    private Instant startDate;
 
     @Column
     private int status;
@@ -151,9 +151,9 @@ public final class Job implements Errorable, Persistable<Long>, Prioritizable {
     /**
      * Return the time when the job was originally created.
      *
-     * @return {@link LocalDateTime}
+     * @return {@link Instant}
      */
-    public LocalDateTime getCreatedDate() {
+    public Instant getCreatedDate() {
         return createdDate;
     }
 
@@ -174,9 +174,9 @@ public final class Job implements Errorable, Persistable<Long>, Prioritizable {
     /**
      * Get time execution entered end status: COMPLETED, STOPPED, FAILED
      *
-     * @return {@link LocalDateTime}
+     * @return {@link Instant}
      */
-    public LocalDateTime getEndDate() {
+    public Instant getEndDate() {
         return endDate;
     }
 
@@ -224,9 +224,9 @@ public final class Job implements Errorable, Persistable<Long>, Prioritizable {
     /**
      * Return the time of when the job began execution.
      *
-     * @return {@link LocalDateTime}
+     * @return {@link Instant}
      */
-    public LocalDateTime getStartDate() {
+    public Instant getStartDate() {
         return startDate;
     }
 
@@ -258,7 +258,7 @@ public final class Job implements Errorable, Persistable<Long>, Prioritizable {
         return lastModifiedBy;
     }
 
-    public LocalDateTime getLastModifiedDate() {
+    public Instant getLastModifiedDate() {
         return lastModifiedDate;
     }
 
@@ -294,7 +294,7 @@ public final class Job implements Errorable, Persistable<Long>, Prioritizable {
         this.currentTask = currentTask;
     }
 
-    public void setEndDate(LocalDateTime endDate) {
+    public void setEndDate(Instant endDate) {
         this.endDate = endDate;
     }
 
@@ -315,7 +315,11 @@ public final class Job implements Errorable, Persistable<Long>, Prioritizable {
     }
 
     public void setMetadata(Map<String, ?> metadata) {
-        this.metadata = new MapWrapper(metadata);
+        if (metadata == null) {
+            this.metadata = new MapWrapper();
+        } else {
+            this.metadata = new MapWrapper(metadata);
+        }
     }
 
     public void setOutputs(FileEntry outputs) {
@@ -332,7 +336,7 @@ public final class Job implements Errorable, Persistable<Long>, Prioritizable {
         this.priority = priority;
     }
 
-    public void setStartDate(LocalDateTime startDate) {
+    public void setStartDate(Instant startDate) {
         this.startDate = startDate;
     }
 

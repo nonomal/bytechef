@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,7 +34,7 @@ import org.springframework.core.io.support.ResourcePatternResolver;
 @Configuration
 public class ResourceWorkflowRepositoryConfiguration {
 
-    private static final Logger logger = LoggerFactory.getLogger(ResourceWorkflowRepositoryConfiguration.class);
+    private static final Logger log = LoggerFactory.getLogger(ResourceWorkflowRepositoryConfiguration.class);
 
     private final ResourcePatternResolver resourcePatternResolver;
 
@@ -47,8 +47,8 @@ public class ResourceWorkflowRepositoryConfiguration {
     @ConditionalOnWorkflowRepositoryClasspath
     ClassPathResourceWorkflowRepository classpathBasedWorkflowRepository(ApplicationProperties applicationProperties) {
 
-        if (logger.isInfoEnabled()) {
-            logger.info("Workflow repository type enabled: classpath");
+        if (log.isInfoEnabled()) {
+            log.info("Workflow repository type enabled: classpath");
         }
 
         String locationPattern = applicationProperties.getWorkflow()
@@ -65,8 +65,8 @@ public class ResourceWorkflowRepositoryConfiguration {
     FilesystemResourceWorkflowRepository filesystemResourceWorkflowRepository(
         ApplicationProperties applicationProperties) {
 
-        if (logger.isInfoEnabled()) {
-            logger.info("Workflow repository type enabled: filesystem");
+        if (log.isInfoEnabled()) {
+            log.info("Workflow repository type enabled: filesystem");
         }
 
         String locationPattern = applicationProperties.getWorkflow()

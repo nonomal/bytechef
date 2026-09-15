@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,10 +19,12 @@ package com.bytechef.platform.workflow.execution.service;
 import com.bytechef.commons.util.OptionalUtils;
 import com.bytechef.platform.workflow.execution.domain.TriggerExecution;
 import com.bytechef.platform.workflow.execution.repository.TriggerExecutionRepository;
+import java.util.List;
 import java.util.Optional;
 import org.apache.commons.lang3.Validate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.Assert;
 
 /**
  * @author Ivica Cardic
@@ -39,8 +41,8 @@ public class TriggerExecutionServiceImpl implements TriggerExecutionService {
 
     @Override
     public TriggerExecution create(TriggerExecution triggerExecution) {
-        Validate.notNull(triggerExecution, "'triggerExecution' must not be null");
-        Validate.isTrue(triggerExecution.getId() == null, "'triggerExecution.id' must be null");
+        Assert.notNull(triggerExecution, "'triggerExecution' must not be null");
+        Assert.isTrue(triggerExecution.getId() == null, "'triggerExecution.id' must be null");
 
         return triggerExecutionRepository.save(triggerExecution);
     }
@@ -64,13 +66,33 @@ public class TriggerExecutionServiceImpl implements TriggerExecutionService {
 
     @Override
     @Transactional(readOnly = true)
+    public List<TriggerExecution> getJobTriggerExecutions(List<Long> jobIds) {
+        if (jobIds.isEmpty()) {
+            return List.of();
+        }
+
+        return triggerExecutionRepository.findAllByJobIdIn(jobIds);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<TriggerExecution> getTriggerExecutions(List<Long> ids) {
+        if (ids.isEmpty()) {
+            return List.of();
+        }
+
+        return triggerExecutionRepository.findAllById(ids);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public TriggerExecution getTriggerExecution(long id) {
         return OptionalUtils.get(triggerExecutionRepository.findById(id));
     }
 
     @Override
     public TriggerExecution update(TriggerExecution triggerExecution) {
-        Validate.notNull(triggerExecution, "'triggerExecution' must not be null");
+        Assert.notNull(triggerExecution, "'triggerExecution' must not be null");
 
         TriggerExecution currentTriggerExecution = OptionalUtils.get(
             triggerExecutionRepository.findByIdForUpdate(Validate.notNull(triggerExecution.getId(), "id")));

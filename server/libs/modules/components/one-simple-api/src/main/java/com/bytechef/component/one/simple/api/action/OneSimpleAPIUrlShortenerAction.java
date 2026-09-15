@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,28 +16,26 @@
 
 package com.bytechef.component.one.simple.api.action;
 
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.object;
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.object;
+import static com.bytechef.component.definition.ComponentDsl.outputSchema;
+import static com.bytechef.component.definition.ComponentDsl.string;
+import static com.bytechef.component.definition.Context.Http.ResponseType;
 import static com.bytechef.component.definition.Context.Http.responseType;
-import static com.bytechef.component.one.simple.api.constants.OneSimpleAPIConstants.ACCESS_TOKEN;
-import static com.bytechef.component.one.simple.api.constants.OneSimpleAPIConstants.BASE_URL;
 import static com.bytechef.component.one.simple.api.constants.OneSimpleAPIConstants.URL;
-import static com.bytechef.component.one.simple.api.constants.OneSimpleAPIConstants.URL_SHORTENER;
 
-import com.bytechef.component.definition.ActionContext;
-import com.bytechef.component.definition.ComponentDSL;
-import com.bytechef.component.definition.Context.Http.Body;
-import com.bytechef.component.definition.Context.Http.ResponseType;
-import com.bytechef.component.definition.Context.TypeReference;
+import com.bytechef.component.definition.ComponentDsl.ModifiableActionDefinition;
+import com.bytechef.component.definition.Context;
 import com.bytechef.component.definition.Parameters;
+import com.bytechef.component.definition.TypeReference;
 
 /**
  * @author Luka Ljubić
+ * @author Monika Kušter
  */
 public class OneSimpleAPIUrlShortenerAction {
 
-    public static final ComponentDSL.ModifiableActionDefinition ACTION_DEFINITION = action(URL_SHORTENER)
+    public static final ModifiableActionDefinition ACTION_DEFINITION = action("urlShortener")
         .title("URL Shortener")
         .description("Shorten your desired URL")
         .properties(
@@ -45,23 +43,24 @@ public class OneSimpleAPIUrlShortenerAction {
                 .label("URL")
                 .description("Place the URL you want to shorten")
                 .required(true))
-        .outputSchema(
-            object()
-                .properties(
-                    string(URL),
-                    string("short_url")))
+        .output(
+            outputSchema(
+                object()
+                    .properties(
+                        string(URL),
+                        string("single_use"),
+                        string("temporary_redirect"),
+                        string("forward_params"),
+                        string("short_url"))))
+        .help("", "https://docs.bytechef.io/reference/components/one-simple-api_v1#url-shortener")
         .perform(OneSimpleAPIUrlShortenerAction::perform);
 
     private OneSimpleAPIUrlShortenerAction() {
     }
 
-    public static Object perform(Parameters inputParameters, Parameters connectionParameters, ActionContext context) {
-        return context.http(http -> http.get(BASE_URL + "/shortener/new"))
-            .body(
-                Body.of(
-                    ACCESS_TOKEN, connectionParameters.getRequiredString(ACCESS_TOKEN),
-                    URL, inputParameters.getRequiredString(URL),
-                    "output", "json"))
+    public static Object perform(Parameters inputParameters, Parameters connectionParameters, Context context) {
+        return context.http(http -> http.get("/shortener/new"))
+            .queryParameters(URL, inputParameters.getRequiredString(URL))
             .configuration(responseType(ResponseType.JSON))
             .execute()
             .getBody(new TypeReference<>() {});

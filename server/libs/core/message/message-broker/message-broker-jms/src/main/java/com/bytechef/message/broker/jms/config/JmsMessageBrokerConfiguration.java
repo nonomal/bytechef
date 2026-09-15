@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,19 +19,19 @@ package com.bytechef.message.broker.jms.config;
 import com.bytechef.message.broker.MessageBroker;
 import com.bytechef.message.broker.annotation.ConditionalOnMessageBrokerJms;
 import com.bytechef.message.broker.jms.JmsMessageBroker;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.jms.ConnectionFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.boot.autoconfigure.jms.DefaultJmsListenerContainerFactoryConfigurer;
+import org.springframework.boot.jms.autoconfigure.DefaultJmsListenerContainerFactoryConfigurer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.jms.config.DefaultJmsListenerContainerFactory;
 import org.springframework.jms.config.JmsListenerContainerFactory;
 import org.springframework.jms.core.JmsTemplate;
-import org.springframework.jms.support.converter.MappingJackson2MessageConverter;
+import org.springframework.jms.support.converter.JacksonJsonMessageConverter;
 import org.springframework.jms.support.converter.MessageConverter;
 import org.springframework.jms.support.converter.MessageType;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * @author Ivica Cardic
@@ -40,23 +40,22 @@ import org.springframework.jms.support.converter.MessageType;
 @ConditionalOnMessageBrokerJms
 public class JmsMessageBrokerConfiguration {
 
-    private static final Logger logger = LoggerFactory.getLogger(JmsMessageBrokerConfiguration.class);
+    private static final Logger log = LoggerFactory.getLogger(JmsMessageBrokerConfiguration.class);
 
     public JmsMessageBrokerConfiguration() {
-        if (logger.isInfoEnabled()) {
-            logger.info("Message broker provider type enabled: jms");
+        if (log.isDebugEnabled()) {
+            log.debug("Message broker provider type enabled: jms");
         }
     }
 
     @Bean
-    MessageConverter jacksonJmsMessageConverter(ObjectMapper objectMapper) {
-        MappingJackson2MessageConverter mappingJackson2MessageConverter = new MappingJackson2MessageConverter();
+    MessageConverter jacksonJmsMessageConverter(JsonMapper objectMapper) {
+        JacksonJsonMessageConverter jacksonJsonMessageConverter = new JacksonJsonMessageConverter(objectMapper);
 
-        mappingJackson2MessageConverter.setObjectMapper(objectMapper);
-        mappingJackson2MessageConverter.setTargetType(MessageType.TEXT);
-        mappingJackson2MessageConverter.setTypeIdPropertyName("_type");
+        jacksonJsonMessageConverter.setTargetType(MessageType.TEXT);
+        jacksonJsonMessageConverter.setTypeIdPropertyName("_type");
 
-        return mappingJackson2MessageConverter;
+        return jacksonJsonMessageConverter;
     }
 
     @Bean

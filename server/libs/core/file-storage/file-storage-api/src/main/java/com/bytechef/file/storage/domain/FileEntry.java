@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,19 +16,24 @@
 
 package com.bytechef.file.storage.domain;
 
+import com.bytechef.commons.util.EncodingUtils;
 import com.bytechef.commons.util.MapUtils;
 import com.bytechef.commons.util.MimeTypeUtils;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.Objects;
-import org.apache.commons.lang3.Validate;
+import org.jspecify.annotations.Nullable;
+import org.springframework.util.Assert;
 
 /**
  * @author Ivica Cardic
  */
 public class FileEntry {
 
+    private static final String SPLITTER = "_;_";
     private static final char UNIX_NAME_SEPARATOR = '/';
     private static final char WINDOWS_NAME_SEPARATOR = '\\';
+    private static final String DEFAULT_EXTENSION = "bin";
 
     private String extension;
     private String mimeType;
@@ -43,28 +48,50 @@ public class FileEntry {
     }
 
     public FileEntry(String filename, String url) {
-        Validate.notNull(filename, "'filename' must not be null");
-        Validate.notNull(url, "'url' must not be null");
+        Assert.notNull(filename, "'filename' must not be null");
+        Assert.notNull(url, "'url' must not be null");
 
-        this.name = filename.substring(indexOfLastSeparator(filename) + 1);
+        String name = filename.substring(indexOfLastSeparator(filename) + 1);
+        String extension = getExtension(name);
 
-        if (name.contains(".")) {
-            this.extension = name.substring(name.lastIndexOf(".") + 1);
-
-            this.mimeType = MimeTypeUtils.getMimeType(extension);
-        }
-
+        this.name = name;
+        this.extension = extension;
+        this.mimeType = MimeTypeUtils.getMimeType(extension);
         this.url = url;
     }
 
-    public FileEntry(String name, String extension, String mimeType, String url) {
-        Validate.notNull(name, "'name' must not be null");
-        Validate.notNull(url, "'url' must not be null");
+    public FileEntry(String name, @Nullable String extension, @Nullable String mimeType, String url) {
+        Assert.notNull(name, "'name' must not be null");
+        Assert.notNull(url, "'url' must not be null");
 
         this.name = name;
         this.extension = extension;
         this.mimeType = mimeType;
         this.url = url;
+    }
+
+    public static boolean isFileEntryMap(Map<?, ?> map) {
+        return map.containsKey("extension") && map.containsKey("mimeType") &&
+            map.containsKey("name") && map.containsKey("url");
+    }
+
+    public static FileEntry parse(String id) {
+        String decodedString = new String(EncodingUtils.base64Decode(id), StandardCharsets.UTF_8);
+
+        String[] parts = decodedString.split(SPLITTER);
+
+        if (parts.length != 4) {
+            throw new IllegalArgumentException(
+                "Invalid FileEntry id format: expected exactly 4 parts but got " + parts.length);
+        }
+
+        String extension = parts[0].isEmpty() ? null : parts[0];
+        String mimeType = parts[1].isEmpty() ? null : parts[1];
+        String url = parts[3];
+
+        validateUrl(url);
+
+        return new FileEntry(parts[2], extension, mimeType, url);
     }
 
     public boolean equals(Object o) {
@@ -86,11 +113,11 @@ public class FileEntry {
         return Objects.hash(name, url);
     }
 
-    public String getExtension() {
+    public @Nullable String getExtension() {
         return extension;
     }
 
-    public String getMimeType() {
+    public @Nullable String getMimeType() {
         return mimeType;
     }
 
@@ -102,18 +129,55 @@ public class FileEntry {
         return url;
     }
 
+    public String toId() {
+        String string = String.join(
+            SPLITTER, Objects.toString(extension, ""), Objects.toString(mimeType, ""), name, url);
+
+        return EncodingUtils.base64EncodeToString(string.getBytes(StandardCharsets.UTF_8));
+    }
+
     @Override
     public String toString() {
         return "FileEntry{" +
             "name='" + name + '\'' +
+            ", extension='" + extension + '\'' +
+            ", mimeType='" + mimeType + '\'' +
             ", url='" + url + '\'' +
             '}';
     }
 
-    private int indexOfLastSeparator(final String fileName) {
+    private static String getExtension(String fileName) {
+        int lastDotIndex = fileName.lastIndexOf(".");
+
+        if (lastDotIndex > 0) {
+            return fileName.substring(lastDotIndex + 1);
+        }
+
+        return DEFAULT_EXTENSION;
+    }
+
+    private static boolean hasWindowsDriveLetter(String url) {
+        if (url.length() < 2 || url.charAt(1) != ':') {
+            return false;
+        }
+
+        char drive = url.charAt(0);
+
+        return (drive >= 'a' && drive <= 'z') || (drive >= 'A' && drive <= 'Z');
+    }
+
+    private static int indexOfLastSeparator(final String fileName) {
         int lastUnixPos = fileName.lastIndexOf(UNIX_NAME_SEPARATOR);
         int lastWindowsPos = fileName.lastIndexOf(WINDOWS_NAME_SEPARATOR);
 
         return Math.max(lastUnixPos, lastWindowsPos);
+    }
+
+    private static void validateUrl(String url) {
+        if (url.isEmpty() || url.indexOf('\0') >= 0 || url.startsWith("/") || url.startsWith("\\")
+            || url.contains("..") || hasWindowsDriveLetter(url)) {
+
+            throw new IllegalArgumentException("Invalid FileEntry id");
+        }
     }
 }

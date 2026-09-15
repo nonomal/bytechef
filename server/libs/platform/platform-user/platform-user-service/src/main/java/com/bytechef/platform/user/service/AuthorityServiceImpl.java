@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -59,5 +59,10 @@ public class AuthorityServiceImpl implements AuthorityService {
     @Override
     public List<Authority> getAuthorities() {
         return authorityRepository.findAll();
+    }
+
+    @Override
+    public Authority update(Authority authority) {
+        return authorityRepository.save(authority);
     }
 }

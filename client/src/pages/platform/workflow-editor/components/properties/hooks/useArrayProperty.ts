@@ -1,0 +1,666 @@
+import {NewSubPropertyI} from '@/pages/platform/workflow-editor/components/properties/components/SubPropertyPopover';
+import {useWorkflowEditor} from '@/pages/platform/workflow-editor/providers/workflowEditorProvider';
+import useWorkflowNodeDetailsPanelStore from '@/pages/platform/workflow-editor/stores/useWorkflowNodeDetailsPanelStore';
+import {VALUE_PROPERTY_CONTROL_TYPES} from '@/shared/constants';
+import {ControlType, ObjectProperty, PropertyType} from '@/shared/middleware/platform/configuration';
+import {ArrayPropertyType, NodeDataType, PropertyAllType} from '@/shared/types';
+import {Dispatch, SetStateAction, useCallback, useEffect, useMemo, useState} from 'react';
+
+import useWorkflowDataStore from '../../../stores/useWorkflowDataStore';
+import {decodePath, encodeParameters, encodePath, safeResolvePath} from '../../../utils/encodingUtils';
+import getParameterItemType from '../../../utils/getParameterItemType';
+import saveProperty from '../../../utils/saveProperty';
+
+const NESTED_STRUCTURE_PROPERTY_TYPES = new Set(['ARRAY', 'DYNAMIC_PROPERTIES', 'OBJECT', 'TASK']);
+
+const initialAvailablePropertyTypes = Object.keys(VALUE_PROPERTY_CONTROL_TYPES).map((type) => ({
+    label: type as string,
+    value: type as string,
+}));
+
+function emptyExplicitValueForScalarPropertyType(type: string | undefined): unknown {
+    if (type === 'FILE_ENTRY' || type === 'NULL') {
+        return null;
+    }
+
+    return '';
+}
+
+function isNestedStructurePropertyType(type: string | undefined): boolean {
+    return type !== undefined && NESTED_STRUCTURE_PROPERTY_TYPES.has(type);
+}
+
+function getExplicitArrayCellParameterValue(arrayItem: ArrayPropertyType): unknown {
+    const {defaultValue, type} = arrayItem;
+
+    if (isNestedStructurePropertyType(type)) {
+        return defaultValue;
+    }
+
+    if (defaultValue !== undefined && defaultValue !== null) {
+        return defaultValue;
+    }
+
+    return emptyExplicitValueForScalarPropertyType(type);
+}
+
+export interface UseArrayPropertyProps {
+    onDeleteClick: (path: string) => void;
+    parentArrayItems?: Array<ArrayPropertyType>;
+    path: string;
+    property: PropertyAllType;
+}
+
+export function useArrayProperty({onDeleteClick, parentArrayItems, path, property}: UseArrayPropertyProps) {
+    const [arrayItems, setArrayItems] = useState<Array<ArrayPropertyType | Array<ArrayPropertyType>>>([]);
+    const [availablePropertyTypes, setAvailablePropertyTypes] =
+        useState<Array<{label: string; value: string}>>(initialAvailablePropertyTypes);
+
+    const currentNode = useWorkflowNodeDetailsPanelStore((state) => state.currentNode);
+    const workflow = useWorkflowDataStore((state) => state.workflow);
+
+    const {updateClusterElementParameterMutation, updateWorkflowNodeParameterMutation} = useWorkflowEditor();
+
+    const {additionalProperties, maxItems, minItems, name} = property;
+
+    const items = useMemo(() => {
+        let resolvedItems = property.items;
+
+        if (!resolvedItems?.length && parentArrayItems?.[0]?.items?.length) {
+            resolvedItems = parentArrayItems[0].items;
+        }
+
+        return resolvedItems;
+    }, [parentArrayItems, property.items]);
+
+    const isAddDisabled = maxItems != null && arrayItems.length >= maxItems;
+
+    type ArrayConstraintHintType =
+        | {variant: 'none'}
+        | {text: string; textColor: string; variant: 'max'}
+        | {text: string; textColor: string; variant: 'min'}
+        | {text: string; textColor: string; variant: 'range'};
+
+    const arrayConstraintHint = useMemo<ArrayConstraintHintType>(() => {
+        const arrayItemCount = arrayItems.length;
+
+        if (minItems != null && maxItems != null) {
+            if (arrayItemCount < minItems) {
+                return {
+                    text: `Minimum ${minItems.toString()} items`,
+                    textColor: 'text-content-destructive-primary',
+                    variant: 'min',
+                };
+            }
+
+            if (isAddDisabled) {
+                return {
+                    text: `Maximum ${maxItems.toString()} items`,
+                    textColor: 'text-content-warning-primary',
+                    variant: 'max',
+                };
+            }
+
+            return {
+                text: `Between ${minItems.toString()} and ${maxItems.toString()} items`,
+                textColor: 'text-content-warning-primary',
+                variant: 'range',
+            };
+        }
+
+        if (minItems != null) {
+            if (arrayItemCount < minItems) {
+                return {
+                    text: `Minimum ${minItems.toString()} items`,
+                    textColor: 'text-content-destructive-primary',
+                    variant: 'min',
+                };
+            }
+
+            return {variant: 'none'};
+        }
+
+        if (maxItems != null) {
+            if (isAddDisabled) {
+                return {
+                    text: `Maximum ${maxItems.toString()} items`,
+                    textColor: 'text-content-warning-primary',
+                    variant: 'max',
+                };
+            }
+
+            return {variant: 'none'};
+        }
+
+        return {variant: 'none'};
+    }, [arrayItems.length, isAddDisabled, maxItems, minItems]);
+
+    const handleAddItemClick = useCallback(
+        ({type: newPropertyType}: NewSubPropertyI) => {
+            if (!currentNode || !name) {
+                return;
+            }
+
+            if (maxItems != null && arrayItems.length >= maxItems) {
+                return;
+            }
+
+            let matchingItem: ArrayPropertyType | undefined = items?.find((item) => item.type === newPropertyType);
+
+            if (!matchingItem) {
+                matchingItem = items?.find((item) => item.name === newPropertyType);
+            }
+
+            const controlType: ControlType = matchingItem
+                ? (matchingItem.controlType as ControlType)
+                : newPropertyType && newPropertyType in VALUE_PROPERTY_CONTROL_TYPES
+                  ? (VALUE_PROPERTY_CONTROL_TYPES[
+                        newPropertyType as keyof typeof VALUE_PROPERTY_CONTROL_TYPES
+                    ] as ControlType)
+                  : ('STRING' as ControlType);
+
+            const newItemPath = `${path}[${arrayItems.length.toString()}]`;
+            const newItemType = (matchingItem?.type as PropertyType) || (newPropertyType as PropertyType) || 'STRING';
+
+            const newItem = {
+                ...matchingItem,
+                controlType,
+                custom: true,
+                expressionEnabled: matchingItem?.expressionEnabled ?? true,
+                key: crypto.randomUUID(),
+                label: `${matchingItem?.label ?? 'Item'} ${arrayItems.length.toString()}`,
+                name: `${matchingItem?.label ?? name}__${arrayItems.length.toString()}`,
+                path: newItemPath,
+                type: newItemType,
+            };
+
+            // Refresh existing items' defaultValue from current workflow parameters before appending.
+            // Otherwise the re-render triggered by the new item passes a stale `defaultValue: undefined`
+            // (coerced to '' by getExplicitArrayCellParameterValue) down to useProperty, which then
+            // overwrites the user's just-selected value because '' !== undefined wins over the workflow.
+            const encodedParameters = encodeParameters(currentNode.parameters ?? {});
+            const encodedBasePath = encodePath(path);
+
+            const refreshedExistingItems = arrayItems.map((existingItem, existingIndex) => {
+                if (Array.isArray(existingItem)) {
+                    return existingItem;
+                }
+
+                const savedValue = safeResolvePath(encodedParameters, `${encodedBasePath}[${existingIndex}]`);
+
+                if (savedValue === undefined || savedValue === null) {
+                    return existingItem;
+                }
+
+                return {
+                    ...existingItem,
+                    defaultValue: savedValue,
+                };
+            });
+
+            setArrayItems([...refreshedExistingItems, newItem]);
+
+            if (updateWorkflowNodeParameterMutation || updateClusterElementParameterMutation) {
+                if (newItemType === 'OBJECT') {
+                    return;
+                }
+
+                saveProperty({
+                    includeInMetadata: true,
+                    path: newItemPath,
+                    type: newItemType,
+                    updateClusterElementParameterMutation,
+                    updateWorkflowNodeParameterMutation,
+                    workflowId: workflow.id!,
+                });
+            }
+        },
+        [
+            arrayItems,
+            currentNode,
+            items,
+            name,
+            path,
+            updateClusterElementParameterMutation,
+            updateWorkflowNodeParameterMutation,
+            workflow.id,
+            maxItems,
+        ]
+    );
+
+    const handleDeleteClick = useCallback(
+        (deletePath: string) => {
+            if (!currentNode || !deletePath) {
+                return;
+            }
+
+            const clickedItemParameterValue = safeResolvePath(currentNode.parameters ?? {}, deletePath);
+
+            if (clickedItemParameterValue !== undefined) {
+                onDeleteClick(deletePath);
+            }
+        },
+        [currentNode, onDeleteClick]
+    );
+
+    useEffect(() => {
+        let propertyTypes: Array<{label: string; value: string}> = [];
+
+        const hasDuplicateTypes = items?.some(
+            (item, index) => items.findIndex((otherItem) => otherItem.type === item.type) !== index
+        );
+
+        const processItems = (itemList: Array<PropertyAllType>) =>
+            itemList.reduce((types: Array<{label: string; value: string}>, item) => {
+                if (item && item.type) {
+                    if (currentNode?.componentName === 'condition' && hasDuplicateTypes) {
+                        types.push({
+                            label: item.label!,
+                            value: item.name!,
+                        });
+                    } else {
+                        types.push({
+                            label: item.type,
+                            value: item.type,
+                        });
+                    }
+                }
+
+                return types;
+            }, []);
+
+        if (items?.length) {
+            propertyTypes = processItems(items);
+        }
+
+        if (additionalProperties?.length) {
+            const additionalPropertyItems: Array<PropertyAllType | undefined> = (
+                additionalProperties as Array<PropertyAllType>
+            )
+                .map((propertyItem: PropertyAllType) => propertyItem.items)
+                .flat();
+
+            if (additionalPropertyItems) {
+                propertyTypes = processItems(additionalPropertyItems as Array<PropertyAllType>);
+            }
+        }
+
+        if (propertyTypes.length) {
+            setAvailablePropertyTypes(propertyTypes);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    useEffect(() => {
+        if (!name || !currentNode || !currentNode.parameters || !Object.keys(currentNode.parameters).length) {
+            return;
+        }
+
+        const encodedParameters = encodeParameters(currentNode.parameters);
+        const encodedPath = encodePath(path);
+
+        const parameterValue = safeResolvePath(encodedParameters, encodedPath);
+
+        if (parameterValue === undefined) {
+            return;
+        }
+
+        if (
+            items &&
+            items.length > 1 &&
+            items.every((item) => item.type === 'OBJECT') &&
+            Array.isArray(parameterValue)
+        ) {
+            const parameterArrayItems = parameterValue.map((parameterItem: ArrayPropertyType, index: number) => {
+                if (parameterItem == null) {
+                    return null;
+                }
+
+                const matchingItem = items?.find((item) => item.name === parameterItem.type);
+
+                if (!matchingItem) {
+                    if (parameterItem && typeof parameterItem === 'object' && !Array.isArray(parameterItem)) {
+                        const parameterItemWithType = parameterItem as ArrayPropertyType;
+
+                        return {
+                            ...parameterItemWithType,
+                            key: parameterItemWithType.key ?? crypto.randomUUID(),
+                        };
+                    }
+
+                    return parameterItem;
+                }
+
+                const parameterItemIsObject =
+                    parameterItem && typeof parameterItem === 'object' && !Array.isArray(parameterItem);
+
+                const subProperties = (matchingItem as ObjectProperty).properties?.map((propertyDefinition) =>
+                    parameterItemIsObject &&
+                    Object.keys(parameterItem).includes(propertyDefinition.name as keyof ArrayPropertyType)
+                        ? {
+                              ...propertyDefinition,
+                              defaultValue: parameterItem[propertyDefinition.name as keyof ArrayPropertyType],
+                              expressionEnabled:
+                                  propertyDefinition.expressionEnabled ?? propertyDefinition.type !== 'STRING',
+                          }
+                        : propertyDefinition
+                );
+
+                return {
+                    ...matchingItem,
+                    custom: true,
+                    expressionEnabled: true,
+                    key: crypto.randomUUID(),
+                    name: index.toString(),
+                    properties: subProperties,
+                };
+            });
+
+            const definedParameterArrayItems = parameterArrayItems.filter(
+                (parameterArrayItem): parameterArrayItem is NonNullable<typeof parameterArrayItem> =>
+                    parameterArrayItem != null
+            );
+
+            if (definedParameterArrayItems.length) {
+                setArrayItems(definedParameterArrayItems);
+            }
+        } else if (items?.length && items[0].type === 'OBJECT' && Array.isArray(parameterValue)) {
+            const parameterArrayItems = parameterValue.map((parameterItem: ArrayPropertyType, index: number) => {
+                const parameterItemIsObject =
+                    parameterItem && typeof parameterItem === 'object' && !Array.isArray(parameterItem);
+
+                const subProperties = (items[0] as ObjectProperty).properties?.map((propertyDefinition) =>
+                    parameterItemIsObject &&
+                    Object.keys(parameterItem).includes(propertyDefinition.name as keyof ArrayPropertyType)
+                        ? {
+                              ...propertyDefinition,
+                              defaultValue: parameterItem[propertyDefinition.name as keyof ArrayPropertyType],
+                              expressionEnabled:
+                                  propertyDefinition.expressionEnabled ?? propertyDefinition.type !== 'STRING',
+                          }
+                        : propertyDefinition
+                );
+
+                return {
+                    ...items[0],
+                    custom: true,
+                    expressionEnabled: true,
+                    key: crypto.randomUUID(),
+                    name: index.toString(),
+                    properties: subProperties,
+                };
+            });
+
+            if (parameterArrayItems?.length) {
+                setArrayItems(parameterArrayItems);
+            }
+        } else if (Array.isArray(parameterValue)) {
+            let subProperty = {};
+
+            if (items?.length === 1 && items[0].type === 'OBJECT') {
+                subProperty = items[0];
+            }
+
+            const parameterArrayItems = parameterValue.map((parameterItemValue: ArrayPropertyType, index: number) => {
+                const subPropertyPath = `${path}[${index}]`;
+
+                let parameterItemType = currentNode.metadata?.ui?.dynamicPropertyTypes?.[subPropertyPath];
+
+                if (!parameterItemType) {
+                    parameterItemType = getParameterItemType(parameterItemValue);
+                }
+
+                const matchingItem: ArrayPropertyType | undefined = items?.find(
+                    (item) => item.type === parameterItemType || item.name === parameterItemType
+                );
+
+                let controlType = 'STRING' as ControlType;
+
+                if (matchingItem) {
+                    controlType = matchingItem.controlType as ControlType;
+                } else if (parameterItemType && parameterItemType in VALUE_PROPERTY_CONTROL_TYPES) {
+                    controlType = VALUE_PROPERTY_CONTROL_TYPES[
+                        parameterItemType as keyof typeof VALUE_PROPERTY_CONTROL_TYPES
+                    ] as ControlType;
+                }
+
+                let label = matchingItem?.label ? `${matchingItem.label} ${index}` : `Item ${index}`;
+
+                if (property.name === 'conditions') {
+                    label = `AND Condition ${index}`;
+                }
+
+                const newSubProperty = {
+                    ...subProperty,
+                    ...matchingItem,
+                    arrayName: name,
+                    controlType,
+                    custom: true,
+                    defaultValue: parameterItemValue,
+                    expressionEnabled: matchingItem?.expressionEnabled ?? true,
+                    key: crypto.randomUUID(),
+                    label,
+                    name: index.toString(),
+                    path: subPropertyPath,
+                    type: parameterItemType as PropertyType,
+                };
+
+                if (parameterItemType === 'OBJECT') {
+                    if (parameterItemValue && typeof parameterItemValue === 'object') {
+                        const customSubProperties = Object.keys(parameterItemValue).map((key) => {
+                            const decodedKey = decodePath(key);
+                            const subPropertyParameterValue = parameterItemValue[key as keyof ArrayPropertyType];
+
+                            let subPropertyParameterItemType =
+                                currentNode.metadata?.ui?.dynamicPropertyTypes?.[`${path}[${index}].${decodedKey}`];
+
+                            if (!subPropertyParameterItemType) {
+                                subPropertyParameterItemType = getParameterItemType(subPropertyParameterValue);
+                            }
+
+                            return {
+                                controlType: VALUE_PROPERTY_CONTROL_TYPES[
+                                    subPropertyParameterItemType as keyof typeof VALUE_PROPERTY_CONTROL_TYPES
+                                ] as ControlType,
+                                custom: true,
+                                defaultValue: subPropertyParameterValue,
+                                expressionEnabled: true,
+                                key: crypto.randomUUID(),
+                                label: decodedKey,
+                                name: key,
+                                path: `${subPropertyPath}.${key}`,
+                                type: subPropertyParameterItemType as PropertyType,
+                            };
+                        });
+
+                        return {
+                            ...newSubProperty,
+                            properties: customSubProperties,
+                        };
+                    }
+                }
+
+                if (parameterItemType === 'BOOLEAN') {
+                    return {
+                        ...newSubProperty,
+                        defaultValue:
+                            parameterItemValue !== null && parameterItemValue !== undefined
+                                ? parameterItemValue.toString()
+                                : '',
+                    };
+                }
+
+                return newSubProperty;
+            });
+
+            if (parameterArrayItems?.length) {
+                setArrayItems(parameterArrayItems);
+            }
+        }
+
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    // Mount hydration runs once, so after a save updates currentNode.parameters each item's
+    // cached defaultValue would stay stale and override the user's selection on the next render.
+    // Re-sync existing items' defaultValue from the saved parameters whenever they change.
+    useEffect(() => {
+        if (!currentNode?.parameters || !name || !path) {
+            return;
+        }
+
+        const encodedParameters = encodeParameters(currentNode.parameters);
+        const encodedBasePath = encodePath(path);
+
+        setArrayItems((previousItems) => {
+            let changed = false;
+
+            const refreshedItems = previousItems.map((previousItem, index) => {
+                if (Array.isArray(previousItem)) {
+                    return previousItem;
+                }
+
+                const savedValue = safeResolvePath(encodedParameters, `${encodedBasePath}[${index}]`);
+
+                if (savedValue === undefined || savedValue === null || savedValue === previousItem.defaultValue) {
+                    return previousItem;
+                }
+
+                changed = true;
+
+                return {
+                    ...previousItem,
+                    defaultValue: savedValue,
+                };
+            });
+
+            return changed ? refreshedItems : previousItems;
+        });
+    }, [currentNode?.parameters, name, path]);
+
+    return {
+        arrayConstraintHint,
+        arrayItems,
+        availablePropertyTypes,
+        currentNode,
+        defaultPropertyType: availablePropertyTypes[0]?.value,
+        handleAddItemClick,
+        handleDeleteClick,
+        isAddDisabled,
+        items,
+        name,
+        setArrayItems,
+    };
+}
+
+export interface UseArrayPropertyItemProps {
+    arrayItem: ArrayPropertyType;
+    currentNode?: NodeDataType;
+    index: number;
+    onDeleteClick: (path: string) => void;
+    path: string;
+    setArrayItems: Dispatch<SetStateAction<Array<ArrayPropertyType | Array<ArrayPropertyType>>>>;
+}
+
+export function useArrayPropertyItem({
+    arrayItem,
+    currentNode,
+    index,
+    onDeleteClick,
+    path,
+    setArrayItems,
+}: UseArrayPropertyItemProps) {
+    const arrayCellParameterValue = getExplicitArrayCellParameterValue(arrayItem);
+
+    const handleOnDeleteClick = useCallback(() => {
+        const basePath = path.replace(/\[\d+\]$/, '');
+
+        let parameterArrayAfterDelete: unknown[] = [];
+
+        if (currentNode?.parameters) {
+            const encodedParameters = encodeParameters(currentNode.parameters);
+            const encodedBasePath = encodePath(basePath);
+
+            let resolvedArray = safeResolvePath(encodedParameters, encodedBasePath);
+
+            if (!Array.isArray(resolvedArray)) {
+                resolvedArray = safeResolvePath(currentNode.parameters as Record<string, unknown>, basePath);
+            }
+
+            if (Array.isArray(resolvedArray)) {
+                parameterArrayAfterDelete = [...resolvedArray];
+
+                parameterArrayAfterDelete.splice(index, 1);
+            }
+        }
+
+        setArrayItems((previousItems) => {
+            const remainingItems = previousItems.filter(
+                (_previousItem, previousItemIndex) => previousItemIndex !== index
+            );
+
+            const storeSliceMatchesRemainingCount = parameterArrayAfterDelete.length === remainingItems.length;
+
+            const reindexedItems = remainingItems.map((remainingItem, newIndex) => {
+                if (Array.isArray(remainingItem)) {
+                    return remainingItem;
+                }
+
+                let nextDefaultValue: unknown;
+
+                if (isNestedStructurePropertyType(remainingItem.type)) {
+                    if (storeSliceMatchesRemainingCount && parameterArrayAfterDelete.length > newIndex) {
+                        const cellValue = parameterArrayAfterDelete[newIndex];
+
+                        nextDefaultValue =
+                            cellValue !== undefined && cellValue !== null ? cellValue : remainingItem.defaultValue;
+                    } else if (remainingItem.defaultValue !== undefined && remainingItem.defaultValue !== null) {
+                        nextDefaultValue = remainingItem.defaultValue;
+                    } else if (parameterArrayAfterDelete.length > newIndex) {
+                        const cellValue = parameterArrayAfterDelete[newIndex];
+
+                        nextDefaultValue =
+                            cellValue !== undefined && cellValue !== null ? cellValue : remainingItem.defaultValue;
+                    } else {
+                        nextDefaultValue = remainingItem.defaultValue;
+                    }
+                } else if (storeSliceMatchesRemainingCount && parameterArrayAfterDelete.length > newIndex) {
+                    const cellValue = parameterArrayAfterDelete[newIndex];
+
+                    nextDefaultValue =
+                        cellValue === undefined || cellValue === null
+                            ? emptyExplicitValueForScalarPropertyType(remainingItem.type)
+                            : cellValue;
+                } else if (remainingItem.defaultValue !== undefined && remainingItem.defaultValue !== null) {
+                    nextDefaultValue = remainingItem.defaultValue;
+                } else if (parameterArrayAfterDelete.length > newIndex) {
+                    const cellValue = parameterArrayAfterDelete[newIndex];
+
+                    nextDefaultValue =
+                        cellValue === undefined || cellValue === null
+                            ? emptyExplicitValueForScalarPropertyType(remainingItem.type)
+                            : cellValue;
+                } else {
+                    nextDefaultValue = emptyExplicitValueForScalarPropertyType(remainingItem.type);
+                }
+
+                return {
+                    ...remainingItem,
+                    defaultValue: nextDefaultValue,
+                    key: crypto.randomUUID(),
+                    name: newIndex.toString(),
+                    path: `${basePath}[${newIndex}]`,
+                };
+            });
+
+            return reindexedItems;
+        });
+
+        onDeleteClick(path);
+    }, [currentNode, index, onDeleteClick, path, setArrayItems]);
+
+    return {
+        arrayCellParameterValue,
+        handleOnDeleteClick,
+    };
+}

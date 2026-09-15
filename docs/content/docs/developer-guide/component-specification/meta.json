@@ -1,0 +1,10 @@
+{
+  "title": "Component Specification",
+  "pages": [
+    "component",
+    "connection",
+    "action",
+    "trigger",
+    "property"
+  ]
+}

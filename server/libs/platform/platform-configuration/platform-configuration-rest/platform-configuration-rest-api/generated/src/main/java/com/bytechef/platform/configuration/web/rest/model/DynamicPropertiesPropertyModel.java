@@ -12,6 +12,9 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.annotation.JsonValue;
+import java.util.HashMap;
+import java.util.Map;
+import org.springframework.lang.Nullable;
 import org.openapitools.jackson.nullable.JsonNullable;
 import java.time.OffsetDateTime;
 import jakarta.validation.Valid;
@@ -28,12 +31,12 @@ import jakarta.annotation.Generated;
 
 @Schema(name = "DynamicPropertiesProperty", description = "A dynamic properties property type.")
 
-@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2024-06-30T07:20:54.243996+02:00[Europe/Zagreb]", comments = "Generator version: 7.5.0")
+@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2026-07-03T17:58:15.504637+02:00[Europe/Zagreb]", comments = "Generator version: 7.22.0")
 public class DynamicPropertiesPropertyModel extends PropertyModel {
 
-  private String header;
+  private @Nullable String header;
 
-  private PropertiesDataSourceModel propertiesDataSource;
+  private @Nullable PropertiesDataSourceModel propertiesDataSource;
 
   public DynamicPropertiesPropertyModel() {
     super();
@@ -46,7 +49,7 @@ public class DynamicPropertiesPropertyModel extends PropertyModel {
     super(type);
   }
 
-  public DynamicPropertiesPropertyModel header(String header) {
+  public DynamicPropertiesPropertyModel header(@Nullable String header) {
     this.header = header;
     return this;
   }
@@ -54,19 +57,20 @@ public class DynamicPropertiesPropertyModel extends PropertyModel {
   /**
    * The dynamic property header.
    * @return header
-  */
+   */
   
   @Schema(name = "header", description = "The dynamic property header.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("header")
-  public String getHeader() {
+  public @Nullable String getHeader() {
     return header;
   }
 
-  public void setHeader(String header) {
+  @JsonProperty("header")
+  public void setHeader(@Nullable String header) {
     this.header = header;
   }
 
-  public DynamicPropertiesPropertyModel propertiesDataSource(PropertiesDataSourceModel propertiesDataSource) {
+  public DynamicPropertiesPropertyModel propertiesDataSource(@Nullable PropertiesDataSourceModel propertiesDataSource) {
     this.propertiesDataSource = propertiesDataSource;
     return this;
   }
@@ -74,15 +78,16 @@ public class DynamicPropertiesPropertyModel extends PropertyModel {
   /**
    * Get propertiesDataSource
    * @return propertiesDataSource
-  */
+   */
   @Valid 
   @Schema(name = "propertiesDataSource", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("propertiesDataSource")
-  public PropertiesDataSourceModel getPropertiesDataSource() {
+  public @Nullable PropertiesDataSourceModel getPropertiesDataSource() {
     return propertiesDataSource;
   }
 
-  public void setPropertiesDataSource(PropertiesDataSourceModel propertiesDataSource) {
+  @JsonProperty("propertiesDataSource")
+  public void setPropertiesDataSource(@Nullable PropertiesDataSourceModel propertiesDataSource) {
     this.propertiesDataSource = propertiesDataSource;
   }
 
@@ -109,6 +114,16 @@ public class DynamicPropertiesPropertyModel extends PropertyModel {
 
   public DynamicPropertiesPropertyModel hidden(Boolean hidden) {
     super.hidden(hidden);
+    return this;
+  }
+
+  public DynamicPropertiesPropertyModel metadata(Map<String, Object> metadata) {
+    super.metadata(metadata);
+    return this;
+  }
+
+  public DynamicPropertiesPropertyModel putMetadataItem(String key, Object metadataItem) {
+    super.putMetadataItem(key, metadataItem);
     return this;
   }
 
@@ -160,11 +175,8 @@ public class DynamicPropertiesPropertyModel extends PropertyModel {
    * Convert the given object to string with each line indented by 4 spaces
    * (except the first line).
    */
-  private String toIndentedString(Object o) {
-    if (o == null) {
-      return "null";
-    }
-    return o.toString().replace("\n", "\n    ");
+  private String toIndentedString(@Nullable Object o) {
+    return o == null ? "null" : o.toString().replace("\n", "\n    ");
   }
 }
 

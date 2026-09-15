@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,53 +16,102 @@
 
 package com.bytechef.component.microsoft.share.point.action;
 
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.fileEntry;
-import static com.bytechef.component.definition.ComponentDSL.object;
-import static com.bytechef.component.definition.ComponentDSL.string;
-import static com.bytechef.component.microsoft.share.point.constant.MicrosoftSharePointConstants.BASE_URL;
-import static com.bytechef.component.microsoft.share.point.constant.MicrosoftSharePointConstants.FILE;
-import static com.bytechef.component.microsoft.share.point.constant.MicrosoftSharePointConstants.ID;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.dateTime;
+import static com.bytechef.component.definition.ComponentDsl.fileEntry;
+import static com.bytechef.component.definition.ComponentDsl.integer;
+import static com.bytechef.component.definition.ComponentDsl.object;
+import static com.bytechef.component.definition.ComponentDsl.outputSchema;
+import static com.bytechef.component.definition.ComponentDsl.string;
 import static com.bytechef.component.microsoft.share.point.constant.MicrosoftSharePointConstants.PARENT_FOLDER;
 import static com.bytechef.component.microsoft.share.point.constant.MicrosoftSharePointConstants.SITE_ID;
 import static com.bytechef.component.microsoft.share.point.constant.MicrosoftSharePointConstants.SITE_ID_PROPERTY;
-import static com.bytechef.component.microsoft.share.point.constant.MicrosoftSharePointConstants.UPLOAD_FILE;
 import static com.bytechef.component.microsoft.share.point.util.MicrosoftSharePointUtils.getFolderId;
+import static com.bytechef.microsoft.commons.MicrosoftConstants.FILE;
+import static com.bytechef.microsoft.commons.MicrosoftConstants.ID;
+import static com.bytechef.microsoft.commons.MicrosoftConstants.NAME;
 
 import com.bytechef.component.definition.ActionContext;
-import com.bytechef.component.definition.ComponentDSL.ModifiableActionDefinition;
+import com.bytechef.component.definition.ActionDefinition.OptionsFunction;
+import com.bytechef.component.definition.ComponentDsl.ModifiableActionDefinition;
 import com.bytechef.component.definition.Context.Http;
-import com.bytechef.component.definition.Context.TypeReference;
 import com.bytechef.component.definition.FileEntry;
-import com.bytechef.component.definition.OptionsDataSource.ActionOptionsFunction;
 import com.bytechef.component.definition.Parameters;
 import com.bytechef.component.microsoft.share.point.util.MicrosoftSharePointUtils;
+import com.bytechef.microsoft.commons.MicrosoftUtils;
 
 /**
  * @author Monika Domiter
  */
 public class MicrosoftSharePointUploadFileAction {
 
-    public static final ModifiableActionDefinition ACTION_DEFINITION = action(UPLOAD_FILE)
-        .title("Upload file")
+    public static final ModifiableActionDefinition ACTION_DEFINITION = action("uploadFile")
+        .title("Upload File")
         .description("Upload file to Microsoft SharePoint folder.")
         .properties(
             SITE_ID_PROPERTY,
             string(PARENT_FOLDER)
-                .label("Parent folder")
-                .description("If no folder is selected, file will be uploaded to root folder")
+                .label("Parent Folder ID")
+                .description("If no folder is selected, file will be uploaded to root folder.")
                 .optionsLookupDependsOn(SITE_ID)
-                .options((ActionOptionsFunction<String>) MicrosoftSharePointUtils::getFolderIdOptions)
+                .options((OptionsFunction<String>) MicrosoftSharePointUtils::getFolderIdOptions)
                 .required(false),
             fileEntry(FILE)
-                .label("File")
+                .label("File Entry")
                 .description("File to upload.")
                 .required(true))
-        .outputSchema(
-            object()
-                .properties(
-                    string(ID)))
-        .perform(MicrosoftSharePointUploadFileAction::perform);
+        .output(
+            outputSchema(
+                object()
+                    .properties(
+                        dateTime("createdDateTime")
+                            .description("The date and time when the file was created."),
+                        string("eTag")
+                            .description("eTag for the entire item (metadata + content)."),
+                        string(ID)
+                            .description("ID of the file."),
+                        dateTime("lastModifiedDateTime")
+                            .description("The date and time when the file was last modified."),
+                        string(NAME)
+                            .description("Name of the file."),
+                        integer("size")
+                            .description("Size of the file in bytes."),
+                        string("webUrl")
+                            .description("URL to access the file in a web browser."),
+                        object("createdBy")
+                            .properties(
+                                object("user")
+                                    .properties(
+                                        string("email")
+                                            .description("Email of the user who created the file."),
+                                        string(ID)
+                                            .description("ID of the user who created the file."),
+                                        string("displayName")
+                                            .description("Display name of the user who created the file."))),
+                        object("lastModifiedBy")
+                            .properties(
+                                object("user")
+                                    .properties(
+                                        string("email")
+                                            .description("Email of the user who last modified the file."),
+                                        string(ID)
+                                            .description("ID of the user who last modified file."),
+                                        string("displayName")
+                                            .description("Display name of the user who last modified the file."))),
+                        object(FILE)
+                            .properties(
+                                object("hashes")
+                                    .description("Hashes of the file's binary content")
+                                    .properties(
+                                        string("quickXorHash")
+                                            .description(
+                                                "A proprietary hash of the file that can be used to determine if the " +
+                                                    "contents of the file change.")),
+                                string("mimeType")
+                                    .description("The MIME type for the file..")))))
+        .perform(MicrosoftSharePointUploadFileAction::perform)
+        .help("", "https://docs.bytechef.io/reference/components/microsoft-share-point_v1#upload-file")
+        .processErrorResponse(MicrosoftUtils::processErrorResponse);
 
     private MicrosoftSharePointUploadFileAction() {
     }
@@ -70,13 +119,16 @@ public class MicrosoftSharePointUploadFileAction {
     public static Object perform(Parameters inputParameters, Parameters connectionParameters, ActionContext context) {
         FileEntry fileEntry = inputParameters.getRequiredFileEntry(FILE);
 
+        String urlEncodedFileEntryName = context.encoder(
+            encoder -> encoder.base64UrlEncode(fileEntry.getName()));
+
         return context
             .http(http -> http.put(
-                BASE_URL + "/" + inputParameters.getRequiredString(SITE_ID) + "/drive/items/" +
-                    getFolderId(inputParameters) + ":/" + fileEntry.getName() + ":/content"))
+                "/sites/%s/drive/items/%s:/%s:/content".formatted(
+                    inputParameters.getRequiredString(SITE_ID), getFolderId(inputParameters), urlEncodedFileEntryName)))
             .configuration(Http.responseType(Http.ResponseType.JSON))
             .body(Http.Body.of(fileEntry))
             .execute()
-            .getBody(new TypeReference<>() {});
+            .getBody();
     }
 }

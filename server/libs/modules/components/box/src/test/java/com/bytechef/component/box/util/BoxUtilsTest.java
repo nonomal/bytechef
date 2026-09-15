@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,144 +19,146 @@ package com.bytechef.component.box.util;
 import static com.bytechef.component.box.constant.BoxConstants.ID;
 import static com.bytechef.component.box.constant.BoxConstants.NAME;
 import static com.bytechef.component.box.constant.BoxConstants.TYPE;
-import static com.bytechef.component.definition.ComponentDSL.option;
+import static com.bytechef.component.definition.ComponentDsl.option;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.mockito.ArgumentCaptor.forClass;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.bytechef.component.definition.ActionContext;
+import com.bytechef.component.definition.Context.ContextFunction;
 import com.bytechef.component.definition.Context.Http;
-import com.bytechef.component.definition.Context.TypeReference;
-import com.bytechef.component.definition.Option;
+import com.bytechef.component.definition.Context.Http.Body;
+import com.bytechef.component.definition.Context.Http.BodyContentType;
+import com.bytechef.component.definition.Context.Http.Configuration;
+import com.bytechef.component.definition.Context.Http.Configuration.ConfigurationBuilder;
+import com.bytechef.component.definition.Context.Http.Executor;
+import com.bytechef.component.definition.Context.Http.Response;
+import com.bytechef.component.definition.Context.Http.ResponseType;
 import com.bytechef.component.definition.Parameters;
 import com.bytechef.component.definition.TriggerContext;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
+import com.bytechef.component.definition.TypeReference;
+import com.bytechef.component.test.definition.MockParametersFactory;
+import com.bytechef.component.test.definition.extension.MockContextSetupExtension;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 
 /**
- * @author Monika Domiter
+ * @author Monika Kušter
  */
+@ExtendWith(MockContextSetupExtension.class)
 class BoxUtilsTest {
 
-    private final ArgumentCaptor<Http.Body> bodyArgumentCaptor = ArgumentCaptor.forClass(Http.Body.class);
-    private final ActionContext mockedActionContext = mock(ActionContext.class);
-    private final TriggerContext mockedContext = mock(TriggerContext.class);
-    private final Http.Executor mockedExecutor = mock(Http.Executor.class);
-    private final Parameters mockedParameters = mock(Parameters.class);
-    private final Http.Response mockedResponse = mock(Http.Response.class);
+    private final ArgumentCaptor<Body> bodyArgumentCaptor = forClass(Body.class);
+    private Parameters mockedParameters = mock(Parameters.class);
+    private final ArgumentCaptor<String> stringArgumentCaptor = forClass(String.class);
+    private final ArgumentCaptor<Object[]> objectsArgumentCaptor = forClass(Object[].class);
 
     @Test
-    void testGetRootFolderOptions() {
-        Map<String, List<Map<String, Object>>> map = new LinkedHashMap<>();
-        List<Map<String, Object>> entries = new ArrayList<>();
-        Map<String, Object> folderMap = new LinkedHashMap<>();
+    void testGetFileIdOptions(
+        ActionContext mockedContext, Response mockedResponse, Executor mockedExecutor, Http mockedHttp,
+        ArgumentCaptor<ContextFunction<Http, Executor>> httpFunctionArgumentCaptor,
+        ArgumentCaptor<ConfigurationBuilder> configurationBuilderArgumentCaptor) {
 
-        folderMap.put(NAME, "folderName");
-        folderMap.put(ID, "folderId");
-        folderMap.put(TYPE, "folder");
+        mockedParameters = MockParametersFactory.create(Map.of(ID, "xy"));
 
-        entries.add(folderMap);
-
-        map.put("entries", entries);
-
-        when(mockedActionContext.http(any()))
+        when(mockedHttp.get(stringArgumentCaptor.capture()))
             .thenReturn(mockedExecutor);
-        when(mockedExecutor.configuration(any()))
+        when(mockedExecutor.queryParameters(objectsArgumentCaptor.capture()))
             .thenReturn(mockedExecutor);
-        when(mockedExecutor.execute())
-            .thenReturn(mockedResponse);
         when(mockedResponse.getBody(any(TypeReference.class)))
-            .thenReturn(map);
-
-        List<Option<String>> expectedOptions = new ArrayList<>();
-
-        expectedOptions.add(option("folderName", "folderId"));
-        expectedOptions.add(option("ROOT", "0"));
+            .thenReturn(
+                Map.of(
+                    "entries", List.of(Map.of(NAME, "file1", ID, "ab", TYPE, "file")),
+                    "total_count", 2,
+                    "limit", 1),
+                Map.of(
+                    "entries", List.of(Map.of(NAME, "file2", ID, "xy", TYPE, "file")),
+                    "total_count", 2,
+                    "limit", 1));
 
         assertEquals(
-            expectedOptions,
-            BoxUtils.getRootFolderOptions(mockedParameters, mockedParameters, Map.of(), "", mockedActionContext));
+            List.of(option("file1", "ab"), option("file2", "xy")),
+            BoxUtils.getFileIdOptions(mockedParameters, mockedParameters, Map.of(), "", mockedContext));
+
+        for (ContextFunction<Http, Executor> httpFunction : httpFunctionArgumentCaptor.getAllValues()) {
+            assertNotNull(httpFunction);
+        }
+
+        for (ConfigurationBuilder configurationBuilder : configurationBuilderArgumentCaptor.getAllValues()) {
+            Configuration configuration = configurationBuilder.build();
+
+            assertEquals(ResponseType.JSON, configuration.getResponseType());
+        }
+
+        assertEquals(List.of("/folders/xy/items", "/folders/xy/items"), stringArgumentCaptor.getAllValues());
+
+        List<Object[]> objectsArgumentCaptorAllValues = objectsArgumentCaptor.getAllValues();
+
+        assertEquals(2, objectsArgumentCaptorAllValues.size());
+
+        Object[] objectsOne = {
+            "offset", 0, "limit", 100
+        };
+
+        Object[] objectsTwo = {
+            "offset", 1, "limit", 100
+        };
+
+        assertArrayEquals(objectsOne, objectsArgumentCaptorAllValues.getFirst());
+        assertArrayEquals(objectsTwo, objectsArgumentCaptorAllValues.getLast());
     }
 
     @Test
-    void testGetFileIdOptions() {
-        Map<String, List<Map<String, Object>>> map = new LinkedHashMap<>();
-        List<Map<String, Object>> entries = new ArrayList<>();
-        Map<String, Object> fileMap = new LinkedHashMap<>();
+    void testSubscribeWebhook(
+        TriggerContext mockedContext, Response mockedResponse, Executor mockedExecutor, Http mockedHttp,
+        ArgumentCaptor<ContextFunction<Http, Executor>> httpFunctionArgumentCaptor,
+        ArgumentCaptor<ConfigurationBuilder> configurationBuilderArgumentCaptor) {
 
-        fileMap.put(NAME, "file name");
-        fileMap.put(ID, "fileId");
-        fileMap.put(TYPE, "file");
-
-        entries.add(fileMap);
-
-        map.put("entries", entries);
-
-        when(mockedActionContext.http(any()))
-            .thenReturn(mockedExecutor);
-        when(mockedExecutor.configuration(any()))
-            .thenReturn(mockedExecutor);
-        when(mockedExecutor.execute())
-            .thenReturn(mockedResponse);
-        when(mockedResponse.getBody(any(TypeReference.class)))
-            .thenReturn(map);
-
-        List<Option<String>> expectedOptions = new ArrayList<>();
-
-        expectedOptions.add(option("file name", "fileId"));
-
-        assertEquals(
-            expectedOptions,
-            BoxUtils.getFileIdOptions(mockedParameters, mockedParameters, Map.of(), "", mockedActionContext));
-    }
-
-    @Test
-    void testSubscribeWebhok() {
-        when(mockedContext.http(any()))
+        when(mockedHttp.post(stringArgumentCaptor.capture()))
             .thenReturn(mockedExecutor);
         when(mockedExecutor.body(bodyArgumentCaptor.capture()))
             .thenReturn(mockedExecutor);
-        when(mockedExecutor.configuration(any()))
-            .thenReturn(mockedExecutor);
-        when(mockedExecutor.execute())
-            .thenReturn(mockedResponse);
         when(mockedResponse.getBody(any(TypeReference.class)))
             .thenReturn(Map.of(ID, "123"));
 
         assertEquals("123",
             BoxUtils.subscribeWebhook("webhookUrl", mockedContext, "type", "triggerEvent", "id"));
 
-        Http.Body body = bodyArgumentCaptor.getValue();
-
-        Object content = body.getContent();
-
-        assertEquals(Map.of("address", "webhookUrl",
+        Map<String, Object> expectedBody = Map.of(
+            "address", "webhookUrl",
             "triggers", List.of("triggerEvent"),
-            "target", Map.of(
-                ID, "id",
-                TYPE, "type")), content);
+            "target", Map.of(ID, "id", TYPE, "type"));
+
+        assertEquals(Body.of(expectedBody, BodyContentType.JSON), bodyArgumentCaptor.getValue());
+        assertNotNull(httpFunctionArgumentCaptor.getValue());
+
+        ConfigurationBuilder configurationBuilder = configurationBuilderArgumentCaptor.getValue();
+        Configuration configuration = configurationBuilder.build();
+
+        assertEquals(ResponseType.JSON, configuration.getResponseType());
+        assertEquals("/webhooks", stringArgumentCaptor.getValue());
     }
 
     @Test
-    void testUnsubscribeWebhook() {
-        when(mockedContext.http(any()))
+    void testUnsubscribeWebhook(
+        TriggerContext mockedContext, Executor mockedExecutor, Http mockedHttp,
+        ArgumentCaptor<ContextFunction<Http, Executor>> httpFunctionArgumentCaptor) {
+
+        mockedParameters = MockParametersFactory.create(Map.of(ID, "123"));
+
+        when(mockedHttp.delete(stringArgumentCaptor.capture()))
             .thenReturn(mockedExecutor);
-        when(mockedExecutor.configuration(any()))
-            .thenReturn(mockedExecutor);
-        when(mockedExecutor.execute())
-            .thenReturn(mockedResponse);
 
         BoxUtils.unsubscribeWebhook(mockedParameters, mockedContext);
 
-        verify(mockedContext, times(1)).http(any());
-        verify(mockedExecutor, times(1)).configuration(any());
-        verify(mockedExecutor, times(1)).execute();
+        assertNotNull(httpFunctionArgumentCaptor.getValue());
+        assertEquals("/webhooks/123", stringArgumentCaptor.getValue());
     }
 }

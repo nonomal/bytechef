@@ -1,0 +1,685 @@
+/*
+ * Copyright 2025 ByteChef
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.bytechef.platform.workflow.validator;
+
+import com.bytechef.commons.util.StringUtils;
+import com.bytechef.platform.workflow.validator.model.PropertyInfo;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import org.jspecify.annotations.Nullable;
+import tools.jackson.databind.JsonNode;
+
+/**
+ * Template Method pattern for task validation. Defines the skeleton of a task validation algorithm while letting
+ * subclasses override specific steps of the algorithm without changing its structure.
+ *
+ * <p>
+ * <b>Security Note:</b> The REDOS suppression covers the static TYPE_PATTERN regex and regex matching operations used
+ * for workflow validation. These patterns are applied to workflow definitions created by trusted users and the input is
+ * bounded by the workflow JSON structure.
+ *
+ * @author Marko Kriskovic
+ */
+@SuppressFBWarnings("REDOS")
+class TaskValidator {
+
+    private static final Pattern TYPE_PATTERN = Pattern.compile("^[a-zA-Z0-9-]+/v[0-9]+(/[a-zA-Z0-9]+)?$");
+    private static final List<String> VECTOR_STORE_OPTIONAL_CLUSTER_KEYS = List.of(
+        "documentReader", "documentTransformer");
+
+    private TaskValidator() {
+    }
+
+    /**
+     * Template method defining the validation algorithm for all tasks. Works directly with the legacy StringBuilder
+     * approach for full backward compatibility.
+     */
+    public static void validateAllTasks(ValidationContext context) {
+        for (JsonNode taskJsonNode : context.getTasks()) {
+            String taskName = "";
+
+            if (taskJsonNode.has("name")) {
+                JsonNode nameJsonNode = taskJsonNode.get("name");
+
+                taskName = nameJsonNode.asString();
+            }
+
+            StringBuilder errors = context.getErrors();
+            StringBuilder warnings = context.getWarnings();
+            int errorsStart = errors.length();
+            int warningsStart = warnings.length();
+
+            validateTaskStructureFields(taskJsonNode, errors, warnings);
+
+            List<PropertyInfo> taskDefinition = validateTaskParameters(taskJsonNode, context);
+
+            processTaskDispatcher(taskJsonNode, context);
+            validateDataPills(taskJsonNode, taskDefinition, context);
+            validateClusterElements(taskJsonNode, "", context);
+
+            removeDynamicPropertyWarnings(taskJsonNode, warnings, warningsStart);
+
+            if (!taskName.isEmpty()) {
+                prefixTaskMessages(errors, errorsStart, taskName);
+                prefixTaskMessages(warnings, warningsStart, taskName);
+            }
+        }
+    }
+
+    private static void removeDynamicPropertyWarnings(
+        JsonNode taskJsonNode, StringBuilder warnings, int warningsStart) {
+
+        Set<String> dynamicPropertyPaths = getDynamicPropertyPaths(taskJsonNode);
+
+        if (dynamicPropertyPaths.isEmpty() || warnings.length() <= warningsStart) {
+            return;
+        }
+
+        Set<String> dynamicPropertyWarnings = new LinkedHashSet<>();
+
+        for (String dynamicPropertyPath : dynamicPropertyPaths) {
+            dynamicPropertyWarnings.add(ValidationErrorUtils.notDefined(dynamicPropertyPath));
+        }
+
+        String content = warnings.substring(warningsStart);
+
+        warnings.delete(warningsStart, warnings.length());
+
+        if (content.startsWith("\n")) {
+            content = content.substring(1);
+        }
+
+        for (String line : content.split("\n", -1)) {
+            if (line.isEmpty() || dynamicPropertyWarnings.contains(line)) {
+                continue;
+            }
+
+            StringUtils.appendWithNewline(line, warnings);
+        }
+    }
+
+    private static Set<String> getDynamicPropertyPaths(JsonNode taskJsonNode) {
+        JsonNode metadataJsonNode = taskJsonNode.get("metadata");
+
+        if (metadataJsonNode == null || !metadataJsonNode.isObject()) {
+            return Set.of();
+        }
+
+        JsonNode uiJsonNode = metadataJsonNode.get("ui");
+
+        if (uiJsonNode == null || !uiJsonNode.isObject()) {
+            return Set.of();
+        }
+
+        JsonNode dynamicPropertyTypesJsonNode = uiJsonNode.get("dynamicPropertyTypes");
+
+        if (dynamicPropertyTypesJsonNode == null || !dynamicPropertyTypesJsonNode.isObject()) {
+            return Set.of();
+        }
+
+        return new LinkedHashSet<>(dynamicPropertyTypesJsonNode.propertyNames());
+    }
+
+    private static void prefixTaskMessages(StringBuilder builder, int startPosition, String taskName) {
+        if (builder.length() <= startPosition) {
+            return;
+        }
+
+        String newContent = builder.substring(startPosition);
+
+        builder.delete(startPosition, builder.length());
+
+        if (newContent.startsWith("\n")) {
+            newContent = newContent.substring(1);
+        }
+
+        String prefix = "[" + taskName + "] ";
+
+        for (String line : newContent.split("\n", -1)) {
+            StringUtils.appendWithNewline(prefix + line, builder);
+        }
+    }
+
+    private static void validateClusterElements(JsonNode taskJsonNode, String parentPath, ValidationContext context) {
+        checkClusterElementKeys(taskJsonNode, context);
+
+        JsonNode clusterElementsJsonNode = taskJsonNode.get("clusterElements");
+
+        if (clusterElementsJsonNode == null || !clusterElementsJsonNode.isObject()) {
+            return;
+        }
+
+        for (String fieldName : clusterElementsJsonNode.propertyNames()) {
+            JsonNode clusterElementJsonNode = clusterElementsJsonNode.get(fieldName);
+
+            if (clusterElementJsonNode == null) {
+                continue;
+            }
+
+            if (clusterElementJsonNode.isArray()) {
+                for (JsonNode clusterElementItemJsonNode : clusterElementJsonNode) {
+                    validateClusterElement(clusterElementItemJsonNode, parentPath, context);
+                }
+            } else {
+                validateClusterElement(clusterElementJsonNode, parentPath, context);
+            }
+        }
+    }
+
+    private static void validateClusterElement(
+        JsonNode clusterElementJsonNode, String parentPath, ValidationContext context) {
+
+        if (!clusterElementJsonNode.isObject() || !clusterElementJsonNode.has("type") ||
+            !clusterElementJsonNode.has("name")) {
+
+            return;
+        }
+
+        JsonNode nameJsonNode = clusterElementJsonNode.get("name");
+
+        String elementName = nameJsonNode.asString();
+
+        String elementPath = PropertyUtils.buildPropertyPath(parentPath, elementName);
+
+        validateClusterElementParameters(clusterElementJsonNode, elementPath, context);
+        validateClusterElements(clusterElementJsonNode, elementPath, context);
+    }
+
+    private static void checkClusterElementKeys(JsonNode taskJsonNode, ValidationContext context) {
+        if (!taskJsonNode.has("type")) {
+            return;
+        }
+
+        JsonNode typeJsonNode = taskJsonNode.get("type");
+
+        String taskType = typeJsonNode.asString();
+
+        Map<String, List<String>> clusterTypesProviderMap = context.getClusterTypesProviderMap();
+
+        List<String> clusterElementKeys = clusterTypesProviderMap.get(taskType);
+
+        if (clusterElementKeys == null || clusterElementKeys.isEmpty()) {
+            return;
+        }
+
+        List<String> requiredKeys = context.getRequiredClusterElementTypes(taskType);
+
+        boolean isVectorStore = taskType.endsWith("/vectorStore");
+        String taskName = taskJsonNode.has("name") ? taskJsonNode.get("name")
+            .asString() : "";
+        JsonNode clusterElementsJsonNode = taskJsonNode.has("clusterElements")
+            ? taskJsonNode.get("clusterElements") : null;
+
+        for (String requiredKey : requiredKeys) {
+            if (isVectorStore && VECTOR_STORE_OPTIONAL_CLUSTER_KEYS.contains(requiredKey)) {
+                continue;
+            }
+
+            if (clusterElementsJsonNode == null || !clusterElementsJsonNode.has(requiredKey)) {
+                StringUtils.appendWithNewline(
+                    ValidationErrorUtils.missingClusterElement(requiredKey, taskName),
+                    context.getWarnings());
+            }
+        }
+
+        if (clusterElementsJsonNode != null && clusterElementsJsonNode.isObject()) {
+            for (String presentKey : clusterElementsJsonNode.propertyNames()) {
+                if (!clusterElementKeys.contains(presentKey)) {
+                    StringUtils.appendWithNewline(
+                        ValidationErrorUtils.undefinedClusterElement(presentKey, taskName),
+                        context.getWarnings());
+                }
+            }
+        }
+    }
+
+    private static void validateClusterElementParameters(
+        JsonNode clusterElementJsonNode, String elementPath, ValidationContext context) {
+
+        String elementType = clusterElementJsonNode.get("type")
+            .asString();
+        List<PropertyInfo> elementDefinition = context.getTaskDefinitions()
+            .get(elementType);
+
+        if (elementDefinition == null || elementDefinition.isEmpty()) {
+            return;
+        }
+
+        String parameters = "{}";
+        JsonNode parametersJsonNode = clusterElementJsonNode.get("parameters");
+
+        if (parametersJsonNode != null && parametersJsonNode.isObject()) {
+            parameters = parametersJsonNode.toString();
+        }
+
+        JsonNode parametersNode = JsonNodeUtils.parseJsonWithErrorHandling(parameters, context.getErrors());
+
+        if (parametersNode != null && parametersNode.isObject()) {
+            PropertyValidator.validateProperties(
+                parametersNode, elementDefinition, elementPath, parameters, context.getErrors(), new StringBuilder());
+        }
+
+        ResourceReferenceValidator.validate(
+            parametersJsonNode, elementDefinition, "", context.getResourceReferenceProvider(), context.getErrors(),
+            context.getWarnings());
+
+        DataPillValidator.validateTaskDataPills(clusterElementJsonNode, context, elementDefinition, true);
+    }
+
+    /**
+     * Validates the structure of a single task JSON.
+     *
+     * @param taskJson the task JSON string to validate
+     * @param errors   StringBuilder to collect validation errors
+     * @param warnings StringBuilder to collect validation warnings
+     */
+    public static void validateTaskStructure(String taskJson, StringBuilder errors, StringBuilder warnings) {
+        JsonNode taskJsonNode = JsonNodeUtils.parseJsonWithErrorHandling(taskJson, errors);
+
+        if (taskJsonNode == null) {
+            return;
+        }
+
+        if (!JsonNodeUtils.appendErrorNodeIsObject(taskJsonNode, "Task", errors)) {
+            return;
+        }
+
+        String taskName = "";
+
+        if (taskJsonNode.has("name")) {
+            JsonNode nameJsonNode = taskJsonNode.get("name");
+
+            if (nameJsonNode.isString()) {
+                taskName = nameJsonNode.asString();
+            }
+        }
+
+        int errorsStart = errors.length();
+        int warningsStart = warnings.length();
+
+        validateTaskStructureFields(taskJsonNode, errors, warnings);
+
+        if (!taskName.isEmpty()) {
+            prefixTaskMessages(errors, errorsStart, taskName);
+            prefixTaskMessages(warnings, warningsStart, taskName);
+        }
+    }
+
+    private static void validateTaskStructureFields(
+        JsonNode taskJsonNode, StringBuilder errors, StringBuilder warnings) {
+
+        FieldValidator.validateOptionalStringField(taskJsonNode, "label", errors, warnings);
+        FieldValidator.validateRequiredStringField(taskJsonNode, "name", errors);
+        appendErrorTaskTypeField(taskJsonNode, errors);
+        appendErrorParametersField(taskJsonNode, errors);
+    }
+
+    /**
+     * Validates an array containing TASK objects.
+     */
+    public static void validateTaskArray(
+        JsonNode arrayValueJsonNode, String propertyPath, StringBuilder errors, StringBuilder warnings) {
+
+        for (int i = 0; i < arrayValueJsonNode.size(); i++) {
+            JsonNode taskJsonNode = arrayValueJsonNode.get(i);
+            String path = propertyPath + "[" + i + "]";
+
+            if (!taskJsonNode.isObject()) {
+                String actualType = JsonNodeUtils.getJsonNodeType(taskJsonNode);
+
+                StringUtils.appendWithNewline(ValidationErrorUtils.typeError(path, "object", actualType), errors);
+            } else {
+                validateTaskStructureFields(taskJsonNode, errors, warnings);
+
+                if (taskJsonNode.has("parameters") && taskJsonNode.has("type")) {
+                    JsonNode parametersJsonNode = taskJsonNode.get("parameters");
+
+                    if (!parametersJsonNode.isObject()) {
+                        String actualType = JsonNodeUtils.getJsonNodeType(parametersJsonNode);
+
+                        StringUtils.appendWithNewline(
+                            ValidationErrorUtils.typeError(path + ".parameters", "object", actualType), errors);
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Validates task parameters against a list of PropertyInfo definitions with display condition processing.
+     *
+     * @param taskParameters the task parameters JSON
+     * @param taskDefinition list of PropertyInfo representing the task definition
+     * @param errors         StringBuilder to collect validation errors
+     * @param warnings       StringBuilder to collect validation warnings
+     */
+    public static void validateTaskParameters(
+        String taskParameters, List<PropertyInfo> taskDefinition, StringBuilder errors, StringBuilder warnings) {
+
+        JsonNode taskParametersJsonNode = JsonNodeUtils.parseJsonWithErrorHandling(taskParameters, errors);
+
+        if (!JsonNodeUtils.appendErrorNodeIsObject(taskParametersJsonNode, "Current task parameters", errors)) {
+            return;
+        }
+
+        PropertyValidator.validateProperties(
+            taskParametersJsonNode, taskDefinition, "", taskParameters, errors, warnings);
+    }
+
+    /**
+     * Validates task parameters and prefixes all errors and warnings with the given task name.
+     *
+     * @param taskName       the task name used as prefix for messages
+     * @param taskParameters the task parameters JSON
+     * @param taskDefinition list of PropertyInfo representing the task definition
+     * @param errors         StringBuilder to collect validation errors
+     * @param warnings       StringBuilder to collect validation warnings
+     */
+    public static void validateTaskParameters(
+        String taskName, String taskParameters, List<PropertyInfo> taskDefinition, StringBuilder errors,
+        StringBuilder warnings) {
+
+        int errorsStart = errors.length();
+        int warningsStart = warnings.length();
+
+        validateTaskParameters(taskParameters, taskDefinition, errors, warnings);
+
+        if (!taskName.isEmpty()) {
+            prefixTaskMessages(errors, errorsStart, taskName);
+            prefixTaskMessages(warnings, warningsStart, taskName);
+        }
+    }
+
+    /**
+     * Adds nested task to validation context for proper tracking.
+     */
+    private static void addNestedTaskToContext(JsonNode nestedTaskJsonNode, ValidationContext context) {
+        if (nestedTaskJsonNode.has("name")) {
+            JsonNode nameJsonNode = nestedTaskJsonNode.get("name");
+
+            String name = nameJsonNode.asString();
+
+            JsonNode typeJsonNode = nestedTaskJsonNode.get("type");
+
+            String type = typeJsonNode.asString();
+
+            Map<String, JsonNode> allTasksMap = context.getAllTasksMap();
+
+            allTasksMap.put(name, nestedTaskJsonNode);
+
+            Map<String, String> taskNameToTypeMap = context.getTaskNameToTypeMap();
+
+            taskNameToTypeMap.put(name, type);
+        }
+    }
+
+    private static void appendErrorParametersField(JsonNode jsonNode, StringBuilder errors) {
+        JsonNode parametersJsonNode = jsonNode.get("parameters");
+
+        if (parametersJsonNode != null && !parametersJsonNode.isObject()) {
+            StringUtils.appendWithNewline("Field 'parameters' must be an object", errors);
+        }
+    }
+
+    private static void appendErrorTaskTypeField(JsonNode taskJsonNode, StringBuilder errors) {
+        if (!taskJsonNode.has("type")) {
+            StringUtils.appendWithNewline("Missing required field: type", errors);
+        } else {
+            JsonNode typeJsonNode = taskJsonNode.get("type");
+
+            if (!typeJsonNode.isString()) {
+                StringUtils.appendWithNewline("Field 'type' must be a string", errors);
+            } else {
+                String typeValue = typeJsonNode.asString();
+
+                Matcher matcher = TYPE_PATTERN.matcher(typeValue);
+
+                if (!matcher.matches()) {
+                    StringUtils.appendWithNewline(
+                        "Field 'type' must match pattern: (alphanumeric|-)+/v(numeric)+(/(alphanumeric)+)?", errors);
+                }
+            }
+        }
+    }
+
+    /**
+     * Finds and validates nested tasks within task parameters. Uses Chain of Responsibility pattern to process
+     * different property types.
+     */
+    private static void findAndValidateNestedTasks(
+        JsonNode parametersJsonNode, List<PropertyInfo> taskDefinition, ValidationContext context) {
+
+        for (PropertyInfo propertyInfo : taskDefinition) {
+            processTaskArrayProperty(parametersJsonNode, propertyInfo, context);
+        }
+    }
+
+    @Nullable
+    private static List<PropertyInfo> getObjectItemProperties(PropertyInfo propertyInfo) {
+        List<PropertyInfo> propertyInfos = propertyInfo.nestedProperties();
+
+        if (!"ARRAY".equalsIgnoreCase(propertyInfo.type()) || propertyInfos == null || propertyInfos.size() != 1) {
+            return null;
+        }
+
+        PropertyInfo propertyInfosFirst = propertyInfos.getFirst();
+
+        if (!"OBJECT".equalsIgnoreCase(propertyInfosFirst.type())) {
+            return null;
+        }
+
+        return propertyInfosFirst.nestedProperties();
+    }
+
+    /**
+     * Strategy to determine if a task type supports nested tasks.
+     */
+    private static boolean isTaskDispatcher(String taskType) {
+        return taskType.matches("^\\w+/\\w+$");
+    }
+
+    /**
+     * Processes a single nested task. Template method defining the nested task validation steps.
+     */
+    private static void processIndividualNestedTask(JsonNode nestedTask, ValidationContext context) {
+        addNestedTaskToContext(nestedTask, context);
+        validateTaskStructure(nestedTask, context);
+        validateNestedTaskParameters(nestedTask, context);
+        validateNestedTaskDataPills(nestedTask, context);
+        processTaskDispatcher(nestedTask, context);
+    }
+
+    /**
+     * Processes an array of nested tasks. Template method for nested task processing.
+     */
+    private static void processNestedTaskArray(JsonNode taskArrayJsonNode, ValidationContext context) {
+        for (int i = 0; i < taskArrayJsonNode.size(); i++) {
+            processNestedTask(taskArrayJsonNode.get(i), context);
+        }
+    }
+
+    private static void processNestedTask(JsonNode nestedTaskJsonNode, ValidationContext context) {
+        if (!nestedTaskJsonNode.has("type")) {
+            return;
+        }
+
+        String nestedTaskName = nestedTaskJsonNode.has("name") ? nestedTaskJsonNode.get("name")
+            .asString() : "";
+        boolean isInMainLoop = context.getAllTasksMap()
+            .containsKey(nestedTaskName);
+
+        if (isInMainLoop) {
+            return;
+        }
+
+        processIndividualNestedTask(nestedTaskJsonNode, context);
+        validateClusterElements(nestedTaskJsonNode, nestedTaskName, context);
+    }
+
+    /**
+     * Main entry point for nested task processing. Uses the strategy pattern to handle different nested task scenarios.
+     */
+    private static void processTaskDispatcher(JsonNode task, ValidationContext context) {
+        if (!task.has("parameters")) {
+            return;
+        }
+
+        JsonNode parametersJsonNode = task.get("parameters");
+
+        String taskType = task.get("type")
+            .asString();
+
+        if (!isTaskDispatcher(taskType)) {
+            return;
+        }
+
+        Map<String, List<PropertyInfo>> taskDefinitionsMap = context.getTaskDefinitions();
+
+        List<PropertyInfo> taskDefinition = taskDefinitionsMap.get(taskType);
+
+        if (taskDefinition != null) {
+            findAndValidateNestedTasks(parametersJsonNode, taskDefinition, context);
+        }
+    }
+
+    private static void processTaskArrayProperty(
+        JsonNode parametersJsonNode, PropertyInfo propertyInfo, ValidationContext context) {
+
+        String propertyName = propertyInfo.name();
+
+        JsonNode jsonNode = parametersJsonNode.get(propertyName);
+
+        if (jsonNode == null) {
+            return;
+        }
+
+        if (PropertyUtils.isNestedTaskProperty(propertyInfo)) {
+            if (jsonNode.isArray()) {
+                processNestedTaskArray(jsonNode, context);
+            } else if (jsonNode.isObject()) {
+                processNestedTask(jsonNode, context);
+            }
+
+            return;
+        }
+
+        if (!jsonNode.isArray()) {
+            return;
+        }
+
+        List<PropertyInfo> itemPropertyInfos = getObjectItemProperties(propertyInfo);
+
+        if (itemPropertyInfos == null) {
+            return;
+        }
+
+        for (JsonNode itemJsonNode : jsonNode) {
+            if (itemJsonNode.isObject()) {
+                findAndValidateNestedTasks(itemJsonNode, itemPropertyInfos, context);
+            }
+        }
+    }
+
+    private static void validateDataPills(
+        JsonNode task, @Nullable List<PropertyInfo> taskDefinition, ValidationContext context) {
+
+        if (taskDefinition != null && !taskDefinition.isEmpty()) {
+            DataPillValidator.validateTaskDataPills(task, context, taskDefinition, false);
+        }
+    }
+
+    /**
+     * Validates the structure of a nested task.
+     */
+    private static void validateTaskStructure(JsonNode nestedTaskJsonNode, ValidationContext context) {
+        validateTaskStructureFields(nestedTaskJsonNode, context.getErrors(), context.getWarnings());
+    }
+
+    /**
+     * Validates parameters of a nested task.
+     */
+    private static void validateNestedTaskParameters(JsonNode taskJsonNode, ValidationContext context) {
+        JsonNode typeJsonNode = taskJsonNode.get("type");
+
+        String type = typeJsonNode.asString();
+
+        Map<String, List<PropertyInfo>> taskDefinitionsMap = context.getTaskDefinitions();
+
+        List<PropertyInfo> nestedTaskDefinition = taskDefinitionsMap.get(type);
+
+        if (nestedTaskDefinition != null) {
+            String nestedTaskParameters = "{}";
+            JsonNode parametersJsonNode = taskJsonNode.get("parameters");
+
+            if (parametersJsonNode != null && parametersJsonNode.isObject()) {
+                nestedTaskParameters = parametersJsonNode.toString();
+            }
+
+            validateTaskParameters(
+                nestedTaskParameters, nestedTaskDefinition, context.getErrors(), context.getWarnings());
+        }
+    }
+
+    /**
+     * Validates data pills in nested task parameters.
+     */
+    private static void validateNestedTaskDataPills(JsonNode nestedTaskJsonNode, ValidationContext context) {
+        JsonNode typeJsonNode = nestedTaskJsonNode.get("type");
+
+        String type = typeJsonNode.asString();
+
+        Map<String, List<PropertyInfo>> taskDefinitionsMap = context.getTaskDefinitions();
+
+        List<PropertyInfo> nestedTaskDefinition = taskDefinitionsMap.get(type);
+
+        DataPillValidator.validateTaskDataPills(
+            nestedTaskJsonNode, context, nestedTaskDefinition, true);
+    }
+
+    @Nullable
+    private static List<PropertyInfo> validateTaskParameters(JsonNode taskJsonNode, ValidationContext context) {
+        JsonNode typeJsonNode = taskJsonNode.get("type");
+
+        String taskType = typeJsonNode.asString();
+
+        Map<String, List<PropertyInfo>> taskDefinitionsMap = context.getTaskDefinitions();
+
+        List<PropertyInfo> taskDefinition = taskDefinitionsMap.get(taskType);
+
+        if (taskDefinition != null && !taskDefinition.isEmpty()) {
+            String taskParameters = "{}";
+            JsonNode jsonNode = taskJsonNode.get("parameters");
+
+            if (jsonNode != null && jsonNode.isObject()) {
+                taskParameters = jsonNode.toString();
+            }
+
+            validateTaskParameters(taskParameters, taskDefinition, context.getErrors(), context.getWarnings());
+
+            ResourceReferenceValidator.validate(
+                jsonNode, taskDefinition, "", context.getResourceReferenceProvider(), context.getErrors(),
+                context.getWarnings());
+        }
+
+        return taskDefinition;
+    }
+}

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,11 +17,11 @@
 package com.bytechef.component.definition;
 
 import com.bytechef.component.definition.Context.Http.Configuration.ConfigurationBuilder;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import com.bytechef.component.definition.Property.ValueProperty;
+import com.bytechef.definition.BaseProperty;
 import java.io.IOException;
 import java.io.InputStream;
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
+import java.io.OutputStream;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.HashMap;
@@ -30,11 +30,43 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
+import org.jspecify.annotations.Nullable;
 
 /**
  * @author Ivica Cardic
+ * @author Igor Beslic
  */
 public interface Context {
+
+    /**
+     * @param converterFunction
+     * @param <R>
+     * @return
+     */
+    <R> R converter(ContextFunction<Converter, R> converterFunction);
+
+    /**
+     *
+     * @param encoderFunction
+     * @return
+     * @param <R>
+     */
+    <R> R encoder(ContextFunction<Encoder, R> encoderFunction);
+
+    /**
+     *
+     * @param escaperFunction
+     * @return
+     * @param <R>
+     */
+    <R> R escaper(ContextFunction<Escaper, R> escaperFunction);
+
+    /**
+     * @param fileFunction
+     * @param <R>
+     * @return
+     */
+    <R> R file(ContextFunction<File, R> fileFunction);
 
     /**
      *
@@ -43,6 +75,13 @@ public interface Context {
      * @param <R>
      */
     <R> R http(ContextFunction<Http, R> httpFunction);
+
+    /**
+     * Determines whether the current environment is the editor environment.
+     *
+     * @return true if the current environment is an editor environment, false otherwise.
+     */
+    boolean isEditorEnvironment();
 
     /**
      *
@@ -56,14 +95,23 @@ public interface Context {
      *
      * @param logConsumer
      */
-    void logger(ContextConsumer<Logger> logConsumer);
+    void log(ContextConsumer<Log> logConsumer);
 
     /**
      *
-     * @param outputFunction
+     * @param mimeTypeFunction
      * @return
+     * @param <R>
      */
-    OutputResponse output(ContextFunction<Output, OutputResponse> outputFunction);
+    <R> R mimeType(ContextFunction<MimeType, R> mimeTypeFunction);
+
+    /**
+     *
+     * @param outputSchemaFunction
+     * @return
+     * @param <R>
+     */
+    <R> R outputSchema(ContextFunction<OutputSchema, R> outputSchemaFunction);
 
     /**
      *
@@ -75,6 +123,130 @@ public interface Context {
 
     /**
      *
+     * @param <T>
+     */
+    @FunctionalInterface
+    interface ContextConsumer<T> {
+
+        void accept(T t) throws Exception;
+    }
+
+    /**
+     *
+     * @param <T>
+     * @param <R>
+     */
+    @FunctionalInterface
+    interface ContextFunction<T, R> {
+
+        R apply(T t) throws Exception;
+    }
+
+    /**
+     *
+     */
+    interface Converter {
+
+        /**
+         *
+         * @param fromValue
+         * @param toValueType
+         * @return
+         */
+        boolean canConvert(Object fromValue, Class<?> toValueType);
+
+        /**
+         *
+         * @param fromValue
+         * @param toValueType
+         * @return
+         */
+        <T> T value(Object fromValue, Class<T> toValueType);
+
+        /**
+         *
+         * @param fromValue
+         * @param toValueTypeRef
+         * @return
+         */
+        <T> T value(Object fromValue, TypeReference<T> toValueTypeRef);
+
+        /**
+         *
+         * @param str
+         * @return
+         */
+        Object string(String str);
+
+    }
+
+    /**
+     *
+     */
+    interface Encoder {
+
+        /**
+         *
+         * @param string
+         * @return
+         */
+        byte[] base64Decode(String string);
+
+        /**
+         * Encodes concatenated values as one Base64 encoded value
+         *
+         * @param values
+         * @return base64 encoded value
+         */
+        String base64Encode(String... values);
+
+        /**
+         *
+         * @param bytes
+         * @return
+         */
+        String base64Encode(byte[] bytes);
+
+        /**
+         * Decodes parameter value which is Base64 encoded URL encoded value
+         *
+         * @param value the base64 encoded value
+         * @return human understandable string value
+         */
+        byte[] base64UrlDecode(String value);
+
+        /**
+         * Encodes parameter value in URL encoding and applies Base64 encoding to the final result.
+         *
+         * @param value the value to be encoded
+         * @return Base64 encoded value of URL encoded input
+         */
+        String base64UrlEncode(String value);
+
+        /**
+         *
+         * @param bytes
+         * @return
+         */
+        String base64UrlEncode(byte[] bytes);
+
+    }
+
+    /**
+     *
+     */
+    interface Escaper {
+
+        /**
+         *
+         * @param html
+         * @return
+         */
+        String escapeHtml(String html);
+    }
+
+    /**
+     *
      */
     interface File {
 
@@ -83,7 +255,21 @@ public interface Context {
          * @param fileEntry
          * @return
          */
-        InputStream getStream(FileEntry fileEntry);
+        long getContentLength(FileEntry fileEntry);
+
+        /**
+         *
+         * @param fileEntry
+         * @return
+         */
+        InputStream getInputStream(FileEntry fileEntry);
+
+        /**
+         *
+         * @param fileEntry
+         * @return
+         */
+        OutputStream getOutputStream(FileEntry fileEntry);
 
         /**
          *
@@ -98,8 +284,7 @@ public interface Context {
          * @param inputStream
          * @return
          */
-        FileEntry storeContent(String fileName, InputStream inputStream)
-            throws IOException;
+        FileEntry storeContent(String fileName, InputStream inputStream) throws IOException;
 
         /**
          *
@@ -130,18 +315,6 @@ public interface Context {
         byte[] readAllBytes(FileEntry fileEntry) throws IOException;
     }
 
-    @FunctionalInterface
-    interface ContextConsumer<T> {
-
-        void accept(T t) throws Exception;
-    }
-
-    @FunctionalInterface
-    interface ContextFunction<T, R> {
-
-        R apply(T t) throws Exception;
-    }
-
     /**
      *
      */
@@ -162,11 +335,72 @@ public interface Context {
         /**
          *
          */
-        enum ResponseType {
-            BINARY,
-            JSON,
-            TEXT,
-            XML,
+        class ResponseType {
+
+            public enum Type {
+                BINARY,
+                JSON,
+                TEXT,
+                XML
+            }
+
+            public static final ResponseType BINARY = new ResponseType("application/octet-stream", Type.BINARY);
+            public static final ResponseType JSON = new ResponseType("application/json", Type.JSON);
+            public static final ResponseType TEXT = new ResponseType("text/plain", Type.TEXT);
+            public static final ResponseType XML = new ResponseType("application/xml", Type.XML);
+
+            private String contentType;
+            private Type type;
+
+            private ResponseType() {
+            }
+
+            @Override
+            public int hashCode() {
+                return Objects.hash(contentType, type);
+            }
+
+            @Override
+            public boolean equals(Object obj) {
+                if (this == obj)
+                    return true;
+                if (obj == null || getClass() != obj.getClass())
+                    return false;
+                ResponseType other = (ResponseType) obj;
+                return Objects.equals(contentType, other.contentType) && type == other.type;
+            }
+
+            @Override
+            public String toString() {
+                return type + " (" + contentType + ")";
+            }
+
+            private ResponseType(String contentType, Type type) {
+                this.contentType = contentType;
+                this.type = type;
+            }
+
+            public static ResponseType binary(String contentType) {
+                return new ResponseType(contentType, Type.BINARY);
+            }
+
+            public static ResponseType valueOf(String string) {
+                return switch (string) {
+                    case "BINARY" -> BINARY;
+                    case "JSON" -> JSON;
+                    case "TEXT" -> TEXT;
+                    case "XML" -> XML;
+                    default -> throw new IllegalArgumentException("Unsupported response type: " + string);
+                };
+            }
+
+            public String getContentType() {
+                return contentType;
+            }
+
+            public Type getType() {
+                return type;
+            }
         }
 
         /**
@@ -311,13 +545,37 @@ public interface Context {
 
         /**
          *
-         * @param timeout
+         * @param connectTimeout
          * @return
          */
-        static ConfigurationBuilder timeout(Duration timeout) {
+        static ConfigurationBuilder connectTimeout(Duration connectTimeout) {
             ConfigurationBuilder configurationBuilder = new ConfigurationBuilder();
 
-            configurationBuilder.timeout = timeout;
+            configurationBuilder.connectTimeout = connectTimeout;
+
+            return configurationBuilder;
+        }
+
+        /**
+         *
+         * @param timeout
+         * @return
+         * @deprecated use {@link #connectTimeout(Duration)}
+         */
+        @Deprecated
+        static ConfigurationBuilder timeout(Duration timeout) {
+            return connectTimeout(timeout);
+        }
+
+        /**
+         *
+         * @param requestTimeout
+         * @return
+         */
+        static ConfigurationBuilder requestTimeout(Duration requestTimeout) {
+            ConfigurationBuilder configurationBuilder = new ConfigurationBuilder();
+
+            configurationBuilder.requestTimeout = requestTimeout;
 
             return configurationBuilder;
         }
@@ -336,8 +594,8 @@ public interface Context {
         }
 
         /**
-        *
-        */
+         *
+         */
         class Body {
 
             private final Object content;
@@ -529,6 +787,26 @@ public interface Context {
                     ", mimeType='" + mimeType + '\'' +
                     '}';
             }
+
+            @Override
+            public boolean equals(Object o) {
+                if (this == o) {
+                    return true;
+                }
+
+                if (!(o instanceof Body that)) {
+                    return false;
+                }
+
+                return Objects.equals(content, that.content)
+                    && Objects.equals(contentType, that.contentType)
+                    && Objects.equals(mimeType, that.mimeType);
+            }
+
+            @Override
+            public int hashCode() {
+                return Objects.hash(content, contentType, mimeType);
+            }
         }
 
         class Configuration {
@@ -538,8 +816,9 @@ public interface Context {
             private boolean followAllRedirects;
             private boolean followRedirect;
             private String proxy;
+            private Duration requestTimeout;
             private ResponseType responseType;
-            private Duration timeout;
+            private Duration connectTimeout;
             private boolean disableAuthorization;
 
             public Configuration() {
@@ -594,8 +873,24 @@ public interface Context {
             /**
              * @return
              */
+            public Duration getRequestTimeout() {
+                return requestTimeout;
+            }
+
+            /**
+             * @return
+             */
+            public Duration getConnectTimeout() {
+                return connectTimeout;
+            }
+
+            /**
+             * @return
+             * @deprecated use {@link #getConnectTimeout()}
+             */
+            @Deprecated
             public Duration getTimeout() {
-                return timeout;
+                return getConnectTimeout();
             }
 
             /**
@@ -612,11 +907,40 @@ public interface Context {
                 private boolean followAllRedirects;
                 private boolean followRedirect;
                 private String proxy;
+                private Duration requestTimeout;
                 private ResponseType responseType;
-                private Duration timeout;
+                private Duration connectTimeout;
                 private boolean disableAuthorization;
 
                 private ConfigurationBuilder() {
+                }
+
+                @Override
+                public boolean equals(Object o) {
+                    if (this == o) {
+                        return true;
+                    }
+
+                    if (!(o instanceof ConfigurationBuilder that)) {
+                        return false;
+                    }
+
+                    return Objects.equals(allowUnauthorizedCerts, that.allowUnauthorizedCerts) &&
+                        Objects.equals(followAllRedirects, that.followAllRedirects) &&
+                        Objects.equals(followRedirect, that.followRedirect) &&
+                        Objects.equals(disableAuthorization, that.disableAuthorization) &&
+                        Objects.equals(filename, that.filename) &&
+                        Objects.equals(proxy, that.proxy) &&
+                        Objects.equals(requestTimeout, that.requestTimeout) &&
+                        Objects.equals(responseType, that.responseType) &&
+                        Objects.equals(connectTimeout, that.connectTimeout);
+                }
+
+                @Override
+                public int hashCode() {
+                    return Objects.hash(
+                        allowUnauthorizedCerts, connectTimeout, filename, followAllRedirects, followRedirect,
+                        proxy, requestTimeout, responseType, disableAuthorization);
                 }
 
                 public ConfigurationBuilder allowUnauthorizedCerts(boolean allowUnauthorizedCerts) {
@@ -649,9 +973,22 @@ public interface Context {
                     return this;
                 }
 
-                public ConfigurationBuilder timeout(Duration timeout) {
-                    this.timeout = timeout;
+                public ConfigurationBuilder requestTimeout(Duration requestTimeout) {
+                    this.requestTimeout = requestTimeout;
                     return this;
+                }
+
+                public ConfigurationBuilder connectTimeout(Duration connectTimeout) {
+                    this.connectTimeout = connectTimeout;
+                    return this;
+                }
+
+                /**
+                 * @deprecated use {@link #connectTimeout(Duration)}
+                 */
+                @Deprecated
+                public ConfigurationBuilder timeout(Duration timeout) {
+                    return connectTimeout(timeout);
                 }
 
                 public ConfigurationBuilder disableAuthorization(boolean disableAuthorization) {
@@ -664,7 +1001,8 @@ public interface Context {
 
                     configuration.proxy = this.proxy;
                     configuration.followRedirect = this.followRedirect;
-                    configuration.timeout = this.timeout;
+                    configuration.requestTimeout = this.requestTimeout;
+                    configuration.connectTimeout = this.connectTimeout;
                     configuration.responseType = this.responseType;
                     configuration.followAllRedirects = this.followAllRedirects;
                     configuration.allowUnauthorizedCerts = this.allowUnauthorizedCerts;
@@ -720,6 +1058,13 @@ public interface Context {
 
             /**
              *
+             * @param keyValueArray
+             * @return
+             */
+            Executor queryParameters(Object... keyValueArray);
+
+            /**
+             *
              * @param body
              * @return
              */
@@ -732,7 +1077,6 @@ public interface Context {
             Response execute();
         }
 
-        @SuppressFBWarnings("EI")
         interface Response {
 
             Map<String, List<String>> getHeaders();
@@ -1009,7 +1353,7 @@ public interface Context {
     /**
      *
      */
-    interface Logger {
+    interface Log {
 
         /**
          *
@@ -1112,51 +1456,34 @@ public interface Context {
         void trace(String message, Exception exception);
     }
 
-    /**
-     *
-     */
-    interface Output {
+    interface MimeType {
 
         /**
          *
-         * @param value
-         * @return
+         * @param ext
          */
-        OutputResponse get(Object value);
-    }
-
-    /**
-     *
-     * @param <T>
-     */
-    abstract class TypeReference<T> implements Comparable<TypeReference<T>> {
-
-        protected final Type type;
-
-        @SuppressFBWarnings("CT_CONSTRUCTOR_THROW")
-        protected TypeReference() {
-            Type superClass = getClass().getGenericSuperclass();
-
-            if (superClass instanceof Class<?>) { // sanity check, should never happen
-                throw new IllegalArgumentException(
-                    "Internal error: TypeReference constructed without actual type information");
-            }
-
-            type = ((ParameterizedType) superClass).getActualTypeArguments()[0];
-        }
-
-        public Type getType() {
-            return type;
-        }
+        String lookupMimeType(String ext);
 
         /**
-         * The only reason we define this method (and require implementation of <code>Comparable</code>) is to prevent
-         * constructing a reference without type information.
+         *
+         * @param mimeType
          */
-        @Override
-        public int compareTo(TypeReference<T> o) {
-            return 0;
-        }
+        String lookupExt(String mimeType);
+
+    }
+
+    interface OutputSchema {
+
+        @Nullable
+        ValueProperty<?> getOutputSchema(String jsonSchema);
+
+        @Nullable
+        ValueProperty<?> getOutputSchema(String propertyName, String jsonSchema);
+
+        ValueProperty<?> getOutputSchema(Object value);
+
+        @Nullable
+        Object getSampleOutput(BaseProperty definitionProperty);
     }
 
     /**

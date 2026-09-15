@@ -13,15 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * Modifications copyright (C) 2023 ByteChef Inc.
+ * Modifications copyright (C) 2025 ByteChef
  */
 
 package com.bytechef.atlas.execution.repository.memory;
 
 import com.bytechef.atlas.execution.domain.Counter;
 import com.bytechef.atlas.execution.repository.CounterRepository;
-import java.util.HashMap;
-import java.util.Map;
+import com.bytechef.tenant.util.TenantCacheKeyUtils;
+import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * @author Arik Cohen
@@ -30,35 +32,121 @@ import java.util.Map;
  */
 public class InMemoryCounterRepository implements CounterRepository {
 
-    private final Map<Long, Long> counters = new HashMap<>();
+    private final ConcurrentHashMap<String, Long> cache = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, ReentrantLock> locks = new ConcurrentHashMap<>();
 
     @Override
     public void deleteById(Long id) {
-        counters.remove(id);
+        String key = TenantCacheKeyUtils.getKey(id);
+
+        ReentrantLock lock = lockFor(key);
+
+        try {
+            lock.lock();
+
+            cache.remove(key);
+        } finally {
+            lock.unlock();
+        }
     }
 
     @Override
-    public Iterable<Counter> findAll() {
-        return counters.entrySet()
-            .stream()
-            .map(entry -> new Counter(entry.getKey(), entry.getValue()))
-            .toList();
+    public Optional<Long> findValueByIdForUpdate(Long id) {
+        String key = TenantCacheKeyUtils.getKey(id);
+
+        ReentrantLock lock = lockFor(key);
+
+        if (!lock.isHeldByCurrentThread()) {
+            lock.lock();
+        }
+
+        return Optional.ofNullable(cache.get(key));
     }
 
     @Override
-    public Long findValueByIdForUpdate(Long id) {
-        return counters.get(id);
+    public void unlockForUpdate(Long id) {
+        String key = TenantCacheKeyUtils.getKey(id);
+
+        ReentrantLock lock = locks.get(key);
+
+        if (lock != null && lock.isHeldByCurrentThread()) {
+            lock.unlock();
+        }
+    }
+
+    @Override
+    public long decrementAndGet(Long id) {
+        String key = TenantCacheKeyUtils.getKey(id);
+
+        ReentrantLock lock = lockFor(key);
+
+        try {
+            lock.lock();
+
+            Long current = cache.get(key);
+
+            if (current == null) {
+                throw new IllegalArgumentException("Unable to locate counter with id: %s".formatted(id));
+            }
+
+            long next = current - 1;
+
+            cache.put(key, next);
+
+            return next;
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    @Override
+    public void setAtomic(Long id, long value) {
+        String key = TenantCacheKeyUtils.getKey(id);
+
+        ReentrantLock lock = lockFor(key);
+
+        try {
+            lock.lock();
+
+            cache.put(key, value);
+        } finally {
+            lock.unlock();
+        }
     }
 
     @Override
     public Counter save(Counter counter) {
-        counters.put(counter.getId(), counter.getValue());
+        String key = TenantCacheKeyUtils.getKey(counter.getId());
+
+        ReentrantLock lock = lockFor(key);
+
+        try {
+            lock.lock();
+
+            cache.put(key, counter.getValue());
+        } finally {
+            lock.unlock();
+        }
 
         return counter;
     }
 
     @Override
     public void update(Long id, long value) {
-        counters.put(id, value);
+        String key = TenantCacheKeyUtils.getKey(id);
+
+        ReentrantLock lock = lockFor(key);
+
+        try {
+            lock.lock();
+
+            cache.put(key, value);
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    private ReentrantLock lockFor(String key) {
+        return locks.computeIfAbsent(key, (key1) -> new ReentrantLock());
     }
 }

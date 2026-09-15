@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,14 +20,16 @@ import com.bytechef.automation.configuration.domain.ProjectVersion.Status;
 import com.bytechef.commons.util.CollectionUtils;
 import com.bytechef.platform.category.domain.Category;
 import com.bytechef.platform.tag.domain.Tag;
+import edu.umd.cs.findbugs.annotations.Nullable;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.UUID;
 import org.apache.commons.lang3.Validate;
 import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.annotation.CreatedDate;
@@ -56,10 +58,13 @@ public final class Project {
 
     @Column("created_date")
     @CreatedDate
-    private LocalDateTime createdDate;
+    private Instant createdDate;
 
     @Column
     private String description;
+
+    @Column("permission_expression")
+    private String permissionExpression;
 
     @Id
     private Long id;
@@ -73,13 +78,16 @@ public final class Project {
 
     @Column("last_modified_date")
     @LastModifiedDate
-    private LocalDateTime lastModifiedDate;
+    private Instant lastModifiedDate;
 
     @MappedCollection(idColumn = "project_id")
     private Set<ProjectTag> projectTags = new HashSet<>();
 
     @MappedCollection(idColumn = "project_id")
     private Set<ProjectVersion> projectVersions = new HashSet<>();
+
+    @Column("uuid")
+    private UUID uuid;
 
     @Version
     private int version;
@@ -94,7 +102,7 @@ public final class Project {
     @PersistenceCreator
     public Project(
         AggregateReference<Category, Long> categoryId, String description, Long id, String name,
-        Set<ProjectTag> projectTags, Set<ProjectVersion> projectVersions, int version) {
+        Set<ProjectTag> projectTags, Set<ProjectVersion> projectVersions, UUID uuid, int version) {
 
         this.categoryId = categoryId;
         this.description = description;
@@ -102,21 +110,12 @@ public final class Project {
         this.name = name;
         this.projectTags.addAll(projectTags);
         this.projectVersions.addAll(projectVersions);
+        this.uuid = uuid;
         this.version = version;
     }
 
     public static Builder builder() {
         return new Builder();
-    }
-
-    public int addVersion() {
-        ProjectVersion projectVersion = getLastProjectVersion();
-
-        int newVersion = projectVersion.getVersion() + 1;
-
-        projectVersions.add(new ProjectVersion(newVersion));
-
-        return newVersion;
     }
 
     @Override
@@ -147,12 +146,16 @@ public final class Project {
         return createdBy;
     }
 
-    public LocalDateTime getCreatedDate() {
+    public Instant getCreatedDate() {
         return createdDate;
     }
 
     public String getDescription() {
         return description;
+    }
+
+    public String getPermissionExpression() {
+        return permissionExpression;
     }
 
     public Long getId() {
@@ -167,26 +170,34 @@ public final class Project {
         return lastModifiedBy;
     }
 
-    public LocalDateTime getLastModifiedDate() {
+    public Instant getLastModifiedDate() {
         return lastModifiedDate;
     }
 
-    public ProjectVersion getLastProjectVersion() {
+    @Nullable
+    public Instant getLastPublishedDate() {
         return projectVersions.stream()
-            .max(Comparator.comparingInt(ProjectVersion::getVersion))
-            .orElseThrow();
-    }
-
-    public LocalDateTime getLastPublishedDate() {
-        return getLastProjectVersion().getPublishedDate();
+            .sorted((o1, o2) -> Integer.compare(o2.getVersion(), o1.getVersion()))
+            .filter(projectVersion -> projectVersion.getStatus() == Status.PUBLISHED)
+            .findFirst()
+            .map(ProjectVersion::getPublishedDate)
+            .orElse(null);
     }
 
     public Status getLastStatus() {
-        return getLastProjectVersion().getStatus();
+        return getMaxProjectVersion().getStatus();
     }
 
-    public int getLastVersion() {
-        return getLastProjectVersion().getVersion();
+    public int getLastProjectVersion() {
+        return getMaxProjectVersion().getVersion();
+    }
+
+    @Nullable
+    public ProjectVersion getLastPublishedProjectVersion() {
+        return projectVersions.stream()
+            .filter(projectVersion -> projectVersion.getStatus() == Status.PUBLISHED)
+            .max(Comparator.comparingInt(ProjectVersion::getVersion))
+            .orElse(null);
     }
 
     public List<ProjectVersion> getProjectVersions() {
@@ -198,6 +209,10 @@ public final class Project {
             .stream()
             .map(ProjectTag::getTagId)
             .toList();
+    }
+
+    public String getUuid() {
+        return uuid == null ? null : uuid.toString();
     }
 
     public int getVersion() {
@@ -213,12 +228,18 @@ public final class Project {
             .anyMatch(projectVersion -> projectVersion.getStatus() == Status.PUBLISHED);
     }
 
-    public void publish(String description) {
-        ProjectVersion projectVersion = getLastProjectVersion();
+    public int publish(String description) {
+        ProjectVersion projectVersion = getMaxProjectVersion();
 
         projectVersion.setDescription(description);
-        projectVersion.setPublishedDate(LocalDateTime.now());
+        projectVersion.setPublishedDate(Instant.now());
         projectVersion.setStatus(Status.PUBLISHED);
+
+        int newVersion = projectVersion.getVersion() + 1;
+
+        projectVersions.add(new ProjectVersion(newVersion));
+
+        return newVersion;
     }
 
     public void setCategory(Category category) {
@@ -235,6 +256,10 @@ public final class Project {
         this.description = description;
     }
 
+    public void setPermissionExpression(String permissionExpression) {
+        this.permissionExpression = permissionExpression;
+    }
+
     public void setId(Long id) {
         this.id = id;
     }
@@ -244,7 +269,9 @@ public final class Project {
     }
 
     public void setProjectVersions(List<ProjectVersion> projectVersions) {
-        this.projectVersions = new HashSet<>(projectVersions);
+        if (!CollectionUtils.isEmpty(projectVersions)) {
+            this.projectVersions = new HashSet<>(projectVersions);
+        }
     }
 
     public void setTagIds(List<Long> tagIds) {
@@ -258,9 +285,19 @@ public final class Project {
     }
 
     public void setTags(List<Tag> tags) {
-        if (!CollectionUtils.isEmpty(tags)) {
+        if (CollectionUtils.isEmpty(tags)) {
+            setTagIds(List.of());
+        } else {
             setTagIds(CollectionUtils.map(tags, Tag::getId));
         }
+    }
+
+    public void setUuid(String uuid) {
+        this.uuid = UUID.fromString(uuid);
+    }
+
+    public void setUuid(UUID uuid) {
+        this.uuid = uuid;
     }
 
     public void setVersion(int version) {
@@ -286,6 +323,12 @@ public final class Project {
             ", lastModifiedBy='" + lastModifiedBy + '\'' +
             ", lastModifiedDate=" + lastModifiedDate +
             '}';
+    }
+
+    private ProjectVersion getMaxProjectVersion() {
+        return projectVersions.stream()
+            .max(Comparator.comparingInt(ProjectVersion::getVersion))
+            .orElseThrow();
     }
 
     @SuppressFBWarnings("EI")

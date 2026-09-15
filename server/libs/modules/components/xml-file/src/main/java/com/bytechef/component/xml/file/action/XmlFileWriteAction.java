@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,19 +16,21 @@
 
 package com.bytechef.component.xml.file.action;
 
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.array;
-import static com.bytechef.component.definition.ComponentDSL.fileEntry;
-import static com.bytechef.component.definition.ComponentDSL.integer;
-import static com.bytechef.component.definition.ComponentDSL.object;
-import static com.bytechef.component.definition.ComponentDSL.option;
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.array;
+import static com.bytechef.component.definition.ComponentDsl.fileEntry;
+import static com.bytechef.component.definition.ComponentDsl.object;
+import static com.bytechef.component.definition.ComponentDsl.option;
+import static com.bytechef.component.definition.ComponentDsl.outputSchema;
+import static com.bytechef.component.definition.ComponentDsl.string;
+import static com.bytechef.component.xml.file.constant.XmlFileConstants.FILENAME;
+import static com.bytechef.component.xml.file.constant.XmlFileConstants.SOURCE;
+import static com.bytechef.component.xml.file.constant.XmlFileConstants.TYPE;
 
 import com.bytechef.component.definition.ActionContext;
-import com.bytechef.component.definition.ComponentDSL.ModifiableActionDefinition;
+import com.bytechef.component.definition.ComponentDsl.ModifiableActionDefinition;
 import com.bytechef.component.definition.FileEntry;
 import com.bytechef.component.definition.Parameters;
-import com.bytechef.component.xml.file.constant.XmlFileConstants;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -41,39 +43,44 @@ import java.nio.charset.StandardCharsets;
  */
 public class XmlFileWriteAction {
 
-    public static final ModifiableActionDefinition ACTION_DEFINITION = action(XmlFileConstants.WRITE)
-        .title("Write to file")
+    private enum ValueType {
+
+        OBJECT, ARRAY;
+    }
+
+    public static final ModifiableActionDefinition ACTION_DEFINITION = action("write")
+        .title("Write to File")
         .description("Writes the data to a XML file.")
         .properties(
-            integer(XmlFileConstants.TYPE)
+            string(TYPE)
                 .label("Type")
                 .description("The value type.")
                 .options(
-                    option("Object", 1),
-                    option("Array", 2)),
-            object(XmlFileConstants.SOURCE)
+                    option("Object", ValueType.OBJECT.name()),
+                    option("Array", ValueType.ARRAY.name())),
+            object(SOURCE)
                 .label("Source")
                 .description("The object to write to the file.")
-                .displayCondition("type == 1")
+                .displayCondition("type == '%s'".formatted(ValueType.OBJECT.name()))
                 .required(true),
-            array(XmlFileConstants.SOURCE)
+            array(SOURCE)
                 .label("Source")
                 .description("The aray to write to the file.")
-                .displayCondition("type == 2")
+                .displayCondition("type == '%s'".formatted(ValueType.ARRAY.name()))
                 .required(true),
-            string(XmlFileConstants.FILENAME)
+            string(FILENAME)
                 .label("Filename")
                 .description("Filename to set for binary data. By default, \"file.xml\" will be used.")
                 .required(true)
                 .defaultValue("file.xml")
                 .advancedOption(true))
-        .outputSchema(fileEntry())
+        .output(outputSchema(fileEntry()))
         .perform(XmlFileWriteAction::perform);
 
     protected static FileEntry perform(
         Parameters inputParameters, Parameters connectionParameters, ActionContext context) throws IOException {
 
-        Object source = inputParameters.getRequired(XmlFileConstants.SOURCE);
+        Object source = inputParameters.getRequired(SOURCE);
         ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
 
         try (PrintWriter printWriter = new PrintWriter(byteArrayOutputStream, false, StandardCharsets.UTF_8)) {
@@ -82,7 +89,7 @@ public class XmlFileWriteAction {
 
         try (InputStream inputStream = new ByteArrayInputStream(byteArrayOutputStream.toByteArray())) {
             return context.file(file -> file.storeContent(
-                inputParameters.getString(XmlFileConstants.FILENAME, "file.xml"), inputStream));
+                inputParameters.getString(FILENAME, "file.xml"), inputStream));
         }
     }
 }

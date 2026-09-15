@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,36 +16,41 @@
 
 package com.bytechef.component.intercom.action;
 
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.object;
-import static com.bytechef.component.definition.ComponentDSL.option;
-import static com.bytechef.component.definition.ComponentDSL.string;
-import static com.bytechef.component.definition.Context.Http.Body;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.object;
+import static com.bytechef.component.definition.ComponentDsl.option;
+import static com.bytechef.component.definition.ComponentDsl.outputSchema;
+import static com.bytechef.component.definition.ComponentDsl.string;
 import static com.bytechef.component.definition.Context.Http.ResponseType;
 import static com.bytechef.component.definition.Context.Http.responseType;
-import static com.bytechef.component.intercom.constant.IntercomConstants.BASE_URL;
 import static com.bytechef.component.intercom.constant.IntercomConstants.BODY;
 import static com.bytechef.component.intercom.constant.IntercomConstants.FROM;
+import static com.bytechef.component.intercom.constant.IntercomConstants.ID;
 import static com.bytechef.component.intercom.constant.IntercomConstants.MESSAGE_TYPE;
 import static com.bytechef.component.intercom.constant.IntercomConstants.SUBJECT;
 import static com.bytechef.component.intercom.constant.IntercomConstants.TEMPLATE;
 import static com.bytechef.component.intercom.constant.IntercomConstants.TO;
+import static com.bytechef.component.intercom.constant.IntercomConstants.TYPE;
 
-import com.bytechef.component.definition.ActionContext;
-import com.bytechef.component.definition.ComponentDSL.ModifiableActionDefinition;
+import com.bytechef.component.definition.ActionDefinition.OptionsFunction;
+import com.bytechef.component.definition.ComponentDsl.ModifiableActionDefinition;
+import com.bytechef.component.definition.Context;
 import com.bytechef.component.definition.Context.ContextFunction;
 import com.bytechef.component.definition.Context.Http;
-import com.bytechef.component.definition.Context.TypeReference;
-import com.bytechef.component.definition.OptionsDataSource;
+import com.bytechef.component.definition.Context.Http.Body;
 import com.bytechef.component.definition.Parameters;
-import com.bytechef.component.intercom.constant.IntercomConstants;
-import com.bytechef.component.intercom.util.IntercomOptionUtils;
+import com.bytechef.component.definition.Property;
+import com.bytechef.component.definition.TypeReference;
 import com.bytechef.component.intercom.util.IntercomUtils;
 import java.util.Map;
 
+/**
+ * @author Luka Ljubić
+ * @author Monika Kušter
+ */
 public class IntercomSendMessageAction {
 
-    public static final ModifiableActionDefinition ACTION_DEFINITION = action(IntercomConstants.SEND_MESSAGE)
+    public static final ModifiableActionDefinition ACTION_DEFINITION = action("sendMessage")
         .title("Send Message")
         .description("Send a new message")
         .properties(
@@ -63,6 +68,7 @@ public class IntercomSendMessageAction {
                 .label("Content")
                 .description("Content of the message")
                 .maxLength(360)
+                .controlType(Property.ControlType.RICH_TEXT)
                 .required(true),
             string(TEMPLATE)
                 .options(option("Plain", "plain"), option("Personal", "personal"))
@@ -71,24 +77,35 @@ public class IntercomSendMessageAction {
                 .required(true),
             string(TO)
                 .label("To")
-                .description("Receiver of the message")
+                .description("ID of the contact to send the message to.")
                 .required(true)
-                .options(
-                    (OptionsDataSource.ActionOptionsFunction<String>) IntercomOptionUtils::getContactIdOptions))
-        .outputSchema(
-            object())
+                .options((OptionsFunction<String>) IntercomUtils::getContactIdOptions))
+        .output(
+            outputSchema(
+                object()
+                    .properties(
+                        string(TYPE)
+                            .description("The type of the message."),
+                        string(ID)
+                            .description("ID of the message."),
+                        string(SUBJECT)
+                            .description("The subject of the message."),
+                        string(BODY)
+                            .description("The message body, which may contain HTML."),
+                        string(MESSAGE_TYPE)
+                            .description("The type of message that was sent."),
+                        string("conversation_id")
+                            .description("The associated conversation_id."))))
         .perform(IntercomSendMessageAction::perform);
 
     protected static final ContextFunction<Http, Http.Executor> POST_MESSAGES_CONTEXT_FUNCTION =
-        http -> http.post(BASE_URL + "/messages");
+        http -> http.post("/messages");
 
-    public static Object perform(
-        Parameters inputParameters, Parameters connectionParameters, ActionContext actionContext) {
+    public static Object perform(Parameters inputParameters, Parameters connectionParameters, Context context) {
+        Map<String, String> fromData = IntercomUtils.getContactRole(inputParameters.getString(TO), context);
+        Map<String, String> toData = IntercomUtils.getAdminId(context);
 
-        Map<String, String> fromData = IntercomUtils.getContactRole(inputParameters.getString(TO), actionContext);
-        Map<String, String> toData = IntercomUtils.getAdminId(actionContext);
-
-        return actionContext.http(POST_MESSAGES_CONTEXT_FUNCTION)
+        return context.http(POST_MESSAGES_CONTEXT_FUNCTION)
             .body(
                 Body.of(
                     MESSAGE_TYPE, inputParameters.getRequiredString(MESSAGE_TYPE),

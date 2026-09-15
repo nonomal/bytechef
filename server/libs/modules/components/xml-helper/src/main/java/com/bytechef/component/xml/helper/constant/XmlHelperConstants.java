@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,8 +22,5 @@ package com.bytechef.component.xml.helper.constant;
 public class XmlHelperConstants {
 
     public static final String SOURCE = "source";
-    public static final String XML_HELPER = "xmlHelper";
-    public static final String PARSE = "parse";
-    public static final String STRINGIFY = "stringify";
     public static final String TYPE = "type";
 }

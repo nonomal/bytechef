@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,7 +26,6 @@ class GithubComponentHandlerTest {
 
     @Test
     void testGetComponentDefinition() {
-
         JsonFileAssert.assertEquals("definition/github_v1.json", new GithubComponentHandler().getDefinition());
     }
 }

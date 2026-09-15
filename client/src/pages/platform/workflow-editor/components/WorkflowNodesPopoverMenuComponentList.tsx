@@ -1,0 +1,276 @@
+import {Input} from '@/components/Input/Input';
+import LoadingIcon from '@/components/LoadingIcon';
+import WorkflowNodesTabs from '@/pages/platform/workflow-editor/components/workflow-nodes-tabs/WorkflowNodesTabs';
+import useWorkflowDataStore from '@/pages/platform/workflow-editor/stores/useWorkflowDataStore';
+import {TaskDispatcherDefinition} from '@/shared/middleware/platform/configuration';
+import {ComponentDefinitionWithActionsProps} from '@/shared/queries/platform/componentDefinitionsGraphQL.queries';
+import {useApplicationInfoStore} from '@/shared/stores/useApplicationInfoStore';
+import {useFeatureFlagsStore} from '@/shared/stores/useFeatureFlagsStore';
+import {ClickedDefinitionType, NodeDataType, UpdateWorkflowMutationType} from '@/shared/types';
+import {Node} from '@xyflow/react';
+import {memo, useMemo} from 'react';
+import {twMerge} from 'tailwind-merge';
+import {useShallow} from 'zustand/react/shallow';
+
+import {convertNameToSnakeCase} from '../../cluster-element-editor/utils/clusterElementsUtils';
+import {useFilteredComponentDefinitions} from '../hooks/useFilteredComponentDefinitions';
+
+interface WorkflowNodesListProps {
+    actionPanelOpen: boolean;
+    clusterElementType?: string;
+    edgeId?: string;
+    handleComponentClick?: (clickedItem: ClickedDefinitionType) => void;
+    hideActionComponents?: boolean;
+    hideClusterElementComponents?: boolean;
+    hideTriggerComponents?: boolean;
+    hideTaskDispatchers?: boolean;
+    onPasteClose?: () => void;
+    selectedComponentName?: string;
+    showPaste?: boolean;
+    sourceNodeId?: string;
+    updateWorkflowMutation?: UpdateWorkflowMutationType;
+}
+
+const hasClusterElementType = (component: ComponentDefinitionWithActionsProps, clusterElementType: string): boolean => {
+    const clusterTypeSnakeCase = convertNameToSnakeCase(clusterElementType);
+
+    const hasClusterElementsCount = component.clusterElementsCount?.[clusterTypeSnakeCase];
+
+    const hasClusterElements = component.clusterElements?.some(
+        (element) => element.type?.name === clusterTypeSnakeCase
+    );
+
+    return !!(hasClusterElementsCount || hasClusterElements);
+};
+
+const WorkflowNodesPopoverMenuComponentList = memo(
+    ({
+        actionPanelOpen,
+        clusterElementType,
+        edgeId,
+        handleComponentClick,
+        hideActionComponents = false,
+        hideClusterElementComponents = false,
+        hideTaskDispatchers = false,
+        hideTriggerComponents = false,
+        onPasteClose,
+        selectedComponentName,
+        showPaste = false,
+        sourceNodeId,
+        updateWorkflowMutation,
+    }: WorkflowNodesListProps) => {
+        const {componentDefinitions, taskDispatcherDefinitions} = useWorkflowDataStore(
+            useShallow((state) => ({
+                componentDefinitions: state.componentDefinitions,
+                taskDispatcherDefinitions: state.taskDispatcherDefinitions,
+            }))
+        );
+        const {nodes} = useWorkflowDataStore(useShallow((state) => ({nodes: state.nodes})));
+
+        const {componentsWithActions, filter, isSearchFetching, setFilter, trimmedFilter} =
+            useFilteredComponentDefinitions(componentDefinitions);
+
+        const getFeatureFlag = useFeatureFlagsStore();
+
+        const ff_797 = getFeatureFlag('ff-797');
+        const ff_3158 = getFeatureFlag('ff-3158');
+
+        const knowledgeBaseEnabled = useApplicationInfoStore((state) => state.ai.knowledgeBase.enabled);
+
+        const filteredActionComponentDefinitions = useMemo(() => {
+            if (!componentsWithActions) {
+                return [];
+            }
+
+            let actionComponents = componentsWithActions
+                .filter(({actionsCount}) => actionsCount && actionsCount > 0)
+                .filter(
+                    ({name}) =>
+                        ((!ff_797 && name !== 'dataStream') || ff_797) &&
+                        ((!ff_3158 && name !== 'claudeCode') || ff_3158) &&
+                        ((!knowledgeBaseEnabled && name !== 'knowledgeBase') || knowledgeBaseEnabled)
+                );
+
+            if (clusterElementType) {
+                actionComponents = actionComponents.filter((component) =>
+                    hasClusterElementType(component, clusterElementType)
+                );
+            }
+
+            return actionComponents;
+        }, [componentsWithActions, clusterElementType, ff_797, ff_3158, knowledgeBaseEnabled]);
+
+        const filteredTaskDispatcherDefinitions = useMemo(
+            () =>
+                filterTaskDispatcherDefinitions(taskDispatcherDefinitions, trimmedFilter, edgeId, sourceNodeId, nodes),
+            [taskDispatcherDefinitions, trimmedFilter, edgeId, sourceNodeId, nodes]
+        );
+
+        const filteredTriggerComponentDefinitions = useMemo(() => {
+            if (!componentsWithActions) {
+                return [];
+            }
+
+            let triggerComponents = componentsWithActions.filter(
+                ({triggersCount}) => triggersCount && triggersCount > 0
+            );
+
+            if (clusterElementType) {
+                triggerComponents = triggerComponents.filter((component) =>
+                    hasClusterElementType(component, clusterElementType)
+                );
+            }
+
+            return triggerComponents;
+        }, [componentsWithActions, clusterElementType]);
+
+        const filteredClusterElementComponentDefinitions = useMemo(() => {
+            if (!componentsWithActions || !clusterElementType) {
+                return [];
+            }
+
+            return componentsWithActions.filter((component) => hasClusterElementType(component, clusterElementType));
+        }, [componentsWithActions, clusterElementType]);
+
+        return (
+            <div className={twMerge('rounded-lg', actionPanelOpen ? 'w-node-popover-width' : 'w-full')}>
+                <header className="flex items-center gap-1 rounded-t-lg px-3 pt-3 text-center">
+                    <div className="relative w-full">
+                        <Input
+                            className={twMerge('bg-white shadow-none', isSearchFetching && 'pr-8')}
+                            id="filter-components"
+                            name="workflowNodeFilter"
+                            onChange={(event) => setFilter(event.target.value)}
+                            placeholder="Filter components"
+                            value={filter}
+                        />
+
+                        {isSearchFetching && (
+                            <span
+                                aria-label="Loading"
+                                className="absolute top-1/2 right-2 -translate-y-1/2"
+                                role="status"
+                            >
+                                <LoadingIcon className="text-content-neutral-secondary" />
+                            </span>
+                        )}
+                    </div>
+                </header>
+
+                <div className="h-96 rounded-b-lg pb-3">
+                    <WorkflowNodesTabs
+                        actionComponentDefinitions={filteredActionComponentDefinitions}
+                        clusterElementComponentDefinitions={filteredClusterElementComponentDefinitions}
+                        clusterElementType={clusterElementType}
+                        edgeId={edgeId}
+                        hideActionComponents={hideActionComponents}
+                        hideClusterElementComponents={hideClusterElementComponents}
+                        hideTaskDispatchers={hideTaskDispatchers}
+                        hideTriggerComponents={hideTriggerComponents}
+                        onItemClick={handleComponentClick}
+                        onPasteClose={onPasteClose}
+                        selectedComponentName={selectedComponentName}
+                        showPaste={showPaste}
+                        sourceNodeId={sourceNodeId}
+                        taskDispatcherDefinitions={filteredTaskDispatcherDefinitions}
+                        triggerComponentDefinitions={filteredTriggerComponentDefinitions}
+                        updateWorkflowMutation={updateWorkflowMutation}
+                    />
+                </div>
+            </div>
+        );
+    }
+);
+
+WorkflowNodesPopoverMenuComponentList.displayName = 'WorkflowNodesPopoverMenuList';
+
+export default WorkflowNodesPopoverMenuComponentList;
+
+const isLoopSubtask = (node?: Node) => !!node?.data?.loopData || !!node?.data.loopId;
+
+const isTaskDispatcherSubtask = (node?: Node) =>
+    !!node?.data?.loopData ||
+    !!node?.data?.conditionData ||
+    !!node?.data?.branchData ||
+    !!node?.data?.parallelData ||
+    !!node?.data?.eachData ||
+    !!node?.data?.forkJoinData ||
+    !!node?.data?.onErrorData ||
+    !!node?.data?.terminateData;
+
+const filterTaskDispatcherDefinitions = (
+    taskDispatcherDefinitions: Array<TaskDispatcherDefinition> | null,
+    filter: string,
+    edgeId?: string,
+    sourceNodeId?: string,
+    nodes: Node[] = []
+) => {
+    if (!taskDispatcherDefinitions) {
+        return [];
+    }
+
+    const nodeId = sourceNodeId || edgeId?.split('=>')[0];
+
+    if (!nodeId) {
+        return taskDispatcherDefinitions;
+    }
+
+    const filteredBySearch = taskDispatcherDefinitions.filter(
+        ({name, title}) =>
+            name?.toLowerCase().includes(filter.toLowerCase()) || title?.toLowerCase().includes(filter.toLowerCase())
+    );
+
+    const result = [...filteredBySearch];
+
+    if (nodeId.startsWith('loop_') && nodeId.includes('placeholder')) {
+        return result;
+    }
+
+    const sourceNode = nodes.find((node) => node.id === nodeId);
+
+    if (!sourceNode) {
+        return result.filter(({name}) => name !== 'loopBreak');
+    }
+
+    let hasLoopTaskDispatcher = false;
+
+    if (isLoopSubtask(sourceNode)) {
+        hasLoopTaskDispatcher = true;
+    } else {
+        let currentNode = sourceNode;
+
+        while (currentNode) {
+            let parentId;
+
+            const currentNodeData = currentNode.data as NodeDataType;
+
+            if (currentNode.data.workflowNodeName) {
+                parentId =
+                    currentNodeData.conditionData?.conditionId ||
+                    currentNodeData.onErrorData?.onErrorId ||
+                    currentNodeData.branchData?.branchId;
+            } else {
+                parentId = currentNodeData.conditionId || currentNodeData.onErrorId || currentNodeData.branchId;
+            }
+
+            const parentNode = nodes.find((node) => node.id === parentId);
+
+            if (!parentNode || !isTaskDispatcherSubtask(parentNode)) {
+                break;
+            }
+
+            if (isLoopSubtask(parentNode)) {
+                hasLoopTaskDispatcher = true;
+                break;
+            }
+
+            currentNode = parentNode;
+        }
+    }
+
+    if (!hasLoopTaskDispatcher) {
+        return result.filter(({name}) => name !== 'loopBreak');
+    }
+
+    return result;
+};

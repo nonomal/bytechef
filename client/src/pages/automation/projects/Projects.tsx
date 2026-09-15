@@ -1,19 +1,33 @@
+import Button from '@/components/Button/Button';
+import EmptyFilterResult from '@/components/EmptyFilterResult';
 import EmptyList from '@/components/EmptyList';
 import PageLoader from '@/components/PageLoader';
-import {Button} from '@/components/ui/button';
+import {ButtonGroup} from '@/components/ui/button-group';
+import {DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger} from '@/components/ui/dropdown-menu';
+import {useGetWorkspaceProjectGitConfigurationsQuery} from '@/ee/shared/mutations/automation/projectGit.queries';
+import handleImportProject from '@/pages/automation/project/utils/handleImportProject';
+import ProjectsFilterTitle from '@/pages/automation/projects/components/ProjectsFilterTitle';
 import {useWorkspaceStore} from '@/pages/automation/stores/useWorkspaceStore';
+import useButtonGroupDropdownAlign from '@/shared/hooks/useButtonGroupDropdownAlign';
+import CategoryTagLeftSidebarNav from '@/shared/layout/CategoryTagLeftSidebarNav';
 import Header from '@/shared/layout/Header';
 import LayoutContainer from '@/shared/layout/LayoutContainer';
-import {LeftSidebarNav, LeftSidebarNavItem} from '@/shared/layout/LeftSidebarNav';
+import {useImportProjectMutation} from '@/shared/mutations/automation/projects.mutations';
+import {useGetComponentDefinitionsQuery} from '@/shared/queries/automation/componentDefinitions.queries';
 import {useGetProjectCategoriesQuery} from '@/shared/queries/automation/projectCategories.queries';
 import {useGetProjectTagsQuery} from '@/shared/queries/automation/projectTags.queries';
-import {useGetWorkspaceProjectsQuery} from '@/shared/queries/automation/projects.queries';
-import {FolderIcon, TagIcon} from 'lucide-react';
-import {useState} from 'react';
+import {ProjectKeys, useGetWorkspaceProjectsQuery} from '@/shared/queries/automation/projects.queries';
+import {useGetTaskDispatcherDefinitionsQuery} from '@/shared/queries/platform/taskDispatcherDefinitions.queries';
+import {useApplicationInfoStore} from '@/shared/stores/useApplicationInfoStore';
+import {useFeatureFlagsStore} from '@/shared/stores/useFeatureFlagsStore';
+import {useQueryClient} from '@tanstack/react-query';
+import {ChevronDownIcon, FolderIcon, LayoutTemplateIcon, UploadIcon} from 'lucide-react';
+import {useRef, useState} from 'react';
 import {useNavigate, useSearchParams} from 'react-router-dom';
+import {toast} from 'sonner';
 
 import ProjectDialog from './components/ProjectDialog';
-import ProjectList from './components/ProjectList';
+import ProjectList from './components/project-list/ProjectList';
 
 export enum Type {
     Category,
@@ -21,24 +35,55 @@ export enum Type {
 }
 
 const Projects = () => {
+    const [newlyCreatedProjectId, setNewlyCreatedProjectId] = useState<number | undefined>();
+
+    const application = useApplicationInfoStore((state) => state.application);
+    const currentWorkspaceId = useWorkspaceStore((state) => state.currentWorkspaceId);
+
     const [searchParams] = useSearchParams();
-
-    const defaultCurrentState = {
-        id: searchParams.get('categoryId')
-            ? parseInt(searchParams.get('categoryId')!)
-            : searchParams.get('tagId')
-              ? parseInt(searchParams.get('tagId')!)
-              : undefined,
-        type: searchParams.get('tagId') ? Type.Tag : Type.Category,
-    };
-
-    const [filterData, setFilterData] = useState<{id?: number; type: Type}>(defaultCurrentState);
-
-    const {currentWorkspaceId} = useWorkspaceStore();
-
+    const fileInputRef = useRef<HTMLInputElement>(null);
     const navigate = useNavigate();
 
-    const {data: categories, error: categoriesError, isLoading: categoriesIsLoading} = useGetProjectCategoriesQuery();
+    const {alignOffset, buttonGroupRef, dropdownMenuTriggerRef, handleOpenChange} = useButtonGroupDropdownAlign();
+
+    const queryClient = useQueryClient();
+
+    const importProjectMutation = useImportProjectMutation({
+        onSuccess: () => {
+            queryClient.invalidateQueries({queryKey: ProjectKeys.projects});
+
+            toast('Project is imported.');
+        },
+    });
+
+    const ff_1039 = useFeatureFlagsStore()('ff-1039');
+
+    const categoryId = searchParams.get('categoryId');
+    const tagId = searchParams.get('tagId');
+
+    const filterData = {
+        id: categoryId ? parseInt(categoryId) : tagId ? parseInt(tagId) : undefined,
+        type: tagId ? Type.Tag : Type.Category,
+    };
+
+    const isFiltered = filterData.id !== undefined;
+
+    const {data: componentDefinitions} = useGetComponentDefinitionsQuery({
+        actionDefinitions: true,
+        triggerDefinitions: true,
+    });
+
+    const {
+        data: categories,
+        error: categoriesError,
+        isLoading: categoriesIsLoading,
+    } = useGetProjectCategoriesQuery(currentWorkspaceId!);
+
+    const {
+        data: projectGitConfigurations,
+        error: projectGitConfigurationsError,
+        isLoading: projectGitConfigurationsIsLoading,
+    } = useGetWorkspaceProjectGitConfigurationsQuery(currentWorkspaceId!, ff_1039 && application?.edition === 'EE');
 
     const {
         data: projects,
@@ -50,15 +95,19 @@ const Projects = () => {
         tagId: searchParams.get('tagId') ? parseInt(searchParams.get('tagId')!) : undefined,
     });
 
+    const isRefetchingProjects =
+        queryClient.isFetching({
+            exact: true,
+            queryKey: ProjectKeys.filteredProjects({
+                categoryId: searchParams.get('categoryId') ? parseInt(searchParams.get('categoryId')!) : undefined,
+                id: currentWorkspaceId!,
+                tagId: searchParams.get('tagId') ? parseInt(searchParams.get('tagId')!) : undefined,
+            }),
+        }) > 0;
+
     const {data: tags, error: tagsError, isLoading: tagsIsLoading} = useGetProjectTagsQuery();
 
-    let pageTitle: string | undefined;
-
-    if (filterData.type === Type.Category) {
-        pageTitle = categories?.find((category) => category.id === filterData.id)?.name;
-    } else {
-        pageTitle = tags?.find((tag) => tag.id === filterData.id)?.name;
-    }
+    const {data: taskDispatcherDefinitions} = useGetTaskDispatcherDefinitionsQuery();
 
     return (
         <LayoutContainer
@@ -69,122 +118,105 @@ const Projects = () => {
                         centerTitle={true}
                         position="main"
                         right={
-                            <ProjectDialog
-                                onClose={(project) => {
-                                    if (project) {
-                                        navigate(
-                                            `/automation/projects/${project?.id}/project-workflows/${project?.projectWorkflowIds![0]}`
-                                        );
+                            <ButtonGroup>
+                                <ProjectDialog
+                                    onSuccess={(projectId) => projectId && setNewlyCreatedProjectId(projectId)}
+                                    project={undefined}
+                                    triggerNode={
+                                        <Button
+                                            aria-label="Create Project"
+                                            onSelect={(event) => event.preventDefault()}
+                                        >
+                                            New Project
+                                        </Button>
                                     }
-                                }}
-                                project={undefined}
-                                triggerNode={<Button>New Project</Button>}
-                            />
+                                />
+
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button>
+                                            <ChevronDownIcon />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+
+                                    <DropdownMenuContent align="end">
+                                        <DropdownMenuItem onClick={() => navigate(`templates`)}>
+                                            <LayoutTemplateIcon className="mr-2 size-4" />
+                                            From Template
+                                        </DropdownMenuItem>
+
+                                        <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>
+                                            <UploadIcon className="mr-2 size-4" />
+                                            Import Project
+                                        </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            </ButtonGroup>
                         }
-                        title={
-                            !pageTitle
-                                ? 'All Projects'
-                                : `Filter by ${searchParams.get('tagId') ? 'tag' : 'category'}: ${pageTitle}`
-                        }
+                        title={<ProjectsFilterTitle categories={categories} filterData={filterData} tags={tags} />}
                     />
                 )
             }
             leftSidebarBody={
-                <>
-                    <LeftSidebarNav
-                        body={
-                            <>
-                                <LeftSidebarNavItem
-                                    item={{
-                                        current: !filterData?.id && filterData.type === Type.Category,
-                                        name: 'All Categories',
-                                        onItemClick: (id?: number | string) => {
-                                            setFilterData({
-                                                id: id as number,
-                                                type: Type.Category,
-                                            });
-                                        },
-                                    }}
-                                />
-
-                                {!categoriesIsLoading &&
-                                    categories?.map((item) => (
-                                        <LeftSidebarNavItem
-                                            item={{
-                                                current:
-                                                    filterData?.id === item.id && filterData.type === Type.Category,
-                                                id: item.id,
-                                                name: item.name,
-                                                onItemClick: (id?: number | string) => {
-                                                    setFilterData({
-                                                        id: id as number,
-                                                        type: Type.Category,
-                                                    });
-                                                },
-                                            }}
-                                            key={item.name}
-                                            toLink={`?categoryId=${item.id}`}
-                                        />
-                                    ))}
-                            </>
-                        }
-                        title="Categories"
-                    />
-
-                    <LeftSidebarNav
-                        body={
-                            <>
-                                {!tagsIsLoading &&
-                                    (tags?.length ? (
-                                        tags?.map((item) => (
-                                            <LeftSidebarNavItem
-                                                icon={<TagIcon className="mr-1 size-4" />}
-                                                item={{
-                                                    current: filterData?.id === item.id && filterData.type === Type.Tag,
-                                                    id: item.id!,
-                                                    name: item.name,
-                                                    onItemClick: (id?: number | string) => {
-                                                        setFilterData({
-                                                            id: id as number,
-                                                            type: Type.Tag,
-                                                        });
-                                                    },
-                                                }}
-                                                key={item.id}
-                                                toLink={`?tagId=${item.id}`}
-                                            />
-                                        ))
-                                    ) : (
-                                        <span className="px-3 text-xs">No defined tags.</span>
-                                    ))}
-                            </>
-                        }
-                        title="Tags"
-                    />
-                </>
+                <CategoryTagLeftSidebarNav
+                    categories={categories}
+                    categoriesIsLoading={categoriesIsLoading}
+                    currentCategoryId={categoryId ? parseInt(categoryId) : undefined}
+                    currentTagId={tagId ? parseInt(tagId) : undefined}
+                    tags={tags}
+                    tagsClassName="mb-0"
+                    tagsEmptyMessage="No defined tags."
+                    tagsIsLoading={tagsIsLoading}
+                />
             }
             leftSidebarHeader={<Header position="sidebar" title="Projects" />}
+            leftSidebarWidth="64"
         >
             <PageLoader
-                errors={[categoriesError, projectsError, tagsError]}
-                loading={categoriesIsLoading || projectsIsLoading || tagsIsLoading}
+                errors={[categoriesError, projectGitConfigurationsError, projectsError, tagsError]}
+                loading={categoriesIsLoading || projectGitConfigurationsIsLoading || projectsIsLoading || tagsIsLoading}
             >
-                {projects && projects?.length > 0 ? (
-                    projects && tags && <ProjectList projects={projects} tags={tags} />
+                {projects && projects?.length > 0 && tags ? (
+                    <ProjectList
+                        componentDefinitions={componentDefinitions}
+                        isRefetchingProjects={isRefetchingProjects}
+                        newlyCreatedProjectId={newlyCreatedProjectId}
+                        projectGitConfigurations={projectGitConfigurations ?? []}
+                        projects={projects}
+                        tags={tags}
+                        taskDispatcherDefinitions={taskDispatcherDefinitions}
+                    />
+                ) : isFiltered ? (
+                    <EmptyFilterResult entityName="projects" entityTitle="Projects" />
                 ) : (
                     <EmptyList
                         button={
-                            <ProjectDialog
-                                onClose={(project) => {
-                                    if (project) {
-                                        navigate(
-                                            `/automation/projects/${project?.id}/project-workflows/${project?.projectWorkflowIds![0]}`
-                                        );
-                                    }
-                                }}
-                                project={undefined}
-                                triggerNode={<Button>Create Project</Button>}
-                            />
+                            <ButtonGroup className="mx-auto" ref={buttonGroupRef}>
+                                <ProjectDialog
+                                    onSuccess={(projectId) => projectId && setNewlyCreatedProjectId(projectId)}
+                                    project={undefined}
+                                    triggerNode={<Button aria-label="Create Project" label="Create Project" />}
+                                />
+
+                                <DropdownMenu onOpenChange={handleOpenChange}>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button ref={dropdownMenuTriggerRef}>
+                                            <ChevronDownIcon />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+
+                                    <DropdownMenuContent align="start" alignOffset={alignOffset}>
+                                        <DropdownMenuItem onClick={() => navigate(`templates`)}>
+                                            <LayoutTemplateIcon className="mr-2 size-4" />
+                                            From Template
+                                        </DropdownMenuItem>
+
+                                        <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>
+                                            <UploadIcon className="mr-2 size-4" /> Import Project
+                                        </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            </ButtonGroup>
                         }
                         icon={<FolderIcon className="size-24 text-gray-300" />}
                         message="Get started by creating a new project."
@@ -192,6 +224,14 @@ const Projects = () => {
                     />
                 )}
             </PageLoader>
+
+            <input
+                accept=".zip"
+                onChange={(event) => handleImportProject(event, currentWorkspaceId!, importProjectMutation)}
+                ref={fileInputRef}
+                style={{display: 'none'}}
+                type="file"
+            />
         </LayoutContainer>
     );
 };

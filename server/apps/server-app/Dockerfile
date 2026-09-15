@@ -1,27 +1,21 @@
 # docker/dockerfile:1
-FROM ghcr.io/graalvm/graalvm-community:21.0.2  AS bytechef-base
+FROM ghcr.io/graalvm/graalvm-community:25.0.2  AS bytechef-server-base
 
-ARG ARG_APPLICATION_HOME=/opt/bytechef
-
-ENV ENV_JVM_MEMORY_OPTS="-Xms1G -Xmx2G"
-
-RUN mkdir ${ARG_APPLICATION_HOME}
-RUN mkdir ${ARG_APPLICATION_HOME}/server
-RUN mkdir ${ARG_APPLICATION_HOME}/server/tmp
-RUN mkdir ${ARG_APPLICATION_HOME}/server/logs
+RUN mkdir /opt/bytechef
+RUN mkdir /opt/bytechef/server
+RUN mkdir /opt/bytechef/server/tmp
+RUN mkdir /opt/bytechef/server/logs
+RUN mkdir /opt/bytechef/external_jars
+RUN mkdir /opt/bytechef/tls
+RUN mkdir /opt/bytechef/tls/bytechef
+RUN mkdir /opt/bytechef/tls/trusted
 
 WORKDIR /opt/bytechef
 
-COPY build/libs/server-app.jar server/
+COPY build/libs/server-app*.jar server/server-app.jar
+COPY docker-entrypoint.sh docker-entrypoint.sh
+RUN chmod +x docker-entrypoint.sh
 
-ENTRYPOINT exec \
-     java \
-     -Dfile.encoding=UTF-8 -Duser.timezone=GMT \
-     -Djava.io.tmpdir=/opt/bytechef/server/tmp \
-     -Dserver.tomcat.basedir=/opt/bytechef/server \
-     -Dserver.tomcat.accesslog.directory=/opt/bytechef/server/logs${ENV_JVM_MEMORY_OPTS:+ $ENV_JVM_MEMORY_OPTS} \
-     -jar server/server-app.jar
+ENTRYPOINT ["./docker-entrypoint.sh"]
 
-EXPOSE 9555
-
-FROM bytechef-base AS bytechef-server
+FROM bytechef-server-base AS bytechef-server

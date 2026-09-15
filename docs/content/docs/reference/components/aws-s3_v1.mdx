@@ -1,0 +1,282 @@
+---
+title: "AWS S3"
+description: "AWS S3 is a simple object storage service provided by Amazon Web Services."
+---
+
+
+Categories: Developer Tools, File Storage
+
+
+Type: awsS3/v1
+
+<hr />
+
+
+
+
+## Connections
+
+Version: 1
+
+
+### custom
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| accessKeyId | Access Key ID | STRING |  | true |
+| secretAccessKey | Secret Access Key | STRING |  | true |
+| region | | STRING <details> <summary> Options </summary> <span>us-east-1</span>, <span>us-east-2</span>, <span>us-west-1</span>, <span>us-west-2</span>, <span>ca-central-1</span>, <span>ap-east-1</span>, <span>ap-south-1</span>, <span>ap-south-2</span>, <span>ap-northeast-3</span>, <span>ap-northeast-2</span>, <span>ap-southeast-1</span>, <span>ap-southeast-2</span>, <span>ap-southeast-3</span>, <span>ap-southeast-4</span>, <span>ap-northeast-1</span>, <span>me-south-1</span>, <span>me-central-1</span>, <span>eu-central-1</span>, <span>eu-central-2</span>, <span>eu-west-1</span>, <span>eu-west-2</span>, <span>eu-south-1</span>, <span>eu-south-2</span>, <span>eu-west-3</span>, <span>eu-north-1</span>, <span>af-south-1</span>, <span>sa-east-1</span>, <span>cn-north-1</span>, <span>cn-northwest-1</span> </details> |  | true |
+| bucketName | Bucket | STRING |  | true |
+
+
+
+
+
+
+<hr />
+
+
+## Actions
+
+
+### Get Object
+Name: getObject
+
+`Get the AWS S3 object.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| filename | Filename | STRING | Filename to set for binary data. | true |
+| key | Key | STRING | Key is most likely the name of the file. | true |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Get Object",
+  "name" : "getObject",
+  "parameters" : {
+    "filename" : "",
+    "key" : ""
+  },
+  "type" : "awsS3/v1/getObject"
+}
+```
+
+#### Output
+
+
+
+Type: FILE_ENTRY
+
+
+#### Properties
+
+|     Name     |     Type     |     Description     |
+|:------------:|:------------:|:-------------------:|
+| extension | STRING |  |
+| mimeType | STRING |  |
+| name | STRING |  |
+| url | STRING |  |
+
+
+
+
+#### Output Example
+```json
+{
+  "extension" : "",
+  "mimeType" : "",
+  "name" : "",
+  "url" : ""
+}
+```
+
+
+
+
+### Get URL
+Name: getUrl
+
+`Get the url of an AWS S3 object.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| key | Key or Entity Tag (Etag) | STRING | Key is most likely the name of the file. | true |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Get URL",
+  "name" : "getUrl",
+  "parameters" : {
+    "key" : ""
+  },
+  "type" : "awsS3/v1/getUrl"
+}
+```
+
+#### Output
+
+
+___Sample Output:___
+
+```https://s3.amazonaws.com/bucket-name/key```
+
+
+
+Type: STRING
+
+
+
+
+
+
+
+
+
+
+### List Objects
+Name: listObjects
+
+`Get the list AWS S3 objects. Every object needs to have read permission in order to be seen.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| prefix | Key Prefix | STRING | The prefix of an AWS S3 object key. | false |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "List Objects",
+  "name" : "listObjects",
+  "parameters" : {
+    "prefix" : ""
+  },
+  "type" : "awsS3/v1/listObjects"
+}
+```
+
+#### Output
+
+
+
+Type: ARRAY
+
+
+Items Type: OBJECT
+
+
+#### Properties
+|     Name     |     Type     |     Description     |
+|:------------:|:------------:|:-------------------:|
+| key | STRING |  |
+| name | STRING |  |
+| uri | STRING |  |
+
+
+
+
+
+#### Output Example
+```json
+[ {
+  "key" : "",
+  "name" : "",
+  "uri" : ""
+} ]
+```
+
+
+
+
+### Get Pre-signed Object
+Name: presignGetObject
+
+`You can share an object with a pre-signed URL for up to 12 hours or until your session expires.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| key | Key | STRING | Key is most likely the name of the file. | true |
+| signatureDuration | Signature Duration | STRING | Time interval until the pre-signed URL expires | true |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Get Pre-signed Object",
+  "name" : "presignGetObject",
+  "parameters" : {
+    "key" : "",
+    "signatureDuration" : ""
+  },
+  "type" : "awsS3/v1/presignGetObject"
+}
+```
+
+#### Output
+
+
+
+Type: STRING
+
+
+
+
+
+
+
+
+
+
+### Put Object
+Name: putObject
+
+`Store an object to AWS S3.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| fileEntry | File Entry | FILE_ENTRY | The object property which contains a reference to the file that needs to be written to AWS S3. | true |
+| key | Key | STRING | Key is most likely the name of the file. | true |
+| acl | ACL | STRING <details> <summary> Options </summary> <span>authenticated-read</span>, <span>aws-exec-read</span>, <span>bucket-owner-read</span>, <span>bucket-owner-full-control</span>, <span>private</span>, <span>public-read</span>, <span>public-read-write</span> </details> | The canned ACL to apply to the object. | false |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Put Object",
+  "name" : "putObject",
+  "parameters" : {
+    "fileEntry" : {
+      "extension" : "",
+      "mimeType" : "",
+      "name" : "",
+      "url" : ""
+    },
+    "key" : "",
+    "acl" : ""
+  },
+  "type" : "awsS3/v1/putObject"
+}
+```
+
+#### Output
+
+This action does not produce any output.
+
+
+
+
+
+
+
+

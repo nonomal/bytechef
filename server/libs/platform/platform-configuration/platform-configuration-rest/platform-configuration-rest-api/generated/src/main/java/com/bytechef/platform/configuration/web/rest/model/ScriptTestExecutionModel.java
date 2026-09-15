@@ -6,6 +6,7 @@ import com.bytechef.platform.configuration.web.rest.model.ExecutionErrorModel;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import org.springframework.lang.Nullable;
 import org.openapitools.jackson.nullable.JsonNullable;
 import java.time.OffsetDateTime;
 import jakarta.validation.Valid;
@@ -22,14 +23,14 @@ import jakarta.annotation.Generated;
 
 @Schema(name = "ScriptTestExecution", description = "Contains information about test execution of a script.")
 @JsonTypeName("ScriptTestExecution")
-@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2024-06-30T07:20:54.243996+02:00[Europe/Zagreb]", comments = "Generator version: 7.5.0")
+@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2026-07-03T17:58:15.504637+02:00[Europe/Zagreb]", comments = "Generator version: 7.22.0")
 public class ScriptTestExecutionModel {
 
-  private ExecutionErrorModel error;
+  private @Nullable ExecutionErrorModel error;
 
-  private Object output;
+  private @Nullable Object output;
 
-  public ScriptTestExecutionModel error(ExecutionErrorModel error) {
+  public ScriptTestExecutionModel error(@Nullable ExecutionErrorModel error) {
     this.error = error;
     return this;
   }
@@ -37,19 +38,20 @@ public class ScriptTestExecutionModel {
   /**
    * Get error
    * @return error
-  */
+   */
   @Valid 
   @Schema(name = "error", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("error")
-  public ExecutionErrorModel getError() {
+  public @Nullable ExecutionErrorModel getError() {
     return error;
   }
 
-  public void setError(ExecutionErrorModel error) {
+  @JsonProperty("error")
+  public void setError(@Nullable ExecutionErrorModel error) {
     this.error = error;
   }
 
-  public ScriptTestExecutionModel output(Object output) {
+  public ScriptTestExecutionModel output(@Nullable Object output) {
     this.output = output;
     return this;
   }
@@ -57,15 +59,16 @@ public class ScriptTestExecutionModel {
   /**
    * The result output of testing a script.
    * @return output
-  */
+   */
   
   @Schema(name = "output", description = "The result output of testing a script.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("output")
-  public Object getOutput() {
+  public @Nullable Object getOutput() {
     return output;
   }
 
-  public void setOutput(Object output) {
+  @JsonProperty("output")
+  public void setOutput(@Nullable Object output) {
     this.output = output;
   }
 
@@ -101,11 +104,8 @@ public class ScriptTestExecutionModel {
    * Convert the given object to string with each line indented by 4 spaces
    * (except the first line).
    */
-  private String toIndentedString(Object o) {
-    if (o == null) {
-      return "null";
-    }
-    return o.toString().replace("\n", "\n    ");
+  private String toIndentedString(@Nullable Object o) {
+    return o == null ? "null" : o.toString().replace("\n", "\n    ");
   }
 }
 

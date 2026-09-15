@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,14 +17,17 @@
 package com.bytechef.component.pipeliner.action;
 
 import static com.bytechef.component.OpenApiComponentHandler.PropertyType;
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.bool;
-import static com.bytechef.component.definition.ComponentDSL.object;
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.bool;
+import static com.bytechef.component.definition.ComponentDsl.object;
+import static com.bytechef.component.definition.ComponentDsl.outputSchema;
+import static com.bytechef.component.definition.ComponentDsl.string;
 import static com.bytechef.component.definition.Context.Http.BodyContentType;
 import static com.bytechef.component.definition.Context.Http.ResponseType;
 
-import com.bytechef.component.definition.ComponentDSL;
+import com.bytechef.component.definition.ActionDefinition;
+import com.bytechef.component.definition.ComponentDsl;
+import com.bytechef.component.pipeliner.util.PipelinerUtils;
 import java.util.Map;
 
 /**
@@ -33,35 +36,43 @@ import java.util.Map;
  * @generated
  */
 public class PipelinerCreateAccountAction {
-    public static final ComponentDSL.ModifiableActionDefinition ACTION_DEFINITION = action("createAccount")
-        .title("Create account")
-        .description("Creates new account")
+    public static final ComponentDsl.ModifiableActionDefinition ACTION_DEFINITION = action("createAccount")
+        .title("Create Account")
+        .description("Creates new account.")
         .metadata(
             Map.of(
                 "method", "POST",
                 "path", "/entities/Accounts", "bodyContentType", BodyContentType.JSON, "mimeType", "application/json"
 
             ))
-        .properties(object("__item").properties(string("owner_id").label("Owner Id")
-            .description("User in Pipeliner Application that will become the owner of the newly created Account.")
-            .required(true),
-            string("name").label("Name")
+        .properties(string("owner_id").metadata(
+            Map.of(
+                "type", PropertyType.BODY))
+            .label("Owner ID")
+            .description(
+                "Id of the user in Pipeliner Application that will become the owner of the newly created account.")
+            .required(true)
+            .options((ActionDefinition.OptionsFunction<String>) PipelinerUtils::getOwnerIdOptions),
+            string("name").metadata(
+                Map.of(
+                    "type", PropertyType.BODY))
+                .label("Name")
                 .description("Account name")
                 .required(true))
-            .label("Account")
-            .required(true)
+        .output(outputSchema(object()
+            .properties(bool("success").description("True when response succeeded, false on error.")
+                .required(false),
+                object("data").properties(string("id").description("ID of the account.")
+                    .required(false),
+                    string("owner_id")
+                        .description("ID of the user in Pipeliner Application that is the owner of the account.")
+                        .required(false),
+                    string("name").description("Account name.")
+                        .required(false))
+                    .required(false))
             .metadata(
                 Map.of(
-                    "type", PropertyType.BODY)))
-        .outputSchema(object().properties(bool("success").description("True when response succeeded, false on error.")
-            .required(false),
-            object("data")
-                .properties(string("id").required(false), string("owner_id").required(false),
-                    string("name").required(false))
-                .required(false))
-            .metadata(
-                Map.of(
-                    "responseType", ResponseType.JSON)));
+                    "responseType", ResponseType.JSON))));
 
     private PipelinerCreateAccountAction() {
     }

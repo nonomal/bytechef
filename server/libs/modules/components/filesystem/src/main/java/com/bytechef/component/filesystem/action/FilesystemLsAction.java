@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,18 +16,18 @@
 
 package com.bytechef.component.filesystem.action;
 
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.array;
-import static com.bytechef.component.definition.ComponentDSL.bool;
-import static com.bytechef.component.definition.ComponentDSL.integer;
-import static com.bytechef.component.definition.ComponentDSL.object;
-import static com.bytechef.component.definition.ComponentDSL.string;
-import static com.bytechef.component.filesystem.constant.FilesystemConstants.LS;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.array;
+import static com.bytechef.component.definition.ComponentDsl.bool;
+import static com.bytechef.component.definition.ComponentDsl.integer;
+import static com.bytechef.component.definition.ComponentDsl.object;
+import static com.bytechef.component.definition.ComponentDsl.outputSchema;
+import static com.bytechef.component.definition.ComponentDsl.string;
 import static com.bytechef.component.filesystem.constant.FilesystemConstants.PATH;
 import static com.bytechef.component.filesystem.constant.FilesystemConstants.RECURSIVE;
 
-import com.bytechef.component.definition.ActionContext;
-import com.bytechef.component.definition.ComponentDSL.ModifiableActionDefinition;
+import com.bytechef.component.definition.ComponentDsl.ModifiableActionDefinition;
+import com.bytechef.component.definition.Context;
 import com.bytechef.component.definition.Parameters;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.io.File;
@@ -41,11 +41,13 @@ import java.util.stream.Stream;
 import org.apache.commons.lang3.Validate;
 
 /**
+ * Filesystem list action for workflow automation. Lists files and directories at a specified path.
+ *
  * @author Ivica Cardic
  */
 public class FilesystemLsAction {
 
-    public static final ModifiableActionDefinition ACTION_DEFINITION = action(LS)
+    public static final ModifiableActionDefinition ACTION_DEFINITION = action("ls")
         .title("List")
         .description("Lists the content of a directory for the given path.")
         .properties(
@@ -57,21 +59,31 @@ public class FilesystemLsAction {
                 .label("Recursive")
                 .description("Should the subdirectories be included?")
                 .defaultValue(false))
-        .outputSchema(
-            array()
-                .items(
-                    object()
-                        .properties(
-                            string("fileName"),
-                            string("relativePath"),
-                            integer("size"))))
+        .output(
+            outputSchema(
+                array()
+                    .items(
+                        object()
+                            .properties(
+                                string("filename")
+                                    .description("Name of the file."),
+                                string("relativePath")
+                                    .description("Relative path of the file."),
+                                integer("size")
+                                    .description("Size of the file.")))))
         .perform(FilesystemLsAction::perform);
 
     private FilesystemLsAction() {
     }
 
+    /**
+     * Security Note: PATH_TRAVERSAL_IN - Path traversal is intentional. The Filesystem component allows workflow
+     * creators to list files/directories. Access is controlled through workflow-level permissions. The path is provided
+     * by the workflow creator, not end users.
+     */
+    @SuppressFBWarnings("PATH_TRAVERSAL_IN")
     protected static List<FileInfo> perform(
-        Parameters inputParameters, Parameters connectionParameters, ActionContext context) throws IOException {
+        Parameters inputParameters, Parameters connectionParameters, Context context) throws IOException {
 
         Path root = Paths.get(inputParameters.getRequiredString(PATH));
         boolean recursive = inputParameters.getBoolean(RECURSIVE, false);
@@ -102,31 +114,11 @@ public class FilesystemLsAction {
             String.valueOf(path.getFileName()), String.valueOf(root.relativize(path)), file.length());
     }
 
-    public static class FileInfo {
-        private final String fileName;
-        private final String relativePath;
-        private final long size;
+    public record FileInfo(String filename, String relativePath, long size) {
 
-        @SuppressFBWarnings("CT_CONSTRUCTOR_THROW")
-        public FileInfo(String fileName, String relativePath, long size) {
-            Validate.notNull(fileName, "fileName is required");
+        public FileInfo {
+            Validate.notNull(filename, "fileName is required");
             Validate.notNull(relativePath, "relativePath is required");
-
-            this.fileName = fileName;
-            this.relativePath = relativePath;
-            this.size = size;
-        }
-
-        public String getFilename() {
-            return fileName;
-        }
-
-        public String getRelativePath() {
-            return relativePath;
-        }
-
-        public long getSize() {
-            return size;
         }
     }
 }

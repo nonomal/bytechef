@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * Modifications copyright (C) 2023 ByteChef Inc.
+ * Modifications copyright (C) 2025 ByteChef
  */
 
 package com.bytechef.task.dispatcher.parallel;
@@ -24,6 +24,7 @@ import static com.bytechef.task.dispatcher.parallel.constants.ParallelTaskDispat
 import com.bytechef.atlas.configuration.domain.Task;
 import com.bytechef.atlas.configuration.domain.WorkflowTask;
 import com.bytechef.atlas.coordinator.event.TaskExecutionCompleteEvent;
+import com.bytechef.atlas.coordinator.task.dispatcher.ErrorHandlingTaskDispatcher;
 import com.bytechef.atlas.coordinator.task.dispatcher.TaskDispatcher;
 import com.bytechef.atlas.coordinator.task.dispatcher.TaskDispatcherResolver;
 import com.bytechef.atlas.execution.domain.Context;
@@ -34,13 +35,13 @@ import com.bytechef.atlas.execution.service.TaskExecutionService;
 import com.bytechef.atlas.file.storage.TaskFileStorage;
 import com.bytechef.commons.util.MapUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import java.time.LocalDateTime;
-import java.util.Collections;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import org.apache.commons.lang3.Validate;
 import org.springframework.context.ApplicationEventPublisher;
+import tools.jackson.core.type.TypeReference;
 
 /**
  * A {@link TaskDispatcher} implementation which implements the parallel construct. Providing a list of
@@ -50,47 +51,60 @@ import org.springframework.context.ApplicationEventPublisher;
  * @author Arik Cohen
  * @since May 12, 2017
  */
-public class ParallelTaskDispatcher implements TaskDispatcher<TaskExecution>, TaskDispatcherResolver {
+public class ParallelTaskDispatcher extends ErrorHandlingTaskDispatcher implements TaskDispatcherResolver {
 
-    private final ApplicationEventPublisher eventPublisher;
     private final ContextService contextService;
     private final CounterService counterService;
+    private final ApplicationEventPublisher eventPublisher;
     private final TaskDispatcher<? super Task> taskDispatcher;
     private final TaskExecutionService taskExecutionService;
     private final TaskFileStorage taskFileStorage;
 
     @SuppressFBWarnings("EI")
     public ParallelTaskDispatcher(
-        ApplicationEventPublisher eventPublisher, ContextService contextService,
-        CounterService counterService, TaskDispatcher<? super Task> taskDispatcher,
-        TaskExecutionService taskExecutionService, TaskFileStorage taskFileStorage) {
+        ContextService contextService, CounterService counterService, ApplicationEventPublisher eventPublisher,
+        TaskDispatcher<? super Task> taskDispatcher, TaskExecutionService taskExecutionService,
+        TaskFileStorage taskFileStorage) {
 
-        this.eventPublisher = eventPublisher;
+        super(eventPublisher);
+
         this.contextService = contextService;
         this.counterService = counterService;
+        this.eventPublisher = eventPublisher;
         this.taskDispatcher = taskDispatcher;
         this.taskExecutionService = taskExecutionService;
         this.taskFileStorage = taskFileStorage;
     }
 
     @Override
-    public void dispatch(TaskExecution taskExecution) {
+    public void doDispatch(TaskExecution taskExecution) {
         List<WorkflowTask> workflowTasks = Validate.notNull(
-            MapUtils.getList(taskExecution.getParameters(), TASKS, WorkflowTask.class, Collections.emptyList()),
+            MapUtils
+                .getList(
+                    taskExecution.getParameters(), TASKS, new TypeReference<Map<String, ?>>() {}, List.of())
+                .stream()
+                .map(WorkflowTask::new)
+                .toList(),
             "'workflowTasks' property must not be null");
 
         if (workflowTasks.isEmpty()) {
-            taskExecution.setStartDate(LocalDateTime.now());
-            taskExecution.setEndDate(LocalDateTime.now());
+            taskExecution.setStartDate(Instant.now());
+            taskExecution.setEndDate(Instant.now());
             taskExecution.setExecutionTime(0);
 
             eventPublisher.publishEvent(new TaskExecutionCompleteEvent(taskExecution));
         } else {
+            taskExecution.setStartDate(Instant.now());
+            taskExecution.setStatus(TaskExecution.Status.STARTED);
+
+            taskExecution = taskExecutionService.update(taskExecution);
+
             counterService.set(Validate.notNull(taskExecution.getId(), "id"), workflowTasks.size());
 
             for (WorkflowTask workflowTask : workflowTasks) {
                 TaskExecution parallelTaskExecution = TaskExecution.builder()
                     .jobId(taskExecution.getJobId())
+                    .maxRetries(workflowTask.getMaxRetries())
                     .parentId(taskExecution.getId())
                     .priority(taskExecution.getPriority())
                     .workflowTask(workflowTask)

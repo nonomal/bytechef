@@ -1,0 +1,666 @@
+---
+title: "Zendesk"
+description: "Zendesk is a customer service and sales platform that helps businesses manage customer interactions across various channels."
+---
+
+
+Categories: Surveys and Feedback
+
+
+Type: zendesk/v1
+
+<hr />
+
+
+
+
+## Connections
+
+Version: 1
+
+
+### basic_auth
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| api_token | API Token | STRING | API tokens are managed in the Admin Center interface at Apps and integrations &gt; APIs &gt; API Tokens. | true |
+| email | Email | STRING | Your Zendesk account email. | true |
+| subdomain | Subdomain | STRING | Subdomain of your Zendesk account (e.g. https://SUBDOMAIN.zendesk.com). | true |
+
+
+
+## Connection Setup
+
+### Create API Token
+
+1. Login to your Zendesk dashboard.
+2. Click on **Support**.
+3. Click on **Admin center**.
+4. Click on **Apps and integrations**.
+5. Click on **API configuration**.
+6. Enable **Allow password access for end users** and **Allow API token access**.
+7. Click on **Save**.
+8. Click on **API tokens**.
+9. Click on **Add API token**.
+10. Enter token name.
+11. Click on **Save**.
+12. Click on **Copy**.
+13. Click on **Save**.
+14. Done 🚀
+
+
+<div style={{ position: 'relative', height:0, width: '100%', overflow: 'hidden', zIndex: 49, boxSizing: 'border-box', paddingBottom: 'calc(50.05219207% + 32px)'}}>
+    <iframe src="https://www.guidejar.com/embed/04987993-f02f-4a65-9cab-fd9e9a393f67?type=1&controls=on" width="100%" height="100%" style={{height:'100%', position:'absolute', inset:0}} allowFullScreen frameBorder="0"></iframe>
+</div>
+
+
+
+<hr />
+
+
+## Actions
+
+
+### Add Comment to Ticket
+Name: commentTicket
+
+`Adds a comment to an existing ticket.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| ticketId | Ticket ID | INTEGER | ID of the ticket that will get the comment. | true |
+| comment | Comment | STRING | A ticket comment. | true |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Add Comment to Ticket",
+  "name" : "commentTicket",
+  "parameters" : {
+    "ticketId" : 1,
+    "comment" : ""
+  },
+  "type" : "zendesk/v1/commentTicket"
+}
+```
+
+#### Output
+
+
+
+Type: OBJECT
+
+
+#### Properties
+
+|     Name     |     Type     |     Description     |
+|:------------:|:------------:|:-------------------:|
+| url | STRING | API URL of the ticket resource. |
+| id | INTEGER | Ticket ID. |
+| external_id | INTEGER | External ID of the ticket. |
+| via | OBJECT <details> <summary> Properties </summary> &#123;STRING\(channel), &#123;&#123;&#125;\(from), &#123;&#125;\(to), &#123;&#125;\(rel)&#125;\(source)&#125; </details> | Information for how the ticket was created. |
+| created_at | STRING | Timestamp when the ticket was created. |
+| updated_at | STRING | Timestamp of the last update to the ticket. |
+| generated_timestamp | INTEGER | UNIX timestamp when the ticket was generated. |
+| type | STRING | Type of the ticket. |
+| subject | STRING | Subject line of the ticket. |
+| raw_subject | STRING | Unprocessed subject line of the ticket. |
+| description | STRING | Detailed description of the ticket issue. |
+| priority | STRING | Priority of the ticket. |
+| status | STRING | Current status of the ticket. |
+| recipient | STRING | Email address of the ticket recipient. |
+| requester_id | INTEGER | ID of the user who requested the ticket. |
+| submitter_id | INTEGER | ID of the user who submitted the ticket. |
+| assignee_id | INTEGER | ID of the agent assigned to the ticket. |
+| organization_id | INTEGER | ID of the organization associated with the requester. |
+| group_id | INTEGER | ID of the group associated with the ticket. |
+| collaborator_ids | ARRAY <details> <summary> Items </summary> [INTEGER] </details> | List of user IDs who are collaborators on the ticket. |
+| follower_ids | ARRAY <details> <summary> Items </summary> [INTEGER] </details> | List of user IDs following the ticket. |
+| email_cc_ids | ARRAY <details> <summary> Items </summary> [] </details> | List of ticket CCs user IDs. |
+| forum_topic_ids | ARRAY <details> <summary> Items </summary> [] </details> | List of forum ID topics. |
+| problem_id | INTEGER | ID of the problem the ticket is linked to. |
+| has_incidents | BOOLEAN <details> <summary> Options </summary> <span>true</span>, <span>false</span> </details> | Whether the ticket has related incidents. |
+| is_public | BOOLEAN <details> <summary> Options </summary> <span>true</span>, <span>false</span> </details> | Whether the ticket is public. |
+| due_at | STRING | Due date for the ticket, if any. |
+| tags | ARRAY <details> <summary> Items </summary> [STRING] </details> | List of tags associated with the ticket. |
+| custom_fields | ARRAY <details> <summary> Items </summary> [&#123;INTEGER\(id), STRING\(value)&#125;] </details> | Custom field values associated with the ticket. |
+| satisfaction_rating | OBJECT <details> <summary> Properties </summary> &#123;STRING\(comment), INTEGER\(id), STRING\(score)&#125; </details> | Customer satisfaction rating for the ticket. |
+| sharing_agreement_ids | ARRAY <details> <summary> Items </summary> [INTEGER\($id)] </details> | List of sharing agreement IDs for the ticket. |
+| custom_status_id | INTEGER | Custom status ID for the ticket. |
+| encoded_id | STRING | Encoded ticket ID. |
+| fields | ARRAY <details> <summary> Items </summary> [&#123;INTEGER\(id), STRING\(value)&#125;\($item)] </details> | Ticket fields. |
+| followup_ids | ARRAY <details> <summary> Items </summary> [] </details> | Array of follow up IDs. |
+| ticket_form_id | INTEGER | Ticket form ID. |
+| brand_id | INTEGER | Brand ID. |
+| allow_channelback | BOOLEAN <details> <summary> Options </summary> <span>true</span>, <span>false</span> </details> | Whether channelback is allowed for the ticket. |
+| allow_attachments | BOOLEAN <details> <summary> Options </summary> <span>true</span>, <span>false</span> </details> | Whether attachments are allowed for the ticket. |
+| from_messaging_channel | BOOLEAN <details> <summary> Options </summary> <span>true</span>, <span>false</span> </details> | Indicates if the ticket originated from a messaging channel. |
+
+
+
+
+#### Output Example
+```json
+{
+  "url" : "",
+  "id" : 1,
+  "external_id" : 1,
+  "via" : {
+    "channel" : "",
+    "source" : {
+      "from" : { },
+      "to" : { },
+      "rel" : { }
+    }
+  },
+  "created_at" : "",
+  "updated_at" : "",
+  "generated_timestamp" : 1,
+  "type" : "",
+  "subject" : "",
+  "raw_subject" : "",
+  "description" : "",
+  "priority" : "",
+  "status" : "",
+  "recipient" : "",
+  "requester_id" : 1,
+  "submitter_id" : 1,
+  "assignee_id" : 1,
+  "organization_id" : 1,
+  "group_id" : 1,
+  "collaborator_ids" : [ 1 ],
+  "follower_ids" : [ 1 ],
+  "email_cc_ids" : [ ],
+  "forum_topic_ids" : [ ],
+  "problem_id" : 1,
+  "has_incidents" : false,
+  "is_public" : false,
+  "due_at" : "",
+  "tags" : [ "" ],
+  "custom_fields" : [ {
+    "id" : 1,
+    "value" : ""
+  } ],
+  "satisfaction_rating" : {
+    "comment" : "",
+    "id" : 1,
+    "score" : ""
+  },
+  "sharing_agreement_ids" : [ 1 ],
+  "custom_status_id" : 1,
+  "encoded_id" : "",
+  "fields" : [ {
+    "id" : 1,
+    "value" : ""
+  } ],
+  "followup_ids" : [ ],
+  "ticket_form_id" : 1,
+  "brand_id" : 1,
+  "allow_channelback" : false,
+  "allow_attachments" : false,
+  "from_messaging_channel" : false
+}
+```
+
+#### Finding Your Ticket ID
+
+1. Open the ticket in Zendesk
+2. Look at the URL in your browser's address bar.
+3. The ticket ID is the number that appears at the end of the URL, after `/tickets/`.
+
+**Example:**
+
+```
+https://bytechefsupport.zendesk.com/agent/tickets/4
+```
+
+In this example, the ticket ID is **4**.
+
+
+
+### Create Organization
+Name: createOrganization
+
+`Creates an organization.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| name | Name | STRING | Name of the organization. | true |
+| details | Details | STRING | Any details about the organization, such as the address. | false |
+| domain_names | Domain Names | ARRAY <details> <summary> Items </summary> [STRING\($domain_name)] </details> | An array of domain names associated with this organization. | true |
+| notes | Notes | STRING | Any notes you have about the organization. | false |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Create Organization",
+  "name" : "createOrganization",
+  "parameters" : {
+    "name" : "",
+    "details" : "",
+    "domain_names" : [ "" ],
+    "notes" : ""
+  },
+  "type" : "zendesk/v1/createOrganization"
+}
+```
+
+#### Output
+
+
+
+Type: OBJECT
+
+
+#### Properties
+
+|     Name     |     Type     |     Description     |
+|:------------:|:------------:|:-------------------:|
+| url | STRING | URL of the created organization. |
+| id | STRING | Organization ID. |
+| name | STRING | Organization name. |
+| shared_tickets | BOOLEAN <details> <summary> Options </summary> <span>true</span>, <span>false</span> </details> | Whether the organization can share tickets. |
+| shared_comments | BOOLEAN <details> <summary> Options </summary> <span>true</span>, <span>false</span> </details> | Whether the organization can share comments. |
+| external_id | INTEGER | External ID of the organization. |
+| created_at | STRING | Date when the organization was created. |
+| updated_at | STRING | Date when the organization was last updated. |
+| domain_names | ARRAY <details> <summary> Items </summary> [STRING] </details> | Array of domain names of the organization. |
+| detail | STRING | Details about the organization. |
+| notes | STRING | Notes about the organization. |
+| group_id | INTEGER | Group ID of the organization. |
+| tags | ARRAY <details> <summary> Items </summary> [STRING] </details> | Tags of the organization. |
+| organization_fields | OBJECT <details> <summary> Properties </summary> &#123;&#125; </details> | Custom organization fields of the organization. |
+
+
+
+
+#### Output Example
+```json
+{
+  "url" : "",
+  "id" : "",
+  "name" : "",
+  "shared_tickets" : false,
+  "shared_comments" : false,
+  "external_id" : 1,
+  "created_at" : "",
+  "updated_at" : "",
+  "domain_names" : [ "" ],
+  "detail" : "",
+  "notes" : "",
+  "group_id" : 1,
+  "tags" : [ "" ],
+  "organization_fields" : { }
+}
+```
+
+
+
+
+### Create Ticket
+Name: createTicket
+
+`Creates a ticket.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| subject | Subject | STRING | Subject of the ticket. | false |
+| type | Type | STRING <details> <summary> Options </summary> <span>problem</span>, <span>incident</span>, <span>question</span>, <span>task</span> </details> | Type of the ticket. | false |
+| comment | Comment | STRING | Comment of the ticket. | true |
+| priority | Priority | STRING <details> <summary> Options </summary> <span>low</span>, <span>normal</span>, <span>high</span>, <span>urgent</span> </details> | Priority of the ticket. | false |
+| status | Status | STRING <details> <summary> Options </summary> <span>new</span>, <span>open</span>, <span>pending</span>, <span>hold</span>, <span>solved</span>, <span>closed</span> </details> | Status of the ticket. | false |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Create Ticket",
+  "name" : "createTicket",
+  "parameters" : {
+    "subject" : "",
+    "type" : "",
+    "comment" : "",
+    "priority" : "",
+    "status" : ""
+  },
+  "type" : "zendesk/v1/createTicket"
+}
+```
+
+#### Output
+
+
+
+Type: OBJECT
+
+
+#### Properties
+
+|     Name     |     Type     |     Description     |
+|:------------:|:------------:|:-------------------:|
+| url | STRING | API URL of the ticket resource. |
+| id | INTEGER | Ticket ID. |
+| external_id | INTEGER | External ID of the ticket. |
+| via | OBJECT <details> <summary> Properties </summary> &#123;STRING\(channel), &#123;&#123;&#125;\(from), &#123;&#125;\(to), &#123;&#125;\(rel)&#125;\(source)&#125; </details> | Information for how the ticket was created. |
+| created_at | STRING | Timestamp when the ticket was created. |
+| updated_at | STRING | Timestamp of the last update to the ticket. |
+| generated_timestamp | INTEGER | UNIX timestamp when the ticket was generated. |
+| type | STRING | Type of the ticket. |
+| subject | STRING | Subject line of the ticket. |
+| raw_subject | STRING | Unprocessed subject line of the ticket. |
+| description | STRING | Detailed description of the ticket issue. |
+| priority | STRING | Priority of the ticket. |
+| status | STRING | Current status of the ticket. |
+| recipient | STRING | Email address of the ticket recipient. |
+| requester_id | INTEGER | ID of the user who requested the ticket. |
+| submitter_id | INTEGER | ID of the user who submitted the ticket. |
+| assignee_id | INTEGER | ID of the agent assigned to the ticket. |
+| organization_id | INTEGER | ID of the organization associated with the requester. |
+| group_id | INTEGER | ID of the group associated with the ticket. |
+| collaborator_ids | ARRAY <details> <summary> Items </summary> [INTEGER] </details> | List of user IDs who are collaborators on the ticket. |
+| follower_ids | ARRAY <details> <summary> Items </summary> [INTEGER] </details> | List of user IDs following the ticket. |
+| email_cc_ids | ARRAY <details> <summary> Items </summary> [] </details> | List of ticket CCs user IDs. |
+| forum_topic_ids | ARRAY <details> <summary> Items </summary> [] </details> | List of forum ID topics. |
+| problem_id | INTEGER | ID of the problem the ticket is linked to. |
+| has_incidents | BOOLEAN <details> <summary> Options </summary> <span>true</span>, <span>false</span> </details> | Whether the ticket has related incidents. |
+| is_public | BOOLEAN <details> <summary> Options </summary> <span>true</span>, <span>false</span> </details> | Whether the ticket is public. |
+| due_at | STRING | Due date for the ticket, if any. |
+| tags | ARRAY <details> <summary> Items </summary> [STRING] </details> | List of tags associated with the ticket. |
+| custom_fields | ARRAY <details> <summary> Items </summary> [&#123;INTEGER\(id), STRING\(value)&#125;] </details> | Custom field values associated with the ticket. |
+| satisfaction_rating | OBJECT <details> <summary> Properties </summary> &#123;STRING\(comment), INTEGER\(id), STRING\(score)&#125; </details> | Customer satisfaction rating for the ticket. |
+| sharing_agreement_ids | ARRAY <details> <summary> Items </summary> [INTEGER\($id)] </details> | List of sharing agreement IDs for the ticket. |
+| custom_status_id | INTEGER | Custom status ID for the ticket. |
+| encoded_id | STRING | Encoded ticket ID. |
+| fields | ARRAY <details> <summary> Items </summary> [&#123;INTEGER\(id), STRING\(value)&#125;\($item)] </details> | Ticket fields. |
+| followup_ids | ARRAY <details> <summary> Items </summary> [] </details> | Array of follow up IDs. |
+| ticket_form_id | INTEGER | Ticket form ID. |
+| brand_id | INTEGER | Brand ID. |
+| allow_channelback | BOOLEAN <details> <summary> Options </summary> <span>true</span>, <span>false</span> </details> | Whether channelback is allowed for the ticket. |
+| allow_attachments | BOOLEAN <details> <summary> Options </summary> <span>true</span>, <span>false</span> </details> | Whether attachments are allowed for the ticket. |
+| from_messaging_channel | BOOLEAN <details> <summary> Options </summary> <span>true</span>, <span>false</span> </details> | Indicates if the ticket originated from a messaging channel. |
+
+
+
+
+#### Output Example
+```json
+{
+  "url" : "",
+  "id" : 1,
+  "external_id" : 1,
+  "via" : {
+    "channel" : "",
+    "source" : {
+      "from" : { },
+      "to" : { },
+      "rel" : { }
+    }
+  },
+  "created_at" : "",
+  "updated_at" : "",
+  "generated_timestamp" : 1,
+  "type" : "",
+  "subject" : "",
+  "raw_subject" : "",
+  "description" : "",
+  "priority" : "",
+  "status" : "",
+  "recipient" : "",
+  "requester_id" : 1,
+  "submitter_id" : 1,
+  "assignee_id" : 1,
+  "organization_id" : 1,
+  "group_id" : 1,
+  "collaborator_ids" : [ 1 ],
+  "follower_ids" : [ 1 ],
+  "email_cc_ids" : [ ],
+  "forum_topic_ids" : [ ],
+  "problem_id" : 1,
+  "has_incidents" : false,
+  "is_public" : false,
+  "due_at" : "",
+  "tags" : [ "" ],
+  "custom_fields" : [ {
+    "id" : 1,
+    "value" : ""
+  } ],
+  "satisfaction_rating" : {
+    "comment" : "",
+    "id" : 1,
+    "score" : ""
+  },
+  "sharing_agreement_ids" : [ 1 ],
+  "custom_status_id" : 1,
+  "encoded_id" : "",
+  "fields" : [ {
+    "id" : 1,
+    "value" : ""
+  } ],
+  "followup_ids" : [ ],
+  "ticket_form_id" : 1,
+  "brand_id" : 1,
+  "allow_channelback" : false,
+  "allow_attachments" : false,
+  "from_messaging_channel" : false
+}
+```
+
+
+
+
+### Create User
+Name: createUser
+
+`Creates a user.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| name | Name | STRING | The name of the user. | true |
+| email | Email | STRING | The email address of the user. | true |
+| role | Role | STRING <details> <summary> Options </summary> <span>admin</span>, <span>agent</span>, <span>end-user</span> </details> | The role that will be assigned to new user. | false |
+| skip_verify_email | Skip Verify Email | BOOLEAN <details> <summary> Options </summary> <span>true</span>, <span>false</span> </details> | Whether a verification mail will be sent to the new user. | false |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Create User",
+  "name" : "createUser",
+  "parameters" : {
+    "name" : "",
+    "email" : "",
+    "role" : "",
+    "skip_verify_email" : false
+  },
+  "type" : "zendesk/v1/createUser"
+}
+```
+
+#### Output
+
+
+
+Type: OBJECT
+
+
+#### Properties
+
+|     Name     |     Type     |     Description     |
+|:------------:|:------------:|:-------------------:|
+| id | INTEGER | Automatically assigned when the user is created |
+| url | STRING | The user's API url |
+| name | STRING | The user's name |
+| email | STRING | The user's primary email address. *Writeable on create only. On update, a secondary email is added. See Email Address |
+| created_at | STRING | The time the user was created |
+| updated_at | STRING | The time the user was last updated |
+| time_zone | STRING | The user's time zone. See Time Zone |
+| iana_time_zone | STRING | The time zone for the user |
+| phone | STRING | The user's primary phone number. See Phone Number below |
+| shared_phone_number | BOOLEAN <details> <summary> Options </summary> <span>true</span>, <span>false</span> </details> | Whether the phone number is shared or not. See Phone Number below |
+| photo | OBJECT <details> <summary> Properties </summary> &#123;&#125; </details> | The user's profile picture represented as an Attachment object |
+| locale_id | INTEGER | The user's language identifier |
+| locale | STRING | The user's locale. A BCP-47 compliant tag for the locale. If both "locale" and "locale_id" are present on create or update, "locale_id" is ignored and only "locale" is used. |
+| organization_id | INTEGER | The id of the user's organization. If the user has more than one organization memberships, the id of the user's default organization. If updating, see Organization ID |
+| role | STRING | The user's role. Possible values are "end-user", "agent", or "admin" |
+| verified | BOOLEAN <details> <summary> Options </summary> <span>true</span>, <span>false</span> </details> | Any of the user's identities is verified. See User Identities |
+| last_active | STRING | Last time the user was active. |
+| external_id | STRING | A unique identifier from another system. The API treats the id as case insensitive. Example: "ian1" and "IAN1" are the same value. |
+| tags | ARRAY <details> <summary> Items </summary> [STRING] </details> | The user's tags. Only present if your account has user tagging enabled |
+| alias | STRING | An alias displayed to end users |
+| active | BOOLEAN <details> <summary> Options </summary> <span>true</span>, <span>false</span> </details> | false if the user has been deleted |
+| shared | BOOLEAN <details> <summary> Options </summary> <span>true</span>, <span>false</span> </details> | If the user is shared from a different Zendesk Support instance. Shared users can be added to organizations but cannot be modified through update requests. Any attempt to update a shared user results in a 403 Forbidden error. Ticket sharing accounts only |
+| shared_agent | BOOLEAN <details> <summary> Options </summary> <span>true</span>, <span>false</span> </details> | If the user is a shared agent from a different Zendesk Support instance. Ticket sharing accounts only |
+| last_login_at | STRING | Last time the user signed in to Zendesk Support or made an API request using an API token |
+| two_factor_auth_enabled | BOOLEAN <details> <summary> Options </summary> <span>true</span>, <span>false</span> </details> | If two factor authentication is enabled |
+| signature | STRING | The user's signature. Only agents and admins can have signatures |
+| details | STRING | Any details you want to store about the user, such as an address |
+| notes | STRING | Any notes you want to store about the user |
+| role_type | INTEGER | The user's role id. 0 for a custom agent, 1 for a light agent, 2 for a chat agent, 3 for a chat agent added to the Support account as a contributor (Chat Phase 4), 4 for an admin, and 5 for a billing admin |
+| custom_role_id | INTEGER | A custom role if the user is an agent on the Enterprise plan or above |
+| is_billing_admin | BOOLEAN <details> <summary> Options </summary> <span>true</span>, <span>false</span> </details> | Whether the user is a billing admin. |
+| moderator | BOOLEAN <details> <summary> Options </summary> <span>true</span>, <span>false</span> </details> | Designates whether the user has forum moderation capabilities |
+| ticket_restriction | STRING | Specifies which tickets the user has access to. Possible values are: "organization", "groups", "assigned", "requested", null. "groups" and "assigned" are valid only for agents. If you pass an invalid value to an end user (for example, "groups"), they will be assigned to "requested", regardless of their previous access |
+| only_private_comments | BOOLEAN <details> <summary> Options </summary> <span>true</span>, <span>false</span> </details> | true if the user can only create private comments |
+| restricted_agent | BOOLEAN <details> <summary> Options </summary> <span>true</span>, <span>false</span> </details> | If the agent has any restrictions; false for admins and unrestricted agents, true for other agents |
+| suspended | BOOLEAN <details> <summary> Options </summary> <span>true</span>, <span>false</span> </details> | If the agent is suspended. Tickets from suspended users are also suspended, and these users cannot sign in to the end user portal |
+| default_group_id | INTEGER | The id of the user's default group |
+| report_csv | BOOLEAN <details> <summary> Options </summary> <span>true</span>, <span>false</span> </details> | This parameter is inert and has no effect. It may be deprecated in the future. Previously, this parameter determined whether a user could access a CSV report in a legacy Guide dashboard. This dashboard has been removed. See Announcing Guide legacy reporting upgrade to Explore |
+| user_fields | OBJECT <details> <summary> Properties </summary> &#123;&#125; </details> | Values of custom fields in the user's profile. See User Fields |
+| suspension_details | OBJECT <details> <summary> Properties </summary> &#123;&#125; </details> | Channel-level suspension state for the user. The value is null if the user has no active channel-level suspension |
+
+
+
+
+#### Output Example
+```json
+{
+  "id" : 1,
+  "url" : "",
+  "name" : "",
+  "email" : "",
+  "created_at" : "",
+  "updated_at" : "",
+  "time_zone" : "",
+  "iana_time_zone" : "",
+  "phone" : "",
+  "shared_phone_number" : false,
+  "photo" : { },
+  "locale_id" : 1,
+  "locale" : "",
+  "organization_id" : 1,
+  "role" : "",
+  "verified" : false,
+  "last_active" : "",
+  "external_id" : "",
+  "tags" : [ "" ],
+  "alias" : "",
+  "active" : false,
+  "shared" : false,
+  "shared_agent" : false,
+  "last_login_at" : "",
+  "two_factor_auth_enabled" : false,
+  "signature" : "",
+  "details" : "",
+  "notes" : "",
+  "role_type" : 1,
+  "custom_role_id" : 1,
+  "is_billing_admin" : false,
+  "moderator" : false,
+  "ticket_restriction" : "",
+  "only_private_comments" : false,
+  "restricted_agent" : false,
+  "suspended" : false,
+  "default_group_id" : 1,
+  "report_csv" : false,
+  "user_fields" : { },
+  "suspension_details" : { }
+}
+```
+
+
+
+
+
+## Triggers
+
+
+### New Ticket
+Name: newTicket
+
+`Triggers when a new ticket is submitted.`
+
+Type: DYNAMIC_WEBHOOK
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| name | Webhook Name | STRING | Name of the webhook. | true |
+
+
+#### Output
+
+
+
+Type: OBJECT
+
+
+#### Properties
+
+|     Name     |     Type     |     Description     |
+|:------------:|:------------:|:-------------------:|
+| actor_id | STRING | ID of the actor that triggered the webhook. |
+| assignee_id | STRING | ID of the agent assigned to the ticket. |
+| brand_id | STRING | Brand ID. |
+| created_at | STRING | Timestamp when the ticket was created. |
+| custom_status | INTEGER | Custom status of the ticket. |
+| description | STRING | Detailed description of the ticket issue. |
+| external_id | STRING | External ID of the ticket. |
+| form_id | STRING | Form ID. |
+| group_id | STRING | ID of the group associated with the ticket. |
+| id | STRING | Ticket ID. |
+| is_public | BOOLEAN <details> <summary> Options </summary> <span>true</span>, <span>false</span> </details> | Whether the ticket is public. |
+| organization_id | STRING | ID of the organization associated with the requester. |
+| priority | STRING | Priority of the ticket. |
+| requester_id | STRING | ID of the user who requested the ticket. |
+| status | STRING | Current status of the ticket. |
+| subject | STRING | Subject line of the ticket. |
+| submitter_id | STRING | ID of the user who submitted the ticket. |
+| tags | ARRAY <details> <summary> Items </summary> [STRING] </details> | List of tags associated with the ticket. |
+| type | STRING | Type of the ticket. |
+| updated_at | STRING | Timestamp of the last update to the ticket. |
+| via | OBJECT <details> <summary> Properties </summary> &#123;STRING\(channel), &#123;&#123;&#125;\(from), &#123;&#125;\(to), &#123;&#125;\(rel)&#125;\(source)&#125; </details> | Information for how the ticket was created. |
+
+
+
+
+#### JSON Example
+```json
+{
+  "label" : "New Ticket",
+  "name" : "newTicket",
+  "parameters" : {
+    "name" : ""
+  },
+  "type" : "zendesk/v1/newTicket"
+}
+```
+
+
+
+
+
+## What to do if your action is not listed here?
+
+If this component doesn't have the action you need, you can use **Custom Action** to create your own. Custom Actions empower you to define HTTP requests tailored to your specific requirements, allowing for greater flexibility in integrating with external services or APIs.
+
+To create a Custom Action, simply specify the desired HTTP method, path, and any necessary parameters. This way, you can extend the functionality of your component beyond the predefined actions, ensuring that you can meet all your integration needs effectively.
+

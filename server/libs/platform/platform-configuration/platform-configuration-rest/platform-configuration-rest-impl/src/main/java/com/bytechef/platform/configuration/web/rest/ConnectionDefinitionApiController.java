@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,8 @@
 
 package com.bytechef.platform.configuration.web.rest;
 
-import com.bytechef.platform.component.registry.service.ConnectionDefinitionService;
+import com.bytechef.atlas.coordinator.annotation.ConditionalOnCoordinator;
+import com.bytechef.platform.component.service.ConnectionDefinitionService;
 import com.bytechef.platform.configuration.web.rest.model.ConnectionDefinitionBasicModel;
 import com.bytechef.platform.configuration.web.rest.model.ConnectionDefinitionModel;
 import java.util.List;
@@ -30,6 +31,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @RestController
 @RequestMapping("${openapi.openAPIDefinition.base-path.platform:}/internal")
+@ConditionalOnCoordinator
 public class ConnectionDefinitionApiController implements ConnectionDefinitionApi {
 
     private final ConnectionDefinitionService connectionDefinitionService;

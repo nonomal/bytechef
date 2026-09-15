@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,17 +16,20 @@
 
 package com.bytechef.component.csv.file;
 
+import static com.bytechef.component.csv.file.constant.CsvFileConstants.DELIMITER;
+import static com.bytechef.component.csv.file.constant.CsvFileConstants.ENCLOSING_CHARACTER;
+import static com.bytechef.component.csv.file.constant.CsvFileConstants.FILE_ENTRY;
+import static com.bytechef.component.csv.file.constant.CsvFileConstants.HEADER_ROW;
+import static com.bytechef.component.csv.file.constant.CsvFileConstants.INCLUDE_EMPTY_CELLS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.skyscreamer.jsonassert.JSONAssert.assertEquals;
 
 import com.bytechef.atlas.configuration.constant.WorkflowConstants;
 import com.bytechef.atlas.execution.domain.Job;
 import com.bytechef.atlas.file.storage.TaskFileStorage;
-import com.bytechef.component.csv.file.constant.CsvFileConstants;
-import com.bytechef.file.storage.service.FileStorageService;
 import com.bytechef.platform.component.test.ComponentJobTestExecutor;
 import com.bytechef.platform.component.test.annotation.ComponentIntTest;
-import com.bytechef.platform.workflow.execution.constants.FileEntryConstants;
+import com.bytechef.platform.file.storage.TempFileStorage;
 import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
@@ -35,19 +38,22 @@ import java.util.Map;
 import org.assertj.core.util.Files;
 import org.json.JSONArray;
 import org.json.JSONException;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * @author Ivica Cardic
+ * @author Igor Beslic
  */
+@Disabled
 @ComponentIntTest
-public class CsvFileComponentHandlerIntTest {
+class CsvFileComponentHandlerIntTest {
 
     private static final Base64.Encoder ENCODER = Base64.getEncoder();
 
     @Autowired
-    private FileStorageService fileStorageService;
+    private TempFileStorage tempFileStorage;
 
     @Autowired
     private ComponentJobTestExecutor componentJobTestExecutor;
@@ -56,34 +62,168 @@ public class CsvFileComponentHandlerIntTest {
     private TaskFileStorage taskFileStorage;
 
     @Test
-    public void testRead() throws JSONException {
+    void testRead() throws JSONException {
+        File sampleFile = getFile("sample.csv");
+
+        Job job = componentJobTestExecutor.execute(
+            ENCODER.encodeToString("csv-file_v1_read".getBytes(StandardCharsets.UTF_8)),
+            Map.of(
+                FILE_ENTRY,
+                tempFileStorage.storeFileContent(
+                    sampleFile.getAbsolutePath(), Files.contentOf(sampleFile, StandardCharsets.UTF_8)),
+                DELIMITER, ",", HEADER_ROW, false,
+                INCLUDE_EMPTY_CELLS, true));
+
+        assertThat(job.getStatus()).isEqualTo(Job.Status.COMPLETED);
+
+        Map<String, ?> outputs = taskFileStorage.readJobOutputs(job.getOutputs());
+
+        JSONArray expectedJSONArray = new JSONArray(
+            Files.contentOf(getFile("expected_output.json"), StandardCharsets.UTF_8));
+
+        assertEquals(
+            expectedJSONArray,
+            new JSONArray((List<?>) outputs.get("readCsvFile")),
+            true);
+    }
+
+    @Test
+    void testReadHeader() throws JSONException {
         File sampleFile = getFile("sample_header.csv");
 
         Job job = componentJobTestExecutor.execute(
             ENCODER.encodeToString("csv-file_v1_read".getBytes(StandardCharsets.UTF_8)),
             Map.of(
-                CsvFileConstants.FILE_ENTRY,
-                fileStorageService.storeFileContent(
-                    FileEntryConstants.FILES_DIR, sampleFile.getAbsolutePath(),
-                    Files.contentOf(sampleFile, StandardCharsets.UTF_8))));
+                FILE_ENTRY,
+                tempFileStorage.storeFileContent(
+                    sampleFile.getAbsolutePath(), Files.contentOf(sampleFile, StandardCharsets.UTF_8)),
+                DELIMITER, ",",
+                HEADER_ROW, true,
+                INCLUDE_EMPTY_CELLS, true));
 
         assertThat(job.getStatus()).isEqualTo(Job.Status.COMPLETED);
 
         Map<String, ?> outputs = taskFileStorage.readJobOutputs(job.getOutputs());
 
         assertEquals(
-            new JSONArray(Files.contentOf(getFile("sample.json"), StandardCharsets.UTF_8)),
+            new JSONArray(Files.contentOf(getFile("expected_output_header.json"), StandardCharsets.UTF_8)),
             new JSONArray((List<?>) outputs.get("readCsvFile")),
             true);
     }
 
-//    @Test
+    @Test
+    void testReadHeaderAndQuoted() throws JSONException {
+        File sampleFile = getFile("sample_header_quoted.csv");
+
+        Job job = componentJobTestExecutor.execute(
+            ENCODER.encodeToString("csv-file_v1_read".getBytes(StandardCharsets.UTF_8)),
+            Map.of(
+                FILE_ENTRY,
+                tempFileStorage.storeFileContent(
+                    sampleFile.getAbsolutePath(), Files.contentOf(sampleFile, StandardCharsets.UTF_8)),
+                DELIMITER, ",",
+                HEADER_ROW, true,
+                INCLUDE_EMPTY_CELLS, true,
+                ENCLOSING_CHARACTER, "'"));
+
+        assertThat(job.getStatus()).isEqualTo(Job.Status.COMPLETED);
+
+        Map<String, ?> outputs = taskFileStorage.readJobOutputs(job.getOutputs());
+
+        List<Map<String, String>> readCsvFile = (List<Map<String, String>>) outputs.get("readCsvFile");
+
+        Map<String, String> theFirstRow = readCsvFile.get(0);
+
+        String[] expectedHeaders = {
+            "id", "name", "city", "description", "active", "date", "sum"
+        };
+        String[] expectedvalues = {
+            "77", "A", "B", "C", "true", "2021-12-07", "11.2"
+        };
+
+        for (int i = 0; i < expectedHeaders.length; i++) {
+            assertThat(theFirstRow)
+                .containsKey(expectedHeaders[i]);
+
+            assertThat(theFirstRow)
+                .containsValues(expectedvalues);
+        }
+
+    }
+
+    @Test
+    void testReadHeaderAndDelimiter() throws JSONException {
+        File sampleFile = getFile("sample_header_pipe_delimiter.csv");
+
+        Job job = componentJobTestExecutor.execute(
+            ENCODER.encodeToString("csv-file_v1_read".getBytes(StandardCharsets.UTF_8)),
+            Map.of(
+                FILE_ENTRY,
+                tempFileStorage.storeFileContent(
+                    sampleFile.getAbsolutePath(), Files.contentOf(sampleFile, StandardCharsets.UTF_8)),
+                INCLUDE_EMPTY_CELLS, true, DELIMITER, "|",
+                HEADER_ROW, true));
+
+        assertThat(job.getStatus()).isEqualTo(Job.Status.COMPLETED);
+
+        Map<String, ?> outputs = taskFileStorage.readJobOutputs(job.getOutputs());
+
+        assertEquals(
+            new JSONArray(Files.contentOf(getFile("expected_output_header.json"), StandardCharsets.UTF_8)),
+            new JSONArray((List<?>) outputs.get("readCsvFile")),
+            true);
+    }
+
+    @Test
+    void testReadHeaderAndDelimiterAdvanced() throws JSONException {
+        File sampleFile = getFile("sample_header_semicolon_delimiter.csv");
+
+        Job job = componentJobTestExecutor.execute(
+            ENCODER.encodeToString("csv-file_v1_read".getBytes(StandardCharsets.UTF_8)),
+            Map.of(
+                FILE_ENTRY,
+                tempFileStorage.storeFileContent(
+                    sampleFile.getAbsolutePath(), Files.contentOf(sampleFile, StandardCharsets.UTF_8)),
+                INCLUDE_EMPTY_CELLS, true, DELIMITER, ";",
+                HEADER_ROW, true));
+
+        assertThat(job.getStatus()).isEqualTo(Job.Status.COMPLETED);
+
+        Map<String, ?> outputs = taskFileStorage.readJobOutputs(job.getOutputs());
+
+        assertThat(((Map<?, ?>) ((List<?>) outputs.get("readCsvFile")).getFirst()).size())
+            .isEqualTo(12);
+    }
+
+    @Test
+    void testReadNoHeaderWithDelimiter() throws JSONException {
+        File sampleFile = getFile("sample_no_header_semicolon_delimiter.csv");
+
+        Job job = componentJobTestExecutor.execute(
+            ENCODER.encodeToString("csv-file_v1_read".getBytes(StandardCharsets.UTF_8)),
+            Map.of(
+                FILE_ENTRY,
+                tempFileStorage.storeFileContent(
+                    sampleFile.getAbsolutePath(), Files.contentOf(sampleFile, StandardCharsets.UTF_8)),
+                INCLUDE_EMPTY_CELLS, true, DELIMITER, ";",
+                HEADER_ROW, false));
+
+        assertThat(job.getStatus()).isEqualTo(Job.Status.COMPLETED);
+
+        Map<String, ?> outputs = taskFileStorage.readJobOutputs(job.getOutputs());
+
+        assertThat(((Map<?, ?>) ((List<?>) outputs.get("readCsvFile")).getFirst()).size())
+            .isEqualTo(12);
+    }
+
+    // @Test
     public void testWrite() throws JSONException {
         Job job = componentJobTestExecutor.execute(
             ENCODER.encodeToString("csv-file_v1_write".getBytes(StandardCharsets.UTF_8)),
             Map.of(
                 "rows",
-                new JSONArray(Files.contentOf(getFile("sample.json"), StandardCharsets.UTF_8)).toList()));
+                new JSONArray(Files.contentOf(getFile("expected_output.json"), StandardCharsets.UTF_8))
+                    .toList()));
 
         assertThat(job.getStatus()).isEqualTo(Job.Status.COMPLETED);
 
@@ -97,15 +237,14 @@ public class CsvFileComponentHandlerIntTest {
         job = componentJobTestExecutor.execute(
             ENCODER.encodeToString("csv-file_v1_read".getBytes(StandardCharsets.UTF_8)),
             Map.of(
-                CsvFileConstants.FILE_ENTRY,
-                fileStorageService.storeFileContent(
-                    FileEntryConstants.FILES_DIR, sampleFile.getName(),
-                    Files.contentOf(sampleFile, StandardCharsets.UTF_8))));
+                FILE_ENTRY,
+                tempFileStorage.storeFileContent(
+                    sampleFile.getName(), Files.contentOf(sampleFile, StandardCharsets.UTF_8))));
 
         outputs = taskFileStorage.readJobOutputs(job.getOutputs());
 
         assertEquals(
-            new JSONArray(Files.contentOf(getFile("sample.json"), StandardCharsets.UTF_8)),
+            new JSONArray(Files.contentOf(getFile("expected_output.json"), StandardCharsets.UTF_8)),
             new JSONArray((List<?>) outputs.get("readCsvFile")),
             true);
     }

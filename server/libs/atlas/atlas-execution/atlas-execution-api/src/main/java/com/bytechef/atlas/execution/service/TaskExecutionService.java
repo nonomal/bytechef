@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package com.bytechef.atlas.execution.service;
 
 import com.bytechef.atlas.execution.domain.TaskExecution;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * @author Ivica Cardic
@@ -30,7 +31,11 @@ public interface TaskExecutionService {
 
     void deleteJobTaskExecutions(long jobId);
 
+    Optional<TaskExecution> fetchLastJobTaskExecution(long jobId);
+
     TaskExecution getTaskExecution(long id);
+
+    TaskExecution getTaskExecutionForUpdate(long id);
 
     List<TaskExecution> getJobTaskExecutions(long jobId);
 

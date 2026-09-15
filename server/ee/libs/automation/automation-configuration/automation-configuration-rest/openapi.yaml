@@ -4,21 +4,23 @@ info:
   title: "The Automation Configuration Internal API"
   version: "1"
 servers:
-- url: "/api/automation/internal"
+  - url: "/api/automation/internal"
 tags:
-- name: "workspace"
-  description: "The Automation Workspace Internal API"
+  - name: "workspace"
+    description: "The Automation Workspace Internal API"
+  - name: "project-git"
+    description: "The Automation Project Git Internal API"
 paths:
-  /users/{id}/workspaces:
+  /projects/{id}/project-git-configuration:
     get:
-      description: "Get all user workspaces."
-      summary: "Get all user workspaces"
+      description: "Get git configuration of a project."
+      summary: "Get git configuration of a project ."
       tags:
-        - "workspace"
-      operationId: "getUserWorkspaces"
+        - "project-git"
+      operationId: "getProjectGitConfiguration"
       parameters:
         - name: "id"
-          description: "The id of a user."
+          description: "The id of a project."
           in: "path"
           required: true
           schema:
@@ -26,13 +28,76 @@ paths:
             format: "int64"
       responses:
         "200":
-          description: "The list of user workspaces."
+          description: "The project git configuration object."
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectGitConfiguration"
+    put:
+      description: "Update git configuration of an existing project."
+      summary: "Update git configuration of an existing project."
+      tags:
+        - "project-git"
+      operationId: "updateProjectGitConfiguration"
+      parameters:
+        - name: "id"
+          description: "The id of a project."
+          in: "path"
+          required: true
+          schema:
+            type: "integer"
+            format: "int64"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProjectGitConfiguration"
+        required: true
+      responses:
+        "204":
+          description: "Successful operation."
+  /projects/{id}/git/remote-branches:
+    get:
+      description: "Get remote branches of a project git repository."
+      summary: "Get remote branches of a project git repository."
+      tags:
+        - "project-git"
+      operationId: "getProjectRemoteBranches"
+      parameters:
+        - name: "id"
+          description: "The id of a project."
+          in: "path"
+          required: true
+          schema:
+            type: "integer"
+            format: "int64"
+      responses:
+        "200":
+          description: "The list of remote branches."
           content:
             application/json:
               schema:
                 type: "array"
                 items:
-                  $ref: "../../../../../libs/automation/automation-configuration/automation-configuration-rest/automation-configuration-rest-impl/openapi.yaml#/components/schemas/Workspace"
+                  type: "string"
+  /projects/{id}/git/pull:
+    post:
+      description: "Pulls project from git repository."
+      summary: "Pulls project from git repository."
+      tags:
+        - "project-git"
+      operationId: "pullProjectFromGit"
+      parameters:
+        - name: "id"
+          description: "The id of a project."
+          in: "path"
+          required: true
+          schema:
+            type: "integer"
+            format: "int64"
+      responses:
+        "204":
+          description: "Successful operation."
   /workspaces:
     get:
       description: "Get workspaces."
@@ -48,7 +113,7 @@ paths:
               schema:
                 type: "array"
                 items:
-                  $ref: "../../../../../libs/automation/automation-configuration/automation-configuration-rest/automation-configuration-rest-impl/openapi.yaml#/components/schemas/Workspace"
+                  $ref: "#/components/schemas/Workspace"
     post:
       description: "Create a workspace event."
       summary: "Create a new workspace"
@@ -59,7 +124,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "../../../../../libs/automation/automation-configuration/automation-configuration-rest/automation-configuration-rest-impl/openapi.yaml#/components/schemas/Workspace"
+              $ref: "#/components/schemas/Workspace"
         required: true
       responses:
         "200":
@@ -67,7 +132,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "../../../../../libs/automation/automation-configuration/automation-configuration-rest/automation-configuration-rest-impl/openapi.yaml#/components/schemas/Workspace"
+                $ref: "#/components/schemas/Workspace"
   /workspaces/{id}:
     delete:
       description: "Delete a workspace."
@@ -84,7 +149,7 @@ paths:
             type: "integer"
             format: "int64"
       responses:
-        "200":
+        "204":
           description: "Successful operation."
     get:
       description: "Get a workspace by id."
@@ -106,7 +171,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "../../../../../libs/automation/automation-configuration/automation-configuration-rest/automation-configuration-rest-impl/openapi.yaml#/components/schemas/Workspace"
+                $ref: "#/components/schemas/Workspace"
     put:
       description: "Update an existing workspace."
       summary: "Update an existing workspace"
@@ -125,7 +190,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "../../../../../libs/automation/automation-configuration/automation-configuration-rest/automation-configuration-rest-impl/openapi.yaml#/components/schemas/Workspace"
+              $ref: "#/components/schemas/Workspace"
         required: true
       responses:
         "200":
@@ -133,4 +198,71 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "../../../../../libs/automation/automation-configuration/automation-configuration-rest/automation-configuration-rest-impl/openapi.yaml#/components/schemas/Workspace"
+                $ref: "#/components/schemas/Workspace"
+  /workspaces/{id}/project-git-configurations:
+    get:
+      description: "Get project git configurations of a workspace."
+      summary: "Get project git configurations of a workspace."
+      tags:
+        - "project-git"
+      operationId: "getWorkspaceProjectGitConfigurations"
+      parameters:
+        - name: "id"
+          description: "The id of a workspace."
+          in: "path"
+          required: true
+          schema:
+            type: "integer"
+            format: "int64"
+      responses:
+        "200":
+          description: "The list of workspace project git configuration objects."
+          content:
+            application/json:
+              schema:
+                type: "array"
+                items:
+                  $ref: "#/components/schemas/ProjectGitConfiguration"
+components:
+  schemas:
+    ProjectGitConfiguration:
+      description: "The git configuration."
+      required:
+        - projectId
+        - branch
+        - enabled
+      properties:
+        projectId:
+          description: "The project id of a project git configuration."
+          type: "integer"
+          format: "int64"
+          readOnly: true
+        branch:
+          description: "The branch."
+          type: "string"
+        enabled:
+          description: "The enabled."
+          type: "boolean"
+        createdBy:
+          description: "The created by."
+          type: "string"
+          readOnly: true
+        createdDate:
+          description: "The created date."
+          type: "string"
+          format: "date-time"
+          readOnly: true
+        lastModifiedBy:
+          description: "The last modified by."
+          type: "string"
+          readOnly: true
+        lastModifiedDate:
+          description: "The last modified date."
+          type: "string"
+          format: "date-time"
+          readOnly: true
+        __version:
+          type: "integer"
+          format: "int32"
+    Workspace:
+      $ref: "../../../../../libs/automation/automation-configuration/automation-configuration-rest/automation-configuration-rest-impl/openapi.yaml#/components/schemas/Workspace"

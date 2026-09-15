@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,11 +16,11 @@
 
 package com.bytechef.platform.data.storage.jdbc.domain;
 
-import com.bytechef.component.definition.ActionContext.Data.Scope;
-import com.bytechef.platform.constant.AppType;
-import java.time.LocalDateTime;
+import com.bytechef.platform.constant.PlatformType;
+import com.bytechef.platform.data.storage.domain.DataStorageScope;
+import com.bytechef.platform.data.storage.domain.ValueWrapper;
+import java.time.Instant;
 import java.util.Objects;
-import org.apache.commons.lang3.Validate;
 import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.Id;
@@ -29,6 +29,7 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.annotation.Version;
 import org.springframework.data.relational.core.mapping.Column;
 import org.springframework.data.relational.core.mapping.Table;
+import org.springframework.util.Assert;
 
 /**
  * @author Ivica Cardic
@@ -45,7 +46,7 @@ public class DataEntry {
 
     @Column("created_date")
     @CreatedDate
-    private LocalDateTime createdDate;
+    private Instant createdDate;
 
     @Id
     private Long id;
@@ -59,10 +60,10 @@ public class DataEntry {
 
     @Column("last_modified_date")
     @LastModifiedDate
-    private LocalDateTime lastModifiedDate;
+    private Instant lastModifiedDate;
 
     @Column
-    private Scope scope;
+    private int scope;
 
     @Column("scope_id")
     private String scopeId;
@@ -73,6 +74,9 @@ public class DataEntry {
     @Column
     private int type;
 
+    @Column("environment")
+    private int environment;
+
     @Version
     private int version;
 
@@ -80,14 +84,16 @@ public class DataEntry {
     }
 
     public DataEntry(
-        String componentName, Scope scope, String scopeId, String key, Object value, AppType type) {
+        String componentName, DataStorageScope scope, String scopeId, String key, Object value, int environment,
+        PlatformType type) {
 
         this.componentName = componentName;
+        this.environment = environment;
         this.key = key;
-        this.scope = scope;
+        this.scope = scope.ordinal();
         this.scopeId = scopeId;
         this.type = type.ordinal();
-        this.value = new ValueWrapper(value, value.getClass());
+        this.value = new ValueWrapper(value);
     }
 
     public String getComponentName() {
@@ -98,7 +104,7 @@ public class DataEntry {
         return createdBy;
     }
 
-    public LocalDateTime getCreatedDate() {
+    public Instant getCreatedDate() {
         return createdDate;
     }
 
@@ -114,20 +120,24 @@ public class DataEntry {
         return lastModifiedBy;
     }
 
-    public LocalDateTime getLastModifiedDate() {
+    public Instant getLastModifiedDate() {
         return lastModifiedDate;
     }
 
-    public Scope getScope() {
-        return scope;
+    public DataStorageScope getScope() {
+        return DataStorageScope.values()[scope];
     }
 
     public String getScopeId() {
         return scopeId;
     }
 
-    public AppType getType() {
-        return AppType.values()[type];
+    public PlatformType getType() {
+        return PlatformType.values()[type];
+    }
+
+    public int getEnvironment() {
+        return environment;
     }
 
     public Object getValue() {
@@ -135,7 +145,7 @@ public class DataEntry {
             return null;
         }
 
-        return value.value;
+        return value.value();
     }
 
     public int getVersion() {
@@ -163,9 +173,9 @@ public class DataEntry {
     }
 
     public void setValue(Object value) {
-        Validate.notNull(value, "'value' must not be null");
+        Assert.notNull(value, "'value' must not be null");
 
-        this.value = new ValueWrapper(value, value.getClass());
+        this.value = new ValueWrapper(value);
     }
 
     @Override
@@ -186,9 +196,4 @@ public class DataEntry {
             '}';
     }
 
-    public record ValueWrapper(Object value, String classname) {
-        public ValueWrapper(Object value, Class<?> valueClass) {
-            this(value, valueClass.getName());
-        }
-    }
 }

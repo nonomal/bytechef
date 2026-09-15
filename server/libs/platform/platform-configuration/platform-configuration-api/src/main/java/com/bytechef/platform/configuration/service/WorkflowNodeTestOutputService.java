@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,30 +17,31 @@
 package com.bytechef.platform.configuration.service;
 
 import com.bytechef.atlas.configuration.domain.Workflow;
-import com.bytechef.platform.component.registry.domain.Output;
 import com.bytechef.platform.configuration.domain.WorkflowNodeTestOutput;
 import com.bytechef.platform.definition.WorkflowNodeType;
+import com.bytechef.platform.domain.OutputResponse;
+import java.time.Instant;
 import java.util.Optional;
-import org.springframework.lang.NonNull;
+import org.jspecify.annotations.Nullable;
 
 /**
  * @author Ivica Cardic
  */
 public interface WorkflowNodeTestOutputService {
 
-    void deleteWorkflowNodeTestOutput(String workflowId, String workflowNodeName);
+    void deleteWorkflowNodeTestOutput(String workflowId, String workflowNodeName, long environmentId);
 
-    Optional<WorkflowNodeTestOutput> fetchWorkflowTestNodeOutput(String workflowId, String workflowNodeName);
+    boolean checkWorkflowNodeTestOutputExists(
+        String workflowId, String workflowNodeName, @Nullable Instant createdDate, long environmentId);
+
+    Optional<WorkflowNodeTestOutput> fetchWorkflowTestNodeOutput(
+        String workflowId, String workflowNodeName, long environmentId);
 
     void removeUnusedNodeTestOutputs(Workflow workflow);
 
     WorkflowNodeTestOutput save(
-        @NonNull String workflowId, @NonNull String workflowNodeName, @NonNull WorkflowNodeType workflowNodeType,
-        @NonNull Object sampleOutput);
-
-    WorkflowNodeTestOutput save(
-        @NonNull String workflowId, @NonNull String workflowNodeName, @NonNull WorkflowNodeType workflowNodeType,
-        @NonNull Output output);
+        String workflowId, String workflowNodeName, WorkflowNodeType workflowNodeType, OutputResponse outputResponse,
+        long environmentId);
 
     void updateWorkflowId(String oldWorkflowId, String newWorkflowId);
 }

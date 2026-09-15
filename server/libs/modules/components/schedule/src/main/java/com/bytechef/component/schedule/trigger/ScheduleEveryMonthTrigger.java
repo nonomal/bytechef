@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,24 +16,27 @@
 
 package com.bytechef.component.schedule.trigger;
 
-import static com.bytechef.component.definition.ComponentDSL.integer;
-import static com.bytechef.component.definition.ComponentDSL.object;
-import static com.bytechef.component.definition.ComponentDSL.string;
-import static com.bytechef.component.definition.ComponentDSL.trigger;
-import static com.bytechef.component.schedule.constant.ScheduleConstants.DATETIME;
+import static com.bytechef.component.definition.ComponentDsl.dateTime;
+import static com.bytechef.component.definition.ComponentDsl.integer;
+import static com.bytechef.component.definition.ComponentDsl.object;
+import static com.bytechef.component.definition.ComponentDsl.outputSchema;
+import static com.bytechef.component.definition.ComponentDsl.string;
+import static com.bytechef.component.definition.ComponentDsl.trigger;
+import static com.bytechef.component.schedule.constant.ScheduleConstants.DATE_TIME;
 import static com.bytechef.component.schedule.constant.ScheduleConstants.DAY_OF_MONTH;
+import static com.bytechef.component.schedule.constant.ScheduleConstants.FIRE_TIME;
 import static com.bytechef.component.schedule.constant.ScheduleConstants.HOUR;
 import static com.bytechef.component.schedule.constant.ScheduleConstants.MINUTE;
 import static com.bytechef.component.schedule.constant.ScheduleConstants.TIMEZONE;
 
-import com.bytechef.component.definition.ComponentDSL.ModifiableTriggerDefinition;
+import com.bytechef.component.definition.ComponentDsl.ModifiableTriggerDefinition;
 import com.bytechef.component.definition.Parameters;
 import com.bytechef.component.definition.TriggerContext;
-import com.bytechef.component.definition.TriggerDefinition;
 import com.bytechef.component.definition.TriggerDefinition.ListenerEmitter;
+import com.bytechef.component.definition.TriggerDefinition.TriggerType;
 import com.bytechef.component.schedule.util.ScheduleUtils;
 import com.bytechef.platform.scheduler.TriggerScheduler;
-import com.bytechef.platform.workflow.execution.WorkflowExecutionId;
+import com.bytechef.platform.workflow.WorkflowExecutionId;
 import java.util.Map;
 
 /**
@@ -42,43 +45,57 @@ import java.util.Map;
 public class ScheduleEveryMonthTrigger {
 
     public final ModifiableTriggerDefinition triggerDefinition = trigger("everyMonth")
-        .title("Every month")
-        .description(
-            "Trigger off at a specific time in month.")
-        .type(TriggerDefinition.TriggerType.LISTENER)
+        .title("Every Month")
+        .description("Runs the workflow once each month on a chosen day at a specific time.")
+        .type(TriggerType.LISTENER)
         .properties(
             integer(HOUR)
                 .label("Hour")
-                .description("The hour at which a workflow will be triggered.")
+                .description("The hour (0-23) when the workflow runs.")
                 .required(true)
                 .defaultValue(0)
                 .minValue(0)
                 .maxValue(23),
             integer(MINUTE)
                 .label("Minute")
-                .description("The minute at which a workflow will be triggered.")
+                .description("The minute (0-59) when the workflow runs.")
                 .required(true)
                 .defaultValue(0)
                 .minValue(0)
                 .maxValue(59),
             integer(DAY_OF_MONTH)
-                .label("Day of month")
-                .description("The day of the month  at which a workflow will be triggered.")
+                .label("Day of Month")
+                .description("The day of the month (1-31) when the workflow runs.")
                 .required(true)
                 .minValue(1)
-                .maxValue(31),
+                .maxValue(31)
+                .required(true),
             string(TIMEZONE)
                 .label("Timezone")
-                .description("The timezone at which the cron expression will be scheduled.")
-                .options(ScheduleUtils.getTimeZoneOptions()))
-        .outputSchema(
-            object()
-                .properties(
-                    string(DATETIME),
-                    integer(HOUR),
-                    integer(MINUTE),
-                    integer(DAY_OF_MONTH),
-                    string(TIMEZONE)))
+                .description("The time zone used to interpret the schedule.")
+                .options(ScheduleUtils.getTimeZoneOptions())
+                .required(true))
+        .output(
+            outputSchema(
+                object()
+                    .properties(
+                        string(FIRE_TIME)
+                            .description("The exact date and time when the trigger was activated."),
+                        dateTime(DATE_TIME)
+                            .description(
+                                "The date and time when the trigger was activated, formatted according to the " +
+                                    "specified timezone."),
+                        integer(HOUR)
+                            .description("The hour of the day (0-23) at which the workflow was set to trigger."),
+                        integer(MINUTE)
+                            .description("The minute of the hour (0-59) at which the workflow was set to trigger."),
+                        integer(DAY_OF_MONTH)
+                            .description(
+                                "The specific day of the month (1-31) on which the workflow was set to trigger."),
+                        string(TIMEZONE)
+                            .description(
+                                "The timezone used for scheduling the cron expression, ensuring the trigger " +
+                                    "fires at the correct local time."))))
         .listenerDisable(this::listenerDisable)
         .listenerEnable(this::listenerEnable);
 
@@ -99,16 +116,15 @@ public class ScheduleEveryMonthTrigger {
         Parameters inputParameters, Parameters connectionParameters, String workflowExecutionId,
         ListenerEmitter listenerEmitter, TriggerContext context) {
 
+        int minute = inputParameters.getRequiredInteger(MINUTE);
+        int hour = inputParameters.getRequiredInteger(HOUR);
+        int dayOfMonth = inputParameters.getRequiredInteger(DAY_OF_MONTH);
+        String timezone = inputParameters.getRequiredString(TIMEZONE);
+
         triggerScheduler.scheduleScheduleTrigger(
-            "0 %s %s %s * ?".formatted(
-                inputParameters.getInteger(MINUTE), inputParameters.getInteger(HOUR),
-                inputParameters.getInteger(DAY_OF_MONTH)),
-            inputParameters.getString(TIMEZONE),
-            Map.of(
-                HOUR, inputParameters.getInteger(HOUR),
-                MINUTE, inputParameters.getInteger(MINUTE),
-                DAY_OF_MONTH, inputParameters.getInteger(DAY_OF_MONTH),
-                TIMEZONE, inputParameters.getString(TIMEZONE)),
+            "0 %s %s %s * ?".formatted(minute, hour, dayOfMonth),
+            timezone,
+            Map.of(HOUR, hour, MINUTE, minute, DAY_OF_MONTH, dayOfMonth, TIMEZONE, timezone),
             WorkflowExecutionId.parse(workflowExecutionId));
     }
 }

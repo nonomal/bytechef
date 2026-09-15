@@ -10,6 +10,7 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import org.springframework.lang.Nullable;
 import org.openapitools.jackson.nullable.JsonNullable;
 import java.time.OffsetDateTime;
 import jakarta.validation.Valid;
@@ -26,29 +27,35 @@ import jakarta.annotation.Generated;
 
 @Schema(name = "ActionDefinition", description = "An action is a portion of reusable code that accomplish a specific task. When building a workflow, each action is represented as a task inside the workflow. The task 'type' property is defined as [component name]/v[component version]/[action name]. Action properties are used to set properties of the task inside the workflow.")
 @JsonTypeName("ActionDefinition")
-@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2024-06-30T07:20:54.243996+02:00[Europe/Zagreb]", comments = "Generator version: 7.5.0")
+@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2026-07-03T17:58:15.504637+02:00[Europe/Zagreb]", comments = "Generator version: 7.22.0")
 public class ActionDefinitionModel {
 
   private String componentName;
 
   private Integer componentVersion;
 
-  private Boolean dynamicOutput;
+  private @Nullable String description;
 
-  private String description;
-
-  private HelpModel help;
+  private @Nullable HelpModel help;
 
   private String name;
 
   private Boolean outputDefined;
 
+  private Boolean outputFunctionDefined;
+
+  private @Nullable Boolean outputSchemaDefined;
+
   @Valid
   private List<@Valid PropertyModel> properties = new ArrayList<>();
 
-  private String title;
+  private @Nullable Boolean resumePerformFunctionDefined;
 
-  private Boolean workflowNodeDescriptionDefined;
+  private @Nullable Boolean sseStreamResponse;
+
+  private @Nullable String title;
+
+  private @Nullable Boolean workflowNodeDescriptionDefined;
 
   public ActionDefinitionModel() {
     super();
@@ -57,10 +64,12 @@ public class ActionDefinitionModel {
   /**
    * Constructor with only required parameters
    */
-  public ActionDefinitionModel(Boolean dynamicOutput, String name, Boolean outputDefined) {
-    this.dynamicOutput = dynamicOutput;
+  public ActionDefinitionModel(String componentName, Integer componentVersion, String name, Boolean outputDefined, Boolean outputFunctionDefined) {
+    this.componentName = componentName;
+    this.componentVersion = componentVersion;
     this.name = name;
     this.outputDefined = outputDefined;
+    this.outputFunctionDefined = outputFunctionDefined;
   }
 
   public ActionDefinitionModel componentName(String componentName) {
@@ -71,14 +80,15 @@ public class ActionDefinitionModel {
   /**
    * The component name.
    * @return componentName
-  */
-  
-  @Schema(name = "componentName", description = "The component name.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+   */
+  @NotNull 
+  @Schema(name = "componentName", description = "The component name.", requiredMode = Schema.RequiredMode.REQUIRED)
   @JsonProperty("componentName")
   public String getComponentName() {
     return componentName;
   }
 
+  @JsonProperty("componentName")
   public void setComponentName(String componentName) {
     this.componentName = componentName;
   }
@@ -91,39 +101,20 @@ public class ActionDefinitionModel {
   /**
    * The component version.
    * @return componentVersion
-  */
-  
-  @Schema(name = "componentVersion", description = "The component version.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+   */
+  @NotNull 
+  @Schema(name = "componentVersion", description = "The component version.", requiredMode = Schema.RequiredMode.REQUIRED)
   @JsonProperty("componentVersion")
   public Integer getComponentVersion() {
     return componentVersion;
   }
 
+  @JsonProperty("componentVersion")
   public void setComponentVersion(Integer componentVersion) {
     this.componentVersion = componentVersion;
   }
 
-  public ActionDefinitionModel dynamicOutput(Boolean dynamicOutput) {
-    this.dynamicOutput = dynamicOutput;
-    return this;
-  }
-
-  /**
-   * Does action define dynamic output schema.
-   * @return dynamicOutput
-  */
-  @NotNull 
-  @Schema(name = "dynamicOutput", description = "Does action define dynamic output schema.", requiredMode = Schema.RequiredMode.REQUIRED)
-  @JsonProperty("dynamicOutput")
-  public Boolean getDynamicOutput() {
-    return dynamicOutput;
-  }
-
-  public void setDynamicOutput(Boolean dynamicOutput) {
-    this.dynamicOutput = dynamicOutput;
-  }
-
-  public ActionDefinitionModel description(String description) {
+  public ActionDefinitionModel description(@Nullable String description) {
     this.description = description;
     return this;
   }
@@ -131,19 +122,20 @@ public class ActionDefinitionModel {
   /**
    * The description.
    * @return description
-  */
+   */
   
   @Schema(name = "description", description = "The description.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("description")
-  public String getDescription() {
+  public @Nullable String getDescription() {
     return description;
   }
 
-  public void setDescription(String description) {
+  @JsonProperty("description")
+  public void setDescription(@Nullable String description) {
     this.description = description;
   }
 
-  public ActionDefinitionModel help(HelpModel help) {
+  public ActionDefinitionModel help(@Nullable HelpModel help) {
     this.help = help;
     return this;
   }
@@ -151,15 +143,16 @@ public class ActionDefinitionModel {
   /**
    * Get help
    * @return help
-  */
+   */
   @Valid 
   @Schema(name = "help", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("help")
-  public HelpModel getHelp() {
+  public @Nullable HelpModel getHelp() {
     return help;
   }
 
-  public void setHelp(HelpModel help) {
+  @JsonProperty("help")
+  public void setHelp(@Nullable HelpModel help) {
     this.help = help;
   }
 
@@ -171,7 +164,7 @@ public class ActionDefinitionModel {
   /**
    * The action name.
    * @return name
-  */
+   */
   @NotNull 
   @Schema(name = "name", description = "The action name.", requiredMode = Schema.RequiredMode.REQUIRED)
   @JsonProperty("name")
@@ -179,6 +172,7 @@ public class ActionDefinitionModel {
     return name;
   }
 
+  @JsonProperty("name")
   public void setName(String name) {
     this.name = name;
   }
@@ -189,18 +183,61 @@ public class ActionDefinitionModel {
   }
 
   /**
-   * Does action define output schema.
+   * Does action defines output.
    * @return outputDefined
-  */
+   */
   @NotNull 
-  @Schema(name = "outputDefined", description = "Does action define output schema.", requiredMode = Schema.RequiredMode.REQUIRED)
+  @Schema(name = "outputDefined", description = "Does action defines output.", requiredMode = Schema.RequiredMode.REQUIRED)
   @JsonProperty("outputDefined")
   public Boolean getOutputDefined() {
     return outputDefined;
   }
 
+  @JsonProperty("outputDefined")
   public void setOutputDefined(Boolean outputDefined) {
     this.outputDefined = outputDefined;
+  }
+
+  public ActionDefinitionModel outputFunctionDefined(Boolean outputFunctionDefined) {
+    this.outputFunctionDefined = outputFunctionDefined;
+    return this;
+  }
+
+  /**
+   * Does action defines output function.
+   * @return outputFunctionDefined
+   */
+  @NotNull 
+  @Schema(name = "outputFunctionDefined", description = "Does action defines output function.", requiredMode = Schema.RequiredMode.REQUIRED)
+  @JsonProperty("outputFunctionDefined")
+  public Boolean getOutputFunctionDefined() {
+    return outputFunctionDefined;
+  }
+
+  @JsonProperty("outputFunctionDefined")
+  public void setOutputFunctionDefined(Boolean outputFunctionDefined) {
+    this.outputFunctionDefined = outputFunctionDefined;
+  }
+
+  public ActionDefinitionModel outputSchemaDefined(@Nullable Boolean outputSchemaDefined) {
+    this.outputSchemaDefined = outputSchemaDefined;
+    return this;
+  }
+
+  /**
+   * Does action defines output schema.
+   * @return outputSchemaDefined
+   */
+  
+  @Schema(name = "outputSchemaDefined", description = "Does action defines output schema.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+  @JsonProperty("outputSchemaDefined")
+  public @Nullable Boolean getOutputSchemaDefined() {
+    return outputSchemaDefined;
+  }
+
+  @JsonProperty("outputSchemaDefined")
+  public void setOutputSchemaDefined(@Nullable Boolean outputSchemaDefined) {
+    this.outputSchemaDefined = outputSchemaDefined;
   }
 
   public ActionDefinitionModel properties(List<@Valid PropertyModel> properties) {
@@ -219,7 +256,7 @@ public class ActionDefinitionModel {
   /**
    * The list of action properties.
    * @return properties
-  */
+   */
   @Valid 
   @Schema(name = "properties", description = "The list of action properties.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("properties")
@@ -227,11 +264,54 @@ public class ActionDefinitionModel {
     return properties;
   }
 
+  @JsonProperty("properties")
   public void setProperties(List<@Valid PropertyModel> properties) {
     this.properties = properties;
   }
 
-  public ActionDefinitionModel title(String title) {
+  public ActionDefinitionModel resumePerformFunctionDefined(@Nullable Boolean resumePerformFunctionDefined) {
+    this.resumePerformFunctionDefined = resumePerformFunctionDefined;
+    return this;
+  }
+
+  /**
+   * Does action define resume perform function.
+   * @return resumePerformFunctionDefined
+   */
+  
+  @Schema(name = "resumePerformFunctionDefined", description = "Does action define resume perform function.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+  @JsonProperty("resumePerformFunctionDefined")
+  public @Nullable Boolean getResumePerformFunctionDefined() {
+    return resumePerformFunctionDefined;
+  }
+
+  @JsonProperty("resumePerformFunctionDefined")
+  public void setResumePerformFunctionDefined(@Nullable Boolean resumePerformFunctionDefined) {
+    this.resumePerformFunctionDefined = resumePerformFunctionDefined;
+  }
+
+  public ActionDefinitionModel sseStreamResponse(@Nullable Boolean sseStreamResponse) {
+    this.sseStreamResponse = sseStreamResponse;
+    return this;
+  }
+
+  /**
+   * Does action support SSE streaming.
+   * @return sseStreamResponse
+   */
+  
+  @Schema(name = "sseStreamResponse", description = "Does action support SSE streaming.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+  @JsonProperty("sseStreamResponse")
+  public @Nullable Boolean getSseStreamResponse() {
+    return sseStreamResponse;
+  }
+
+  @JsonProperty("sseStreamResponse")
+  public void setSseStreamResponse(@Nullable Boolean sseStreamResponse) {
+    this.sseStreamResponse = sseStreamResponse;
+  }
+
+  public ActionDefinitionModel title(@Nullable String title) {
     this.title = title;
     return this;
   }
@@ -239,19 +319,20 @@ public class ActionDefinitionModel {
   /**
    * The title
    * @return title
-  */
+   */
   
   @Schema(name = "title", description = "The title", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("title")
-  public String getTitle() {
+  public @Nullable String getTitle() {
     return title;
   }
 
-  public void setTitle(String title) {
+  @JsonProperty("title")
+  public void setTitle(@Nullable String title) {
     this.title = title;
   }
 
-  public ActionDefinitionModel workflowNodeDescriptionDefined(Boolean workflowNodeDescriptionDefined) {
+  public ActionDefinitionModel workflowNodeDescriptionDefined(@Nullable Boolean workflowNodeDescriptionDefined) {
     this.workflowNodeDescriptionDefined = workflowNodeDescriptionDefined;
     return this;
   }
@@ -259,15 +340,16 @@ public class ActionDefinitionModel {
   /**
    * Does action define dynamic node description.
    * @return workflowNodeDescriptionDefined
-  */
+   */
   
   @Schema(name = "workflowNodeDescriptionDefined", description = "Does action define dynamic node description.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("workflowNodeDescriptionDefined")
-  public Boolean getWorkflowNodeDescriptionDefined() {
+  public @Nullable Boolean getWorkflowNodeDescriptionDefined() {
     return workflowNodeDescriptionDefined;
   }
 
-  public void setWorkflowNodeDescriptionDefined(Boolean workflowNodeDescriptionDefined) {
+  @JsonProperty("workflowNodeDescriptionDefined")
+  public void setWorkflowNodeDescriptionDefined(@Nullable Boolean workflowNodeDescriptionDefined) {
     this.workflowNodeDescriptionDefined = workflowNodeDescriptionDefined;
   }
 
@@ -282,19 +364,22 @@ public class ActionDefinitionModel {
     ActionDefinitionModel actionDefinition = (ActionDefinitionModel) o;
     return Objects.equals(this.componentName, actionDefinition.componentName) &&
         Objects.equals(this.componentVersion, actionDefinition.componentVersion) &&
-        Objects.equals(this.dynamicOutput, actionDefinition.dynamicOutput) &&
         Objects.equals(this.description, actionDefinition.description) &&
         Objects.equals(this.help, actionDefinition.help) &&
         Objects.equals(this.name, actionDefinition.name) &&
         Objects.equals(this.outputDefined, actionDefinition.outputDefined) &&
+        Objects.equals(this.outputFunctionDefined, actionDefinition.outputFunctionDefined) &&
+        Objects.equals(this.outputSchemaDefined, actionDefinition.outputSchemaDefined) &&
         Objects.equals(this.properties, actionDefinition.properties) &&
+        Objects.equals(this.resumePerformFunctionDefined, actionDefinition.resumePerformFunctionDefined) &&
+        Objects.equals(this.sseStreamResponse, actionDefinition.sseStreamResponse) &&
         Objects.equals(this.title, actionDefinition.title) &&
         Objects.equals(this.workflowNodeDescriptionDefined, actionDefinition.workflowNodeDescriptionDefined);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(componentName, componentVersion, dynamicOutput, description, help, name, outputDefined, properties, title, workflowNodeDescriptionDefined);
+    return Objects.hash(componentName, componentVersion, description, help, name, outputDefined, outputFunctionDefined, outputSchemaDefined, properties, resumePerformFunctionDefined, sseStreamResponse, title, workflowNodeDescriptionDefined);
   }
 
   @Override
@@ -303,12 +388,15 @@ public class ActionDefinitionModel {
     sb.append("class ActionDefinitionModel {\n");
     sb.append("    componentName: ").append(toIndentedString(componentName)).append("\n");
     sb.append("    componentVersion: ").append(toIndentedString(componentVersion)).append("\n");
-    sb.append("    dynamicOutput: ").append(toIndentedString(dynamicOutput)).append("\n");
     sb.append("    description: ").append(toIndentedString(description)).append("\n");
     sb.append("    help: ").append(toIndentedString(help)).append("\n");
     sb.append("    name: ").append(toIndentedString(name)).append("\n");
     sb.append("    outputDefined: ").append(toIndentedString(outputDefined)).append("\n");
+    sb.append("    outputFunctionDefined: ").append(toIndentedString(outputFunctionDefined)).append("\n");
+    sb.append("    outputSchemaDefined: ").append(toIndentedString(outputSchemaDefined)).append("\n");
     sb.append("    properties: ").append(toIndentedString(properties)).append("\n");
+    sb.append("    resumePerformFunctionDefined: ").append(toIndentedString(resumePerformFunctionDefined)).append("\n");
+    sb.append("    sseStreamResponse: ").append(toIndentedString(sseStreamResponse)).append("\n");
     sb.append("    title: ").append(toIndentedString(title)).append("\n");
     sb.append("    workflowNodeDescriptionDefined: ").append(toIndentedString(workflowNodeDescriptionDefined)).append("\n");
     sb.append("}");
@@ -319,11 +407,8 @@ public class ActionDefinitionModel {
    * Convert the given object to string with each line indented by 4 spaces
    * (except the first line).
    */
-  private String toIndentedString(Object o) {
-    if (o == null) {
-      return "null";
-    }
-    return o.toString().replace("\n", "\n    ");
+  private String toIndentedString(@Nullable Object o) {
+    return o == null ? "null" : o.toString().replace("\n", "\n    ");
   }
 }
 

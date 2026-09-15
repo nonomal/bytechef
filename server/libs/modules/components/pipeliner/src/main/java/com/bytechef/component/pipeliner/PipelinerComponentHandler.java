@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,28 +16,22 @@
 
 package com.bytechef.component.pipeliner;
 
-import static com.bytechef.component.definition.Authorization.PASSWORD;
-import static com.bytechef.component.definition.Authorization.USERNAME;
-import static com.bytechef.component.definition.ComponentDSL.authorization;
-import static com.bytechef.component.definition.ComponentDSL.option;
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.definition.ComponentDsl.option;
+import static com.bytechef.component.definition.ComponentDsl.string;
 import static com.bytechef.component.pipeliner.constant.PipelinerConstants.SERVER_URL;
 import static com.bytechef.component.pipeliner.constant.PipelinerConstants.SPACE_ID;
 
 import com.bytechef.component.OpenApiComponentHandler;
-import com.bytechef.component.definition.ActionDefinition;
-import com.bytechef.component.definition.Authorization.AuthorizationType;
+import com.bytechef.component.definition.Authorization;
 import com.bytechef.component.definition.ComponentCategory;
-import com.bytechef.component.definition.ComponentDSL.ModifiableComponentDefinition;
-import com.bytechef.component.definition.ComponentDSL.ModifiableConnectionDefinition;
-import com.bytechef.component.definition.ComponentDSL.ModifiableObjectProperty;
-import com.bytechef.component.definition.ComponentDSL.ModifiableProperty;
-import com.bytechef.component.definition.ComponentDSL.ModifiableStringProperty;
-import com.bytechef.component.definition.OptionsDataSource.ActionOptionsFunction;
-import com.bytechef.component.pipeliner.util.PipelinerUtils;
-import com.bytechef.definition.BaseProperty;
+import com.bytechef.component.definition.ComponentDsl.ModifiableAuthorization;
+import com.bytechef.component.definition.ComponentDsl.ModifiableComponentDefinition;
+import com.bytechef.component.definition.ComponentDsl.ModifiableConnectionDefinition;
+import com.bytechef.component.definition.Property;
 import com.google.auto.service.AutoService;
-import java.util.Objects;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 
 /**
  * @author Monika Domiter
@@ -57,59 +51,41 @@ public class PipelinerComponentHandler extends AbstractPipelinerComponentHandler
     public ModifiableConnectionDefinition modifyConnection(
         ModifiableConnectionDefinition modifiableConnectionDefinition) {
 
-        modifiableConnectionDefinition
-            .authorizations(
-                authorization(AuthorizationType.BASIC_AUTH)
-                    .title("Basic Auth")
-                    .properties(
-                        string(SPACE_ID)
-                            .label("Space Id")
-                            .description("Your Space ID")
-                            .required(true),
-                        string(SERVER_URL)
-                            .label("Server URL")
-                            .options(
-                                option("https://us-east.api.pipelinersales.com/api/v100/rest/spaces/",
-                                    "https://us-east.api.pipelinersales.com/api/v100/rest/spaces/"),
-                                option("https://eu-central.api.pipelinersales.com/api/v100/rest/spaces/",
-                                    "https://eu-central.api.pipelinersales.com/api/v100/rest/spaces/"),
-                                option("https://ca-central.api.pipelinersales.com/api/v100/rest/spaces/",
-                                    "https://ca-central.api.pipelinersales.com/api/v100/rest/spaces/"),
-                                option("https://ap-southeast.api.pipelinersales.com/api/v100/rest/spaces/",
-                                    "https://ap-southeast.api.pipelinersales.com/api/v100/rest/spaces/"))
-                            .required(true),
-                        string(USERNAME)
-                            .label("Username")
-                            .required(true),
-                        string(PASSWORD)
-                            .label("Password")
-                            .required(true)))
-            .baseUri((connectionParameters, context) -> connectionParameters.getRequiredString(SERVER_URL) +
-                connectionParameters.getRequiredString(SPACE_ID));
+        Optional<List<? extends Authorization>> optionalAuthorizations =
+            modifiableConnectionDefinition.getAuthorizations();
 
-        return modifiableConnectionDefinition;
-    }
+        if (optionalAuthorizations.isPresent()) {
+            List<? extends Authorization> authorizations = optionalAuthorizations.get();
+            ModifiableAuthorization modifiableAuthorization = (ModifiableAuthorization) authorizations.getFirst();
 
-    @Override
-    public ModifiableProperty<?> modifyProperty(
-        ActionDefinition actionDefinition, ModifiableProperty<?> modifiableProperty) {
+            Optional<List<? extends Property>> optionalProperties = modifiableAuthorization.getProperties();
+            List<Property> properties = new ArrayList<>(optionalProperties.orElse(List.of()));
 
-        if (Objects.equals(modifiableProperty.getName(), "__item")) {
-            for (BaseProperty baseProperty : ((ModifiableObjectProperty) modifiableProperty).getProperties()
-                .get()) {
-                if (Objects.equals(baseProperty.getName(), "owner_id")) {
-                    ((ModifiableStringProperty) baseProperty)
-                        .options((ActionOptionsFunction<String>) PipelinerUtils::getOwnerIdOptions);
-                } else if (Objects.equals(baseProperty.getName(), "activity_type_id")) {
-                    ((ModifiableStringProperty) baseProperty)
-                        .options((ActionOptionsFunction<String>) PipelinerUtils::getActivityTypeIdOptions);
-                } else if (Objects.equals(baseProperty.getName(), "unit_id")) {
-                    ((ModifiableStringProperty) baseProperty)
-                        .options((ActionOptionsFunction<String>) PipelinerUtils::getSalesUnitsIdOptions);
-                }
-            }
+            properties.addFirst(
+                string(SERVER_URL)
+                    .label("Server URL")
+                    .options(
+                        option("https://us-east.api.pipelinersales.com/api/v100/rest/spaces/",
+                            "https://us-east.api.pipelinersales.com/api/v100/rest/spaces/"),
+                        option("https://eu-central.api.pipelinersales.com/api/v100/rest/spaces/",
+                            "https://eu-central.api.pipelinersales.com/api/v100/rest/spaces/"),
+                        option("https://ca-central.api.pipelinersales.com/api/v100/rest/spaces/",
+                            "https://ca-central.api.pipelinersales.com/api/v100/rest/spaces/"),
+                        option("https://ap-southeast.api.pipelinersales.com/api/v100/rest/spaces/",
+                            "https://ap-southeast.api.pipelinersales.com/api/v100/rest/spaces/"))
+                    .required(true));
+
+            properties.addFirst(
+                string(SPACE_ID)
+                    .label("Space Id")
+                    .description("Your Space ID")
+                    .required(true));
+
+            modifiableAuthorization.properties(properties);
         }
 
-        return modifiableProperty;
+        return modifiableConnectionDefinition
+            .baseUri((connectionParameters, context) -> connectionParameters.getRequiredString(SERVER_URL) +
+                connectionParameters.getRequiredString(SPACE_ID));
     }
 }

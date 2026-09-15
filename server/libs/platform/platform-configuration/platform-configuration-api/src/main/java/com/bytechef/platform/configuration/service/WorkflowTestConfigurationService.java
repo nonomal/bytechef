@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,23 +27,38 @@ import java.util.Optional;
  */
 public interface WorkflowTestConfigurationService {
 
-    Optional<WorkflowTestConfiguration> fetchWorkflowTestConfiguration(String workflowId);
+    void delete(String workflowId);
 
-    Optional<Long> fetchWorkflowTestConfigurationConnectionId(String workflowId, String workflowNodeName);
+    void delete(String workflowId, long environmentId);
+
+    void delete(List<String> workflowIds);
+
+    void deleteWorkflowTestConfigurationConnection(long connectionId);
+
+    Optional<WorkflowTestConfiguration> fetchWorkflowTestConfiguration(String workflowId, long environmentId);
+
+    Optional<Long> fetchWorkflowTestConfigurationConnectionId(
+        String workflowId, String workflowNodeName, long environmentId);
 
     List<WorkflowTestConfigurationConnection> getWorkflowTestConfigurationConnections(
-        String workflowId, String workflowNodeName);
+        String workflowId, String workflowNodeName, long environmentId);
 
-    Map<String, ?> getWorkflowTestConfigurationInputs(String workflowId);
+    List<WorkflowTestConfiguration> getWorkflowTestConfigurations(String workflowId);
+
+    Map<String, ?> getWorkflowTestConfigurationInputs(String workflowId, long environmentId);
 
     boolean isConnectionUsed(long connectionId);
 
     WorkflowTestConfiguration saveWorkflowTestConfiguration(WorkflowTestConfiguration workflowTestConfiguration);
 
     void saveWorkflowTestConfigurationConnection(
-        String workflowId, String workflowNodeName, String key, long connectionId);
+        String workflowId, String workflowNodeName, String key, long connectionId, boolean workflowNodeTrigger,
+        long environmentId);
 
-    void saveWorkflowTestConfigurationInputs(String workflowId, Map<String, String> inputs);
+    void saveWorkflowTestConfigurationInputs(String workflowId, String key, Object value, long environmentId);
 
     void updateWorkflowId(String oldWorkflowId, String newWorkflowId);
+
+    void deleteWorkflowTestConfigurationConnection(
+        String workflowId, String workflowNodeName, String key, long environmentId);
 }

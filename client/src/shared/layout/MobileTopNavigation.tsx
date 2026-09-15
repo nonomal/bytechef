@@ -1,9 +1,7 @@
-import {Button} from '@/components/ui/button';
-import {Menu} from 'lucide-react';
+import reactLogo from '@/assets/logo.svg';
+import {SidebarTrigger} from '@/components/ui/sidebar';
 
-import reactLogo from '../../assets/logo.svg';
-
-export function MobileTopNavigation({setMobileMenuOpen}: {setMobileMenuOpen: (value: boolean) => void}) {
+export function MobileTopNavigation() {
     return (
         <div className="lg:hidden">
             <div className="flex items-center justify-between bg-white px-4 py-2">
@@ -11,13 +9,7 @@ export function MobileTopNavigation({setMobileMenuOpen}: {setMobileMenuOpen: (va
                     <img alt="ByteChef" className="h-8 w-auto" src={reactLogo} />
                 </div>
 
-                <div>
-                    <Button onClick={() => setMobileMenuOpen(true)} size="icon" variant="ghost">
-                        <span className="sr-only">Open sidebar</span>
-
-                        <Menu aria-hidden="true" className="size-6" />
-                    </Button>
-                </div>
+                <SidebarTrigger aria-label="Open sidebar" />
             </div>
         </div>
     );

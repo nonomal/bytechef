@@ -5,6 +5,7 @@ import java.util.Objects;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import org.springframework.lang.Nullable;
 import org.openapitools.jackson.nullable.JsonNullable;
 import java.time.OffsetDateTime;
 import jakarta.validation.Valid;
@@ -20,18 +21,18 @@ import jakarta.annotation.Generated;
  */
 
 @JsonTypeName("Webhook_retry")
-@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2024-06-30T07:20:55.672695+02:00[Europe/Zagreb]", comments = "Generator version: 7.5.0")
+@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2026-07-03T17:58:17.150015+02:00[Europe/Zagreb]", comments = "Generator version: 7.22.0")
 public class WebhookRetryModel {
 
-  private Integer initialInterval;
+  private @Nullable Integer initialInterval;
 
-  private Integer maxInterval;
+  private @Nullable Integer maxInterval;
 
-  private Integer maxAttempts;
+  private @Nullable Integer maxAttempts;
 
-  private Integer multiplier;
+  private @Nullable Integer multiplier;
 
-  public WebhookRetryModel initialInterval(Integer initialInterval) {
+  public WebhookRetryModel initialInterval(@Nullable Integer initialInterval) {
     this.initialInterval = initialInterval;
     return this;
   }
@@ -39,19 +40,20 @@ public class WebhookRetryModel {
   /**
    * Get initialInterval
    * @return initialInterval
-  */
+   */
   
   @Schema(name = "initialInterval", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("initialInterval")
-  public Integer getInitialInterval() {
+  public @Nullable Integer getInitialInterval() {
     return initialInterval;
   }
 
-  public void setInitialInterval(Integer initialInterval) {
+  @JsonProperty("initialInterval")
+  public void setInitialInterval(@Nullable Integer initialInterval) {
     this.initialInterval = initialInterval;
   }
 
-  public WebhookRetryModel maxInterval(Integer maxInterval) {
+  public WebhookRetryModel maxInterval(@Nullable Integer maxInterval) {
     this.maxInterval = maxInterval;
     return this;
   }
@@ -59,19 +61,20 @@ public class WebhookRetryModel {
   /**
    * Get maxInterval
    * @return maxInterval
-  */
+   */
   
   @Schema(name = "maxInterval", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("maxInterval")
-  public Integer getMaxInterval() {
+  public @Nullable Integer getMaxInterval() {
     return maxInterval;
   }
 
-  public void setMaxInterval(Integer maxInterval) {
+  @JsonProperty("maxInterval")
+  public void setMaxInterval(@Nullable Integer maxInterval) {
     this.maxInterval = maxInterval;
   }
 
-  public WebhookRetryModel maxAttempts(Integer maxAttempts) {
+  public WebhookRetryModel maxAttempts(@Nullable Integer maxAttempts) {
     this.maxAttempts = maxAttempts;
     return this;
   }
@@ -79,19 +82,20 @@ public class WebhookRetryModel {
   /**
    * Get maxAttempts
    * @return maxAttempts
-  */
+   */
   
   @Schema(name = "maxAttempts", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("maxAttempts")
-  public Integer getMaxAttempts() {
+  public @Nullable Integer getMaxAttempts() {
     return maxAttempts;
   }
 
-  public void setMaxAttempts(Integer maxAttempts) {
+  @JsonProperty("maxAttempts")
+  public void setMaxAttempts(@Nullable Integer maxAttempts) {
     this.maxAttempts = maxAttempts;
   }
 
-  public WebhookRetryModel multiplier(Integer multiplier) {
+  public WebhookRetryModel multiplier(@Nullable Integer multiplier) {
     this.multiplier = multiplier;
     return this;
   }
@@ -99,15 +103,16 @@ public class WebhookRetryModel {
   /**
    * Get multiplier
    * @return multiplier
-  */
+   */
   
   @Schema(name = "multiplier", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("multiplier")
-  public Integer getMultiplier() {
+  public @Nullable Integer getMultiplier() {
     return multiplier;
   }
 
-  public void setMultiplier(Integer multiplier) {
+  @JsonProperty("multiplier")
+  public void setMultiplier(@Nullable Integer multiplier) {
     this.multiplier = multiplier;
   }
 
@@ -147,11 +152,8 @@ public class WebhookRetryModel {
    * Convert the given object to string with each line indented by 4 spaces
    * (except the first line).
    */
-  private String toIndentedString(Object o) {
-    if (o == null) {
-      return "null";
-    }
-    return o.toString().replace("\n", "\n    ");
+  private String toIndentedString(@Nullable Object o) {
+    return o == null ? "null" : o.toString().replace("\n", "\n    ");
   }
 }
 

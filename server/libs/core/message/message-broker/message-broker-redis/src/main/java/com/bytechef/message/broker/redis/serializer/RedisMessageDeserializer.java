@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,10 +16,10 @@
 
 package com.bytechef.message.broker.redis.serializer;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import org.apache.commons.lang3.Validate;
 import org.springframework.data.redis.serializer.SerializationException;
+import org.springframework.util.Assert;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * @author Ivica Cardic
@@ -34,7 +34,7 @@ public class RedisMessageDeserializer {
     }
 
     public Object deserialize(String string) throws SerializationException {
-        Validate.notNull(string, "'string' must not be null");
+        Assert.notNull(string, "'string' must not be null");
 
         try {
             RedisMessage redisMessage = objectMapper.readValue(string, RedisMessage.class);

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,24 +16,24 @@
 
 package com.bytechef.component.jira.action;
 
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.array;
-import static com.bytechef.component.definition.ComponentDSL.integer;
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.array;
+import static com.bytechef.component.definition.ComponentDsl.object;
+import static com.bytechef.component.definition.ComponentDsl.outputSchema;
+import static com.bytechef.component.definition.ComponentDsl.string;
+import static com.bytechef.component.jira.constant.JiraConstants.ID;
 import static com.bytechef.component.jira.constant.JiraConstants.ISSUES;
-import static com.bytechef.component.jira.constant.JiraConstants.ISSUE_OUTPUT_PROPERTY;
 import static com.bytechef.component.jira.constant.JiraConstants.JQL;
 import static com.bytechef.component.jira.constant.JiraConstants.MAX_RESULTS;
-import static com.bytechef.component.jira.constant.JiraConstants.SEARCH_FOR_ISSUES_USING_JQL;
-import static com.bytechef.component.jira.util.JiraUtils.getBaseUrl;
+import static com.bytechef.component.jira.constant.JiraConstants.NEXT_PAGE_TOKEN;
 
-import com.bytechef.component.definition.ActionContext;
-import com.bytechef.component.definition.ComponentDSL.ModifiableActionDefinition;
+import com.bytechef.component.definition.ComponentDsl.ModifiableActionDefinition;
+import com.bytechef.component.definition.Context;
 import com.bytechef.component.definition.Context.Http;
-import com.bytechef.component.definition.Context.TypeReference;
 import com.bytechef.component.definition.Parameters;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
+import com.bytechef.component.definition.TypeReference;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -41,45 +41,52 @@ import java.util.Map;
  */
 public class JiraSearchForIssuesUsingJqlAction {
 
-    public static final ModifiableActionDefinition ACTION_DEFINITION = action(SEARCH_FOR_ISSUES_USING_JQL)
-        .title("Search issues")
-        .description("Search for issues using JQL")
+    public static final ModifiableActionDefinition ACTION_DEFINITION = action("searchForIssuesUsingJql")
+        .title("Search Issues")
+        .description("Search for issues using JQL.")
+        .help("", "https://docs.bytechef.io/reference/components/jira_v1#search-issues")
         .properties(
             string(JQL)
                 .label("JQL")
                 .description(
-                    "The JQL that defines the search. If no JQL expression is provided, all issues are returned")
+                    "The JQL that defines the search. If no JQL expression is provided, all issues are returned.")
                 .exampleValue("project = HSP")
-                .required(false),
-            integer(MAX_RESULTS)
-                .label("Max results")
-                .description("The maximum number of items to return per page.")
-                .defaultValue(50)
-                .minValue(1)
-                .maxValue(100)
                 .required(true))
-        .outputSchema(
-            array()
-                .items(ISSUE_OUTPUT_PROPERTY))
+        .output(
+            outputSchema(
+                array()
+                    .items(
+                        object()
+                            .properties(
+                                string(ID)
+                                    .description("The ID of the issue.")))))
         .perform(JiraSearchForIssuesUsingJqlAction::perform);
 
     private JiraSearchForIssuesUsingJqlAction() {
     }
 
-    public static Object perform(Parameters inputParameters, Parameters connectionParameters, ActionContext context) {
-        StringBuilder url = new StringBuilder("?maxResults=" + inputParameters.getRequiredInteger(MAX_RESULTS));
-        String jql = inputParameters.getString(JQL);
+    public static List<Object> perform(Parameters inputParameters, Parameters connectionParameters, Context context) {
+        List<Object> issues = new ArrayList<>();
 
-        if (jql != null) {
-            url.append("&jql=")
-                .append(URLEncoder.encode(jql, StandardCharsets.UTF_8));
-        }
+        String nextPageToken = null;
 
-        Map<String, Object> body = context.http(http -> http.get(getBaseUrl(context) + "/search" + url))
-            .configuration(Http.responseType(Http.ResponseType.JSON))
-            .execute()
-            .getBody(new TypeReference<>() {});
+        do {
+            Map<String, Object> body = context.http(http -> http.get("/search/jql"))
+                .queryParameters(
+                    MAX_RESULTS, 5000,
+                    NEXT_PAGE_TOKEN, nextPageToken,
+                    JQL, inputParameters.getString(JQL))
+                .configuration(Http.responseType(Http.ResponseType.JSON))
+                .execute()
+                .getBody(new TypeReference<>() {});
 
-        return body.get(ISSUES);
+            if (body.get(ISSUES) instanceof List<?> list) {
+                issues.addAll(list);
+            }
+
+            nextPageToken = (String) body.get(NEXT_PAGE_TOKEN);
+        } while (nextPageToken != null);
+
+        return issues;
     }
 }

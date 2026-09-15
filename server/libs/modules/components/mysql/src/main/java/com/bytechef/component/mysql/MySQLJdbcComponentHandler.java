@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,11 +16,10 @@
 
 package com.bytechef.component.mysql;
 
-import static com.bytechef.component.definition.ComponentDSL.jdbcComponent;
-import static com.bytechef.component.mysql.constant.MySQLConstants.MYSQL;
+import static com.bytechef.platform.component.definition.JdbcComponentDsl.jdbcComponent;
 
-import com.bytechef.component.JdbcComponentHandler;
-import com.bytechef.component.definition.JdbcComponentDefinition;
+import com.bytechef.platform.component.JdbcComponentHandler;
+import com.bytechef.platform.component.definition.JdbcComponentDefinition;
 import com.google.auto.service.AutoService;
 
 /**
@@ -29,11 +28,11 @@ import com.google.auto.service.AutoService;
 @AutoService(JdbcComponentHandler.class)
 public class MySQLJdbcComponentHandler implements JdbcComponentHandler {
 
-    private static final JdbcComponentDefinition COMPONENT_DEFINITION = jdbcComponent(MYSQL)
+    private static final JdbcComponentDefinition COMPONENT_DEFINITION = jdbcComponent("mysql")
         .title("MySQL")
         .description("Query, insert and update data from MySQL.")
         .icon("path:assets/mysql.svg")
-        .databaseJdbcName("mysql")
+        .urlTemplate("jdbc:mysql://{host}:{port}/{database}")
         .jdbcDriverClassName("com.mysql.jdbc.Driver");
 
     @Override

@@ -5,6 +5,7 @@ import java.util.Objects;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import org.springframework.lang.Nullable;
 import org.openapitools.jackson.nullable.JsonNullable;
 import java.time.OffsetDateTime;
 import jakarta.validation.Valid;
@@ -21,12 +22,12 @@ import jakarta.annotation.Generated;
 
 @Schema(name = "Resources", description = "A set of available resources.")
 @JsonTypeName("Resources")
-@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2024-06-30T07:20:54.243996+02:00[Europe/Zagreb]", comments = "Generator version: 7.5.0")
+@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2026-07-03T17:58:15.504637+02:00[Europe/Zagreb]", comments = "Generator version: 7.22.0")
 public class ResourcesModel {
 
-  private String documentationUrl;
+  private @Nullable String documentationUrl;
 
-  public ResourcesModel documentationUrl(String documentationUrl) {
+  public ResourcesModel documentationUrl(@Nullable String documentationUrl) {
     this.documentationUrl = documentationUrl;
     return this;
   }
@@ -34,15 +35,16 @@ public class ResourcesModel {
   /**
    * The url of available documentation.
    * @return documentationUrl
-  */
+   */
   
   @Schema(name = "documentationUrl", description = "The url of available documentation.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("documentationUrl")
-  public String getDocumentationUrl() {
+  public @Nullable String getDocumentationUrl() {
     return documentationUrl;
   }
 
-  public void setDocumentationUrl(String documentationUrl) {
+  @JsonProperty("documentationUrl")
+  public void setDocumentationUrl(@Nullable String documentationUrl) {
     this.documentationUrl = documentationUrl;
   }
 
@@ -76,11 +78,8 @@ public class ResourcesModel {
    * Convert the given object to string with each line indented by 4 spaces
    * (except the first line).
    */
-  private String toIndentedString(Object o) {
-    if (o == null) {
-      return "null";
-    }
-    return o.toString().replace("\n", "\n    ");
+  private String toIndentedString(@Nullable Object o) {
+    return o == null ? "null" : o.toString().replace("\n", "\n    ");
   }
 }
 

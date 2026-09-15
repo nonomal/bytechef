@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,8 @@ package com.bytechef.automation.configuration.service;
 
 import com.bytechef.automation.configuration.domain.ProjectWorkflow;
 import java.util.List;
+import java.util.Optional;
+import org.jspecify.annotations.Nullable;
 
 /**
  * @author Ivica Cardic
@@ -26,29 +28,53 @@ public interface ProjectWorkflowService {
 
     ProjectWorkflow addWorkflow(long projectId, int projectVersion, String workflowId);
 
-    ProjectWorkflow addWorkflow(long projectId, int projectVersion, String workflowId, String workflowReferenceCode);
+    void delete(List<Long> ids);
 
-    void deleteProjectWorkflows(List<Long> ids);
+    void delete(long projectId, int projectVersion, String workflowId);
+
+    Optional<String> fetchLastProjectWorkflowId(Long projectId, String workflowUuid);
+
+    Optional<ProjectWorkflow> fetchProjectWorkflow(long projectId, int projectVersion, String workflowUuid);
+
+    Optional<String> fetchProjectWorkflowWorkflowId(long projectDeploymentId, String workflowUuid);
+
+    ProjectWorkflow getLastProjectWorkflow(long projectId, String workflowUuid);
+
+    String getLastPublishedWorkflowId(String workflowUuid);
+
+    String getLastWorkflowId(String workflowUuid);
+
+    List<ProjectWorkflow> getLatestProjectWorkflows();
+
+    List<Long> getProjectProjectWorkflowIds(long projectId, int projectVersion);
 
     ProjectWorkflow getProjectWorkflow(long id);
 
-    String getProjectWorkflowId(long projectInstanceId, String workflowReferenceCode);
+    List<String> getProjectWorkflowIds(long projectId);
 
-    List<Long> getProjectWorkflowIds(long projectId, int projectVersion);
+    List<String> getProjectWorkflowIds(long projectId, int projectVersion);
 
     List<ProjectWorkflow> getProjectWorkflows();
+
+    List<ProjectWorkflow> getProjectWorkflows(List<Long> projectIds);
 
     List<ProjectWorkflow> getProjectWorkflows(long projectId);
 
     List<ProjectWorkflow> getProjectWorkflows(long projectId, int projectVersion);
 
-    List<String> getWorkflowIds(long projectId);
+    List<ProjectWorkflow> getProjectWorkflows(Long projectId, String workflowUuid);
 
-    List<String> getWorkflowIds(long projectId, int projectVersion);
+    String getProjectWorkflowWorkflowId(long projectDeploymentId, String workflowUuid);
+
+    String getProjectWorkflowUuid(long projectDeploymentId, String workflowId);
 
     ProjectWorkflow getWorkflowProjectWorkflow(String workflowId);
 
-    void removeWorkflow(long projectId, int projectVersion, String workflowId);
+    List<ProjectWorkflow> getWorkflowProjectWorkflows(List<String> workflowIds);
+
+    void publishWorkflow(long projectId, int oldProjectVersion, String oldWorkflowId, ProjectWorkflow projectWorkflow);
 
     ProjectWorkflow update(ProjectWorkflow projectWorkflow);
+
+    ProjectWorkflow updatePermissionExpression(long id, @Nullable String permissionExpression);
 }

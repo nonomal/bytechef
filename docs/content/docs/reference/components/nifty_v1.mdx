@@ -1,0 +1,599 @@
+---
+title: "Nifty"
+description: "Nifty Project Management is a software tool that streamlines team collaboration and project tracking with features like task management, timelines, and communication tools to enhance productivity."
+---
+
+
+Categories: Project Management, Productivity and Collaboration
+
+
+Type: nifty/v1
+
+<hr />
+
+
+
+
+## Connections
+
+Version: 1
+
+
+### OAuth2 Authorization Code
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| clientId | Client Id | STRING |  | true |
+| clientSecret | Client Secret | STRING |  | true |
+
+
+
+## Connection Setup
+
+### Create OAuth2 App
+
+1. Navigate to your [Nifty](https://niftypm.com/case/agile-development/?utm_campaign=10981377029&utm_campaign=WorldWideDev-traffic-Search-14&utm_source=g&utm_source=adwords&utm_medium=cpc&utm_medium=ppc&utm_content=&utm_term=&utm_term=&ad_id=648900225750%E2%80%A9&hsa_acc=6503027811&hsa_cam=10981377029&hsa_grp=116587391671&hsa_ad=648900225750&hsa_src=g&hsa_tgt=dsa-1034839133995&hsa_kw=&hsa_mt=&hsa_net=adwords&hsa_ver=3&gad_source=1&gad_campaignid=10981377029&gbraid=0AAAAACydPO--RTfGKXzwwAaWd0b4pQxeW&gclid=CjwKCAiAu67KBhAkEiwAY0jAlcdshbZXCzyoCD7ZVdahI1GfjePmp5VvXd5P1iV3QjuSVRcAsJvlyxoCBC8QAvD_BwE) dashboard.
+2. Click on your account name.
+3. Click on **Settings**.
+4. Click on **App Center**.
+5. Click on **Integrate with API**.
+6. Click on **Create a new App**.
+7. Enter name and description.
+8. Enter **Redirect URI** depending on your instance:
+     - `https://app.bytechef.io/callback` (Cloud)
+     - `http://localhost:5173/callback` (Local dev)
+9. Add all needed Scopes.
+10. Click on **Create**.
+11. Click this icon.
+12. Here are Client ID and Client Secret.
+
+<div style={{ position: 'relative', height:0, width: '100%', overflow: 'hidden', zIndex: 49, boxSizing: 'border-box', paddingBottom: 'calc(52.05219207% + 32px)'}}>
+    <iframe src="https://www.guidejar.com/embed/d345f40c-f9ff-4717-895a-0449d23bb3e1?type=1&controls=on" width="100%" height="100%" style={{height:'100%', position:'absolute', inset:0}} allowFullScreen frameBorder="0"></iframe>
+</div>
+
+
+
+<hr />
+
+
+## Actions
+
+
+### Add Labels
+Name: addLabels
+
+`Add labels to the task.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| taskId | Task ID | STRING | ID of the task to add label to. | true |
+| labels | Labels | ARRAY <details> <summary> Items </summary> [STRING] </details> | List of labels to add to the task. | true |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Add Labels",
+  "name" : "addLabels",
+  "parameters" : {
+    "taskId" : "",
+    "labels" : [ "" ]
+  },
+  "type" : "nifty/v1/addLabels"
+}
+```
+
+#### Output
+
+
+
+Type: OBJECT
+
+
+#### Properties
+
+|     Name     |     Type     |     Description     |
+|:------------:|:------------:|:-------------------:|
+| message | STRING | A confirmation message indicating whether the labels where added successfully. |
+| labels | ARRAY <details> <summary> Items </summary> [STRING] </details> | List of labels added to the task. |
+
+
+
+
+#### Output Example
+```json
+{
+  "message" : "",
+  "labels" : [ "" ]
+}
+```
+
+#### Find Task ID
+
+To find your task ID, click [here](/reference/components/nifty_v1#how-to-find-your-task-id).
+
+#### Find Task Status
+
+To find your task Status, click [here](/reference/components/nifty_v1#how-to-find-task-status).
+
+
+
+### Create Project
+Name: createProject
+
+`Creates new project.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| name | Name | STRING | Name of the project. | true |
+| description | Description | STRING | Description of the project's purpose, goals, or any other relevent information. | false |
+| template_id | Template ID | STRING | ID of template that can be used to pre-configure the project. | false |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Create Project",
+  "name" : "createProject",
+  "parameters" : {
+    "name" : "",
+    "description" : "",
+    "template_id" : ""
+  },
+  "type" : "nifty/v1/createProject"
+}
+```
+
+#### Output
+
+
+
+Type: OBJECT
+
+
+#### Properties
+
+|     Name     |     Type     |     Description     |
+|:------------:|:------------:|:-------------------:|
+| id | STRING | ID of the project. |
+| name | STRING | Name of the project. |
+| description | STRING | Description of the project. |
+| template_id | STRING | ID of the template used to create the project. |
+
+
+
+
+#### Output Example
+```json
+{
+  "id" : "",
+  "name" : "",
+  "description" : "",
+  "template_id" : ""
+}
+```
+
+#### Find Template ID
+
+To find your template ID, click [here](/reference/components/nifty_v1#how-to-find-your-template-id).
+
+
+
+### Create Status
+Name: createStatus
+
+`Creates new status`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| name | Name | STRING | Name of the status. | true |
+| project_id | Project ID | STRING | Project ID that the status belongs to. | true |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Create Status",
+  "name" : "createStatus",
+  "parameters" : {
+    "name" : "",
+    "project_id" : ""
+  },
+  "type" : "nifty/v1/createStatus"
+}
+```
+
+#### Output
+
+
+
+Type: OBJECT
+
+
+#### Properties
+
+|     Name     |     Type     |     Description     |
+|:------------:|:------------:|:-------------------:|
+| message | STRING |  |
+| task_group | OBJECT <details> <summary> Properties </summary> &#123;STRING\(id), STRING\(name), STRING\(color), STRING\(created_by), STRING\(project), INTEGER\(order)&#125; </details> |  |
+
+
+
+
+#### Output Example
+```json
+{
+  "message" : "",
+  "task_group" : {
+    "id" : "",
+    "name" : "",
+    "color" : "",
+    "created_by" : "",
+    "project" : "",
+    "order" : 1
+  }
+}
+```
+
+#### Find Project ID
+
+To find your project ID, click [here](/reference/components/nifty_v1#how-to-find-your-project-id).
+
+
+
+### Create Task
+Name: createTask
+
+`Creates new task`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| project | Project ID | STRING | ID of the project within which the task will be created. | false |
+| task_group_id | Status | STRING <details> <summary> Depends On </summary> project </details> | Status or Task Group ID of the group where the task will be stored. | true |
+| name | Name | STRING | Name of the task. | true |
+| description | Description | STRING | Description of the task. | false |
+| due_date | Due Date | DATE_TIME | Due date for the task. | false |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Create Task",
+  "name" : "createTask",
+  "parameters" : {
+    "project" : "",
+    "task_group_id" : "",
+    "name" : "",
+    "description" : "",
+    "due_date" : "2021-01-01T00:00:00"
+  },
+  "type" : "nifty/v1/createTask"
+}
+```
+
+#### Output
+
+
+
+Type: OBJECT
+
+
+#### Properties
+
+|     Name     |     Type     |     Description     |
+|:------------:|:------------:|:-------------------:|
+| id | STRING | ID of the task. |
+| name | STRING | Name of the task. |
+| project | STRING | ID of the project the task belongs to. |
+| description | STRING | Description of the task. |
+| due_date | DATE_TIME | Due date for the task. |
+
+
+
+
+#### Output Example
+```json
+{
+  "id" : "",
+  "name" : "",
+  "project" : "",
+  "description" : "",
+  "due_date" : "2021-01-01T00:00:00"
+}
+```
+
+#### Find Project ID
+
+To find your project ID, click [here](/reference/components/nifty_v1#how-to-find-your-project-id).
+
+#### Find Task Status
+
+To find your task Status, click [here](/reference/components/nifty_v1#how-to-find-task-status).
+
+
+
+### Get Task
+Name: getTask
+
+`Gets task details.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| taskId | Task ID | STRING | ID of the task to get details for. | true |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Get Task",
+  "name" : "getTask",
+  "parameters" : {
+    "taskId" : ""
+  },
+  "type" : "nifty/v1/getTask"
+}
+```
+
+#### Output
+
+
+
+Type: OBJECT
+
+
+#### Properties
+
+|     Name     |     Type     |     Description     |
+|:------------:|:------------:|:-------------------:|
+| id | STRING | ID of the task. |
+| name | STRING | Name of the task. |
+| project | STRING | ID of the project the task belongs to. |
+| description | STRING | Description of the task. |
+
+
+
+
+#### Output Example
+```json
+{
+  "id" : "",
+  "name" : "",
+  "project" : "",
+  "description" : ""
+}
+```
+
+#### Find Task ID
+
+To find your task ID, click [here](/reference/components/nifty_v1#how-to-find-your-task-id).
+
+
+
+### Get Tracked Time Report
+Name: getTrackedTimeReport
+
+`Gets tracked time report information.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| project_id | Project ID | STRING | Id of the project to get the report for. | true |
+| start_date | Start Date | DATE_TIME | Start date for the report. | false |
+| end_date | End Date | DATE_TIME | Start date for the report. | false |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Get Tracked Time Report",
+  "name" : "getTrackedTimeReport",
+  "parameters" : {
+    "project_id" : "",
+    "start_date" : "2021-01-01T00:00:00",
+    "end_date" : "2021-01-01T00:00:00"
+  },
+  "type" : "nifty/v1/getTrackedTimeReport"
+}
+```
+
+#### Output
+
+
+
+Type: OBJECT
+
+
+#### Properties
+
+|     Name     |     Type     |     Description     |
+|:------------:|:------------:|:-------------------:|
+| items | ARRAY <details> <summary> Items </summary> [&#123;STRING\(id), STRING\(project), STRING\(start), BOOLEAN\(manual), STRING\(user), STRING\(task), STRING\(end), BOOLEAN\(active), STRING\(duration)&#125;] </details> |  |
+
+
+
+
+#### Output Example
+```json
+{
+  "items" : [ {
+    "id" : "",
+    "project" : "",
+    "start" : "",
+    "manual" : false,
+    "user" : "",
+    "task" : "",
+    "end" : "",
+    "active" : false,
+    "duration" : ""
+  } ]
+}
+```
+
+#### Find Project ID
+
+To find your project ID, click [here](/reference/components/nifty_v1#how-to-find-your-project-id).
+
+
+
+
+## Triggers
+
+
+### New Task
+Name: newTask
+
+`Triggers when new task is created.`
+
+Type: DYNAMIC_WEBHOOK
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| app_id | Application | STRING | Application to be used for the trigger. | true |
+
+
+#### Output
+
+
+
+Type: OBJECT
+
+
+#### Properties
+
+|     Name     |     Type     |     Description     |
+|:------------:|:------------:|:-------------------:|
+| id | STRING | ID pod the task. |
+| project | STRING | Project under which the task is created. |
+| order | STRING | Order of the task. |
+| milestone | STRING | Milestone of the task. |
+
+
+
+
+#### JSON Example
+```json
+{
+  "label" : "New Task",
+  "name" : "newTask",
+  "parameters" : {
+    "app_id" : ""
+  },
+  "type" : "nifty/v1/newTask"
+}
+```
+
+
+
+
+
+## What to do if your action is not listed here?
+
+If this component doesn't have the action you need, you can use **Custom Action** to create your own. Custom Actions empower you to define HTTP requests tailored to your specific requirements, allowing for greater flexibility in integrating with external services or APIs.
+
+To create a Custom Action, simply specify the desired HTTP method, path, and any necessary parameters. This way, you can extend the functionality of your component beyond the predefined actions, ensuring that you can meet all your integration needs effectively.
+
+<hr />
+
+# Additional Instructions
+
+### How to find your Project ID
+
+You have several methods to find your Nifty project ID:
+
+* **Method 1: Through the Project URL**
+
+1. Open the project in **Nifty**.
+
+2. Look at the URL in your browser. It will look similar to:
+
+    https://nifty.pm/projects/12345/tasks
+
+3. The number in the URL (`12345` in this example) is your **project ID**.
+
+* **Method 2: Through the Nifty API**
+
+1. Open your browser or API client.
+
+2. Run the following request (replace `WORKSPACE_ID` with your workspace ID):
+
+    https://api.nifty.pm/v1/workspaces/WORKSPACE_ID/projects
+
+3. Find the project in the JSON response.
+
+4. The value under `id` is the **project ID**.
+
+
+### How to find your Project Status
+
+1. Open your browser or API client.
+
+2. Run the following request (replace `PROJECT_ID` with your project ID):
+
+    https://api.nifty.pm/v1/projects/PROJECT_ID
+
+3. Look for the `status` field in the JSON response.
+
+4. The value under `status` is your **project status**.
+
+
+### How to find your Task ID
+
+You have several methods to find your Nifty task ID:
+
+* **Method 1: Through the Task URL**
+
+1. Open the task in **Nifty**.
+
+2. Look at the URL in your browser. It will look similar to:
+
+    https://nifty.pm/projects/12345/tasks/67890
+
+3. The **last number** (`67890` in this example) is the **task ID**.
+
+* **Method 2: Through the Nifty API**
+
+1. Open your browser or API client.
+
+2. Run the following request (replace `PROJECT_ID` with your project ID):
+
+    https://api.nifty.pm/v1/projects/PROJECT_ID/tasks
+
+3. Find the task in the JSON response.
+
+4. The value under `id` is the **task ID**.
+
+
+### How to find your Template ID
+
+1. Open your browser or API client.
+
+2. Run the following request:
+
+    https://api.nifty.pm/v1/templates
+
+3. Find the template you want in the JSON response.
+
+4. The value under `id` is the **template ID**.
+
+
+### How to find Task Status
+
+1. Open your browser or API client.
+
+2. Run the following request (replace `TASK_ID` with your task ID):
+
+    https://api.nifty.pm/v1/tasks/TASK_ID
+
+3. Look for the `status` field in the JSON response.
+
+4. The value under `status` is your **task status**.
+

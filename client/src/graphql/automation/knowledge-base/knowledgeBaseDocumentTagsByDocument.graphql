@@ -1,0 +1,6 @@
+query knowledgeBaseDocumentTagsByDocument($knowledgeBaseId: ID!) {
+    knowledgeBaseDocumentTagsByDocument(knowledgeBaseId: $knowledgeBaseId) {
+        knowledgeBaseDocumentId
+        tags
+    }
+}

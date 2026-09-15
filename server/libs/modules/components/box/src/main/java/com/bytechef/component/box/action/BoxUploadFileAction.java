@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,22 +21,19 @@ import static com.bytechef.component.box.constant.BoxConstants.FILE_OUTPUT_PROPE
 import static com.bytechef.component.box.constant.BoxConstants.ID;
 import static com.bytechef.component.box.constant.BoxConstants.NAME;
 import static com.bytechef.component.box.constant.BoxConstants.PARENT;
-import static com.bytechef.component.box.constant.BoxConstants.UPLOAD_FILE;
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.array;
-import static com.bytechef.component.definition.ComponentDSL.fileEntry;
-import static com.bytechef.component.definition.ComponentDSL.object;
-import static com.bytechef.component.definition.ComponentDSL.string;
-import static com.bytechef.component.definition.Context.Http.BodyContentType;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.array;
+import static com.bytechef.component.definition.ComponentDsl.fileEntry;
+import static com.bytechef.component.definition.ComponentDsl.object;
+import static com.bytechef.component.definition.ComponentDsl.outputSchema;
+import static com.bytechef.component.definition.ComponentDsl.string;
 import static com.bytechef.component.definition.Context.Http.ResponseType;
 
-import com.bytechef.component.box.util.BoxUtils;
 import com.bytechef.component.definition.ActionContext;
-import com.bytechef.component.definition.ComponentDSL.ModifiableActionDefinition;
+import com.bytechef.component.definition.ComponentDsl.ModifiableActionDefinition;
 import com.bytechef.component.definition.Context.Http;
-import com.bytechef.component.definition.Context.TypeReference;
+import com.bytechef.component.definition.Context.Http.BodyContentType;
 import com.bytechef.component.definition.FileEntry;
-import com.bytechef.component.definition.OptionsDataSource.ActionOptionsFunction;
 import com.bytechef.component.definition.Parameters;
 import java.util.Map;
 
@@ -45,34 +42,34 @@ import java.util.Map;
  */
 public class BoxUploadFileAction {
 
-    public static final ModifiableActionDefinition ACTION_DEFINITION = action(UPLOAD_FILE)
-        .title("Upload file")
+    public static final ModifiableActionDefinition ACTION_DEFINITION = action("uploadFile")
+        .title("Upload File")
         .description("Uploads a small file to Box.")
+        .help("", "https://docs.bytechef.io/reference/components/box_v1#upload-file")
         .properties(
             string(ID)
-                .label("Parent folder")
+                .label("Parent Folder ID")
                 .description(
-                    "Folder where the file should be uploaded; if no folder is selected, the file will be " +
-                        "uploaded in the root folder.")
-                .options((ActionOptionsFunction<String>) BoxUtils::getRootFolderOptions)
+                    "ID of the folder where the file should be uploaded. The root folder is always represented " +
+                        "by the ID 0.")
                 .defaultValue("0")
                 .required(true),
             fileEntry(FILE)
-                .label("File")
+                .label("File Entry")
                 .required(true))
-        .outputSchema(
-            object()
-                .properties(
-                    array("entries")
-                        .items(FILE_OUTPUT_PROPERTY)))
+        .output(
+            outputSchema(
+                object()
+                    .properties(
+                        array("entries")
+                            .description("A list of files that were uploaded.")
+                            .items(FILE_OUTPUT_PROPERTY))))
         .perform(BoxUploadFileAction::perform);
 
     private BoxUploadFileAction() {
     }
 
-    public static Object perform(
-        Parameters inputParameters, Parameters connectionParameters, ActionContext context) {
-
+    public static Object perform(Parameters inputParameters, Parameters connectionParameters, ActionContext context) {
         FileEntry fileEntry = inputParameters.getRequiredFileEntry(FILE);
 
         return context
@@ -83,11 +80,12 @@ public class BoxUploadFileAction {
                     Map.of(
                         "attributes",
                         context.json(json -> json.write(
-                            Map.of(NAME, fileEntry.getName(),
+                            Map.of(
+                                NAME, fileEntry.getName(),
                                 PARENT, Map.of(ID, inputParameters.getRequiredString(ID))))),
                         FILE, fileEntry),
                     BodyContentType.FORM_DATA))
             .execute()
-            .getBody(new TypeReference<>() {});
+            .getBody();
     }
 }

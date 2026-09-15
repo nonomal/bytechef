@@ -5,6 +5,7 @@ import java.util.Objects;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import org.springframework.lang.Nullable;
 import org.openapitools.jackson.nullable.JsonNullable;
 import java.time.OffsetDateTime;
 import jakarta.validation.Valid;
@@ -21,16 +22,16 @@ import jakarta.annotation.Generated;
 
 @Schema(name = "JobConnection", description = "The connection used in a particular task.")
 @JsonTypeName("JobConnection")
-@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2024-06-30T07:20:55.672695+02:00[Europe/Zagreb]", comments = "Generator version: 7.5.0")
+@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2026-07-03T17:58:17.150015+02:00[Europe/Zagreb]", comments = "Generator version: 7.22.0")
 public class JobConnectionModel {
 
-  private Long id;
+  private @Nullable Long id;
 
-  private String key;
+  private @Nullable String key;
 
-  private String taskName;
+  private @Nullable String taskName;
 
-  public JobConnectionModel id(Long id) {
+  public JobConnectionModel id(@Nullable Long id) {
     this.id = id;
     return this;
   }
@@ -38,19 +39,20 @@ public class JobConnectionModel {
   /**
    * The connection id
    * @return id
-  */
+   */
   
   @Schema(name = "id", description = "The connection id", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("id")
-  public Long getId() {
+  public @Nullable Long getId() {
     return id;
   }
 
-  public void setId(Long id) {
+  @JsonProperty("id")
+  public void setId(@Nullable Long id) {
     this.id = id;
   }
 
-  public JobConnectionModel key(String key) {
+  public JobConnectionModel key(@Nullable String key) {
     this.key = key;
     return this;
   }
@@ -58,19 +60,20 @@ public class JobConnectionModel {
   /**
    * The connection key under which a connection is defined in a workflow definition.
    * @return key
-  */
+   */
   
   @Schema(name = "key", description = "The connection key under which a connection is defined in a workflow definition.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("key")
-  public String getKey() {
+  public @Nullable String getKey() {
     return key;
   }
 
-  public void setKey(String key) {
+  @JsonProperty("key")
+  public void setKey(@Nullable String key) {
     this.key = key;
   }
 
-  public JobConnectionModel taskName(String taskName) {
+  public JobConnectionModel taskName(@Nullable String taskName) {
     this.taskName = taskName;
     return this;
   }
@@ -78,15 +81,16 @@ public class JobConnectionModel {
   /**
    * The task name to which a connection belongs.
    * @return taskName
-  */
+   */
   
   @Schema(name = "taskName", description = "The task name to which a connection belongs.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("taskName")
-  public String getTaskName() {
+  public @Nullable String getTaskName() {
     return taskName;
   }
 
-  public void setTaskName(String taskName) {
+  @JsonProperty("taskName")
+  public void setTaskName(@Nullable String taskName) {
     this.taskName = taskName;
   }
 
@@ -124,11 +128,8 @@ public class JobConnectionModel {
    * Convert the given object to string with each line indented by 4 spaces
    * (except the first line).
    */
-  private String toIndentedString(Object o) {
-    if (o == null) {
-      return "null";
-    }
-    return o.toString().replace("\n", "\n    ");
+  private String toIndentedString(@Nullable Object o) {
+    return o == null ? "null" : o.toString().replace("\n", "\n    ");
   }
 }
 

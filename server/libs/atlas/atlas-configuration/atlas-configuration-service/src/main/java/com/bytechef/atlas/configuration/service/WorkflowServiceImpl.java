@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,12 +19,13 @@ package com.bytechef.atlas.configuration.service;
 import com.bytechef.atlas.configuration.domain.Workflow;
 import com.bytechef.atlas.configuration.domain.Workflow.Format;
 import com.bytechef.atlas.configuration.domain.Workflow.SourceType;
+import com.bytechef.atlas.configuration.exception.WorkflowErrorType;
 import com.bytechef.atlas.configuration.repository.WorkflowCrudRepository;
 import com.bytechef.atlas.configuration.repository.WorkflowRepository;
 import com.bytechef.commons.util.CollectionUtils;
-import com.bytechef.commons.util.OptionalUtils;
+import com.bytechef.exception.ConfigurationException;
+import com.bytechef.tenant.util.TenantCacheKeyUtils;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
@@ -37,8 +38,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.dao.OptimisticLockingFailureException;
-import org.springframework.lang.NonNull;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.Assert;
 
 /**
  * @author Ivica Cardic
@@ -46,10 +47,10 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 public class WorkflowServiceImpl implements WorkflowService {
 
-    private static final Logger logger = LoggerFactory.getLogger(WorkflowServiceImpl.class);
+    private static final Logger log = LoggerFactory.getLogger(WorkflowServiceImpl.class);
 
-    private static final String CACHE_ALL = WorkflowService.class.getName() + ".all";
-    private static final String CACHE_ONE = WorkflowService.class.getName() + ".one";
+    private static final String WORKFLOW_CACHE = WorkflowService.class.getName() + ".workflow";
+    private static final String WORKFLOWS_CACHE = WorkflowService.class.getName() + ".workflows";
 
     private final CacheManager cacheManager;
     private final List<WorkflowCrudRepository> workflowCrudRepositories;
@@ -66,12 +67,10 @@ public class WorkflowServiceImpl implements WorkflowService {
     }
 
     @Override
-    public Workflow create(
-        @NonNull String definition, @NonNull Format format, @NonNull SourceType sourceType) {
-
-        Validate.notNull(definition, "'definition' must not be null");
-        Validate.notNull(format, "'format' must not be null");
-        Validate.notNull(sourceType, "'sourceType' must not be null");
+    public Workflow create(String definition, Format format, SourceType sourceType) {
+        Assert.notNull(definition, "'definition' must not be null");
+        Assert.notNull(format, "'format' must not be null");
+        Assert.notNull(sourceType, "'sourceType' must not be null");
 
         // TODO Validate definition considering format value
 
@@ -85,22 +84,34 @@ public class WorkflowServiceImpl implements WorkflowService {
             workflowCrudRepository -> Objects.equals(workflowCrudRepository.getSourceType(), sourceType),
             workflowCrudRepository -> workflowCrudRepository.save(workflow));
 
-        return getWorkflow(Validate.notNull(savedWorkflow.getId(), "id"));
+        String savedWorkflowId = Validate.notNull(savedWorkflow.getId(), "id");
+
+        refreshCache(savedWorkflowId);
+
+        return getWorkflow(savedWorkflowId);
     }
 
     @Override
-    public void delete(@NonNull String id) {
-        Validate.notNull(id, "'id' must not be null");
+    public void delete(String id) {
+        Assert.notNull(id, "'id' must not be null");
 
         workflowCrudRepositories
             .stream()
-            .filter(workflowCrudRepository -> OptionalUtils.isPresent(workflowCrudRepository.findById(id)))
+            .filter(workflowCrudRepository -> workflowCrudRepository.findById(id)
+                .isPresent())
             .findFirst()
             .ifPresent(workflowCrudRepository -> workflowCrudRepository.deleteById(id));
     }
 
     @Override
-    public Workflow duplicateWorkflow(@NonNull String id) {
+    public void delete(List<String> ids) {
+        for (String id : ids) {
+            delete(id);
+        }
+    }
+
+    @Override
+    public Workflow duplicateWorkflow(String id) {
         Workflow workflow = getWorkflow(id);
 
         return create(workflow.getDefinition(), workflow.getFormat(), workflow.getSourceType());
@@ -108,31 +119,37 @@ public class WorkflowServiceImpl implements WorkflowService {
 
     @Override
     @Transactional(readOnly = true)
-    public Workflow getWorkflow(@NonNull String id) {
-        Validate.notNull(id, "'id' must not be null");
+    public Optional<Workflow> fetchWorkflow(String id) {
+        Assert.notNull(id, "'id' must not be null");
 
-        Cache cacheOne = Validate.notNull(cacheManager.getCache(CACHE_ONE), "cacheOne");
+        String tenantWorkflowCacheKey = TenantCacheKeyUtils.getKey(id);
 
-        if (cacheOne.get(id) != null) {
-            Cache.ValueWrapper valueWrapper = Validate.notNull(cacheOne.get(id), "valueWrapper");
+        Cache workflowCache = Validate.notNull(cacheManager.getCache(WORKFLOW_CACHE), WORKFLOW_CACHE);
 
-            return (Workflow) valueWrapper.get();
+        Cache.ValueWrapper workflowValueWrapper = workflowCache.get(tenantWorkflowCacheKey);
+
+        if (workflowValueWrapper != null) {
+            return Optional.ofNullable((Workflow) workflowValueWrapper.get());
         }
 
-        Cache cacheAll = Validate.notNull(cacheManager.getCache(CACHE_ALL), "cacheAll");
+        String tenantWorkflowsCacheKey = TenantCacheKeyUtils.getKey(WORKFLOWS_CACHE);
 
-        if (cacheAll.get(CACHE_ALL) != null) {
-            Cache.ValueWrapper valueWrapper = Validate.notNull(cacheAll.get(CACHE_ALL), "valueWrapper");
+        Cache workflowsCache = Validate.notNull(cacheManager.getCache(WORKFLOWS_CACHE), WORKFLOWS_CACHE);
 
+        Cache.ValueWrapper workflowsValueWrapper = workflowsCache.get(tenantWorkflowsCacheKey);
+
+        if (workflowsValueWrapper != null) {
             @SuppressWarnings("unchecked")
-            List<Workflow> workflows = (List<Workflow>) valueWrapper.get();
+            List<Workflow> workflows = (List<Workflow>) workflowsValueWrapper.get();
 
             for (Workflow workflow : Validate.notNull(workflows, "workflows")) {
                 if (Objects.equals(workflow.getId(), id)) {
-                    return workflow;
+                    return Optional.of(workflow);
                 }
             }
         }
+
+        RuntimeException lookupException = null;
 
         for (WorkflowRepository workflowRepository : workflowRepositories) {
             try {
@@ -143,16 +160,35 @@ public class WorkflowServiceImpl implements WorkflowService {
 
                     workflow.setSourceType(workflowRepository.getSourceType());
 
-                    cacheOne.put(id, workflow);
+                    workflowCache.put(tenantWorkflowCacheKey, workflow);
 
-                    return workflow;
+                    return Optional.of(workflow);
                 }
-            } catch (Exception e) {
-                logger.error(e.getMessage(), e);
+            } catch (RuntimeException exception) {
+                // A repository may legitimately reject an id it cannot serve (e.g. a filesystem repository asked for
+                // a JDBC id), so keep probing the remaining repositories. But remember the failure: if no repository
+                // ends up holding the workflow, the lookup was inconclusive (e.g. a transient datasource error) rather
+                // than a confirmed miss, and must not be reported as "not found" - that would let callers such as the
+                // trigger coordinator treat a still-live workflow as orphaned and delete its schedule (#5202).
+                log.error(exception.getMessage(), exception);
+
+                lookupException = exception;
             }
         }
 
-        throw new IllegalArgumentException("Workflow %s does not exist".formatted(id));
+        if (lookupException != null) {
+            throw lookupException;
+        }
+
+        return Optional.empty();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Workflow getWorkflow(String id) {
+        return fetchWorkflow(id)
+            .orElseThrow(() -> new ConfigurationException(
+                "Workflow with id: %s does not exist".formatted(id), WorkflowErrorType.WORKFLOW_NOT_FOUND));
     }
 
     @Override
@@ -165,18 +201,20 @@ public class WorkflowServiceImpl implements WorkflowService {
         List<WorkflowRepository> filteredWorkflowRepositories = CollectionUtils.filter(
             workflowRepositories, curWorkflowRepository -> sourceTypes.contains(curWorkflowRepository.getSourceType()));
 
-        Cache cacheAll = Validate.notNull(cacheManager.getCache(CACHE_ALL), "cacheAll");
+        String tenantWorkflowsCacheKey = TenantCacheKeyUtils.getKey(WORKFLOWS_CACHE);
 
-        if (cacheAll.get(CACHE_ALL) == null) {
+        Cache workflowsCache = Validate.notNull(cacheManager.getCache(WORKFLOWS_CACHE), WORKFLOWS_CACHE);
+
+        Cache.ValueWrapper valueWrapper = workflowsCache.get(tenantWorkflowsCacheKey);
+
+        if (valueWrapper == null) {
             workflows = filteredWorkflowRepositories.stream()
                 .flatMap(WorkflowServiceImpl::stream)
                 .sorted(WorkflowServiceImpl::compare)
                 .collect(Collectors.toList());
 
-            cacheAll.put(CACHE_ALL, workflows);
+            workflowsCache.put(tenantWorkflowsCacheKey, workflows);
         } else {
-            Cache.ValueWrapper valueWrapper = Validate.notNull(cacheAll.get(CACHE_ALL), "valueWrapper");
-
             workflows = (List<Workflow>) valueWrapper.get();
         }
 
@@ -185,23 +223,18 @@ public class WorkflowServiceImpl implements WorkflowService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<Workflow> getWorkflows(@NonNull List<String> workflowIds) {
-        List<Workflow> workflows = new ArrayList<>();
+    public List<Workflow> getWorkflows(List<String> workflowIds) {
+        List<Workflow> workflows = getWorkflows()
+            .stream()
+            .filter(workflow -> workflowIds.contains(workflow.getId()))
+            .toList();
 
-        for (String workflowId : workflowIds) {
-            workflows.add(getWorkflow(workflowId));
-        }
-
-        return CollectionUtils.sort(workflows, (workflow1, workflow2) -> {
-            String label1 = workflow1.getLabel();
-
-            return label1.compareTo(workflow2.getLabel());
-        });
+        return CollectionUtils.sort(workflows, WorkflowServiceImpl::compare);
     }
 
     @Override
-    public void refreshCache(@NonNull String id) {
-        Validate.notNull(id, "'id' must not be null");
+    public void refreshCache(String id) {
+        Assert.notNull(id, "'id' must not be null");
 
         Workflow workflow = null;
 
@@ -215,27 +248,33 @@ public class WorkflowServiceImpl implements WorkflowService {
                     workflow.setSourceType(workflowRepository.getSourceType());
                 }
             } catch (Exception e) {
-                logger.error(e.getMessage(), e);
+                log.error(e.getMessage(), e);
             }
         }
 
-        Cache cacheOne = Validate.notNull(cacheManager.getCache(CACHE_ONE), "cacheOne");
+        String tenantWorkflowCacheKey = TenantCacheKeyUtils.getKey(id);
 
-        if (cacheOne.get(id) != null) {
+        Cache workflowCache = Validate.notNull(cacheManager.getCache(WORKFLOW_CACHE), WORKFLOW_CACHE);
+
+        Cache.ValueWrapper workflowValueWrapper = workflowCache.get(tenantWorkflowCacheKey);
+
+        if (workflowValueWrapper != null) {
             if (workflow == null) {
-                cacheOne.evictIfPresent(id);
+                workflowCache.evictIfPresent(tenantWorkflowCacheKey);
             } else {
-                cacheOne.put(id, workflow);
+                workflowCache.put(tenantWorkflowCacheKey, workflow);
             }
         }
 
-        Cache cacheAll = Validate.notNull(cacheManager.getCache(CACHE_ALL), "cacheAll");
+        String tenantWorkflowsCacheKey = TenantCacheKeyUtils.getKey(WORKFLOWS_CACHE);
 
-        if (cacheAll.get(CACHE_ALL) != null) {
-            Cache.ValueWrapper valueWrapper = Validate.notNull(cacheAll.get(CACHE_ALL), "valueWrapper");
+        Cache workflowsCache = Validate.notNull(cacheManager.getCache(WORKFLOWS_CACHE), WORKFLOWS_CACHE);
 
+        Cache.ValueWrapper workflowsValueWrapper = workflowsCache.get(tenantWorkflowsCacheKey);
+
+        if (workflowsValueWrapper != null) {
             @SuppressWarnings("unchecked")
-            List<Workflow> workflows = (List<Workflow>) Validate.notNull(valueWrapper.get(), "workflows");
+            List<Workflow> workflows = (List<Workflow>) Validate.notNull(workflowsValueWrapper.get(), "workflows");
 
             if (workflow == null) {
                 CollectionUtils
@@ -253,31 +292,37 @@ public class WorkflowServiceImpl implements WorkflowService {
                 }
             }
 
-            cacheAll.put(CACHE_ALL, workflows);
+            workflowsCache.put(tenantWorkflowsCacheKey, workflows);
         }
     }
 
     @Override
-    public Workflow update(@NonNull String id, @NonNull String definition, int version) {
-        Validate.notNull(id, "'id' must not be null");
-        Validate.notNull(definition, "'definition' must not be null");
+    public Workflow update(String id, String definition, int version) {
+        Assert.notNull(id, "'id' must not be null");
+        Assert.notNull(definition, "'definition' must not be null");
 
         final Workflow workflow = getWorkflow(id);
 
         return CollectionUtils.getFirstFilter(
             workflowCrudRepositories,
-            workflowCrudRepository -> OptionalUtils.isPresent(workflowCrudRepository.findById(id)),
+            workflowCrudRepository -> workflowCrudRepository.findById(id)
+                .isPresent(),
             workflowCrudRepository -> update(definition, version, workflow, workflowCrudRepository));
     }
 
-    private static int compare(Workflow a, Workflow b) {
-        if (a.getLabel() == null || b.getLabel() == null) {
+    private static int compare(Workflow workflow1, Workflow workflow2) {
+        String label1 = workflow1.getLabel();
+        String label2 = workflow2.getLabel();
+
+        if (label1 == null && label2 == null) {
+            return 0;
+        } else if (label1 == null) {
             return -1;
+        } else if (label2 == null) {
+            return 1;
         }
 
-        String label = a.getLabel();
-
-        return label.compareTo(b.getLabel());
+        return label1.compareTo(label2);
     }
 
     private static Stream<Workflow> stream(WorkflowRepository workflowRepository) {
@@ -309,25 +354,32 @@ public class WorkflowServiceImpl implements WorkflowService {
 
                     return curWorkflow;
                 })
-                .get());
+                .orElseThrow(() -> new ConfigurationException(
+                    "Workflow with id: %s does not exist".formatted(workflow.getId()),
+                    WorkflowErrorType.WORKFLOW_NOT_FOUND)));
     }
 
     private Workflow updateCache(Workflow workflow) {
-        Cache cacheOne = Validate.notNull(cacheManager.getCache(CACHE_ONE), "cacheOne");
+        Cache workflowCache = Validate.notNull(cacheManager.getCache(WORKFLOW_CACHE), WORKFLOW_CACHE);
 
-        String workflowId = Validate.notNull(workflow.getId(), "id");
+        String tenantWorkflowCacheKey = TenantCacheKeyUtils.getKey(
+            Validate.notNull(workflow.getId(), "id"));
 
-        if (cacheOne.get(workflowId) != null) {
-            cacheOne.put(workflowId, workflow);
+        Cache.ValueWrapper workflowValueWrapper = workflowCache.get(tenantWorkflowCacheKey);
+
+        if (workflowValueWrapper != null) {
+            workflowCache.put(tenantWorkflowCacheKey, workflow);
         }
 
-        Cache cacheAll = Validate.notNull(cacheManager.getCache(CACHE_ALL), "cacheAll");
+        String tenantWorkflowsCacheKey = TenantCacheKeyUtils.getKey(WORKFLOWS_CACHE);
 
-        if (cacheAll.get(CACHE_ALL) != null) {
-            Cache.ValueWrapper valueWrapper = Validate.notNull(cacheAll.get(CACHE_ALL), "valueWrapper");
+        Cache workflowsCache = Validate.notNull(cacheManager.getCache(WORKFLOWS_CACHE), WORKFLOWS_CACHE);
 
+        Cache.ValueWrapper workflowsValueWrapper = workflowsCache.get(tenantWorkflowsCacheKey);
+
+        if (workflowsValueWrapper != null) {
             @SuppressWarnings("unchecked")
-            List<Workflow> workflows = (List<Workflow>) Validate.notNull(valueWrapper.get(), "workflows");
+            List<Workflow> workflows = (List<Workflow>) Validate.notNull(workflowsValueWrapper.get(), "workflows");
 
             int index = workflows.indexOf(workflow);
 
@@ -339,7 +391,7 @@ public class WorkflowServiceImpl implements WorkflowService {
                 workflows.add(index, workflow);
             }
 
-            cacheAll.put(CACHE_ALL, workflows);
+            workflowsCache.put(tenantWorkflowsCacheKey, workflows);
         }
 
         return workflow;

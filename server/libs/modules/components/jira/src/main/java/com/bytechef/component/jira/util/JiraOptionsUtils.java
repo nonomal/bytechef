@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,24 +16,25 @@
 
 package com.bytechef.component.jira.util;
 
-import static com.bytechef.component.definition.ComponentDSL.option;
+import static com.bytechef.component.definition.ComponentDsl.option;
 import static com.bytechef.component.jira.constant.JiraConstants.FIELDS;
 import static com.bytechef.component.jira.constant.JiraConstants.ID;
 import static com.bytechef.component.jira.constant.JiraConstants.ISSUES;
+import static com.bytechef.component.jira.constant.JiraConstants.ISSUE_ID;
+import static com.bytechef.component.jira.constant.JiraConstants.JQL;
+import static com.bytechef.component.jira.constant.JiraConstants.MAX_RESULTS;
 import static com.bytechef.component.jira.constant.JiraConstants.NAME;
+import static com.bytechef.component.jira.constant.JiraConstants.NEXT_PAGE;
+import static com.bytechef.component.jira.constant.JiraConstants.NEXT_PAGE_TOKEN;
 import static com.bytechef.component.jira.constant.JiraConstants.PROJECT;
 import static com.bytechef.component.jira.constant.JiraConstants.SUMMARY;
-import static com.bytechef.component.jira.util.JiraUtils.getBaseUrl;
 import static com.bytechef.component.jira.util.JiraUtils.getProjectName;
 
-import com.bytechef.component.definition.ActionContext;
 import com.bytechef.component.definition.Context;
 import com.bytechef.component.definition.Context.Http;
-import com.bytechef.component.definition.Context.TypeReference;
 import com.bytechef.component.definition.Option;
 import com.bytechef.component.definition.Parameters;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
+import com.bytechef.component.definition.TypeReference;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -47,38 +48,54 @@ public class JiraOptionsUtils {
     }
 
     public static List<Option<String>> getIssueIdOptions(
-        Parameters inputParameters, Parameters connectionParameters, Map<String, String> dependencyPaths,
-        String searchText, ActionContext context) {
+        Parameters inputParameters, Parameters connectionParameters, Map<String, String> lookupDependsOnPaths,
+        String searchText, Context context) {
 
-        String encode = URLEncoder.encode(
-            "=\"" + getProjectName(inputParameters, connectionParameters, context) + "\"", StandardCharsets.UTF_8);
-
-        Map<String, Object> body = context
-            .http(http -> http.get(getBaseUrl(context) + "/search?jql=project" + encode))
-            .configuration(Http.responseType(Http.ResponseType.JSON))
-            .execute()
-            .getBody(new TypeReference<>() {});
+        if (!inputParameters.containsKey(PROJECT)) {
+            return List.of();
+        }
 
         List<Option<String>> options = new ArrayList<>();
 
-        if (body.get(ISSUES) instanceof List<?> list) {
-            for (Object object : list) {
-                if (object instanceof Map<?, ?> map && map.get(FIELDS) instanceof Map<?, ?> fields) {
-                    options.add(option((String) fields.get(SUMMARY), (String) map.get(ID)));
+        String nextPageToken = null;
+
+        do {
+            Map<String, Object> body = context
+                .http(http -> http.get("/search/jql"))
+                .queryParameters(
+                    JQL, PROJECT + "=\"" + getProjectName(inputParameters, context) + "\"",
+                    FIELDS, SUMMARY,
+                    MAX_RESULTS, 5000,
+                    NEXT_PAGE_TOKEN, nextPageToken)
+                .configuration(Http.responseType(Http.ResponseType.JSON))
+                .execute()
+                .getBody(new TypeReference<>() {});
+
+            if (body.get(ISSUES) instanceof List<?> list) {
+                for (Object object : list) {
+                    if (object instanceof Map<?, ?> map && map.get(FIELDS) instanceof Map<?, ?> fields) {
+                        options.add(option((String) fields.get(SUMMARY), (String) map.get(ID)));
+                    }
                 }
             }
-        }
+
+            nextPageToken = (String) body.get(NEXT_PAGE_TOKEN);
+        } while (nextPageToken != null);
 
         return options;
     }
 
     public static List<Option<String>> getIssueTypesIdOptions(
-        Parameters inputParameters, Parameters connectionParameters, Map<String, String> dependencyPaths,
+        Parameters inputParameters, Parameters connectionParameters, Map<String, String> lookupDependsOnPaths,
         String searchText, Context context) {
 
+        if (!inputParameters.containsKey(PROJECT)) {
+            return List.of();
+        }
+
         List<Object> body = context
-            .http(http -> http.get(getBaseUrl(context) + "/issuetype/project?projectId=" +
-                inputParameters.getRequiredString(PROJECT)))
+            .http(http -> http.get("/issuetype/project"))
+            .queryParameter("projectId", inputParameters.getRequiredString(PROJECT))
             .configuration(Http.responseType(Http.ResponseType.JSON))
             .execute()
             .getBody(new TypeReference<>() {});
@@ -87,11 +104,11 @@ public class JiraOptionsUtils {
     }
 
     public static List<Option<String>> getPriorityIdOptions(
-        Parameters inputParameters, Parameters connectionParameters, Map<String, String> dependencyPaths,
-        String searchText, ActionContext context) {
+        Parameters inputParameters, Parameters connectionParameters, Map<String, String> lookupDependsOnPaths,
+        String searchText, Context context) {
 
         List<Object> body = context
-            .http(http -> http.get(getBaseUrl(context) + "/priority"))
+            .http(http -> http.get("/priority"))
             .configuration(Http.responseType(Http.ResponseType.JSON))
             .execute()
             .getBody(new TypeReference<>() {});
@@ -100,21 +117,62 @@ public class JiraOptionsUtils {
     }
 
     public static List<Option<String>> getProjectIdOptions(
-        Parameters inputParameters, Parameters connectionParameters, Map<String, String> dependencyPaths,
+        Parameters inputParameters, Parameters connectionParameters, Map<String, String> lookupDependsOnPaths,
         String searchText, Context context) {
 
+        List<Option<String>> options = new ArrayList<>();
+
         Map<String, Object> body = context
-            .http(http -> http.get(getBaseUrl(context) + "/project/search"))
+            .http(http -> http.get("/project/search"))
+            .queryParameters(MAX_RESULTS, 100)
             .configuration(Http.responseType(Http.ResponseType.JSON))
             .execute()
             .getBody(new TypeReference<>() {});
 
+        if (body.get("values") instanceof List<?> list) {
+            options.addAll(getOptions(list));
+        }
+
+        String nextPage = (String) body.get(NEXT_PAGE);
+
+        while (nextPage != null) {
+            String url = nextPage;
+
+            Map<String, Object> body1 = context.http(http -> http.get(url))
+                .configuration(Http.responseType(Http.ResponseType.JSON))
+                .execute()
+                .getBody(new TypeReference<>() {});
+
+            if (body1.get("values") instanceof List<?> list) {
+                options.addAll(getOptions(list));
+            }
+
+            nextPage = (String) body1.get(NEXT_PAGE);
+        }
+
+        return options;
+    }
+
+    public static List<Option<String>> getStatusIdOptions(
+        Parameters inputParameters, Parameters connectionParameters, Map<String, String> lookupDependsOnPaths,
+        String searchText, Context context) {
+
+        if (!inputParameters.containsKey(ISSUE_ID)) {
+            return List.of();
+        }
+
         List<Option<String>> options = new ArrayList<>();
 
-        if (body.get("values") instanceof List<?> list) {
-            for (Object item : list) {
-                if (item instanceof Map<?, ?> map) {
-                    options.add(option((String) map.get(NAME), (String) map.get(ID)));
+        Map<String, Object> body = context.http(
+            http -> http.get("/issue/" + inputParameters.getRequiredString(ISSUE_ID) + "/transitions"))
+            .configuration(Http.responseType(Http.ResponseType.JSON))
+            .execute()
+            .getBody(new TypeReference<>() {});
+
+        if (body.get("transitions") instanceof List<?> list) {
+            for (Object object : list) {
+                if (object instanceof Map<?, ?> map && map.get("to") instanceof Map<?, ?> to) {
+                    options.add(option((String) to.get("name"), (String) map.get("id")));
                 }
             }
         }
@@ -123,28 +181,33 @@ public class JiraOptionsUtils {
     }
 
     public static List<Option<String>> getUserIdOptions(
-        Parameters inputParameters, Parameters connectionParameters, Map<String, String> dependencyPaths,
-        String searchText, ActionContext context) {
+        Parameters inputParameters, Parameters connectionParameters, Map<String, String> lookupDependsOnPaths,
+        String searchText, Context context) {
+
+        List<Option<String>> options = new ArrayList<>();
 
         List<Object> body = context
-            .http(http -> http.get(getBaseUrl(context) + "/users/search"))
+            .http(http -> http.get("/users/search"))
+            .queryParameters(MAX_RESULTS, 1000)
             .configuration(Http.responseType(Http.ResponseType.JSON))
             .execute()
             .getBody(new TypeReference<>() {});
 
-        List<Option<String>> options = new ArrayList<>();
-
         for (Object object : body) {
             if (object instanceof Map<?, ?> map) {
-                String displayName = (String) map.get("displayName");
-                options.add(option(displayName == null ? "User" : displayName, (String) map.get("accountId")));
+                String accountType = (String) map.get("accountType");
+
+                if (accountType.equals("atlassian")) {
+                    String displayName = (String) map.get("displayName");
+                    options.add(option(displayName == null ? "User" : displayName, (String) map.get("accountId")));
+                }
             }
         }
 
         return options;
     }
 
-    private static List<Option<String>> getOptions(List<Object> body) {
+    private static List<Option<String>> getOptions(List<?> body) {
         List<Option<String>> options = new ArrayList<>();
 
         for (Object object : body) {

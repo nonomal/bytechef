@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,24 +21,25 @@ import java.security.Key;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import javax.crypto.KeyGenerator;
+import org.jspecify.annotations.Nullable;
 
 /**
  * @author Ivica Cardic
  */
 public abstract class AbstractEncryptionKey implements EncryptionKey {
 
-    private String key;
+    private @Nullable String key;
 
     @Override
     public String getKey() {
         if (key == null) {
-            key = fetchKey();
+            key = doGetKey();
         }
 
         return key;
     }
 
-    protected abstract String fetchKey();
+    protected abstract String doGetKey();
 
     protected String generateKey() throws NoSuchAlgorithmException {
         KeyGenerator keyGenerator = KeyGenerator.getInstance("AES");
@@ -52,6 +53,6 @@ public abstract class AbstractEncryptionKey implements EncryptionKey {
         // Creating/Generating a key
         Key key = keyGenerator.generateKey();
 
-        return EncodingUtils.encodeBase64ToString(key.getEncoded());
+        return EncodingUtils.base64EncodeToString(key.getEncoded());
     }
 }

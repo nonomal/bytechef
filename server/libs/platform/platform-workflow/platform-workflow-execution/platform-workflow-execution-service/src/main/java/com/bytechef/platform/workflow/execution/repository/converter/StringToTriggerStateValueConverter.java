@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,11 +17,10 @@
 package com.bytechef.platform.workflow.execution.repository.converter;
 
 import com.bytechef.platform.workflow.execution.domain.TriggerState;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.data.convert.ReadingConverter;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * @author Ivica Cardic
@@ -49,7 +48,7 @@ public class StringToTriggerStateValueConverter implements Converter<String, Tri
             return new TriggerState.TriggerStateValue(
                 objectMapper.convertValue(triggerStateValue.value(), Class.forName(triggerStateValue.classname())),
                 triggerStateValue.classname());
-        } catch (JsonProcessingException | ClassNotFoundException e) {
+        } catch (ClassNotFoundException e) {
             throw new RuntimeException(e);
         }
     }

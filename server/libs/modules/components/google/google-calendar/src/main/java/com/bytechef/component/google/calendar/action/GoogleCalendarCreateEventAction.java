@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,26 +16,25 @@
 
 package com.bytechef.component.google.calendar.action;
 
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.array;
-import static com.bytechef.component.definition.ComponentDSL.bool;
-import static com.bytechef.component.definition.ComponentDSL.date;
-import static com.bytechef.component.definition.ComponentDSL.dateTime;
-import static com.bytechef.component.definition.ComponentDSL.fileEntry;
-import static com.bytechef.component.definition.ComponentDSL.integer;
-import static com.bytechef.component.definition.ComponentDSL.object;
-import static com.bytechef.component.definition.ComponentDSL.option;
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.array;
+import static com.bytechef.component.definition.ComponentDsl.bool;
+import static com.bytechef.component.definition.ComponentDsl.date;
+import static com.bytechef.component.definition.ComponentDsl.dateTime;
+import static com.bytechef.component.definition.ComponentDsl.fileEntry;
+import static com.bytechef.component.definition.ComponentDsl.integer;
+import static com.bytechef.component.definition.ComponentDsl.object;
+import static com.bytechef.component.definition.ComponentDsl.option;
+import static com.bytechef.component.definition.ComponentDsl.outputSchema;
+import static com.bytechef.component.definition.ComponentDsl.string;
 import static com.bytechef.component.google.calendar.constant.GoogleCalendarConstants.ALL_DAY;
 import static com.bytechef.component.google.calendar.constant.GoogleCalendarConstants.ATTACHMENTS;
 import static com.bytechef.component.google.calendar.constant.GoogleCalendarConstants.ATTENDEES;
 import static com.bytechef.component.google.calendar.constant.GoogleCalendarConstants.CALENDAR_ID;
 import static com.bytechef.component.google.calendar.constant.GoogleCalendarConstants.CALENDAR_ID_PROPERTY;
-import static com.bytechef.component.google.calendar.constant.GoogleCalendarConstants.CREATE_EVENT;
 import static com.bytechef.component.google.calendar.constant.GoogleCalendarConstants.DESCRIPTION;
-import static com.bytechef.component.google.calendar.constant.GoogleCalendarConstants.EMAIL;
 import static com.bytechef.component.google.calendar.constant.GoogleCalendarConstants.END;
-import static com.bytechef.component.google.calendar.constant.GoogleCalendarConstants.EVENT_PROPERTY;
+import static com.bytechef.component.google.calendar.constant.GoogleCalendarConstants.EVENT_OUTPUT_PROPERTY;
 import static com.bytechef.component.google.calendar.constant.GoogleCalendarConstants.GUEST_CAN_INVITE_OTHERS;
 import static com.bytechef.component.google.calendar.constant.GoogleCalendarConstants.GUEST_CAN_MODIFY;
 import static com.bytechef.component.google.calendar.constant.GoogleCalendarConstants.GUEST_CAN_SEE_OTHER_GUESTS;
@@ -48,31 +47,35 @@ import static com.bytechef.component.google.calendar.constant.GoogleCalendarCons
 import static com.bytechef.component.google.calendar.constant.GoogleCalendarConstants.START;
 import static com.bytechef.component.google.calendar.constant.GoogleCalendarConstants.SUMMARY;
 import static com.bytechef.component.google.calendar.constant.GoogleCalendarConstants.USE_DEFAULT;
+import static com.bytechef.component.google.calendar.util.GoogleCalendarUtils.createCustomEvent;
 import static com.bytechef.component.google.calendar.util.GoogleCalendarUtils.createEventDateTime;
+import static com.bytechef.google.commons.GoogleUtils.translateGoogleIOException;
 
-import com.bytechef.component.definition.ActionContext;
-import com.bytechef.component.definition.ComponentDSL.ModifiableActionDefinition;
+import com.bytechef.component.definition.ComponentDsl.ModifiableActionDefinition;
+import com.bytechef.component.definition.Context;
 import com.bytechef.component.definition.FileEntry;
 import com.bytechef.component.definition.Parameters;
+import com.bytechef.component.google.calendar.util.GoogleCalendarUtils.CustomEvent;
 import com.bytechef.google.commons.GoogleServices;
+import com.bytechef.google.commons.GoogleUtils;
 import com.google.api.services.calendar.Calendar;
 import com.google.api.services.calendar.model.Event;
 import com.google.api.services.calendar.model.EventAttachment;
 import com.google.api.services.calendar.model.EventAttendee;
-import com.google.api.services.calendar.model.EventDateTime;
 import com.google.api.services.calendar.model.EventReminder;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * @author Monika Domiter
+ * @author Monika Kušter
  */
 public class GoogleCalendarCreateEventAction {
 
-    public static final ModifiableActionDefinition ACTION_DEFINITION = action(CREATE_EVENT)
-        .title("Create event")
-        .description("Creates an event")
+    public static final ModifiableActionDefinition ACTION_DEFINITION = action("createEvent")
+        .title("Create Event")
+        .description("Creates a new event in Google Calendar.")
+        .help("", "https://docs.bytechef.io/reference/components/google-calendar_v1#create-event")
         .properties(
             CALENDAR_ID_PROPERTY,
             string(SUMMARY)
@@ -80,28 +83,29 @@ public class GoogleCalendarCreateEventAction {
                 .description("Title of the event.")
                 .required(false),
             bool(ALL_DAY)
-                .label("All day event?")
+                .label("All Day Event?")
+                .description("Whether it is an all day event.")
                 .defaultValue(false)
                 .required(true),
             date(START)
-                .label("Start date")
+                .label("Start Date")
                 .description("The start date of the event.")
                 .displayCondition("%s == true".formatted(ALL_DAY))
                 .required(true),
             date(END)
-                .label("End date")
+                .label("End Date")
                 .description("The end date of the event.")
                 .displayCondition("%s == true".formatted(ALL_DAY))
                 .required(true),
             dateTime(START)
-                .label("Start date time")
+                .label("Start Date Time")
                 .description(
                     "The (inclusive) start time of the event. For a recurring event, this is the start time of the " +
                         "first instance.")
                 .displayCondition("%s == false".formatted(ALL_DAY))
                 .required(true),
             dateTime(END)
-                .label("End date time")
+                .label("End Date Time")
                 .description(
                     "The (exclusive) end time of the event. For a recurring event, this is the end time of the " +
                         "first instance.")
@@ -117,45 +121,47 @@ public class GoogleCalendarCreateEventAction {
                 .required(false),
             array(ATTACHMENTS)
                 .label("Attachments")
+                .description("The attachments to the event.")
                 .items(fileEntry())
                 .required(false),
             array(ATTENDEES)
                 .label("Attendees")
                 .description("The attendees of the event.")
                 .items(
-                    string(EMAIL)
+                    string()
                         .label("Email")
                         .description("The attendee's email address."))
                 .required(false),
             bool(GUEST_CAN_INVITE_OTHERS)
-                .label("Guest can invite others")
+                .label("Guest Can Invite Others")
                 .description("Whether attendees other than the organizer can invite others to the event.")
                 .defaultValue(true)
                 .required(false),
             bool(GUEST_CAN_MODIFY)
-                .label("Guest can modify")
+                .label("Guest Can Modify")
                 .description("Whether attendees other than the organizer can modify the event.")
                 .defaultValue(false)
                 .required(false),
             bool(GUEST_CAN_SEE_OTHER_GUESTS)
-                .label("Guest can see other guests")
+                .label("Guest Can See Other Guests")
                 .description("Whether attendees other than the organizer can see who the event's attendees are.")
                 .defaultValue(true)
                 .required(false),
             SEND_UPDATES_PROPERTY,
             bool(USE_DEFAULT)
-                .label("Use default reminders")
+                .label("Use Default Reminders")
                 .description("Whether the default reminders of the calendar apply to the event.")
                 .defaultValue(true)
                 .required(true),
             array(REMINDERS)
                 .label("Reminders")
+                .description("The reminders that will be sent about the event.")
                 .displayCondition("%s == false".formatted(USE_DEFAULT))
                 .items(
                     object()
                         .properties(
                             string(METHOD)
-                                .label("How is reminder sent?")
+                                .label("How Is Reminder Sent?")
                                 .options(
                                     option("Email", "email", "Reminders are sent via email."),
                                     option("Popup", "popup", "Reminders are sent via a UI popup."))
@@ -169,18 +175,13 @@ public class GoogleCalendarCreateEventAction {
                                 .maxValue(40320)
                                 .required(true)))
                 .required(false))
-        .outputSchema(EVENT_PROPERTY)
+        .output(outputSchema(EVENT_OUTPUT_PROPERTY))
         .perform(GoogleCalendarCreateEventAction::perform);
 
     private GoogleCalendarCreateEventAction() {
     }
 
-    public static Event perform(
-        Parameters inputParameters, Parameters connectionParameters, ActionContext actionContext) throws IOException {
-
-        EventDateTime startEventDateTime = createEventDateTime(inputParameters, START);
-        EventDateTime endEventDateTime = createEventDateTime(inputParameters, END);
-
+    public static CustomEvent perform(Parameters inputParameters, Parameters connectionParameters, Context context) {
         List<EventAttachment> eventAttachments = new ArrayList<>();
 
         for (FileEntry fileEntry : inputParameters.getFileEntries(ATTACHMENTS, List.of())) {
@@ -196,11 +197,14 @@ public class GoogleCalendarCreateEventAction {
             .map(attendee -> new EventAttendee().setEmail(attendee))
             .toList();
 
+        Calendar calendar = GoogleServices.getCalendar(connectionParameters);
+        String timezone = GoogleUtils.getCalendarTimezone(calendar);
+
         Event event = new Event()
             .setAttachments(eventAttachments)
             .setAttendees(eventAttendees)
             .setDescription(inputParameters.getString(DESCRIPTION))
-            .setEnd(endEventDateTime)
+            .setEnd(createEventDateTime(inputParameters, END, timezone))
             .setGuestsCanInviteOthers(inputParameters.getBoolean(GUEST_CAN_INVITE_OTHERS))
             .setGuestsCanModify(inputParameters.getBoolean(GUEST_CAN_MODIFY))
             .setGuestsCanSeeOtherGuests(inputParameters.getBoolean(GUEST_CAN_SEE_OTHER_GUESTS))
@@ -209,14 +213,19 @@ public class GoogleCalendarCreateEventAction {
                 new Event.Reminders()
                     .setUseDefault(inputParameters.getRequiredBoolean(USE_DEFAULT))
                     .setOverrides(inputParameters.getList(REMINDERS, EventReminder.class, List.of())))
-            .setStart(startEventDateTime)
+            .setStart(createEventDateTime(inputParameters, START, timezone))
             .setSummary(inputParameters.getString(SUMMARY));
 
-        Calendar calendar = GoogleServices.getCalendar(connectionParameters);
+        Event newEvent;
+        try {
+            newEvent = calendar.events()
+                .insert(inputParameters.getRequiredString(CALENDAR_ID), event)
+                .setSendUpdates(inputParameters.getString(SEND_UPDATES))
+                .execute();
+        } catch (IOException e) {
+            throw translateGoogleIOException(e);
+        }
 
-        return calendar.events()
-            .insert(inputParameters.getRequiredString(CALENDAR_ID), event)
-            .setSendUpdates(inputParameters.getString(SEND_UPDATES))
-            .execute();
+        return createCustomEvent(newEvent, timezone);
     }
 }

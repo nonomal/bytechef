@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,14 +17,15 @@
 package com.bytechef.component.vtiger.connection;
 
 import static com.bytechef.component.definition.Authorization.PASSWORD;
-import static com.bytechef.component.definition.ComponentDSL.authorization;
-import static com.bytechef.component.definition.ComponentDSL.connection;
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.definition.Authorization.USERNAME;
+import static com.bytechef.component.definition.ComponentDsl.authorization;
+import static com.bytechef.component.definition.ComponentDsl.connection;
+import static com.bytechef.component.definition.ComponentDsl.string;
 import static com.bytechef.component.vtiger.constant.VTigerConstants.INSTANCE_URL;
 
-import com.bytechef.component.definition.Authorization;
 import com.bytechef.component.definition.Authorization.AuthorizationType;
-import com.bytechef.component.definition.ComponentDSL.ModifiableConnectionDefinition;
+import com.bytechef.component.definition.ComponentDsl.ModifiableConnectionDefinition;
+import com.bytechef.component.definition.Property.ControlType;
 
 /**
  * @author Luka Ljubić
@@ -32,22 +33,27 @@ import com.bytechef.component.definition.ComponentDSL.ModifiableConnectionDefini
 public class VTigerConnection {
 
     public static final ModifiableConnectionDefinition CONNECTION_DEFINITION = connection()
+        .baseUri((connectionParameters, context) -> connectionParameters.getRequiredString(INSTANCE_URL)
+            + "/restapi/v1/vtiger/default")
         .authorizations(
             authorization(AuthorizationType.BASIC_AUTH)
                 .title("Basic Auth")
                 .properties(
-                    string(Authorization.USERNAME)
-                        .label("VTiger Username of email")
+                    string(USERNAME)
+                        .label("Username")
+                        .description("Enter your username/email.")
                         .required(true),
                     string(PASSWORD)
-                        .label("VTiger Access Key")
+                        .label("Access Key")
+                        .controlType(ControlType.PASSWORD)
                         .required(true),
                     string(INSTANCE_URL)
                         .label("VTiger Instance URL")
-                        .description("For the instance URL, add the url without the endpoint. For example enter" +
-                            " https://<instance>.od2.vtiger.com instead of" +
-                            " https://<instance>.od2.vtiger.com/restapi/v1/vtiger/default")
-                        .required(true)));
+                        .description("For the instance URL, add the url without the endpoint.")
+                        .exampleValue("https://<instance>.od2.vtiger.com")
+                        .required(true)))
+        .help("", "https://docs.bytechef.io/reference/components/vtiger_v1#connection-setup")
+        .version(1);
 
     private VTigerConnection() {
     }

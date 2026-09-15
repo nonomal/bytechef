@@ -3,9 +3,7 @@ import {twMerge} from 'tailwind-merge';
 
 import './CreatableSelect.css';
 
-import {ExclamationTriangleIcon} from '@radix-ui/react-icons';
-import {FieldPath, FieldValues} from 'react-hook-form/dist/types';
-import {ControllerRenderProps} from 'react-hook-form/dist/types/controller';
+import {ControllerRenderProps, FieldPath, FieldValues} from 'react-hook-form';
 import {GroupBase} from 'react-select';
 
 export type SelectOptionType = {
@@ -57,12 +55,6 @@ const CreatableSelect = <
 
         <div className={twMerge([label && 'mt-1'])}>
             <ReactSelectCreatable {...field} classNamePrefix="react-select" isMulti={isMulti} {...props} />
-
-            {error && (
-                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
-                    <ExclamationTriangleIcon aria-hidden="true" className="size-5 text-red-500" />
-                </div>
-            )}
         </div>
 
         {error && (

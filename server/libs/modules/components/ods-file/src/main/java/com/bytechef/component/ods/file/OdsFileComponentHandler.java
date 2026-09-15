@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,14 +16,13 @@
 
 package com.bytechef.component.ods.file;
 
-import static com.bytechef.component.definition.ComponentDSL.component;
+import static com.bytechef.component.definition.ComponentDsl.component;
 
 import com.bytechef.component.ComponentHandler;
 import com.bytechef.component.definition.ComponentCategory;
 import com.bytechef.component.definition.ComponentDefinition;
 import com.bytechef.component.ods.file.action.OdsFileReadAction;
 import com.bytechef.component.ods.file.action.OdsFileWriteAction;
-import com.bytechef.component.ods.file.constant.OdsFileConstants;
 import com.google.auto.service.AutoService;
 
 /**
@@ -33,7 +32,7 @@ import com.google.auto.service.AutoService;
 @AutoService(ComponentHandler.class)
 public class OdsFileComponentHandler implements ComponentHandler {
 
-    private static final ComponentDefinition COMPONENT_DEFINITION = component(OdsFileConstants.ODS_FILE)
+    private static final ComponentDefinition COMPONENT_DEFINITION = component("odsFile")
         .title("ODS File")
         .description("Reads and writes data from a ODS file.")
         .icon("path:assets/ods-file.svg")

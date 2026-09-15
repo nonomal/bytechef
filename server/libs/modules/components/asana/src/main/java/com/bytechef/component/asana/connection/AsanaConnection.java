@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,12 +19,13 @@ package com.bytechef.component.asana.connection;
 import static com.bytechef.component.definition.Authorization.AuthorizationType;
 import static com.bytechef.component.definition.Authorization.CLIENT_ID;
 import static com.bytechef.component.definition.Authorization.CLIENT_SECRET;
-import static com.bytechef.component.definition.ComponentDSL.authorization;
-import static com.bytechef.component.definition.ComponentDSL.connection;
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.definition.ComponentDsl.authorization;
+import static com.bytechef.component.definition.ComponentDsl.connection;
+import static com.bytechef.component.definition.ComponentDsl.string;
 
-import com.bytechef.component.definition.ComponentDSL;
-import java.util.List;
+import com.bytechef.component.definition.ComponentDsl;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 /**
  * Provides the component connection definition.
@@ -32,7 +33,7 @@ import java.util.List;
  * @generated
  */
 public class AsanaConnection {
-    public static final ComponentDSL.ModifiableConnectionDefinition CONNECTION_DEFINITION = connection()
+    public static final ComponentDsl.ModifiableConnectionDefinition CONNECTION_DEFINITION = connection()
         .baseUri((connectionParameters, context) -> "https://app.asana.com/api/1.0")
         .authorizations(authorization(AuthorizationType.OAUTH2_AUTHORIZATION_CODE)
             .title("OAuth2 Authorization Code")
@@ -44,7 +45,47 @@ public class AsanaConnection {
                     .label("Client Secret")
                     .required(true))
             .authorizationUrl((connectionParameters, context) -> "https://app.asana.com/-/oauth_authorize")
-            .scopes((connection, context) -> List.of("default", "openid", "email", "profile"))
+            .scopes((connectionParameters, context) -> {
+                Map<String, Boolean> scopeMap = new LinkedHashMap<>();
+
+                scopeMap.put("attachments:delete", false);
+                scopeMap.put("attachments:read", false);
+                scopeMap.put("attachments:write", false);
+                scopeMap.put("custom_fields:read", false);
+                scopeMap.put("custom_fields:write", true);
+                scopeMap.put("goals:read", false);
+                scopeMap.put("portfolios:read", false);
+                scopeMap.put("portfolios:write", false);
+                scopeMap.put("project_templates:read", false);
+                scopeMap.put("projects:delete", false);
+                scopeMap.put("projects:read", true);
+                scopeMap.put("projects:write", true);
+                scopeMap.put("stories:read", false);
+                scopeMap.put("stories:write", false);
+                scopeMap.put("tags:read", true);
+                scopeMap.put("tags:write", false);
+                scopeMap.put("task_templates:read", false);
+                scopeMap.put("tasks:delete", false);
+                scopeMap.put("tasks:read", true);
+                scopeMap.put("tasks:write", true);
+                scopeMap.put("team_memberships:read", false);
+                scopeMap.put("teams:read", true);
+                scopeMap.put("time_tracking_entries:read", false);
+                scopeMap.put("timesheet_approval_statuses:read", false);
+                scopeMap.put("timesheet_approval_statuses:write", false);
+                scopeMap.put("workspace.typehead:read", false);
+                scopeMap.put("users:read", true);
+                scopeMap.put("webhooks:delete", false);
+                scopeMap.put("webhooks:read", false);
+                scopeMap.put("webhooks:write", false);
+                scopeMap.put("workspaces:read", true);
+                scopeMap.put("default", false);
+                scopeMap.put("openid", false);
+                scopeMap.put("email", false);
+                scopeMap.put("profile", false);
+
+                return scopeMap;
+            })
             .tokenUrl((connectionParameters, context) -> "https://app.asana.com/-/oauth_token")
             .refreshUrl((connectionParameters, context) -> "https://app.asana.com/-/oauth_token"));
 

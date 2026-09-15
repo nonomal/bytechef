@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the ByteChef Enterprise license (the "Enterprise License");
  * you may not use this file except in compliance with the Enterprise License.
@@ -7,11 +7,11 @@
 
 package com.bytechef.ee.platform.connection.remote.client.service;
 
+import com.bytechef.component.definition.Authorization.AuthorizationType;
 import com.bytechef.ee.remote.client.LoadBalancedRestClient;
 import com.bytechef.platform.connection.domain.Connection;
-import com.bytechef.platform.connection.domain.ConnectionEnvironment;
 import com.bytechef.platform.connection.service.ConnectionService;
-import com.bytechef.platform.constant.AppType;
+import com.bytechef.platform.constant.PlatformType;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.List;
 import java.util.Map;
@@ -39,6 +39,14 @@ public class RemoteConnectionServiceClient implements ConnectionService {
     }
 
     @Override
+    public Connection create(
+        AuthorizationType authorizationType, String componentName, int connectionVersion, int environmentId,
+        String name, Map<String, Object> parameters, PlatformType type) {
+
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
     public void delete(long id) {
         throw new UnsupportedOperationException();
     }
@@ -54,7 +62,7 @@ public class RemoteConnectionServiceClient implements ConnectionService {
     }
 
     @Override
-    public List<Connection> getConnections(AppType type) {
+    public List<Connection> getConnections(PlatformType type) {
         return loadBalancedRestClient.get(
             uriBuilder -> uriBuilder
                 .host("connection-app")
@@ -64,15 +72,19 @@ public class RemoteConnectionServiceClient implements ConnectionService {
     }
 
     @Override
-    public List<Connection> getConnections(String componentName, int version, AppType type) {
+    public List<Connection> getConnections(String componentName, int version, PlatformType type) {
         throw new UnsupportedOperationException();
     }
 
     @Override
     public List<Connection> getConnections(
-        String componentName, Integer connectionVersion, ConnectionEnvironment connectionEnvironment, Long tagId,
-        AppType type) {
+        String componentName, Integer connectionVersion, Long typeId, Long environmentId, PlatformType type) {
 
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public List<Connection> getConnections(List<Long> connectionIds) {
         throw new UnsupportedOperationException();
     }
 
@@ -82,7 +94,7 @@ public class RemoteConnectionServiceClient implements ConnectionService {
     }
 
     @Override
-    public Connection update(Connection connection) {
+    public Connection update(long id, String name, List<Long> tagIds, int version) {
         throw new UnsupportedOperationException();
     }
 

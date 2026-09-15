@@ -1,0 +1,681 @@
+/*
+ * Copyright 2025 ByteChef
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.bytechef.component.ai.agent.action;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
+
+import com.bytechef.component.ai.agent.facade.AiAgentToolFacade;
+import com.bytechef.component.ai.llm.util.ModelUtils;
+import com.bytechef.component.definition.ActionContext;
+import com.bytechef.component.definition.Context;
+import com.bytechef.component.definition.Parameters;
+import com.bytechef.component.test.definition.MockParametersFactory;
+import com.bytechef.platform.component.ComponentConnection;
+import com.bytechef.platform.component.definition.ai.agent.ChatMemoryFunction;
+import com.bytechef.platform.component.definition.ai.agent.ModelFunction;
+import com.bytechef.platform.component.service.ClusterElementDefinitionService;
+import com.bytechef.platform.configuration.domain.ClusterElementMap;
+import java.lang.reflect.Field;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.MockedStatic;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.chat.client.DefaultChatClient;
+import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
+import org.springframework.ai.chat.client.advisor.StructuredOutputValidationAdvisor;
+import org.springframework.ai.chat.client.advisor.ToolCallingAdvisor;
+import org.springframework.ai.chat.client.advisor.api.Advisor;
+import org.springframework.ai.chat.client.advisor.api.BaseChatMemoryAdvisor;
+import org.springframework.ai.chat.memory.ChatMemory;
+import org.springframework.ai.chat.model.ChatModel;
+import org.springframework.ai.model.tool.ToolCallingManager;
+
+/**
+ * @author Ivica Cardic
+ */
+@ExtendWith(MockitoExtension.class)
+class AbstractAiAgentChatActionTest {
+
+    @Mock
+    private AiAgentToolFacade aiAgentToolFacade;
+
+    @Mock
+    private ClusterElementDefinitionService clusterElementDefinitionService;
+
+    @Mock
+    private ToolCallingManager toolCallingManager;
+
+    @Test
+    void testGetChatClientRequestSpecWithNullParameterValues() throws Exception {
+        HashMap<String, Object> inputParamsMap = new HashMap<>();
+
+        inputParamsMap.put("key1", "value1");
+        inputParamsMap.put("nullableKey", null);
+
+        Parameters inputParameters = MockParametersFactory.create(inputParamsMap);
+
+        HashMap<String, Object> clusterElementParams = new HashMap<>();
+
+        clusterElementParams.put("model", "gpt-4o");
+        clusterElementParams.put("conversationId", "sampleConversationId");
+        clusterElementParams.put("nullableParam", null);
+
+        Map<String, Object> modelElement = new HashMap<>();
+
+        modelElement.put("name", "model_1");
+        modelElement.put("type", "testComponent/v1/testModel");
+        modelElement.put("parameters", clusterElementParams);
+
+        Map<String, Object> chatMemoryElement = new HashMap<>();
+
+        chatMemoryElement.put("name", "chatMemory_1");
+        chatMemoryElement.put("type", "testComponent/v1/testChatMemory");
+        chatMemoryElement.put("parameters", clusterElementParams);
+
+        Parameters extensions = MockParametersFactory.create(
+            Map.of("clusterElements", Map.of("model", modelElement, "chatMemory", chatMemoryElement)));
+
+        ModelFunction modelFunction = mock(ModelFunction.class);
+        ChatMemoryFunction chatMemoryFunction = mock(ChatMemoryFunction.class);
+
+        ChatModel chatModel = mock(ChatModel.class);
+        BaseChatMemoryAdvisor chatMemoryAdvisor = mock(BaseChatMemoryAdvisor.class);
+        ChatMemoryFunction.Result chatMemoryResult = new ChatMemoryFunction.Result(chatMemoryAdvisor, null);
+
+        when(clusterElementDefinitionService.<ModelFunction>getClusterElement(
+            eq("testComponent"), eq(1), eq("testModel"))).thenReturn(modelFunction);
+        when(clusterElementDefinitionService.<ChatMemoryFunction>getClusterElement(
+            eq("testComponent"), eq(1), eq("testChatMemory"))).thenReturn(chatMemoryFunction);
+        when(modelFunction.apply(any(), any(), anyBoolean())).thenAnswer(invocation -> chatModel);
+        when(chatMemoryFunction.apply(any(), any(), any(), any())).thenReturn(chatMemoryResult);
+
+        ComponentConnection componentConnection = new ComponentConnection(
+            "testComponent", 1, 1L, Map.of(), null);
+
+        Map<String, ComponentConnection> connectionParameters = Map.of("model_1", componentConnection);
+
+        ActionContext actionContext = mock(ActionContext.class);
+
+        TestAiAgentChatAction action = new TestAiAgentChatAction(
+            aiAgentToolFacade, clusterElementDefinitionService, toolCallingManager);
+
+        try (MockedStatic<ModelUtils> modelUtilsMockedStatic = mockStatic(ModelUtils.class)) {
+            modelUtilsMockedStatic.when(() -> ModelUtils.getMessages(any(), any()))
+                .thenReturn(List.of());
+
+            assertDoesNotThrow(() -> action.getChatClientRequestSpec(
+                inputParameters, connectionParameters, extensions, null, actionContext));
+        }
+    }
+
+    @Test
+    void testMultipleCheckForViolationsRejectedAtAdvisorBuild() throws Exception {
+        Parameters inputParameters = MockParametersFactory.create(Map.of());
+
+        Map<String, Object> modelElement = buildModelElement();
+        Map<String, Object> checkForViolationsA = buildGuardrailElement(
+            "checkForViolationsA", "checkForViolations/v1/checkForViolations");
+        Map<String, Object> checkForViolationsB = buildGuardrailElement(
+            "checkForViolationsB", "checkForViolations/v1/checkForViolations");
+
+        Parameters extensions = MockParametersFactory.create(
+            Map.of(
+                "clusterElements",
+                Map.of(
+                    "model", modelElement,
+                    "guardrails", List.of(checkForViolationsA, checkForViolationsB))));
+
+        stubModelLookup();
+
+        ComponentConnection componentConnection = new ComponentConnection(
+            "testComponent", 1, 1L, Map.of(), null);
+        Map<String, ComponentConnection> connectionParameters = Map.of("model_1", componentConnection);
+        ActionContext actionContext = mock(ActionContext.class);
+
+        TestAiAgentChatAction action = new TestAiAgentChatAction(
+            aiAgentToolFacade, clusterElementDefinitionService, toolCallingManager);
+
+        try (MockedStatic<ModelUtils> modelUtilsMockedStatic = mockStatic(ModelUtils.class)) {
+            modelUtilsMockedStatic.when(() -> ModelUtils.getMessages(any(), any()))
+                .thenReturn(List.of());
+
+            assertThatThrownBy(() -> action.getChatClientRequestSpec(
+                inputParameters, connectionParameters, extensions, null, actionContext))
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("Multiple CheckForViolations");
+        }
+    }
+
+    @Test
+    void testMultipleSanitizeTextRejectedAtAdvisorBuild() throws Exception {
+        Parameters inputParameters = MockParametersFactory.create(Map.of());
+
+        Map<String, Object> modelElement = buildModelElement();
+        Map<String, Object> sanitizeTextA = buildGuardrailElement(
+            "sanitizeTextA", "sanitizeText/v1/sanitizeText");
+        Map<String, Object> sanitizeTextB = buildGuardrailElement(
+            "sanitizeTextB", "sanitizeText/v1/sanitizeText");
+
+        Parameters extensions = MockParametersFactory.create(
+            Map.of(
+                "clusterElements",
+                Map.of(
+                    "model", modelElement,
+                    "guardrails", List.of(sanitizeTextA, sanitizeTextB))));
+
+        stubModelLookup();
+
+        ComponentConnection componentConnection = new ComponentConnection(
+            "testComponent", 1, 1L, Map.of(), null);
+        Map<String, ComponentConnection> connectionParameters = Map.of("model_1", componentConnection);
+        ActionContext actionContext = mock(ActionContext.class);
+
+        TestAiAgentChatAction action = new TestAiAgentChatAction(
+            aiAgentToolFacade, clusterElementDefinitionService, toolCallingManager);
+
+        try (MockedStatic<ModelUtils> modelUtilsMockedStatic = mockStatic(ModelUtils.class)) {
+            modelUtilsMockedStatic.when(() -> ModelUtils.getMessages(any(), any()))
+                .thenReturn(List.of());
+
+            assertThatThrownBy(() -> action.getChatClientRequestSpec(
+                inputParameters, connectionParameters, extensions, null, actionContext))
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("Multiple SanitizeText");
+        }
+    }
+
+    @Test
+    void testSingleCheckForViolationsAndSingleSanitizeTextAccepted() throws Exception {
+        Parameters inputParameters = MockParametersFactory.create(Map.of());
+
+        Map<String, Object> modelElement = buildModelElement();
+        Map<String, Object> checkForViolations = buildGuardrailElement(
+            "checkForViolations_1", "checkForViolations/v1/checkForViolations");
+        Map<String, Object> sanitizeText = buildGuardrailElement(
+            "sanitizeText_1", "sanitizeText/v1/sanitizeText");
+
+        Parameters extensions = MockParametersFactory.create(
+            Map.of(
+                "clusterElements",
+                Map.of(
+                    "model", modelElement,
+                    "guardrails", List.of(checkForViolations, sanitizeText))));
+
+        ModelFunction modelFunction = mock(ModelFunction.class);
+        ChatModel chatModel = mock(ChatModel.class);
+
+        when(clusterElementDefinitionService.<ModelFunction>getClusterElement(
+            eq("testComponent"), eq(1), eq("testModel"))).thenReturn(modelFunction);
+        when(modelFunction.apply(any(), any(), anyBoolean())).thenAnswer(invocation -> chatModel);
+
+        com.bytechef.platform.component.definition.ai.agent.GuardrailsFunction guardrailsFunction = mock(
+            com.bytechef.platform.component.definition.ai.agent.GuardrailsFunction.class);
+        Advisor advisor = mock(Advisor.class);
+
+        when(
+            clusterElementDefinitionService.<com.bytechef.platform.component.definition.ai.agent.GuardrailsFunction>getClusterElement(
+                eq("checkForViolations"), eq(1), eq("checkForViolations")))
+                    .thenReturn(guardrailsFunction);
+        when(
+            clusterElementDefinitionService.<com.bytechef.platform.component.definition.ai.agent.GuardrailsFunction>getClusterElement(
+                eq("sanitizeText"), eq(1), eq("sanitizeText")))
+                    .thenReturn(guardrailsFunction);
+        when(guardrailsFunction.apply(any(), any(), any(), any(), any(), any()))
+            .thenReturn(advisor);
+
+        ComponentConnection componentConnection = new ComponentConnection(
+            "testComponent", 1, 1L, Map.of(), null);
+        Map<String, ComponentConnection> connectionParameters = new HashMap<>();
+
+        connectionParameters.put("model_1", componentConnection);
+        connectionParameters.put("checkForViolations_1", componentConnection);
+        connectionParameters.put("sanitizeText_1", componentConnection);
+
+        ActionContext actionContext = mock(ActionContext.class);
+
+        TestAiAgentChatAction action = new TestAiAgentChatAction(
+            aiAgentToolFacade, clusterElementDefinitionService, toolCallingManager);
+
+        try (MockedStatic<ModelUtils> modelUtilsMockedStatic = mockStatic(ModelUtils.class)) {
+            modelUtilsMockedStatic.when(() -> ModelUtils.getMessages(any(), any()))
+                .thenReturn(List.of());
+
+            assertDoesNotThrow(() -> action.getChatClientRequestSpec(
+                inputParameters, connectionParameters, extensions, null, actionContext));
+        }
+
+        assertThat(advisor).isNotNull();
+    }
+
+    @Test
+    void testGuardrailAdvisorBuildFailureInvokesContextLog() throws Exception {
+        // Pins the Context-threading promise from commit ee185584cf5: when a cluster element fails to initialize,
+        // the error path MUST go through ActionContext.log(...) rather than raw SLF4J, so tenant-aware structured
+        // logging captures the failure. A refactor dropping context.log for raw SLF4J would otherwise pass CI.
+        Parameters inputParameters = MockParametersFactory.create(Map.of());
+
+        Map<String, Object> modelElement = buildModelElement();
+        Map<String, Object> guardrailElement = buildGuardrailElement(
+            "checkForViolations_1", "checkForViolations/v1/checkForViolations");
+
+        Parameters extensions = MockParametersFactory.create(
+            Map.of(
+                "clusterElements",
+                Map.of(
+                    "model", modelElement,
+                    "guardrails", List.of(guardrailElement))));
+
+        stubModelLookup();
+
+        com.bytechef.platform.component.definition.ai.agent.GuardrailsFunction guardrailsFunction = mock(
+            com.bytechef.platform.component.definition.ai.agent.GuardrailsFunction.class);
+
+        when(
+            clusterElementDefinitionService.<com.bytechef.platform.component.definition.ai.agent.GuardrailsFunction>getClusterElement(
+                eq("checkForViolations"), eq(1), eq("checkForViolations")))
+                    .thenReturn(guardrailsFunction);
+        when(guardrailsFunction.apply(any(), any(), any(), any(), any(), any()))
+            .thenThrow(new RuntimeException("simulated guardrail init failure"));
+
+        ComponentConnection componentConnection = new ComponentConnection(
+            "testComponent", 1, 1L, Map.of(), null);
+        Map<String, ComponentConnection> connectionParameters = new HashMap<>();
+
+        connectionParameters.put("model_1", componentConnection);
+        connectionParameters.put("checkForViolations_1", componentConnection);
+
+        ActionContext actionContext = mock(ActionContext.class);
+
+        TestAiAgentChatAction action = new TestAiAgentChatAction(
+            aiAgentToolFacade, clusterElementDefinitionService, toolCallingManager);
+
+        try (MockedStatic<ModelUtils> modelUtilsMockedStatic = mockStatic(ModelUtils.class)) {
+            modelUtilsMockedStatic.when(() -> ModelUtils.getMessages(any(), any()))
+                .thenReturn(List.of());
+
+            assertThatThrownBy(() -> action.getChatClientRequestSpec(
+                inputParameters, connectionParameters, extensions, null, actionContext))
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("guardrails");
+        }
+
+        verify(actionContext, org.mockito.Mockito.atLeastOnce()).log(any());
+    }
+
+    @Test
+    void testNoGuardrailsConfiguredRunsModelChainWithoutAddingAdvisor() throws Exception {
+        Parameters inputParameters = MockParametersFactory.create(Map.of());
+
+        Map<String, Object> modelElement = buildModelElement();
+
+        Parameters extensions = MockParametersFactory.create(
+            Map.of(
+                "clusterElements",
+                Map.of("model", modelElement)));
+
+        stubModelLookup();
+
+        ComponentConnection componentConnection = new ComponentConnection(
+            "testComponent", 1, 1L, Map.of(), null);
+        Map<String, ComponentConnection> connectionParameters = new HashMap<>();
+
+        connectionParameters.put("model_1", componentConnection);
+
+        ActionContext actionContext = mock(ActionContext.class);
+
+        TestAiAgentChatAction action = new TestAiAgentChatAction(
+            aiAgentToolFacade, clusterElementDefinitionService, toolCallingManager);
+
+        try (MockedStatic<ModelUtils> modelUtilsMockedStatic = mockStatic(ModelUtils.class)) {
+            modelUtilsMockedStatic.when(() -> ModelUtils.getMessages(any(), any()))
+                .thenReturn(List.of());
+
+            assertDoesNotThrow(() -> action.getChatClientRequestSpec(
+                inputParameters, connectionParameters, extensions, null, actionContext));
+        }
+
+        verify(clusterElementDefinitionService,
+            never()).<com.bytechef.platform.component.definition.ai.agent.GuardrailsFunction>getClusterElement(
+                eq("checkForViolations"), anyInt(), anyString());
+        verify(clusterElementDefinitionService,
+            never()).<com.bytechef.platform.component.definition.ai.agent.GuardrailsFunction>getClusterElement(
+                eq("sanitizeText"), anyInt(), anyString());
+    }
+
+    @Test
+    void testChatMemoryAdvisorOrderedUpstreamOfToolCallingAdvisor() throws Exception {
+        // Spring AI 2.0.0-RC1 default ordering: ChatMemoryAdvisor (DEFAULT_CHAT_MEMORY_PRECEDENCE_ORDER,
+        // MIN+200) runs upstream of ToolCallingAdvisor (DEFAULT_ORDER, MIN+300), so memory wraps the whole
+        // tool-call loop — persisted history is applied once before the loop and only the final assistant
+        // message is written back. Validity inside the loop comes from ToolCallingAdvisor retaining the
+        // (assistant-with-tool_calls, toolResultMsg) pairs in its own in-loop history
+        // (conversationHistoryEnabled defaults to true), so OpenAI never sees an orphaned tool result. This
+        // test pins the default composition so a future bump that changes it surfaces at the dependency PR.
+        Parameters inputParameters = MockParametersFactory.create(Map.of());
+
+        Map<String, Object> modelElement = buildModelElement();
+
+        Map<String, Object> chatMemoryParameters = new HashMap<>();
+        chatMemoryParameters.put("conversationId", "test-conversation");
+
+        Map<String, Object> chatMemoryElement = new HashMap<>();
+        chatMemoryElement.put("name", "chatMemory_1");
+        chatMemoryElement.put("type", "testComponent/v1/testChatMemory");
+        chatMemoryElement.put("parameters", chatMemoryParameters);
+
+        Parameters extensions = MockParametersFactory.create(
+            Map.of("clusterElements", Map.of("model", modelElement, "chatMemory", chatMemoryElement)));
+
+        // stubModelLookup() is invoked for its side effect of wiring the cluster-element model resolution;
+        // the returned ChatModel handle is no longer needed now that getOptions() is not stubbed.
+        stubModelLookup();
+
+        ChatMemoryFunction chatMemoryFunction = mock(ChatMemoryFunction.class);
+
+        when(clusterElementDefinitionService.<ChatMemoryFunction>getClusterElement(
+            eq("testComponent"), eq(1), eq("testChatMemory"))).thenReturn(chatMemoryFunction);
+
+        // Build the chat-memory advisor exactly as the production chat-memory components do
+        // (default order via the builder), so the assertion catches regressions in any of them.
+        MessageChatMemoryAdvisor productionStyleChatMemoryAdvisor = MessageChatMemoryAdvisor
+            .builder(mock(ChatMemory.class))
+            .build();
+
+        when(chatMemoryFunction.apply(any(), any(), any(), any()))
+            .thenReturn(new ChatMemoryFunction.Result(productionStyleChatMemoryAdvisor, null));
+
+        ComponentConnection componentConnection = new ComponentConnection(
+            "testComponent", 1, 1L, Map.of(), null);
+        Map<String, ComponentConnection> connectionParameters = Map.of(
+            "model_1", componentConnection,
+            "chatMemory_1", componentConnection);
+
+        ActionContext actionContext = mock(ActionContext.class);
+
+        TestAiAgentChatAction action = new TestAiAgentChatAction(
+            aiAgentToolFacade, clusterElementDefinitionService, toolCallingManager);
+
+        try (MockedStatic<ModelUtils> modelUtilsMockedStatic = mockStatic(ModelUtils.class)) {
+            modelUtilsMockedStatic.when(() -> ModelUtils.getMessages(any(), any()))
+                .thenReturn(List.of());
+
+            ChatClient.ChatClientRequestSpec spec = action.getChatClientRequestSpec(
+                inputParameters, connectionParameters, extensions, null, actionContext);
+
+            List<Advisor> advisors = ((DefaultChatClient.DefaultChatClientRequestSpec) spec).getAdvisors();
+
+            Advisor toolCallAdvisor = advisors.stream()
+                .filter(ToolCallingAdvisor.class::isInstance)
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("ToolCallingAdvisor missing from advisor chain"));
+
+            Advisor chatMemoryAdvisor = advisors.stream()
+                .filter(advisor -> advisor instanceof BaseChatMemoryAdvisor)
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("ChatMemoryAdvisor missing from advisor chain"));
+
+            assertThat(chatMemoryAdvisor.getOrder())
+                .as(
+                    "Spring AI RC1 default ordering places ChatMemoryAdvisor upstream of ToolCallingAdvisor; " +
+                        "ToolCallingAdvisor's own in-loop history (conversationHistoryEnabled=true) is what " +
+                        "keeps each tool-call iteration valid, not advisor ordering.")
+                .isLessThan(toolCallAdvisor.getOrder());
+        }
+    }
+
+    @Test
+    void testSpringAiDefaultOrdersComposeCorrectly() {
+        // Safety net for Spring AI version bumps. Our chat-memory components and AbstractAiAgentChatAction
+        // both rely on Spring AI's builder defaults (no explicit .order(...) / .advisorOrder(...) calls).
+        // As of 2.0.0-RC1 those defaults place ChatMemoryAdvisor (MIN+200) upstream of ToolCallingAdvisor
+        // (MIN+300). If a future bump changes this relationship, the regression surfaces at the
+        // dependency-bump PR rather than in production.
+        ToolCallingAdvisor toolCallingAdvisor = ToolCallingAdvisor.builder()
+            .build();
+
+        MessageChatMemoryAdvisor chatMemoryAdvisor = MessageChatMemoryAdvisor
+            .builder(mock(ChatMemory.class))
+            .build();
+
+        assertThat(chatMemoryAdvisor.getOrder())
+            .as("Spring AI default ordering must keep ChatMemoryAdvisor upstream of ToolCallingAdvisor")
+            .isLessThan(toolCallingAdvisor.getOrder());
+    }
+
+    @Test
+    void testApplyStructuredOutputValidationAddsAdvisorForJsonResponseFormat() {
+        Parameters inputParameters = MockParametersFactory.create(
+            Map.of(
+                "response",
+                Map.of(
+                    "responseFormat", "JSON",
+                    "responseSchema", "{\"type\":\"object\",\"properties\":{\"answer\":{\"type\":\"string\"}}}")));
+
+        ActionContext context = mock(ActionContext.class);
+        Context.Json json = mock(Context.Json.class);
+
+        Map<String, Object> schemaMap = new LinkedHashMap<>();
+
+        schemaMap.put("type", "object");
+        schemaMap.put("properties", Map.of("answer", Map.of("type", "string")));
+
+        when(json.readMap(anyString(), eq(Object.class))).thenReturn(schemaMap);
+        when(json.write(any())).thenReturn(
+            "{\"type\":\"object\",\"properties\":{\"answer\":{\"type\":\"string\"}}," +
+                "\"required\":[\"answer\"],\"additionalProperties\":false}");
+        when(context.json(any())).thenAnswer(invocation -> {
+            Context.ContextFunction<Context.Json, Object> contextFunction = invocation.getArgument(0);
+
+            return contextFunction.apply(json);
+        });
+
+        ChatClient.ChatClientRequestSpec chatClientRequestSpec = ChatClient.builder(mock(ChatModel.class))
+            .build()
+            .prompt();
+
+        AbstractAiAgentChatAction.applyStructuredOutputValidation(chatClientRequestSpec, inputParameters, context);
+
+        List<Advisor> advisors =
+            ((DefaultChatClient.DefaultChatClientRequestSpec) chatClientRequestSpec).getAdvisors();
+
+        assertThat(advisors).anyMatch(StructuredOutputValidationAdvisor.class::isInstance);
+    }
+
+    @Test
+    void testApplyStructuredOutputValidationSkipsAdvisorForTextResponseFormat() {
+        Parameters inputParameters = MockParametersFactory.create(
+            Map.of("response", Map.of("responseFormat", "TEXT")));
+
+        ActionContext context = mock(ActionContext.class);
+
+        ChatClient.ChatClientRequestSpec chatClientRequestSpec = ChatClient.builder(mock(ChatModel.class))
+            .build()
+            .prompt();
+
+        AbstractAiAgentChatAction.applyStructuredOutputValidation(chatClientRequestSpec, inputParameters, context);
+
+        List<Advisor> advisors =
+            ((DefaultChatClient.DefaultChatClientRequestSpec) chatClientRequestSpec).getAdvisors();
+
+        assertThat(advisors).noneMatch(StructuredOutputValidationAdvisor.class::isInstance);
+
+        // No JSON schema is read for a TEXT response, so the converter (and therefore context.json) is never touched.
+        verifyNoInteractions(context);
+    }
+
+    private static Map<String, Object> buildModelElement() {
+        HashMap<String, Object> modelParams = new HashMap<>();
+        modelParams.put("model", "gpt-4o");
+
+        Map<String, Object> modelElement = new HashMap<>();
+        modelElement.put("name", "model_1");
+        modelElement.put("type", "testComponent/v1/testModel");
+        modelElement.put("parameters", modelParams);
+
+        return modelElement;
+    }
+
+    @Test
+    void testGetAdvisorsIncludesToolCallAdvisorWithDefaultConversationHistoryWhenNoChatMemory() {
+        ClusterElementMap clusterElementMap = ClusterElementMap.of(
+            Map.of("clusterElements", Map.of("model", buildModelClusterElement())));
+
+        ChatModel chatModel = mock(ChatModel.class);
+
+        ActionContext actionContext = mock(ActionContext.class);
+
+        TestAiAgentChatAction action = new TestAiAgentChatAction(
+            aiAgentToolFacade, clusterElementDefinitionService, toolCallingManager);
+
+        List<Advisor> advisors = action.getAdvisors(clusterElementMap, Map.of(), chatModel, actionContext);
+
+        ToolCallingAdvisor toolCallAdvisor = findToolCallAdvisor(advisors);
+
+        assertThat(toolCallAdvisor).isNotNull();
+        assertThat(advisors).noneMatch(BaseChatMemoryAdvisor.class::isInstance);
+        assertThat(readConversationHistoryEnabled(toolCallAdvisor)).isTrue();
+    }
+
+    @Test
+    void testGetAdvisorsAddsChatMemoryBeforeToolCallAdvisor() throws Exception {
+        Map<String, Object> chatMemoryElement = new HashMap<>();
+
+        chatMemoryElement.put("name", "memory_1");
+        chatMemoryElement.put("type", "memoryComponent/v1/memoryElement");
+        chatMemoryElement.put("parameters", Map.of());
+
+        ClusterElementMap clusterElementMap = ClusterElementMap.of(
+            Map.of(
+                "clusterElements",
+                Map.of("model", buildModelClusterElement(), "chatMemory", chatMemoryElement)));
+
+        BaseChatMemoryAdvisor chatMemoryAdvisor = mock(BaseChatMemoryAdvisor.class);
+
+        ChatMemoryFunction chatMemoryFunction = mock(ChatMemoryFunction.class);
+
+        when(chatMemoryFunction.apply(any(), any(), any(), any()))
+            .thenReturn(new ChatMemoryFunction.Result(chatMemoryAdvisor, null));
+        when(clusterElementDefinitionService.<ChatMemoryFunction>getClusterElement(
+            eq("memoryComponent"), eq(1), eq("memoryElement"))).thenReturn(chatMemoryFunction);
+
+        ComponentConnection memoryConnection = new ComponentConnection(
+            "memoryComponent", 1, 2L, Map.of(), null);
+
+        Map<String, ComponentConnection> connectionParameters = Map.of("memory_1", memoryConnection);
+        ActionContext actionContext = mock(ActionContext.class);
+
+        ChatModel chatModel = mock(ChatModel.class);
+
+        TestAiAgentChatAction action = new TestAiAgentChatAction(
+            aiAgentToolFacade, clusterElementDefinitionService, toolCallingManager);
+
+        List<Advisor> advisors = action.getAdvisors(clusterElementMap, connectionParameters, chatModel, actionContext);
+
+        int chatMemoryIndex = advisors.indexOf(chatMemoryAdvisor);
+        ToolCallingAdvisor toolCallAdvisor = findToolCallAdvisor(advisors);
+        int toolCallIndex = advisors.indexOf(toolCallAdvisor);
+
+        assertThat(chatMemoryIndex).isGreaterThanOrEqualTo(0);
+        assertThat(toolCallIndex).isGreaterThan(chatMemoryIndex);
+
+        // With ChatMemoryAdvisor now upstream of the tool loop (RC1 defaults), ToolCallingAdvisor keeps its
+        // internal in-loop history enabled — the former disableInternalConversationHistory() workaround is gone.
+        assertThat(readConversationHistoryEnabled(toolCallAdvisor)).isTrue();
+    }
+
+    private static Map<String, Object> buildModelClusterElement() {
+        Map<String, Object> modelElement = new HashMap<>();
+
+        modelElement.put("name", "model_1");
+        modelElement.put("type", "testComponent/v1/testModel");
+        modelElement.put("parameters", Map.of());
+
+        return modelElement;
+    }
+
+    private static Map<String, Object> buildGuardrailElement(String workflowNodeName, String type) {
+        Map<String, Object> element = new HashMap<>();
+        element.put("name", workflowNodeName);
+        element.put("type", type);
+        element.put("parameters", new HashMap<>());
+
+        return element;
+    }
+
+    private ChatModel stubModelLookup() throws Exception {
+        ModelFunction modelFunction = mock(ModelFunction.class);
+        ChatModel chatModel = mock(ChatModel.class);
+
+        when(clusterElementDefinitionService.<ModelFunction>getClusterElement(
+            eq("testComponent"), eq(1), eq("testModel"))).thenReturn(modelFunction);
+        when(modelFunction.apply(any(), any(), anyBoolean())).thenAnswer(invocation -> chatModel);
+
+        return chatModel;
+    }
+
+    private static ToolCallingAdvisor findToolCallAdvisor(List<Advisor> advisors) {
+        return advisors.stream()
+            .filter(ToolCallingAdvisor.class::isInstance)
+            .map(ToolCallingAdvisor.class::cast)
+            .findFirst()
+            .orElseThrow(() -> new AssertionError("Expected ToolCallingAdvisor in advisor list"));
+    }
+
+    private static boolean readConversationHistoryEnabled(ToolCallingAdvisor toolCallAdvisor) {
+        try {
+            Field field = ToolCallingAdvisor.class.getDeclaredField("conversationHistoryEnabled");
+
+            field.setAccessible(true);
+
+            return field.getBoolean(toolCallAdvisor);
+        } catch (ReflectiveOperationException exception) {
+            throw new AssertionError(
+                "Unable to read conversationHistoryEnabled from ToolCallingAdvisor — "
+                    + "field name changed in Spring AI?",
+                exception);
+        }
+    }
+
+    private static class TestAiAgentChatAction extends AbstractAiAgentChatAction {
+
+        TestAiAgentChatAction(
+            AiAgentToolFacade aiAgentToolFacade, ClusterElementDefinitionService clusterElementDefinitionService,
+            ToolCallingManager toolCallingManager) {
+
+            super(aiAgentToolFacade, clusterElementDefinitionService, toolCallingManager);
+        }
+    }
+}

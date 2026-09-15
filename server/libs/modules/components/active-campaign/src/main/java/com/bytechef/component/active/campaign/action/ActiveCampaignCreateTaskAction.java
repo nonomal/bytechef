@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,15 +17,16 @@
 package com.bytechef.component.active.campaign.action;
 
 import static com.bytechef.component.OpenApiComponentHandler.PropertyType;
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.date;
-import static com.bytechef.component.definition.ComponentDSL.integer;
-import static com.bytechef.component.definition.ComponentDSL.object;
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.date;
+import static com.bytechef.component.definition.ComponentDsl.integer;
+import static com.bytechef.component.definition.ComponentDsl.object;
+import static com.bytechef.component.definition.ComponentDsl.outputSchema;
+import static com.bytechef.component.definition.ComponentDsl.string;
 import static com.bytechef.component.definition.Context.Http.BodyContentType;
 import static com.bytechef.component.definition.Context.Http.ResponseType;
 
-import com.bytechef.component.definition.ComponentDSL;
+import com.bytechef.component.definition.ComponentDsl;
 import java.util.Map;
 
 /**
@@ -34,44 +35,48 @@ import java.util.Map;
  * @generated
  */
 public class ActiveCampaignCreateTaskAction {
-    public static final ComponentDSL.ModifiableActionDefinition ACTION_DEFINITION = action("createTask")
-        .title("Creates a task")
-        .description("Creates a new task")
+    public static final ComponentDsl.ModifiableActionDefinition ACTION_DEFINITION = action("createTask")
+        .title("Create Task")
+        .description("Creates a new task.")
         .metadata(
             Map.of(
                 "method", "POST",
                 "path", "/dealTasks", "bodyContentType", BodyContentType.JSON, "mimeType", "application/json"
 
             ))
-        .properties(object("__item").properties(object("dealTask").properties(string("title").label("Title")
-            .description("The title to be assigned to the task")
+        .properties(object("dealTask").properties(string("title").label("Title")
+            .description("The title to be assigned to the task.")
             .required(false),
-            integer("relid").label("Assigned   To")
-                .description("The id of the relational object for this task")
+            integer("relid").label("Assigned To")
+                .description("The id of the relational object for this task.")
                 .required(true),
-            date("duedate").label("Due   Date")
-                .description("Due date of the task")
+            date("duedate").label("Due Date")
+                .description("Due date of the task.")
                 .required(true),
-            integer("dealTasktype").label("Task   Type")
-                .description("The type of the task based on the available Task Types in the account")
+            integer("dealTasktype").label("Task Type ID")
+                .description("ID of the task type.")
                 .required(true))
-            .label("Deal Task")
-            .required(false))
-            .label("Task")
             .metadata(
                 Map.of(
-                    "type", PropertyType.BODY)))
-        .outputSchema(object()
-            .properties(object("body")
-                .properties(object("dealTask")
-                    .properties(string("id").required(false), string("title").required(false),
-                        integer("relid").required(false), date("duedate").required(false),
-                        integer("dealTasktype").required(false))
+                    "type", PropertyType.BODY))
+            .label("Deal Task")
+            .required(false))
+        .output(outputSchema(object()
+            .properties(object("dealTask").properties(string("id").description("ID of the task.")
+                .required(false),
+                string("title").description("Title of the task.")
+                    .required(false),
+                integer("relid").description("ID of the relational object for this task.")
+                    .required(false),
+                date("duedate").description("Due date of the task.")
+                    .required(false),
+                integer("dealTasktype").description("ID of the task type.")
                     .required(false))
                 .required(false))
             .metadata(
                 Map.of(
-                    "responseType", ResponseType.JSON)));
+                    "responseType", ResponseType.JSON))))
+        .help("", "https://docs.bytechef.io/reference/components/active-campaign_v1#create-task");
 
     private ActiveCampaignCreateTaskAction() {
     }

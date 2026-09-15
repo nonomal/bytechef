@@ -3,21 +3,25 @@ import {getCookie} from '@/shared/util/cookie-utils';
 
 /* eslint-disable sort-keys */
 
-import {create} from 'zustand';
+import {createStore, useStore} from 'zustand';
 import {devtools} from 'zustand/middleware';
+
+import type {ExtractState} from 'zustand/vanilla';
 
 export interface AuthenticationI {
     account: UserI | undefined;
     authenticated: boolean;
     loading: boolean;
     loginError: boolean;
+    mfaRequired: boolean;
     sessionHasBeenFetched: boolean;
     showLogin: boolean;
-
     clearAuthentication: () => void;
-    getAccount: () => void;
-    login: (email: string, password: string, rememberMe: boolean) => void;
-    logout: () => void;
+    getAccount: () => Promise<UserI | undefined>;
+    login: (email: string, password: string, rememberMe: boolean) => Promise<UserI | undefined>;
+    logout: () => Promise<void>;
+    reset: () => void;
+    verifyMfa: (code: string) => Promise<UserI | undefined>;
 }
 
 const initialState = {
@@ -25,6 +29,7 @@ const initialState = {
     authenticated: false,
     loading: false,
     loginError: false,
+    mfaRequired: false,
     sessionHasBeenFetched: false,
     showLogin: false,
 };
@@ -58,13 +63,14 @@ const fetchLogout = async (): Promise<Response> => {
     }).then((response) => response);
 };
 
-export const useAuthenticationStore = create<AuthenticationI>()(
+export const authenticationStore = createStore<AuthenticationI>()(
     devtools(
         (set, get) => ({
             account: undefined,
             authenticated: false,
             loading: false,
             loginError: false,
+            mfaRequired: false,
             sessionHasBeenFetched: false,
             showLogin: false,
 
@@ -72,12 +78,13 @@ export const useAuthenticationStore = create<AuthenticationI>()(
                 set((state) => ({
                     ...state,
                     loading: false,
+                    mfaRequired: false,
                     showLogin: true,
                     authenticated: false,
                 }));
             },
 
-            getAccount: async () => {
+            getAccount: async (): Promise<UserI | undefined> => {
                 if (get().loading) {
                     return;
                 }
@@ -87,52 +94,61 @@ export const useAuthenticationStore = create<AuthenticationI>()(
                     loading: true,
                 }));
 
-                const response = await fetchGetAccount();
+                return fetchGetAccount().then((response) => {
+                    if (response.status === 200) {
+                        return response.json().then((account) => {
+                            set((state) => ({
+                                ...state,
+                                account,
+                                authenticated: account.activated,
+                                loading: false,
+                                sessionHasBeenFetched: true,
+                            }));
 
-                if (response.status === 200) {
-                    const account = (await response.json()) as UserI;
-
-                    set((state) => ({
-                        ...state,
-                        account,
-                        authenticated: account.activated,
-                        loading: false,
-                        sessionHasBeenFetched: true,
-                    }));
-                } else {
-                    set((state) => ({
-                        ...state,
-                        loading: false,
-                        isAuthenticated: false,
-                        sessionHasBeenFetched: true,
-                        showLogin: true,
-                    }));
-                }
+                            return account;
+                        });
+                    } else {
+                        set((state) => ({
+                            ...state,
+                            loading: false,
+                            isAuthenticated: false,
+                            sessionHasBeenFetched: true,
+                            showLogin: true,
+                        }));
+                    }
+                });
             },
 
-            login: async (email: string, password: string, rememberMe: boolean) => {
+            login: async (email: string, password: string, rememberMe: boolean): Promise<UserI | undefined> => {
                 const data = `username=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}&remember-me=${rememberMe}&submit=Login`;
 
-                const response = await fetchAuthenticate(data);
+                return fetchAuthenticate(data).then((response) => {
+                    if (response.status === 200) {
+                        set((state) => ({
+                            ...state,
+                            loginError: false,
+                            loginSuccess: true,
+                            showLogin: false,
+                        }));
 
-                if (response.status === 200) {
-                    set((state) => ({
-                        ...state,
-                        loginError: false,
-                        loginSuccess: true,
-                        showLogin: false,
-                    }));
+                        const {getAccount} = get();
 
-                    const {getAccount} = get();
-
-                    getAccount();
-                } else {
-                    set(() => ({
-                        ...initialState,
-                        loginError: true,
-                        showLogin: true,
-                    }));
-                }
+                        return getAccount();
+                    } else if (response.status === 202) {
+                        set((state) => ({
+                            ...state,
+                            loginError: false,
+                            mfaRequired: true,
+                            showLogin: false,
+                        }));
+                    } else {
+                        set(() => ({
+                            ...initialState,
+                            loginError: true,
+                            showLogin: true,
+                        }));
+                    }
+                });
             },
 
             logout: async () => {
@@ -145,10 +161,54 @@ export const useAuthenticationStore = create<AuthenticationI>()(
                     }));
                 }
 
-                // const {getAccount} = get();
+                const {getAccount} = get();
 
                 // fetch new csrf token
-                // getAccount();
+                getAccount();
+            },
+
+            verifyMfa: async (code: string): Promise<UserI | undefined> => {
+                try {
+                    const response = await fetch('/api/mfa/verify', {
+                        body: JSON.stringify({code}),
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-XSRF-TOKEN': getCookie('XSRF-TOKEN') || '',
+                        },
+                        method: 'POST',
+                    });
+
+                    if (response.status === 200) {
+                        set((state) => ({
+                            ...state,
+                            mfaRequired: false,
+                        }));
+
+                        const {getAccount} = get();
+
+                        return getAccount();
+                    } else {
+                        set((state) => ({
+                            ...state,
+                            loginError: true,
+                        }));
+
+                        return undefined;
+                    }
+                } catch {
+                    set((state) => ({
+                        ...state,
+                        loginError: true,
+                    }));
+
+                    return undefined;
+                }
+            },
+
+            reset: () => {
+                set(() => ({
+                    ...initialState,
+                }));
             },
         }),
         {
@@ -156,3 +216,7 @@ export const useAuthenticationStore = create<AuthenticationI>()(
         }
     )
 );
+
+export function useAuthenticationStore<U>(selector: (state: ExtractState<typeof authenticationStore>) => U): U {
+    return useStore(authenticationStore, selector);
+}

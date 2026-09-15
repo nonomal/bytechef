@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,12 +16,12 @@
 
 package com.bytechef.component.map.config;
 
-import com.bytechef.atlas.worker.task.factory.TaskDispatcherAdapterFactory;
+import com.bytechef.atlas.worker.task.handler.TaskDispatcherAdapterFactory;
 import com.bytechef.atlas.worker.task.handler.TaskHandler;
 import com.bytechef.atlas.worker.task.handler.TaskHandlerResolver;
 import com.bytechef.component.map.MapTaskDispatcherAdapterTaskHandler;
 import com.bytechef.component.map.constant.MapConstants;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.bytechef.evaluator.Evaluator;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -32,12 +32,12 @@ import org.springframework.context.annotation.Configuration;
 public class MapTaskDispatcherAdapterConfiguration {
 
     @Bean
-    TaskDispatcherAdapterFactory taskDispatcherAdapterFactory(ObjectMapper objectMapper) {
+    TaskDispatcherAdapterFactory taskDispatcherAdapterFactory(Evaluator evaluator) {
         return new TaskDispatcherAdapterFactory() {
 
             @Override
             public TaskHandler<?> create(TaskHandlerResolver taskHandlerResolver) {
-                return new MapTaskDispatcherAdapterTaskHandler(objectMapper, taskHandlerResolver);
+                return new MapTaskDispatcherAdapterTaskHandler(evaluator, taskHandlerResolver);
             }
 
             @Override

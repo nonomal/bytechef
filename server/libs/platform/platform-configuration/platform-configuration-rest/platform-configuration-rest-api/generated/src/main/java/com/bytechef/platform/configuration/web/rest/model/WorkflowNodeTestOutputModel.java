@@ -5,6 +5,7 @@ import java.util.Objects;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import org.springframework.lang.Nullable;
 import org.openapitools.jackson.nullable.JsonNullable;
 import java.time.OffsetDateTime;
 import jakarta.validation.Valid;
@@ -21,16 +22,16 @@ import jakarta.annotation.Generated;
 
 @Schema(name = "WorkflowNodeTestOutput", description = "Contains test output of a workflow node.")
 @JsonTypeName("WorkflowNodeTestOutput")
-@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2024-06-30T07:20:54.243996+02:00[Europe/Zagreb]", comments = "Generator version: 7.5.0")
+@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2026-07-03T17:58:15.504637+02:00[Europe/Zagreb]", comments = "Generator version: 7.22.0")
 public class WorkflowNodeTestOutputModel {
 
-  private Long id;
+  private @Nullable Long id;
 
-  private String workflowNodeName;
+  private @Nullable String workflowNodeName;
 
-  private String workflowId;
+  private @Nullable String workflowId;
 
-  public WorkflowNodeTestOutputModel id(Long id) {
+  public WorkflowNodeTestOutputModel id(@Nullable Long id) {
     this.id = id;
     return this;
   }
@@ -38,19 +39,20 @@ public class WorkflowNodeTestOutputModel {
   /**
    * The workflow test node output id
    * @return id
-  */
+   */
   
   @Schema(name = "id", description = "The workflow test node output id", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("id")
-  public Long getId() {
+  public @Nullable Long getId() {
     return id;
   }
 
-  public void setId(Long id) {
+  @JsonProperty("id")
+  public void setId(@Nullable Long id) {
     this.id = id;
   }
 
-  public WorkflowNodeTestOutputModel workflowNodeName(String workflowNodeName) {
+  public WorkflowNodeTestOutputModel workflowNodeName(@Nullable String workflowNodeName) {
     this.workflowNodeName = workflowNodeName;
     return this;
   }
@@ -58,19 +60,20 @@ public class WorkflowNodeTestOutputModel {
   /**
    * The workflow node name.
    * @return workflowNodeName
-  */
+   */
   
   @Schema(name = "workflowNodeName", description = "The workflow node name.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("workflowNodeName")
-  public String getWorkflowNodeName() {
+  public @Nullable String getWorkflowNodeName() {
     return workflowNodeName;
   }
 
-  public void setWorkflowNodeName(String workflowNodeName) {
+  @JsonProperty("workflowNodeName")
+  public void setWorkflowNodeName(@Nullable String workflowNodeName) {
     this.workflowNodeName = workflowNodeName;
   }
 
-  public WorkflowNodeTestOutputModel workflowId(String workflowId) {
+  public WorkflowNodeTestOutputModel workflowId(@Nullable String workflowId) {
     this.workflowId = workflowId;
     return this;
   }
@@ -78,15 +81,16 @@ public class WorkflowNodeTestOutputModel {
   /**
    * The workflow id.
    * @return workflowId
-  */
+   */
   
   @Schema(name = "workflowId", description = "The workflow id.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("workflowId")
-  public String getWorkflowId() {
+  public @Nullable String getWorkflowId() {
     return workflowId;
   }
 
-  public void setWorkflowId(String workflowId) {
+  @JsonProperty("workflowId")
+  public void setWorkflowId(@Nullable String workflowId) {
     this.workflowId = workflowId;
   }
 
@@ -124,11 +128,8 @@ public class WorkflowNodeTestOutputModel {
    * Convert the given object to string with each line indented by 4 spaces
    * (except the first line).
    */
-  private String toIndentedString(Object o) {
-    if (o == null) {
-      return "null";
-    }
-    return o.toString().replace("\n", "\n    ");
+  private String toIndentedString(@Nullable Object o) {
+    return o == null ? "null" : o.toString().replace("\n", "\n    ");
   }
 }
 

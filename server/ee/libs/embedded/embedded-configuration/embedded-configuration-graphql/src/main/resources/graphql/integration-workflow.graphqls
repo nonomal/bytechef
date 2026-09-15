@@ -1,0 +1,24 @@
+extend type Query {
+    integrationWorkflows: [IntegrationWorkflow!]!
+    integrationWorkflowsByIntegrationId(integrationId: ID!): [IntegrationWorkflow!]!
+}
+
+extend type Mutation {
+    updateIntegrationWorkflowPermissionExpression(
+        integrationWorkflowId: ID!, permissionExpression: String): IntegrationWorkflow
+}
+
+type IntegrationWorkflow {
+    id: ID!
+    label: String!
+    description: String
+    integrationWorkflowId: ID!
+    workflowUuid: String
+    permissionExpression: String
+    workflowTaskComponentNames: [String!]!
+    workflowTriggerComponentNames: [String!]!
+    createdBy: String
+    createdDate: Long
+    lastModifiedBy: String
+    lastModifiedDate: Long
+}

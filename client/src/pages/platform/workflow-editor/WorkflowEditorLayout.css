@@ -1,0 +1,27 @@
+.react-flow__node.selected > div:first-of-type {
+    border-color: #3b82f6 !important;
+}
+
+@keyframes slideInFromLeft {
+    from {
+        opacity: 0;
+        transform: translateX(-30px);
+    }
+}
+
+@keyframes slideInFromRight {
+    from {
+        opacity: 0;
+        transform: translateX(30px);
+    }
+}
+
+.react-flow__node {
+    animation: nodeAppear 200ms ease-out;
+}
+
+@keyframes nodeAppear {
+    from {
+        opacity: 0;
+    }
+}

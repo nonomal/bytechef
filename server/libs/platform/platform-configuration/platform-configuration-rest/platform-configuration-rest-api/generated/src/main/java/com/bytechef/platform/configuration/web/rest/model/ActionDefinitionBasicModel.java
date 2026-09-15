@@ -6,6 +6,7 @@ import com.bytechef.platform.configuration.web.rest.model.HelpModel;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import org.springframework.lang.Nullable;
 import org.openapitools.jackson.nullable.JsonNullable;
 import java.time.OffsetDateTime;
 import jakarta.validation.Valid;
@@ -22,16 +23,30 @@ import jakarta.annotation.Generated;
 
 @Schema(name = "ActionDefinitionBasic", description = "An action is a portion of reusable code that accomplish a specific task. When building a workflow, each action is represented as a task inside the workflow. The task 'type' property is defined as [component name]/v[component version]/[action name]. Action properties are used to set properties of the task inside the workflow.")
 @JsonTypeName("ActionDefinitionBasic")
-@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2024-06-30T07:20:54.243996+02:00[Europe/Zagreb]", comments = "Generator version: 7.5.0")
+@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2026-07-03T17:58:15.504637+02:00[Europe/Zagreb]", comments = "Generator version: 7.22.0")
 public class ActionDefinitionBasicModel {
 
-  private String description;
+  private String componentName;
 
-  private HelpModel help;
+  private Integer componentVersion;
+
+  private @Nullable String description;
+
+  private @Nullable HelpModel help;
 
   private String name;
 
-  private String title;
+  private Boolean outputDefined;
+
+  private Boolean outputFunctionDefined;
+
+  private @Nullable Boolean outputSchemaDefined;
+
+  private @Nullable Boolean resumePerformFunctionDefined;
+
+  private @Nullable Boolean sseStreamResponse;
+
+  private @Nullable String title;
 
   public ActionDefinitionBasicModel() {
     super();
@@ -40,11 +55,57 @@ public class ActionDefinitionBasicModel {
   /**
    * Constructor with only required parameters
    */
-  public ActionDefinitionBasicModel(String name) {
+  public ActionDefinitionBasicModel(String componentName, Integer componentVersion, String name, Boolean outputDefined, Boolean outputFunctionDefined) {
+    this.componentName = componentName;
+    this.componentVersion = componentVersion;
     this.name = name;
+    this.outputDefined = outputDefined;
+    this.outputFunctionDefined = outputFunctionDefined;
   }
 
-  public ActionDefinitionBasicModel description(String description) {
+  public ActionDefinitionBasicModel componentName(String componentName) {
+    this.componentName = componentName;
+    return this;
+  }
+
+  /**
+   * The component name.
+   * @return componentName
+   */
+  @NotNull 
+  @Schema(name = "componentName", description = "The component name.", requiredMode = Schema.RequiredMode.REQUIRED)
+  @JsonProperty("componentName")
+  public String getComponentName() {
+    return componentName;
+  }
+
+  @JsonProperty("componentName")
+  public void setComponentName(String componentName) {
+    this.componentName = componentName;
+  }
+
+  public ActionDefinitionBasicModel componentVersion(Integer componentVersion) {
+    this.componentVersion = componentVersion;
+    return this;
+  }
+
+  /**
+   * The component version.
+   * @return componentVersion
+   */
+  @NotNull 
+  @Schema(name = "componentVersion", description = "The component version.", requiredMode = Schema.RequiredMode.REQUIRED)
+  @JsonProperty("componentVersion")
+  public Integer getComponentVersion() {
+    return componentVersion;
+  }
+
+  @JsonProperty("componentVersion")
+  public void setComponentVersion(Integer componentVersion) {
+    this.componentVersion = componentVersion;
+  }
+
+  public ActionDefinitionBasicModel description(@Nullable String description) {
     this.description = description;
     return this;
   }
@@ -52,19 +113,20 @@ public class ActionDefinitionBasicModel {
   /**
    * The description.
    * @return description
-  */
+   */
   
   @Schema(name = "description", description = "The description.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("description")
-  public String getDescription() {
+  public @Nullable String getDescription() {
     return description;
   }
 
-  public void setDescription(String description) {
+  @JsonProperty("description")
+  public void setDescription(@Nullable String description) {
     this.description = description;
   }
 
-  public ActionDefinitionBasicModel help(HelpModel help) {
+  public ActionDefinitionBasicModel help(@Nullable HelpModel help) {
     this.help = help;
     return this;
   }
@@ -72,15 +134,16 @@ public class ActionDefinitionBasicModel {
   /**
    * Get help
    * @return help
-  */
+   */
   @Valid 
   @Schema(name = "help", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("help")
-  public HelpModel getHelp() {
+  public @Nullable HelpModel getHelp() {
     return help;
   }
 
-  public void setHelp(HelpModel help) {
+  @JsonProperty("help")
+  public void setHelp(@Nullable HelpModel help) {
     this.help = help;
   }
 
@@ -92,7 +155,7 @@ public class ActionDefinitionBasicModel {
   /**
    * The action name.
    * @return name
-  */
+   */
   @NotNull 
   @Schema(name = "name", description = "The action name.", requiredMode = Schema.RequiredMode.REQUIRED)
   @JsonProperty("name")
@@ -100,11 +163,117 @@ public class ActionDefinitionBasicModel {
     return name;
   }
 
+  @JsonProperty("name")
   public void setName(String name) {
     this.name = name;
   }
 
-  public ActionDefinitionBasicModel title(String title) {
+  public ActionDefinitionBasicModel outputDefined(Boolean outputDefined) {
+    this.outputDefined = outputDefined;
+    return this;
+  }
+
+  /**
+   * Does action defines output.
+   * @return outputDefined
+   */
+  @NotNull 
+  @Schema(name = "outputDefined", description = "Does action defines output.", requiredMode = Schema.RequiredMode.REQUIRED)
+  @JsonProperty("outputDefined")
+  public Boolean getOutputDefined() {
+    return outputDefined;
+  }
+
+  @JsonProperty("outputDefined")
+  public void setOutputDefined(Boolean outputDefined) {
+    this.outputDefined = outputDefined;
+  }
+
+  public ActionDefinitionBasicModel outputFunctionDefined(Boolean outputFunctionDefined) {
+    this.outputFunctionDefined = outputFunctionDefined;
+    return this;
+  }
+
+  /**
+   * Does action defines output function.
+   * @return outputFunctionDefined
+   */
+  @NotNull 
+  @Schema(name = "outputFunctionDefined", description = "Does action defines output function.", requiredMode = Schema.RequiredMode.REQUIRED)
+  @JsonProperty("outputFunctionDefined")
+  public Boolean getOutputFunctionDefined() {
+    return outputFunctionDefined;
+  }
+
+  @JsonProperty("outputFunctionDefined")
+  public void setOutputFunctionDefined(Boolean outputFunctionDefined) {
+    this.outputFunctionDefined = outputFunctionDefined;
+  }
+
+  public ActionDefinitionBasicModel outputSchemaDefined(@Nullable Boolean outputSchemaDefined) {
+    this.outputSchemaDefined = outputSchemaDefined;
+    return this;
+  }
+
+  /**
+   * Does action defines output schema.
+   * @return outputSchemaDefined
+   */
+  
+  @Schema(name = "outputSchemaDefined", description = "Does action defines output schema.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+  @JsonProperty("outputSchemaDefined")
+  public @Nullable Boolean getOutputSchemaDefined() {
+    return outputSchemaDefined;
+  }
+
+  @JsonProperty("outputSchemaDefined")
+  public void setOutputSchemaDefined(@Nullable Boolean outputSchemaDefined) {
+    this.outputSchemaDefined = outputSchemaDefined;
+  }
+
+  public ActionDefinitionBasicModel resumePerformFunctionDefined(@Nullable Boolean resumePerformFunctionDefined) {
+    this.resumePerformFunctionDefined = resumePerformFunctionDefined;
+    return this;
+  }
+
+  /**
+   * Does action define resume perform function.
+   * @return resumePerformFunctionDefined
+   */
+  
+  @Schema(name = "resumePerformFunctionDefined", description = "Does action define resume perform function.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+  @JsonProperty("resumePerformFunctionDefined")
+  public @Nullable Boolean getResumePerformFunctionDefined() {
+    return resumePerformFunctionDefined;
+  }
+
+  @JsonProperty("resumePerformFunctionDefined")
+  public void setResumePerformFunctionDefined(@Nullable Boolean resumePerformFunctionDefined) {
+    this.resumePerformFunctionDefined = resumePerformFunctionDefined;
+  }
+
+  public ActionDefinitionBasicModel sseStreamResponse(@Nullable Boolean sseStreamResponse) {
+    this.sseStreamResponse = sseStreamResponse;
+    return this;
+  }
+
+  /**
+   * Does action support SSE streaming.
+   * @return sseStreamResponse
+   */
+  
+  @Schema(name = "sseStreamResponse", description = "Does action support SSE streaming.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+  @JsonProperty("sseStreamResponse")
+  public @Nullable Boolean getSseStreamResponse() {
+    return sseStreamResponse;
+  }
+
+  @JsonProperty("sseStreamResponse")
+  public void setSseStreamResponse(@Nullable Boolean sseStreamResponse) {
+    this.sseStreamResponse = sseStreamResponse;
+  }
+
+  public ActionDefinitionBasicModel title(@Nullable String title) {
     this.title = title;
     return this;
   }
@@ -112,15 +281,16 @@ public class ActionDefinitionBasicModel {
   /**
    * The title
    * @return title
-  */
+   */
   
   @Schema(name = "title", description = "The title", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("title")
-  public String getTitle() {
+  public @Nullable String getTitle() {
     return title;
   }
 
-  public void setTitle(String title) {
+  @JsonProperty("title")
+  public void setTitle(@Nullable String title) {
     this.title = title;
   }
 
@@ -133,24 +303,38 @@ public class ActionDefinitionBasicModel {
       return false;
     }
     ActionDefinitionBasicModel actionDefinitionBasic = (ActionDefinitionBasicModel) o;
-    return Objects.equals(this.description, actionDefinitionBasic.description) &&
+    return Objects.equals(this.componentName, actionDefinitionBasic.componentName) &&
+        Objects.equals(this.componentVersion, actionDefinitionBasic.componentVersion) &&
+        Objects.equals(this.description, actionDefinitionBasic.description) &&
         Objects.equals(this.help, actionDefinitionBasic.help) &&
         Objects.equals(this.name, actionDefinitionBasic.name) &&
+        Objects.equals(this.outputDefined, actionDefinitionBasic.outputDefined) &&
+        Objects.equals(this.outputFunctionDefined, actionDefinitionBasic.outputFunctionDefined) &&
+        Objects.equals(this.outputSchemaDefined, actionDefinitionBasic.outputSchemaDefined) &&
+        Objects.equals(this.resumePerformFunctionDefined, actionDefinitionBasic.resumePerformFunctionDefined) &&
+        Objects.equals(this.sseStreamResponse, actionDefinitionBasic.sseStreamResponse) &&
         Objects.equals(this.title, actionDefinitionBasic.title);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(description, help, name, title);
+    return Objects.hash(componentName, componentVersion, description, help, name, outputDefined, outputFunctionDefined, outputSchemaDefined, resumePerformFunctionDefined, sseStreamResponse, title);
   }
 
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
     sb.append("class ActionDefinitionBasicModel {\n");
+    sb.append("    componentName: ").append(toIndentedString(componentName)).append("\n");
+    sb.append("    componentVersion: ").append(toIndentedString(componentVersion)).append("\n");
     sb.append("    description: ").append(toIndentedString(description)).append("\n");
     sb.append("    help: ").append(toIndentedString(help)).append("\n");
     sb.append("    name: ").append(toIndentedString(name)).append("\n");
+    sb.append("    outputDefined: ").append(toIndentedString(outputDefined)).append("\n");
+    sb.append("    outputFunctionDefined: ").append(toIndentedString(outputFunctionDefined)).append("\n");
+    sb.append("    outputSchemaDefined: ").append(toIndentedString(outputSchemaDefined)).append("\n");
+    sb.append("    resumePerformFunctionDefined: ").append(toIndentedString(resumePerformFunctionDefined)).append("\n");
+    sb.append("    sseStreamResponse: ").append(toIndentedString(sseStreamResponse)).append("\n");
     sb.append("    title: ").append(toIndentedString(title)).append("\n");
     sb.append("}");
     return sb.toString();
@@ -160,11 +344,8 @@ public class ActionDefinitionBasicModel {
    * Convert the given object to string with each line indented by 4 spaces
    * (except the first line).
    */
-  private String toIndentedString(Object o) {
-    if (o == null) {
-      return "null";
-    }
-    return o.toString().replace("\n", "\n    ");
+  private String toIndentedString(@Nullable Object o) {
+    return o == null ? "null" : o.toString().replace("\n", "\n    ");
   }
 }
 

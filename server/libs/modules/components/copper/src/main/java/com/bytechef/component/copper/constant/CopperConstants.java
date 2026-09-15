@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,19 +24,15 @@ public class CopperConstants {
     public static final String ADDRESS = "address";
     public static final String ASSIGNEE_ID = "assignee_id";
     public static final String ACTIVITY_TYPE = "activity_type";
-    public static final String BASE_URL = "https://api.copper.com/developer_api/v1";
     public static final String CATEGORY = "category";
     public static final String CATEGORY_LABEL = "Category";
     public static final String CITY = "city";
     public static final String COMPANY = "company";
     public static final String COMPANY_ID = "company_id";
     public static final String CONTACT_TYPE_ID = "contact_type_id";
-    public static final String COPPER = "copper";
     public static final String COUNTRY = "country";
-    public static final String CREATE_COMPANY = "createCompany";
-    public static final String CREATE_PERSON = "createPerson";
-    public static final String CREATE_ACTIVITY = "createActivity";
     public static final String DETAILS = "details";
+    public static final String DUE_DATE = "due_date";
     public static final String EMAIL = "email";
     public static final String EMAILS = "emails";
     public static final String EMAIL_DOMAIN = "email_domain";
@@ -44,14 +40,16 @@ public class CopperConstants {
     public static final String LEAD = "lead";
     public static final String NAME = "name";
     public static final String NUMBER = "number";
-    public static final String OPPORTUNITY = "opportunity";
     public static final String OTHER = "other";
     public static final String PARENT = "parent";
     public static final String PERSON = "person";
     public static final String PHONE_NUMBERS = "phone_numbers";
     public static final String POSTAL_CODE = "postal_code";
+    public static final String PRIORITY = "priority";
+    public static final String REMINDER_DATE = "reminder_date";
     public static final String SOCIALS = "socials";
     public static final String STATE = "state";
+    public static final String STATUS = "status";
     public static final String STREET = "street";
     public static final String TAGS = "tags";
     public static final String TITLE = "title";

@@ -3,6 +3,7 @@ package com.bytechef.platform.configuration.web.rest.model;
 import java.net.URI;
 import java.util.Objects;
 import com.bytechef.platform.configuration.web.rest.model.AuthorizationModel;
+import com.bytechef.platform.configuration.web.rest.model.ConnectionDefinitionHelpModel;
 import com.bytechef.platform.configuration.web.rest.model.PropertyModel;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonCreator;
@@ -10,6 +11,7 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import org.springframework.lang.Nullable;
 import org.openapitools.jackson.nullable.JsonNullable;
 import java.time.OffsetDateTime;
 import jakarta.validation.Valid;
@@ -26,7 +28,7 @@ import jakarta.annotation.Generated;
 
 @Schema(name = "ConnectionDefinition", description = "Definition of a connection to an outside service.")
 @JsonTypeName("ConnectionDefinition")
-@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2024-06-30T07:20:54.243996+02:00[Europe/Zagreb]", comments = "Generator version: 7.5.0")
+@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2026-07-03T17:58:15.504637+02:00[Europe/Zagreb]", comments = "Generator version: 7.22.0")
 public class ConnectionDefinitionModel {
 
   private Boolean authorizationRequired = true;
@@ -34,16 +36,18 @@ public class ConnectionDefinitionModel {
   @Valid
   private List<@Valid AuthorizationModel> authorizations = new ArrayList<>();
 
-  private String baseUri;
+  private @Nullable String baseUri;
 
-  private String componentDescription;
+  private @Nullable String componentDescription;
 
   private String componentName;
+
+  private @Nullable ConnectionDefinitionHelpModel help;
 
   @Valid
   private List<@Valid PropertyModel> properties = new ArrayList<>();
 
-  private String componentTitle;
+  private @Nullable String componentTitle;
 
   private Integer version;
 
@@ -67,7 +71,7 @@ public class ConnectionDefinitionModel {
   /**
    * If a connection requires an authorization to be defined or not
    * @return authorizationRequired
-  */
+   */
   
   @Schema(name = "authorizationRequired", description = "If a connection requires an authorization to be defined or not", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("authorizationRequired")
@@ -75,6 +79,7 @@ public class ConnectionDefinitionModel {
     return authorizationRequired;
   }
 
+  @JsonProperty("authorizationRequired")
   public void setAuthorizationRequired(Boolean authorizationRequired) {
     this.authorizationRequired = authorizationRequired;
   }
@@ -95,7 +100,7 @@ public class ConnectionDefinitionModel {
   /**
    * Get authorizations
    * @return authorizations
-  */
+   */
   @Valid 
   @Schema(name = "authorizations", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("authorizations")
@@ -103,11 +108,12 @@ public class ConnectionDefinitionModel {
     return authorizations;
   }
 
+  @JsonProperty("authorizations")
   public void setAuthorizations(List<@Valid AuthorizationModel> authorizations) {
     this.authorizations = authorizations;
   }
 
-  public ConnectionDefinitionModel baseUri(String baseUri) {
+  public ConnectionDefinitionModel baseUri(@Nullable String baseUri) {
     this.baseUri = baseUri;
     return this;
   }
@@ -115,19 +121,20 @@ public class ConnectionDefinitionModel {
   /**
    * Defines the base URI for all future HTTP requests.
    * @return baseUri
-  */
+   */
   
   @Schema(name = "baseUri", description = "Defines the base URI for all future HTTP requests.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("baseUri")
-  public String getBaseUri() {
+  public @Nullable String getBaseUri() {
     return baseUri;
   }
 
-  public void setBaseUri(String baseUri) {
+  @JsonProperty("baseUri")
+  public void setBaseUri(@Nullable String baseUri) {
     this.baseUri = baseUri;
   }
 
-  public ConnectionDefinitionModel componentDescription(String componentDescription) {
+  public ConnectionDefinitionModel componentDescription(@Nullable String componentDescription) {
     this.componentDescription = componentDescription;
     return this;
   }
@@ -135,15 +142,16 @@ public class ConnectionDefinitionModel {
   /**
    * The description used from the connection's component.
    * @return componentDescription
-  */
+   */
   
   @Schema(name = "componentDescription", description = "The description used from the connection's component.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("componentDescription")
-  public String getComponentDescription() {
+  public @Nullable String getComponentDescription() {
     return componentDescription;
   }
 
-  public void setComponentDescription(String componentDescription) {
+  @JsonProperty("componentDescription")
+  public void setComponentDescription(@Nullable String componentDescription) {
     this.componentDescription = componentDescription;
   }
 
@@ -155,7 +163,7 @@ public class ConnectionDefinitionModel {
   /**
    * The component name used from the connection's component.
    * @return componentName
-  */
+   */
   @NotNull 
   @Schema(name = "componentName", description = "The component name used from the connection's component.", requiredMode = Schema.RequiredMode.REQUIRED)
   @JsonProperty("componentName")
@@ -163,8 +171,30 @@ public class ConnectionDefinitionModel {
     return componentName;
   }
 
+  @JsonProperty("componentName")
   public void setComponentName(String componentName) {
     this.componentName = componentName;
+  }
+
+  public ConnectionDefinitionModel help(@Nullable ConnectionDefinitionHelpModel help) {
+    this.help = help;
+    return this;
+  }
+
+  /**
+   * Get help
+   * @return help
+   */
+  @Valid 
+  @Schema(name = "help", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
+  @JsonProperty("help")
+  public @Nullable ConnectionDefinitionHelpModel getHelp() {
+    return help;
+  }
+
+  @JsonProperty("help")
+  public void setHelp(@Nullable ConnectionDefinitionHelpModel help) {
+    this.help = help;
   }
 
   public ConnectionDefinitionModel properties(List<@Valid PropertyModel> properties) {
@@ -183,7 +213,7 @@ public class ConnectionDefinitionModel {
   /**
    * The properties of the connection.
    * @return properties
-  */
+   */
   @Valid 
   @Schema(name = "properties", description = "The properties of the connection.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("properties")
@@ -191,11 +221,12 @@ public class ConnectionDefinitionModel {
     return properties;
   }
 
+  @JsonProperty("properties")
   public void setProperties(List<@Valid PropertyModel> properties) {
     this.properties = properties;
   }
 
-  public ConnectionDefinitionModel componentTitle(String componentTitle) {
+  public ConnectionDefinitionModel componentTitle(@Nullable String componentTitle) {
     this.componentTitle = componentTitle;
     return this;
   }
@@ -203,15 +234,16 @@ public class ConnectionDefinitionModel {
   /**
    * The title used from the connection's component.
    * @return componentTitle
-  */
+   */
   
   @Schema(name = "componentTitle", description = "The title used from the connection's component.", requiredMode = Schema.RequiredMode.NOT_REQUIRED)
   @JsonProperty("componentTitle")
-  public String getComponentTitle() {
+  public @Nullable String getComponentTitle() {
     return componentTitle;
   }
 
-  public void setComponentTitle(String componentTitle) {
+  @JsonProperty("componentTitle")
+  public void setComponentTitle(@Nullable String componentTitle) {
     this.componentTitle = componentTitle;
   }
 
@@ -223,7 +255,7 @@ public class ConnectionDefinitionModel {
   /**
    * The version of a connection.
    * @return version
-  */
+   */
   @NotNull 
   @Schema(name = "version", description = "The version of a connection.", requiredMode = Schema.RequiredMode.REQUIRED)
   @JsonProperty("version")
@@ -231,6 +263,7 @@ public class ConnectionDefinitionModel {
     return version;
   }
 
+  @JsonProperty("version")
   public void setVersion(Integer version) {
     this.version = version;
   }
@@ -249,6 +282,7 @@ public class ConnectionDefinitionModel {
         Objects.equals(this.baseUri, connectionDefinition.baseUri) &&
         Objects.equals(this.componentDescription, connectionDefinition.componentDescription) &&
         Objects.equals(this.componentName, connectionDefinition.componentName) &&
+        Objects.equals(this.help, connectionDefinition.help) &&
         Objects.equals(this.properties, connectionDefinition.properties) &&
         Objects.equals(this.componentTitle, connectionDefinition.componentTitle) &&
         Objects.equals(this.version, connectionDefinition.version);
@@ -256,7 +290,7 @@ public class ConnectionDefinitionModel {
 
   @Override
   public int hashCode() {
-    return Objects.hash(authorizationRequired, authorizations, baseUri, componentDescription, componentName, properties, componentTitle, version);
+    return Objects.hash(authorizationRequired, authorizations, baseUri, componentDescription, componentName, help, properties, componentTitle, version);
   }
 
   @Override
@@ -268,6 +302,7 @@ public class ConnectionDefinitionModel {
     sb.append("    baseUri: ").append(toIndentedString(baseUri)).append("\n");
     sb.append("    componentDescription: ").append(toIndentedString(componentDescription)).append("\n");
     sb.append("    componentName: ").append(toIndentedString(componentName)).append("\n");
+    sb.append("    help: ").append(toIndentedString(help)).append("\n");
     sb.append("    properties: ").append(toIndentedString(properties)).append("\n");
     sb.append("    componentTitle: ").append(toIndentedString(componentTitle)).append("\n");
     sb.append("    version: ").append(toIndentedString(version)).append("\n");
@@ -279,11 +314,8 @@ public class ConnectionDefinitionModel {
    * Convert the given object to string with each line indented by 4 spaces
    * (except the first line).
    */
-  private String toIndentedString(Object o) {
-    if (o == null) {
-      return "null";
-    }
-    return o.toString().replace("\n", "\n    ");
+  private String toIndentedString(@Nullable Object o) {
+    return o == null ? "null" : o.toString().replace("\n", "\n    ");
   }
 }
 

@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * Modifications copyright (C) 2023 ByteChef Inc.
+ * Modifications copyright (C) 2025 ByteChef
  */
 
 package com.bytechef.atlas.coordinator.event.listener;
@@ -40,7 +40,7 @@ import org.slf4j.LoggerFactory;
  */
 public class TaskStartedApplicationEventListener implements ApplicationEventListener {
 
-    private static final Logger logger = LoggerFactory.getLogger(TaskStartedApplicationEventListener.class);
+    private static final Logger log = LoggerFactory.getLogger(TaskStartedApplicationEventListener.class);
 
     private final TaskExecutionService taskExecutionService;
     private final TaskDispatcher<? super Task> taskDispatcher;
@@ -63,8 +63,8 @@ public class TaskStartedApplicationEventListener implements ApplicationEventList
 
             TaskExecution taskExecution = taskExecutionService.getTaskExecution(taskExecutionId);
 
-            if (logger.isDebugEnabled()) {
-                logger.debug(
+            if (log.isDebugEnabled()) {
+                log.debug(
                     "Task id={}, name='{}', type='{}' started", taskExecution.getId(), taskExecution.getName(),
                     taskExecution.getType());
             }
@@ -72,8 +72,10 @@ public class TaskStartedApplicationEventListener implements ApplicationEventList
             Job job = jobService.getTaskExecutionJob(taskExecutionId);
 
             if (taskExecution.getStatus() == Status.CANCELLED || job.getStatus() != Job.Status.STARTED) {
-                taskDispatcher.dispatch(new CancelControlTask(
-                    Validate.notNull(taskExecution.getJobId(), "id"), Validate.notNull(taskExecution.getId(), "id")));
+                taskDispatcher.dispatch(
+                    new CancelControlTask(
+                        Validate.notNull(taskExecution.getJobId(), "jobId"),
+                        Validate.notNull(taskExecution.getId(), "id")));
             } else {
                 if (taskExecution.getStartDate() == null && taskExecution.getStatus() != Status.STARTED) {
                     taskExecution.setStartDate(taskStartedApplicationEvent.getCreateDate());

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,27 +16,20 @@
 
 package com.bytechef.component.airtable;
 
-import static com.bytechef.component.airtable.constant.AirtableConstants.BASE_ID;
-import static com.bytechef.component.airtable.constant.AirtableConstants.TABLE_ID;
-
 import com.bytechef.component.OpenApiComponentHandler;
+import com.bytechef.component.airtable.datastream.AirtableItemReader;
+import com.bytechef.component.airtable.datastream.AirtableItemWriter;
 import com.bytechef.component.airtable.trigger.AirtableNewRecordTrigger;
-import com.bytechef.component.airtable.util.AirtableUtils;
-import com.bytechef.component.definition.ActionDefinition;
 import com.bytechef.component.definition.ComponentCategory;
-import com.bytechef.component.definition.ComponentDSL.ModifiableActionDefinition;
-import com.bytechef.component.definition.ComponentDSL.ModifiableComponentDefinition;
-import com.bytechef.component.definition.ComponentDSL.ModifiableDynamicPropertiesProperty;
-import com.bytechef.component.definition.ComponentDSL.ModifiableProperty;
-import com.bytechef.component.definition.ComponentDSL.ModifiableStringProperty;
-import com.bytechef.component.definition.ComponentDSL.ModifiableTriggerDefinition;
-import com.bytechef.component.definition.DataStreamItemReader;
-import com.bytechef.component.definition.OptionsDataSource.ActionOptionsFunction;
+import com.bytechef.component.definition.ComponentDsl.ModifiableActionDefinition;
+import com.bytechef.component.definition.ComponentDsl.ModifiableClusterElementDefinition;
+import com.bytechef.component.definition.ComponentDsl.ModifiableComponentDefinition;
+import com.bytechef.component.definition.ComponentDsl.ModifiableConnectionDefinition;
+import com.bytechef.component.definition.ComponentDsl.ModifiableTriggerDefinition;
 import com.bytechef.component.exception.ProviderException;
 import com.google.auto.service.AutoService;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
 /**
  * @author Ivica Cardic
@@ -52,7 +45,7 @@ public class AirtableComponentHandler extends AbstractAirtableComponentHandler {
     @Override
     public ModifiableActionDefinition modifyAction(ModifiableActionDefinition modifiableActionDefinition) {
         modifiableActionDefinition.processErrorResponse(
-            (statusCode, body, context) -> {
+            (statusCode, body, headers, context) -> {
                 String message;
 
                 if (body instanceof Map<?, ?> map) {
@@ -68,40 +61,27 @@ public class AirtableComponentHandler extends AbstractAirtableComponentHandler {
     }
 
     @Override
-    public ModifiableComponentDefinition modifyComponent(ModifiableComponentDefinition modifiableComponentDefinition) {
-        return modifiableComponentDefinition
-            .customAction(true)
-            .icon("path:assets/airtable.svg")
-            .categories(ComponentCategory.PRODUCTIVITY_AND_COLLABORATION)
-            .dataStreamItemReader(new DataStreamItemReader() {});
+    public List<ModifiableClusterElementDefinition<?>> getCustomClusterElements() {
+        return List.of(
+            AirtableItemReader.CLUSTER_ELEMENT_DEFINITION,
+            AirtableItemWriter.CLUSTER_ELEMENT_DEFINITION);
     }
 
     @Override
-    public ModifiableProperty<?> modifyProperty(
-        ActionDefinition actionDefinition, ModifiableProperty<?> modifiableProperty) {
+    public ModifiableComponentDefinition modifyComponent(ModifiableComponentDefinition modifiableComponentDefinition) {
+        return modifiableComponentDefinition
+            .customAction(true)
+            .customActionHelp("", "https://airtable.com/developers/web/api/introduction")
+            .icon("path:assets/airtable.svg")
+            .categories(ComponentCategory.PRODUCTIVITY_AND_COLLABORATION);
+    }
 
-        if (Objects.equals(modifiableProperty.getName(), BASE_ID)) {
-            ((ModifiableStringProperty) modifiableProperty).options(
-                (ActionOptionsFunction<String>) (
-                    inputParameters, connectionParameters, lookupDependsOnPaths, searchText,
-                    context) -> AirtableUtils.getBaseIdOptions(context));
-        }
+    @Override
+    public ModifiableConnectionDefinition modifyConnection(
+        ModifiableConnectionDefinition modifiableConnectionDefinition) {
 
-        if (Objects.equals(modifiableProperty.getName(), "__item")) {
-            ((ModifiableDynamicPropertiesProperty) modifiableProperty)
-                .propertiesLookupDependsOn(BASE_ID, TABLE_ID)
-                .properties(AirtableUtils.getFieldsProperties());
-        }
-
-        if (Objects.equals(modifiableProperty.getName(), TABLE_ID)) {
-            ((ModifiableStringProperty) modifiableProperty)
-                .optionsLookupDependsOn(BASE_ID)
-                .options(
-                    (ActionOptionsFunction<String>) (
-                        inputParameters, connectionParameters, lookupDependsOnPaths, searchText,
-                        context) -> AirtableUtils.getTableIdOptions(inputParameters, context));
-        }
-
-        return modifiableProperty;
+        return modifiableConnectionDefinition
+            .help("", "https://docs.bytechef.io/reference/components/airtable_v1#connection-setup")
+            .version(1);
     }
 }

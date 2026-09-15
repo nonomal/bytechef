@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,16 +16,20 @@
 
 package com.bytechef.message.event.listener;
 
+import static com.bytechef.tenant.TenantContext.CURRENT_TENANT_ID;
+
 import com.bytechef.message.broker.MessageBroker;
 import com.bytechef.message.event.MessageEvent;
 import com.bytechef.message.event.MessageEventPreSendProcessor;
+import com.bytechef.tenant.TenantContext;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 
 /**
  * @author Ivica Cardic
@@ -33,7 +37,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class MessageEventListener {
 
-    private static final Logger logger = LoggerFactory.getLogger(MessageEventListener.class);
+    private static final Logger log = LoggerFactory.getLogger(MessageEventListener.class);
 
     private final MessageBroker messageBroker;
     private final List<MessageEventPreSendProcessor> messageEventPreSendProcessors;
@@ -46,16 +50,18 @@ public class MessageEventListener {
         this.messageEventPreSendProcessors = messageEventPreSendProcessors;
     }
 
-    @EventListener
-    @Async
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
+    @Async("messageEventExecutor")
     public void onMessageEvent(MessageEvent<?> messageEvent) {
-        if (logger.isDebugEnabled()) {
-            logger.debug("onMessageEvent: " + messageEvent);
+        if (log.isTraceEnabled()) {
+            log.trace("onMessageEvent: " + messageEvent);
         }
 
         for (MessageEventPreSendProcessor messageEventPreSendProcessor : messageEventPreSendProcessors) {
             messageEvent = messageEventPreSendProcessor.process(messageEvent);
         }
+
+        messageEvent.putMetadata(CURRENT_TENANT_ID, TenantContext.getCurrentTenantId());
 
         messageBroker.send(messageEvent.getRoute(), messageEvent);
     }

@@ -1,24 +1,26 @@
+import Button from '@/components/Button/Button';
+import EmptyFilterResult from '@/components/EmptyFilterResult';
 import EmptyList from '@/components/EmptyList';
 import PageLoader from '@/components/PageLoader';
-import {Button} from '@/components/ui/button';
+import ConnectionsFilterTitle from '@/pages/automation/connections/components/ConnectionsFilterTitle';
 import {useWorkspaceStore} from '@/pages/automation/stores/useWorkspaceStore';
-import ConnectionDialog from '@/pages/platform/connection/components/ConnectionDialog';
+import ConnectionDialog from '@/shared/components/connection/ConnectionDialog';
+import ConnectionsLeftSidebarNav from '@/shared/components/connection/ConnectionsLeftSidebarNav';
 import Header from '@/shared/layout/Header';
 import LayoutContainer from '@/shared/layout/LayoutContainer';
-import {LeftSidebarNav, LeftSidebarNavItem} from '@/shared/layout/LeftSidebarNav';
-import {ConnectionEnvironmentModel} from '@/shared/middleware/automation/connection';
+import {Connection} from '@/shared/middleware/automation/configuration';
 import {useCreateConnectionMutation} from '@/shared/mutations/automation/connections.mutations';
+import {useGetComponentDefinitionsQuery} from '@/shared/queries/automation/componentDefinitions.queries';
 import {
     ConnectionKeys,
     useGetConnectionTagsQuery,
     useGetWorkspaceConnectionsQuery,
 } from '@/shared/queries/automation/connections.queries';
-import {useGetComponentDefinitionsQuery} from '@/shared/queries/platform/componentDefinitions.queries';
-import {Link2Icon, TagIcon} from 'lucide-react';
-import {useEffect, useState} from 'react';
+import {useEnvironmentStore} from '@/shared/stores/useEnvironmentStore';
+import {Link2Icon} from 'lucide-react';
 import {useSearchParams} from 'react-router-dom';
 
-import ConnectionList from './components/ConnectionList';
+import ConnectionList from './components/connection-list/ConnectionList';
 
 export enum Type {
     Component,
@@ -26,225 +28,136 @@ export enum Type {
 }
 
 export const Connections = () => {
+    const currentEnvironmentId = useEnvironmentStore((state) => state.currentEnvironmentId);
+    const currentWorkspaceId = useWorkspaceStore((state) => state.currentWorkspaceId);
+
     const [searchParams] = useSearchParams();
 
-    const [environment, setEnvironment] = useState<number | undefined>(getEnvironment());
-    const [filterData, setFilterData] = useState<{
-        id?: number | string;
-        type: Type;
-    }>(getFilterData());
+    const componentName = searchParams.get('componentName');
+    const tagId = searchParams.get('tagId');
 
-    const {currentWorkspaceId} = useWorkspaceStore();
+    const filterData = {
+        id: componentName ? componentName : tagId ? parseInt(tagId) : undefined,
+        type: tagId ? Type.Tag : Type.Component,
+    };
 
-    const {
-        data: allConnections,
-        error: allConnectionsError,
-        isLoading: allConnectionsIsLoading,
-    } = useGetWorkspaceConnectionsQuery({id: currentWorkspaceId!});
+    const hasActiveFilter = !!componentName || !!tagId;
 
-    const allComponentNames = allConnections?.map((connection) => connection.componentName);
-
-    const {data: componentDefinitions, isLoading: componentsLoading} = useGetComponentDefinitionsQuery(
-        {include: allComponentNames},
-        allComponentNames !== undefined
-    );
+    const {data: componentDefinitions, isLoading: componentsLoading} = useGetComponentDefinitionsQuery({
+        connectionDefinitions: true,
+    });
 
     const {
         data: connections,
         error: connectionsError,
         isLoading: connectionsIsLoading,
     } = useGetWorkspaceConnectionsQuery({
-        componentName: searchParams.get('componentName') ? searchParams.get('componentName')! : undefined,
-        environment:
-            environment === 1
-                ? ConnectionEnvironmentModel.Development
-                : environment === 2
-                  ? ConnectionEnvironmentModel.Test
-                  : environment === 3
-                    ? ConnectionEnvironmentModel.Production
-                    : undefined,
+        componentName: componentName ? componentName : undefined,
+        environmentId: currentEnvironmentId,
         id: currentWorkspaceId!,
-        tagId: searchParams.get('tagId') ? parseInt(searchParams.get('tagId')!) : undefined,
+        tagId: tagId ? parseInt(tagId) : undefined,
     });
+
+    const {
+        data: unfilteredConnections,
+        error: unfilteredConnectionsError,
+        isLoading: unfilteredConnectionsIsLoading,
+    } = useGetWorkspaceConnectionsQuery(
+        {
+            environmentId: currentEnvironmentId,
+            id: currentWorkspaceId!,
+        },
+        hasActiveFilter
+    );
 
     const {data: tags, error: tagsError, isLoading: tagsIsLoading} = useGetConnectionTagsQuery();
 
-    let pageTitle: string | undefined;
+    const isAnyLoading = componentsLoading || connectionsIsLoading || tagsIsLoading || unfilteredConnectionsIsLoading;
 
-    if (filterData.type === Type.Component) {
-        pageTitle = componentDefinitions?.find(
-            (componentDefinition) => componentDefinition.name === filterData.id
-        )?.title;
-    } else {
-        pageTitle = tags?.find((tag) => tag.id === filterData.id)?.name;
-    }
-
-    function getEnvironment() {
-        return searchParams.get('environment') ? parseInt(searchParams.get('environment')!) : undefined;
-    }
-
-    function getFilterData() {
-        return searchParams.get('componentName') || searchParams.get('tagId')
-            ? {
-                  id: searchParams.get('componentName')
-                      ? searchParams.get('componentName')!
-                      : parseInt(searchParams.get('tagId')!),
-                  type: searchParams.get('tagId') ? Type.Tag : Type.Component,
-              }
-            : {type: Type.Component};
-    }
-
-    useEffect(() => {
-        setEnvironment(getEnvironment());
-        setFilterData(getFilterData());
-
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [searchParams]);
+    const componentRowsAreLoading = componentsLoading || connectionsIsLoading || unfilteredConnectionsIsLoading;
 
     return (
         <LayoutContainer
             header={
-                connections &&
-                connections.length > 0 && (
-                    <Header
-                        centerTitle={true}
-                        position="main"
-                        right={
+                <Header
+                    centerTitle={true}
+                    position="main"
+                    right={
+                        connections &&
+                        connections.length > 0 &&
+                        componentDefinitions && (
                             <ConnectionDialog
+                                componentDefinitions={componentDefinitions}
+                                connection={
+                                    {
+                                        environmentId: currentEnvironmentId,
+                                    } as Connection
+                                }
                                 connectionTagsQueryKey={ConnectionKeys.connectionTags}
                                 connectionsQueryKey={ConnectionKeys.connections}
-                                triggerNode={<Button>New Connection</Button>}
+                                triggerNode={<Button label="New Connection" />}
                                 useCreateConnectionMutation={useCreateConnectionMutation}
                                 useGetConnectionTagsQuery={useGetConnectionTagsQuery}
                             />
-                        }
-                        title={
-                            !pageTitle
-                                ? 'All Connections'
-                                : `Filter by ${searchParams.get('tagId') ? 'tag' : 'component'}: ${pageTitle}`
-                        }
-                    />
-                )
+                        )
+                    }
+                    title={
+                        ((connections && connections.length > 0) || hasActiveFilter) && componentDefinitions ? (
+                            <ConnectionsFilterTitle
+                                componentDefinitions={componentDefinitions}
+                                filterData={filterData}
+                                tags={tags}
+                            />
+                        ) : (
+                            ''
+                        )
+                    }
+                />
             }
             leftSidebarBody={
-                <>
-                    <LeftSidebarNav
-                        body={
-                            <>
-                                {[
-                                    {label: 'All Environments', value: undefined},
-                                    {label: 'Development', value: 1},
-                                    {label: 'Test', value: 2},
-                                    {label: 'Production', value: 3},
-                                ]?.map((item) => (
-                                    <LeftSidebarNavItem
-                                        item={{
-                                            current: environment === item.value,
-                                            id: item.value,
-                                            name: item.label,
-                                            onItemClick: (id?: number | string) => {
-                                                setEnvironment(id as number);
-                                            },
-                                        }}
-                                        key={item.value ?? ''}
-                                        toLink={`?environment=${item.value ?? ''}${filterData.id ? `&${filterData.type === Type.Component ? 'componentName' : 'tagId'}=${filterData.id}` : ''}`}
-                                    />
-                                ))}
-                            </>
-                        }
-                        title="Environments"
-                    />
-
-                    <LeftSidebarNav
-                        body={
-                            <>
-                                <LeftSidebarNavItem
-                                    item={{
-                                        current: !filterData?.id && filterData.type === Type.Component,
-                                        name: 'All Components',
-                                        onItemClick: (id?: number | string) => {
-                                            setFilterData({
-                                                id,
-                                                type: Type.Component,
-                                            });
-                                        },
-                                    }}
-                                    toLink={`?environment=${environment}`}
-                                />
-
-                                {!componentsLoading &&
-                                    componentDefinitions?.map((item) => (
-                                        <LeftSidebarNavItem
-                                            item={{
-                                                current:
-                                                    filterData?.id === item.name && filterData.type === Type.Component,
-                                                id: item.name!,
-                                                name: item.title!,
-                                                onItemClick: (id?: number | string) =>
-                                                    setFilterData({
-                                                        id,
-                                                        type: Type.Component,
-                                                    }),
-                                            }}
-                                            key={item.name}
-                                            toLink={`?componentName=${item.name}&environment=${environment ?? ''}`}
-                                        />
-                                    ))}
-                            </>
-                        }
-                        title="Components"
-                    />
-
-                    <LeftSidebarNav
-                        body={
-                            <>
-                                {!tagsIsLoading &&
-                                    (!tags?.length ? (
-                                        <p className="px-3 text-xs">No tags.</p>
-                                    ) : (
-                                        tags?.map((item) => (
-                                            <LeftSidebarNavItem
-                                                icon={<TagIcon className="mr-1 size-4" />}
-                                                item={{
-                                                    current: filterData?.id === item.id && filterData.type === Type.Tag,
-                                                    id: item.id!,
-                                                    name: item.name,
-                                                    onItemClick: (id?: number | string) => {
-                                                        setFilterData({
-                                                            id,
-                                                            type: Type.Tag,
-                                                        });
-                                                    },
-                                                }}
-                                                key={item.id}
-                                                toLink={`?tagId=${item.id}&environment=${environment ?? ''}`}
-                                            />
-                                        ))
-                                    ))}
-                            </>
-                        }
-                        title="Tags"
-                    />
-                </>
+                <ConnectionsLeftSidebarNav
+                    componentDefinitions={componentDefinitions}
+                    connections={hasActiveFilter ? unfilteredConnections : connections}
+                    connectionsAreLoading={componentRowsAreLoading}
+                    currentComponentName={componentName ?? undefined}
+                    currentTagId={tagId ? parseInt(tagId) : undefined}
+                    tags={tags}
+                    tagsIsLoading={tagsIsLoading}
+                />
             }
             leftSidebarHeader={<Header position="sidebar" title="Connections" />}
+            leftSidebarWidth="64"
         >
-            <PageLoader
-                errors={[allConnectionsError, connectionsError, tagsError]}
-                loading={allConnectionsIsLoading || connectionsIsLoading || tagsIsLoading}
-            >
-                {connections && connections?.length > 0 ? (
-                    connections && tags && <ConnectionList connections={connections} tags={tags} />
+            <PageLoader errors={[connectionsError, tagsError, unfilteredConnectionsError]} loading={isAnyLoading}>
+                {componentDefinitions && connections && connections?.length > 0 ? (
+                    connections &&
+                    tags && (
+                        <ConnectionList
+                            componentDefinitions={componentDefinitions}
+                            connections={connections}
+                            tags={tags}
+                        />
+                    )
+                ) : hasActiveFilter ? (
+                    <EmptyFilterResult entityName="connections" entityTitle="Connections" />
                 ) : (
                     <EmptyList
                         button={
-                            <ConnectionDialog
-                                connectionTagsQueryKey={ConnectionKeys.connectionTags}
-                                connectionsQueryKey={ConnectionKeys.connections}
-                                triggerNode={<Button>Create Connection</Button>}
-                                useCreateConnectionMutation={useCreateConnectionMutation}
-                                useGetConnectionTagsQuery={useGetConnectionTagsQuery}
-                            />
+                            componentDefinitions && (
+                                <ConnectionDialog
+                                    componentDefinitions={componentDefinitions}
+                                    connection={
+                                        {
+                                            environmentId: currentEnvironmentId,
+                                        } as Connection
+                                    }
+                                    connectionTagsQueryKey={ConnectionKeys.connectionTags}
+                                    connectionsQueryKey={ConnectionKeys.connections}
+                                    triggerNode={<Button label="Create Connection" />}
+                                    useCreateConnectionMutation={useCreateConnectionMutation}
+                                    useGetConnectionTagsQuery={useGetConnectionTagsQuery}
+                                />
+                            )
                         }
                         icon={<Link2Icon className="size-24 text-gray-300" />}
                         message="You do not have any Connections created yet."

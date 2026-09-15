@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,14 +16,15 @@
 
 package com.bytechef.component.csv.file.action;
 
+import static com.bytechef.component.csv.file.constant.CsvFileConstants.ROWS;
 import static org.skyscreamer.jsonassert.JSONAssert.assertEquals;
 
 import com.bytechef.component.csv.file.CsvFileComponentHandlerTest;
-import com.bytechef.component.csv.file.action.CsvFileReadAction.ReadConfiguration;
-import com.bytechef.component.csv.file.constant.CsvFileConstants;
+import com.bytechef.component.csv.file.util.ReadConfiguration;
 import com.bytechef.component.definition.ActionContext;
 import com.bytechef.component.definition.Context;
 import com.bytechef.component.definition.Parameters;
+import com.bytechef.component.definition.TypeReference;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
@@ -52,7 +53,7 @@ class CsvFileWriteActionTest {
         "rawtypes", "unchecked"
     })
     void testPerformWriteCSV() throws IOException {
-        String jsonContent = Files.contentOf(getFile("sample.json"), StandardCharsets.UTF_8);
+        String jsonContent = Files.contentOf(getFile("expected_output.json"), StandardCharsets.UTF_8);
 
         Parameters parameters = Mockito.mock(Parameters.class);
 
@@ -82,14 +83,14 @@ class CsvFileWriteActionTest {
 
     private Parameters getWriteParameters(List<Map<?, ?>> items, Parameters parameters) {
         Mockito.when(
-            parameters.getList(Mockito.eq(CsvFileConstants.ROWS), Mockito.any(Context.TypeReference.class),
+            parameters.getList(Mockito.eq(ROWS), Mockito.any(TypeReference.class),
                 Mockito.eq(List.of())))
             .thenReturn(items);
 
         return parameters;
     }
 
-    private List<Map<String, Object>> read(InputStream inputStream, Context context) throws IOException {
+    private List<Map<String, String>> read(InputStream inputStream, Context context) throws IOException {
         return CsvFileReadAction.read(
             inputStream, new ReadConfiguration(",", null, true, true, 0, Integer.MAX_VALUE, false), context);
     }

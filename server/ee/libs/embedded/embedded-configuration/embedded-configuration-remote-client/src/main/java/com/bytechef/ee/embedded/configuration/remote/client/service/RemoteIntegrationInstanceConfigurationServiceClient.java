@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the ByteChef Enterprise license (the "Enterprise License");
  * you may not use this file except in compliance with the Enterprise License.
@@ -7,10 +7,11 @@
 
 package com.bytechef.ee.embedded.configuration.remote.client.service;
 
+import com.bytechef.ee.embedded.configuration.domain.IntegrationInstanceConfiguration;
+import com.bytechef.ee.embedded.configuration.service.IntegrationInstanceConfigurationService;
 import com.bytechef.ee.remote.client.LoadBalancedRestClient;
-import com.bytechef.embedded.configuration.domain.IntegrationInstanceConfiguration;
-import com.bytechef.embedded.configuration.service.IntegrationInstanceConfigurationService;
-import com.bytechef.platform.constant.Environment;
+import com.bytechef.platform.annotation.ConditionalOnEEVersion;
+import com.bytechef.platform.configuration.domain.Environment;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.List;
 import org.springframework.stereotype.Component;
@@ -21,10 +22,12 @@ import org.springframework.stereotype.Component;
  * @author Ivica Cardic
  */
 @Component
+@ConditionalOnEEVersion
 public class RemoteIntegrationInstanceConfigurationServiceClient implements IntegrationInstanceConfigurationService {
 
     private static final String CONFIGURATION_APP = "configuration-app";
-    private static final String PROJECT_INSTANCE_SERVICE = "/remote/integration-instance-configuration-service";
+    private static final String INTEGRATION_INSTANCE_CONFIGURATION_SERVICE =
+        "/remote/integration-instance-configuration-service";
 
     private final LoadBalancedRestClient loadBalancedRestClient;
 
@@ -49,22 +52,30 @@ public class RemoteIntegrationInstanceConfigurationServiceClient implements Inte
     }
 
     @Override
+    public List<IntegrationInstanceConfiguration>
+        getIntegrationInstanceConfigurations(Environment environment, boolean enabled) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
     public IntegrationInstanceConfiguration getIntegrationInstanceConfiguration(long id) {
         return loadBalancedRestClient.get(
             uriBuilder -> uriBuilder
                 .host(CONFIGURATION_APP)
-                .path(PROJECT_INSTANCE_SERVICE + "/get-integration-instance-configuration/{id}")
+                .path(INTEGRATION_INSTANCE_CONFIGURATION_SERVICE + "/get-integration-instance-configuration/{id}")
                 .build(id),
             IntegrationInstanceConfiguration.class);
     }
 
     @Override
-    public List<Long> getIntegrationIds() {
+    public IntegrationInstanceConfiguration getIntegrationIntegrationInstanceConfiguration(
+        long id, Environment environment, boolean enabled) {
+
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public List<Long> getIntegrationIds(Environment environment) {
+    public List<Long> getIntegrationIds() {
         throw new UnsupportedOperationException();
     }
 

@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * Modifications copyright (C) 2023 ByteChef Inc.
+ * Modifications copyright (C) 2025 ByteChef
  */
 
 package com.bytechef.task.dispatcher.branch.completion;
@@ -35,13 +35,16 @@ import com.bytechef.atlas.execution.service.ContextService;
 import com.bytechef.atlas.execution.service.TaskExecutionService;
 import com.bytechef.atlas.file.storage.TaskFileStorage;
 import com.bytechef.commons.util.MapUtils;
+import com.bytechef.evaluator.Evaluator;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import org.apache.commons.lang3.Validate;
+import java.util.Objects;
+import org.springframework.util.Assert;
+import tools.jackson.core.type.TypeReference;
 
 /**
  * @author Arik Cohen
@@ -51,6 +54,7 @@ import org.apache.commons.lang3.Validate;
 public class BranchTaskCompletionHandler implements TaskCompletionHandler {
 
     private final ContextService contextService;
+    private final Evaluator evaluator;
     private final TaskExecutionService taskExecutionService;
     private final TaskCompletionHandler taskCompletionHandler;
     private final TaskDispatcher<? super Task> taskDispatcher;
@@ -58,11 +62,12 @@ public class BranchTaskCompletionHandler implements TaskCompletionHandler {
 
     @SuppressFBWarnings("EI")
     public BranchTaskCompletionHandler(
-        ContextService contextService, TaskCompletionHandler taskCompletionHandler,
+        ContextService contextService, Evaluator evaluator, TaskCompletionHandler taskCompletionHandler,
         TaskDispatcher<? super Task> taskDispatcher, TaskExecutionService taskExecutionService,
         TaskFileStorage taskFileStorage) {
 
         this.contextService = contextService;
+        this.evaluator = evaluator;
         this.taskExecutionService = taskExecutionService;
         this.taskCompletionHandler = taskCompletionHandler;
         this.taskDispatcher = taskDispatcher;
@@ -90,78 +95,94 @@ public class BranchTaskCompletionHandler implements TaskCompletionHandler {
 
         taskExecution = taskExecutionService.update(taskExecution);
 
-        TaskExecution branchTaskExecution = taskExecutionService.getTaskExecution(
-            Validate.notNull(taskExecution.getParentId(), "parentId"));
+        Long taskExecutionParentId = Objects.requireNonNull(taskExecution.getParentId());
 
-        if (taskExecution.getOutput() != null && taskExecution.getName() != null) {
+        TaskExecution branchTaskExecution = taskExecutionService.getTaskExecution(taskExecutionParentId);
+
+        long branchTaskExecutionId = Objects.requireNonNull(branchTaskExecution.getId());
+
+        if (taskExecution.getName() != null) {
             Map<String, Object> newContext = new HashMap<>(
-                taskFileStorage.readContextValue(
-                    contextService.peek(Validate.notNull(branchTaskExecution.getId(), "id"),
-                        Classname.TASK_EXECUTION)));
+                taskFileStorage.readContextValue(contextService.peek(branchTaskExecutionId, Classname.TASK_EXECUTION)));
 
-            newContext.put(
-                taskExecution.getName(),
-                taskFileStorage.readTaskExecutionOutput(taskExecution.getOutput()));
+            if (taskExecution.getOutput() != null) {
+                newContext.put(
+                    taskExecution.getName(), taskFileStorage.readTaskExecutionOutput(taskExecution.getOutput()));
+            } else {
+                newContext.put(taskExecution.getName(), null);
+            }
 
             contextService.push(
-                Validate.notNull(branchTaskExecution.getId(), "id"), Classname.TASK_EXECUTION,
-                taskFileStorage.storeContextValue(
-                    Validate.notNull(branchTaskExecution.getId(), "id"), Classname.TASK_EXECUTION, newContext));
+                branchTaskExecutionId, Classname.TASK_EXECUTION,
+                taskFileStorage.storeContextValue(branchTaskExecutionId, Classname.TASK_EXECUTION, newContext));
         }
 
-        List<WorkflowTask> subWorkflowTasks = resolveCase(branchTaskExecution);
+        Map<String, ?> context = taskFileStorage.readContextValue(
+            contextService.peek(branchTaskExecutionId, Classname.TASK_EXECUTION));
+
+        List<WorkflowTask> subWorkflowTasks = resolveCase(branchTaskExecution, context);
 
         if (taskExecution.getTaskNumber() < subWorkflowTasks.size()) {
             WorkflowTask workflowTask = subWorkflowTasks.get(taskExecution.getTaskNumber());
 
             TaskExecution subTaskExecution = TaskExecution.builder()
                 .jobId(branchTaskExecution.getJobId())
+                .maxRetries(workflowTask.getMaxRetries())
                 .parentId(branchTaskExecution.getId())
                 .priority(branchTaskExecution.getPriority())
                 .taskNumber(taskExecution.getTaskNumber() + 1)
                 .workflowTask(workflowTask)
                 .build();
 
-            Map<String, ?> context = taskFileStorage.readContextValue(
-                contextService.peek(Validate.notNull(branchTaskExecution.getId(), "id"), Classname.TASK_EXECUTION));
-
-            subTaskExecution.evaluate(context);
+            subTaskExecution.evaluate(context, evaluator);
 
             subTaskExecution = taskExecutionService.create(subTaskExecution);
 
+            long subTaskExecutionId = Objects.requireNonNull(subTaskExecution.getId());
+
             contextService.push(
-                Validate.notNull(taskExecution.getId(), "id"), Classname.TASK_EXECUTION,
-                taskFileStorage.storeContextValue(
-                    Validate.notNull(taskExecution.getId(), "id"), Classname.TASK_EXECUTION, context));
+                subTaskExecutionId, Classname.TASK_EXECUTION,
+                taskFileStorage.storeContextValue(subTaskExecutionId, Classname.TASK_EXECUTION, context));
 
             taskDispatcher.dispatch(subTaskExecution);
         }
         // no more tasks to execute -- complete the branch
         else {
-            branchTaskExecution.setEndDate(LocalDateTime.now());
+            branchTaskExecution.setEndDate(Instant.now());
+
+            branchTaskExecution = taskExecutionService.update(branchTaskExecution);
 
             taskCompletionHandler.handle(branchTaskExecution);
         }
     }
 
-    private List<WorkflowTask> resolveCase(TaskExecution taskExecution) {
+    private List<WorkflowTask> resolveCase(TaskExecution taskExecution, Map<String, ?> context) {
         Object expression = MapUtils.getRequired(taskExecution.getParameters(), EXPRESSION);
-        List<WorkflowTask> caseWorkflowTasks = MapUtils.getList(
-            taskExecution.getParameters(), CASES, WorkflowTask.class, Collections.emptyList());
+        List<Map<String, ?>> branchCases = MapUtils.getList(
+            taskExecution.getParameters(), CASES, new TypeReference<>() {}, Collections.emptyList());
 
-        Validate.notNull(caseWorkflowTasks, "you must specify 'cases' in a branch statement");
+        Assert.notNull(branchCases, "you must specify 'cases' in a branch statement");
 
-        for (WorkflowTask caseWorkflowTask : caseWorkflowTasks) {
-            Object key = MapUtils.getRequired(caseWorkflowTask.getParameters(), KEY);
-            List<WorkflowTask> subWorkflowTasks = MapUtils.getList(
-                caseWorkflowTask.getParameters(), TASKS, WorkflowTask.class, Collections.emptyList());
+        for (Map<String, ?> branchCase : branchCases) {
+            Map<String, Object> keyMap = evaluator.evaluate(
+                Map.of(KEY, MapUtils.getRequired(branchCase, KEY)), context);
+
+            Object key = keyMap.get(KEY);
 
             if (key.equals(expression)) {
-                return subWorkflowTasks;
+                return MapUtils
+                    .getList(branchCase, TASKS, new TypeReference<Map<String, ?>>() {}, List.of())
+                    .stream()
+                    .map(WorkflowTask::new)
+                    .toList();
             }
         }
 
-        return MapUtils.getList(
-            taskExecution.getParameters(), DEFAULT, WorkflowTask.class, Collections.emptyList());
+        return MapUtils
+            .getList(
+                taskExecution.getParameters(), DEFAULT, new TypeReference<Map<String, ?>>() {}, List.of())
+            .stream()
+            .map(WorkflowTask::new)
+            .toList();
     }
 }

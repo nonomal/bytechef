@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,16 +17,17 @@
 package com.bytechef.component.keap.action;
 
 import static com.bytechef.component.OpenApiComponentHandler.PropertyType;
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.bool;
-import static com.bytechef.component.definition.ComponentDSL.dateTime;
-import static com.bytechef.component.definition.ComponentDSL.integer;
-import static com.bytechef.component.definition.ComponentDSL.object;
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.bool;
+import static com.bytechef.component.definition.ComponentDsl.dateTime;
+import static com.bytechef.component.definition.ComponentDsl.integer;
+import static com.bytechef.component.definition.ComponentDsl.object;
+import static com.bytechef.component.definition.ComponentDsl.outputSchema;
+import static com.bytechef.component.definition.ComponentDsl.string;
 import static com.bytechef.component.definition.Context.Http.BodyContentType;
 import static com.bytechef.component.definition.Context.Http.ResponseType;
 
-import com.bytechef.component.definition.ComponentDSL;
+import com.bytechef.component.definition.ComponentDsl;
 import java.util.Map;
 
 /**
@@ -35,18 +36,24 @@ import java.util.Map;
  * @generated
  */
 public class KeapCreateTaskAction {
-    public static final ComponentDSL.ModifiableActionDefinition ACTION_DEFINITION = action("createTask")
-        .title("Create a Task")
-        .description("Creates a new task")
+    public static final ComponentDsl.ModifiableActionDefinition ACTION_DEFINITION = action("createTask")
+        .title("Create Task")
+        .description("Creates a new task.")
         .metadata(
             Map.of(
                 "method", "POST",
-                "path", "/v1/tasks", "bodyContentType", BodyContentType.JSON, "mimeType", "application/json"
+                "path", "/tasks", "bodyContentType", BodyContentType.JSON, "mimeType", "application/json"
 
             ))
-        .properties(object("__item").properties(bool("completed").label("Completed")
+        .properties(bool("completed").metadata(
+            Map.of(
+                "type", PropertyType.BODY))
+            .label("Completed")
             .required(false),
-            dateTime("completion_date").label("Completion Date")
+            dateTime("completion_date").metadata(
+                Map.of(
+                    "type", PropertyType.BODY))
+                .label("Completion Date")
                 .required(false),
             object("contact").properties(string("email").label("Email")
                 .required(false),
@@ -56,40 +63,75 @@ public class KeapCreateTaskAction {
                     .required(false),
                 string("last_name").label("Last Name")
                     .required(false))
-                .label("Basic Contact")
+                .metadata(
+                    Map.of(
+                        "type", PropertyType.BODY))
+                .label("BasicContact")
                 .required(false),
-            dateTime("creation_date").label("Creation Date")
+            dateTime("creation_date").metadata(
+                Map.of(
+                    "type", PropertyType.BODY))
+                .label("Creation Date")
                 .required(false),
-            string("description").label("Description")
+            string("description").metadata(
+                Map.of(
+                    "type", PropertyType.BODY))
+                .label("Description")
                 .required(false),
-            dateTime("due_date").label("Due Date")
+            dateTime("due_date").metadata(
+                Map.of(
+                    "type", PropertyType.BODY))
+                .label("Due Date")
                 .required(false),
-            integer("funnel_id").label("Funnel Id")
+            integer("funnel_id").metadata(
+                Map.of(
+                    "type", PropertyType.BODY))
+                .label("Funnel Id")
                 .required(false),
-            integer("jgraph_id").label("Jgraph Id")
+            integer("jgraph_id").metadata(
+                Map.of(
+                    "type", PropertyType.BODY))
+                .label("Jgraph Id")
                 .required(false),
-            dateTime("modification_date").label("Modification Date")
+            dateTime("modification_date").metadata(
+                Map.of(
+                    "type", PropertyType.BODY))
+                .label("Modification Date")
                 .required(false),
-            integer("priority").label("Priority")
+            integer("priority").metadata(
+                Map.of(
+                    "type", PropertyType.BODY))
+                .label("Priority")
                 .required(false),
-            integer("remind_time").label("Remind Time")
+            integer("remind_time").metadata(
+                Map.of(
+                    "type", PropertyType.BODY))
+                .label("Remind Time")
                 .description(
                     "Value in minutes before start_date to show pop-up reminder. Acceptable values are in [`5`,`10`,`15`,`30`,`60`,`120`,`240`,`480`,`1440`,`2880`]")
                 .required(false),
-            string("title").label("Title")
-                .required(false),
-            string("type").label("Type")
-                .required(false),
-            string("url").label("Url")
-                .required(false),
-            integer("user_id").label("User Id")
-                .required(false))
-            .label("Task")
-            .metadata(
+            string("title").metadata(
                 Map.of(
-                    "type", PropertyType.BODY)))
-        .outputSchema(
-            object()
+                    "type", PropertyType.BODY))
+                .label("Title")
+                .required(false),
+            string("type").metadata(
+                Map.of(
+                    "type", PropertyType.BODY))
+                .label("Type")
+                .required(false),
+            string("url").metadata(
+                Map.of(
+                    "type", PropertyType.BODY))
+                .label("Url")
+                .required(false),
+            integer("user_id").metadata(
+                Map.of(
+                    "type", PropertyType.BODY))
+                .label("User Id")
+                .required(false))
+        .output(
+            outputSchema(object()
                 .properties(bool("completed").required(false), dateTime("completion_date").required(false),
                     object("contact").properties(
                         string("email").required(false), string("first_name").required(false),
@@ -106,7 +148,7 @@ public class KeapCreateTaskAction {
                     integer("user_id").required(false))
                 .metadata(
                     Map.of(
-                        "responseType", ResponseType.JSON)));
+                        "responseType", ResponseType.JSON))));
 
     private KeapCreateTaskAction() {
     }

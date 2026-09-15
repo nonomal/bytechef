@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,18 +25,21 @@ import static com.bytechef.component.data.mapper.constant.DataMapperConstants.IN
 import static com.bytechef.component.data.mapper.constant.DataMapperConstants.MAPPINGS;
 import static com.bytechef.component.data.mapper.constant.DataMapperConstants.REQUIRED_FIELD;
 import static com.bytechef.component.data.mapper.constant.DataMapperConstants.TO;
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.array;
-import static com.bytechef.component.definition.ComponentDSL.bool;
-import static com.bytechef.component.definition.ComponentDSL.integer;
-import static com.bytechef.component.definition.ComponentDSL.object;
-import static com.bytechef.component.definition.ComponentDSL.option;
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.data.mapper.constant.InputType.ARRAY;
+import static com.bytechef.component.data.mapper.constant.InputType.OBJECT;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.array;
+import static com.bytechef.component.definition.ComponentDsl.bool;
+import static com.bytechef.component.definition.ComponentDsl.object;
+import static com.bytechef.component.definition.ComponentDsl.option;
+import static com.bytechef.component.definition.ComponentDsl.string;
 
+import com.bytechef.component.data.mapper.constant.InputType;
 import com.bytechef.component.data.mapper.model.Pair;
 import com.bytechef.component.data.mapper.model.RequiredStringMapping;
 import com.bytechef.component.definition.ActionContext;
-import com.bytechef.component.definition.ComponentDSL.ModifiableActionDefinition;
+import com.bytechef.component.definition.ComponentDsl.ModifiableActionDefinition;
+import com.bytechef.component.definition.Context;
 import com.bytechef.component.definition.Parameters;
 import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
@@ -57,42 +60,45 @@ import org.apache.commons.lang3.Validate;
 public class DataMapperMapObjectsToObjectAction {
 
     public static final ModifiableActionDefinition ACTION_DEFINITION = action("mapObjectsToObject")
-        .title("Map objects to object")
+        .title("Map Objects to Object")
         .description("Creates a new object with the chosen input properties. You can also rename the property keys.")
         .properties(
-            integer(INPUT_TYPE)
-                .label("Input type")
+            string(INPUT_TYPE)
+                .label("Input Type")
                 .description("The input type.")
                 .options(
-                    option("Object", 1),
-                    option("Array", 2))
+                    option("Object", OBJECT.name()),
+                    option("Array", ARRAY.name()))
                 .required(true),
             object(INPUT)
                 .label("Input")
                 .description("An object containing one or more properties.")
-                .displayCondition("inputType == 1")
+                .displayCondition("inputType == '%s'".formatted(OBJECT.name()))
                 .required(true),
             array(INPUT)
                 .label("Input")
                 .description("An array containing one or more objects.")
-                .displayCondition("inputType == 2")
+                .displayCondition("inputType == '%s'".formatted(ARRAY.name()))
                 .items(object())
                 .required(true),
             array(MAPPINGS)
                 .label("Mapping")
                 .description(
-                    "An array of objects that contains properties 'from', 'to' and 'requiredField'. For nested keys, it supports dot notation, where the new mapped path can be used for nested mapping.")
+                    "An array of objects that contains properties 'from', 'to' and 'requiredField'. For nested keys, " +
+                        "it supports dot notation, where the new mapped path can be used for nested mapping.")
                 .items(
                     object()
                         .properties(
                             string(FROM)
                                 .label("Path From")
                                 .description(
-                                    "Path to the input property key that you want to put in the newly created object, written in dot notation."),
+                                    "Path to the input property key that you want to put in the newly created " +
+                                        "object, written in dot notation."),
                             string(TO)
                                 .label("To")
                                 .description(
-                                    "Name of the key you want to assign to the input property value in the newly created object."),
+                                    "Name of the key you want to assign to the input property value in the newly " +
+                                        "created object."),
                             bool(REQUIRED_FIELD)
                                 .label("Required field")
                                 .description("Does the property require a value?")
@@ -112,15 +118,13 @@ public class DataMapperMapObjectsToObjectAction {
                 .description("Should fields with empty string values be included in the new object?")
                 .defaultValue(true))
         .output()
+        .help("", "https://docs.bytechef.io/reference/components/data-mapper_v1#map-objects-to-object")
         .perform(DataMapperMapObjectsToObjectAction::perform);
 
     private DataMapperMapObjectsToObjectAction() {
     }
 
-    @SuppressWarnings("unchecked")
-    protected static Object perform(
-        Parameters inputParameters, Parameters connectionParameters, ActionContext context) {
-
+    public static Object perform(Parameters inputParameters, Parameters connectionParameters, ActionContext context) {
         List<RequiredStringMapping> mappings = inputParameters.getList(
             MAPPINGS, RequiredStringMapping.class, List.of());
 
@@ -129,9 +133,9 @@ public class DataMapperMapObjectsToObjectAction {
                 Collectors.toMap(
                     RequiredStringMapping::getFrom, value -> Pair.create(value.getTo(), value.isRequiredField())));
 
-        Integer inputType = inputParameters.getInteger(INPUT_TYPE);
+        InputType inputType = inputParameters.get(INPUT_TYPE, InputType.class);
 
-        if (inputType != null && inputType.equals(1)) {
+        if (inputType == OBJECT) {
             DocumentContext input = JsonPath.parse(inputParameters.getMap(INPUT, Object.class, Map.of()));
 
             return fillOutput(inputParameters, input, mappingMap, context);
@@ -152,30 +156,31 @@ public class DataMapperMapObjectsToObjectAction {
 
     private static Map<String, Object> fillOutput(
         Parameters inputParameters, DocumentContext input, Map<String, Pair<String, Boolean>> mappingMap,
-        ActionContext context) {
+        Context context) {
         Map<String, Object> output = new LinkedHashMap<>();
+
         if (inputParameters.getBoolean(INCLUDE_UNMAPPED) != null && inputParameters.getBoolean(INCLUDE_UNMAPPED)) {
             output = input.read("$");
         }
 
         for (Map.Entry<String, Pair<String, Boolean>> pair : mappingMap.entrySet()) {
             Object value = null;
+
             try {
                 value = input.read(pair.getKey());
 
                 if (isAllowedToMap(inputParameters, value)) {
-                    if (pair.getValue()
-                        .getRight() != null && pair.getValue()
-                            .getRight()) {
+                    Pair<String, Boolean> value1 = pair.getValue();
+
+                    if (value1.getRight() != null && value1.getRight()) {
                         Objects.requireNonNull(value, "Required field " + pair.getKey() + " cannot be null.");
                         Validate.notBlank(value.toString(), "Required field " + pair.getKey() + " cannot be empty.");
                     }
 
-                    output.put(pair.getValue()
-                        .getLeft(), value);
+                    output.put(value1.getLeft(), value);
                 }
             } catch (PathNotFoundException exception) {
-                context.logger(logger -> logger.info(exception.getMessage()));
+                context.log(log -> log.info(exception.getMessage()));
             }
         }
 

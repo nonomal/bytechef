@@ -13,20 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * Modifications copyright (C) 2023 ByteChef Inc.
+ * Modifications copyright (C) 2025 ByteChef
  */
 
 package com.bytechef.atlas.execution.repository.memory;
 
 import com.bytechef.atlas.execution.domain.Context;
 import com.bytechef.atlas.execution.repository.ContextRepository;
+import com.bytechef.commons.util.RandomUtils;
 import com.bytechef.file.storage.domain.FileEntry;
+import com.bytechef.tenant.util.TenantCacheKeyUtils;
 import java.util.Deque;
-import java.util.HashMap;
 import java.util.LinkedList;
-import java.util.Map;
-import java.util.Random;
-import org.apache.commons.lang3.Validate;
+import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * @author Arik Cohen
@@ -34,53 +35,59 @@ import org.apache.commons.lang3.Validate;
  */
 public class InMemoryContextRepository implements ContextRepository {
 
-    private static final Random RANDOM = new Random();
-
-    private final Map<String, Deque<FileEntry>> contexts = new HashMap<>();
+    private final ConcurrentHashMap<String, Deque<FileEntry>> cache = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, ReentrantLock> locks = new ConcurrentHashMap<>();
 
     @Override
-    public Iterable<Context> findAll() {
-        return contexts.values()
-            .stream()
-            .flatMap(deque -> deque.stream()
-                .map(Context::new))
-            .toList();
+    public Optional<Context> findTop1ByStackIdAndClassnameIdOrderByCreatedDateDesc(long stackId, int classnameId) {
+        Deque<FileEntry> stack = getStack(getKey(stackId, null, classnameId));
+
+        return Optional.ofNullable(stack == null ? null : new Context(stack.peek()));
     }
 
     @Override
-    public Context findTop1ByStackIdAndClassnameIdOrderByCreatedDateDesc(long stackId, int classnameId) {
-        Deque<FileEntry> linkedList = contexts.get(getKey(stackId, null, classnameId));
-
-        Validate.notNull(linkedList, "unknown stack: %s", stackId);
-
-        return new Context(linkedList.peek());
-    }
-
-    @Override
-    public Context findTop1ByStackIdAndSubStackIdAndClassnameIdOrderByCreatedDateDesc(
+    public Optional<Context> findTop1ByStackIdAndSubStackIdAndClassnameIdOrderByCreatedDateDesc(
         long stackId, int subStackId, int classnameId) {
-        Deque<FileEntry> linkedList = contexts.get(getKey(stackId, subStackId, classnameId));
 
-        Validate.notNull(linkedList, "unknown stack: " + stackId);
+        Deque<FileEntry> linkedList = getStack(getKey(stackId, subStackId, classnameId));
 
-        return new Context(linkedList.peek());
+        return Optional.ofNullable(linkedList == null ? null : new Context(linkedList.peek()));
     }
 
     @Override
     public Context save(Context context) {
-        Deque<FileEntry> stack = contexts.computeIfAbsent(
-            getKey(context.getStackId(), context.getSubStackId(), context.getClassnameId()), k -> new LinkedList<>());
+        String key = getKey(context.getStackId(), context.getSubStackId(), context.getClassnameId());
 
-        if (context.isNew()) {
-            context.setId(RANDOM.nextLong());
+        ReentrantLock lock = locks.computeIfAbsent(key, k -> new ReentrantLock());
+
+        try {
+            lock.lock();
+
+            Deque<FileEntry> stack = getStack(key);
+
+            if (context.isNew()) {
+                context.setId(Math.abs(Math.max(RandomUtils.nextLong(), Long.MIN_VALUE + 1)));
+            }
+
+            stack.push(context.getValue());
+
+            cache.put(key, stack);
+        } finally {
+            lock.unlock();
+
+            if (!lock.isLocked() && !lock.hasQueuedThreads()) {
+                locks.remove(key, lock);
+            }
         }
-
-        stack.push(context.getValue());
 
         return context;
     }
 
     private static String getKey(long stackId, Integer subStackId, int classnameId) {
-        return "" + stackId + subStackId + classnameId;
+        return TenantCacheKeyUtils.getKey(stackId, subStackId, classnameId);
+    }
+
+    private Deque<FileEntry> getStack(String key) {
+        return cache.computeIfAbsent(key, (key1) -> new LinkedList<>());
     }
 }

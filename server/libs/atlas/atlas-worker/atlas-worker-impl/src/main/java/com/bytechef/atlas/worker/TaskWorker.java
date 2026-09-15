@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * Modifications copyright (C) 2023 ByteChef Inc.
+ * Modifications copyright (C) 2025 ByteChef
  */
 
 package com.bytechef.atlas.worker;
@@ -28,13 +28,15 @@ import com.bytechef.atlas.execution.domain.TaskExecution.Status;
 import com.bytechef.atlas.file.storage.TaskFileStorage;
 import com.bytechef.atlas.worker.event.CancelControlTaskEvent;
 import com.bytechef.atlas.worker.event.TaskExecutionEvent;
+import com.bytechef.atlas.worker.task.handler.TaskExecutionPostOutputProcessor;
 import com.bytechef.atlas.worker.task.handler.TaskHandler;
 import com.bytechef.atlas.worker.task.handler.TaskHandlerResolver;
-import com.bytechef.commons.util.ExceptionUtils;
 import com.bytechef.error.ExecutionError;
+import com.bytechef.evaluator.Evaluator;
 import com.bytechef.message.event.MessageEvent;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.time.Duration;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -49,6 +51,8 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import org.apache.commons.lang3.Validate;
+import org.apache.commons.lang3.exception.ExceptionUtils;
+import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
@@ -70,24 +74,32 @@ import org.springframework.core.task.AsyncTaskExecutor;
  */
 public class TaskWorker {
 
-    private static final Logger logger = LoggerFactory.getLogger(TaskWorker.class);
+    private static final Logger log = LoggerFactory.getLogger(TaskWorker.class);
 
-    private static final long DEFAULT_TIME_OUT = 24 * 60 * 60 * 1000; // 24 hours
+    public static final long DEFAULT_TIME_OUT = 24 * 60 * 60 * 1000; // 24 hours
 
+    private final @Nullable Long defaultTimeout;
+    private final Evaluator evaluator;
     private final ApplicationEventPublisher eventPublisher;
     private final AsyncTaskExecutor taskExecutor;
     private final TaskHandlerResolver taskHandlerResolver;
     private final Map<Long, TaskExecutionFuture<?>> taskExecutionFutureMap = new ConcurrentHashMap<>();
     private final TaskFileStorage taskFileStorage;
+    private final List<TaskExecutionPostOutputProcessor> taskExecutionPostOutputProcessors;
 
+    @SuppressFBWarnings("EI")
     public TaskWorker(
-        ApplicationEventPublisher eventPublisher, AsyncTaskExecutor taskExecutor,
-        TaskHandlerResolver taskHandlerResolver, TaskFileStorage taskFileStorage) {
+        @Nullable Long defaultTimeout, Evaluator evaluator, ApplicationEventPublisher eventPublisher,
+        AsyncTaskExecutor taskExecutor, TaskHandlerResolver taskHandlerResolver,
+        TaskFileStorage taskFileStorage, List<TaskExecutionPostOutputProcessor> taskExecutionPostOutputProcessors) {
 
+        this.defaultTimeout = defaultTimeout;
+        this.evaluator = evaluator;
         this.eventPublisher = eventPublisher;
         this.taskExecutor = taskExecutor;
         this.taskHandlerResolver = taskHandlerResolver;
         this.taskFileStorage = taskFileStorage;
+        this.taskExecutionPostOutputProcessors = taskExecutionPostOutputProcessors;
     }
 
     /**
@@ -96,7 +108,9 @@ public class TaskWorker {
      * @param taskExecutionEvent The task event which contains task to execute.
      */
     public void onTaskExecutionEvent(TaskExecutionEvent taskExecutionEvent) {
-        logger.debug("onTaskExecutionEvent: taskExecutionEvent={}", taskExecutionEvent);
+        if (log.isTraceEnabled()) {
+            log.trace("onTaskExecutionEvent: taskExecutionEvent={}", taskExecutionEvent);
+        }
 
         TaskExecution taskExecution = taskExecutionEvent.getTaskExecution();
         CountDownLatch latch = new CountDownLatch(1);
@@ -110,11 +124,10 @@ public class TaskWorker {
 
                 TaskExecution completedTaskExecution = doExecuteTask(taskExecution);
 
-                eventPublisher.publishEvent(
-                    new TaskExecutionCompleteEvent(completedTaskExecution));
+                eventPublisher.publishEvent(new TaskExecutionCompleteEvent(completedTaskExecution));
             } catch (InterruptedException e) {
-                if (logger.isTraceEnabled()) {
-                    logger.trace(e.getMessage(), e);
+                if (log.isTraceEnabled()) {
+                    log.trace(e.getMessage(), e);
                 }
             } catch (Exception e) {
                 TaskExecutionFuture<?> taskExecutionFuture = taskExecutionFutureMap.get(taskExecution.getId());
@@ -132,9 +145,11 @@ public class TaskWorker {
         try {
             future.get(calculateTimeout(taskExecution), TimeUnit.MILLISECONDS);
         } catch (InterruptedException | ExecutionException | TimeoutException e) {
+            future.cancel(true);
+
             handleException(taskExecution, e);
         } catch (CancellationException e) {
-            logger.debug("Cancelled task: {}", taskExecution.getId());
+            log.debug("Cancelled task: {}", taskExecution.getId());
         } finally {
             try {
                 latch.await();
@@ -154,13 +169,13 @@ public class TaskWorker {
         if (event instanceof CancelControlTaskEvent cancelControlTaskEvent) {
             CancelControlTask cancelControlTask = cancelControlTaskEvent.getControlTask();
 
-            logger.debug("onCancelControlTaskEvent: cancelControlTask={}", cancelControlTask);
+            log.debug("onCancelControlTaskEvent: cancelControlTask={}", cancelControlTask);
 
             Long jobId = cancelControlTask.getJobId();
 
             for (TaskExecutionFuture<?> taskExecutionFuture : taskExecutionFutureMap.values()) {
                 if (Objects.equals(taskExecutionFuture.taskExecution.getJobId(), jobId)) {
-                    logger.info(
+                    log.info(
                         "Cancelling task jobId={}->taskExecutionId={}", jobId,
                         taskExecutionFuture.taskExecution.getId());
 
@@ -183,19 +198,26 @@ public class TaskWorker {
             // pre tasks
             executeSubTasks(Validate.notNull(taskExecution.getJobId(), "id"), taskExecution.getPre(), context);
 
-            taskExecution.evaluate(context);
+            taskExecution.evaluate(context, evaluator);
 
             TaskHandler<?> taskHandler = taskHandlerResolver.resolve(taskExecution);
 
             Object output = taskHandler.handle(taskExecution.clone());
 
             if (output != null) {
-                taskExecution.setOutput(
-                    taskFileStorage.storeTaskExecutionOutput(
-                        Validate.notNull(taskExecution.getId(), "id"), output));
+                for (TaskExecutionPostOutputProcessor taskExecutionPostOutputProcessor : taskExecutionPostOutputProcessors) {
+                    output = taskExecutionPostOutputProcessor.process(taskExecution, output);
+                }
+
+                if (output != null) {
+                    taskExecution.setOutput(
+                        taskFileStorage.storeTaskExecutionOutput(
+                            Objects.requireNonNull(taskExecution.getJobId()),
+                            Objects.requireNonNull(taskExecution.getId()), output));
+                }
             }
 
-            taskExecution.setEndDate(LocalDateTime.now());
+            taskExecution.setEndDate(Instant.now());
             taskExecution.setExecutionTime(System.currentTimeMillis() - startTime);
             taskExecution.setProgress(100);
             taskExecution.setStatus(Status.COMPLETED);
@@ -219,13 +241,13 @@ public class TaskWorker {
             // pre tasks
             executeSubTasks(Validate.notNull(taskExecution.getJobId(), "id"), taskExecution.getPre(), context);
 
-            taskExecution.evaluate(context);
+            taskExecution.evaluate(context, evaluator);
 
             TaskHandler<?> taskHandler = taskHandlerResolver.resolve(taskExecution);
 
             Object output = taskHandler.handle(taskExecution.clone());
 
-            taskExecution.setEndDate(LocalDateTime.now());
+            taskExecution.setEndDate(Instant.now());
             taskExecution.setExecutionTime(System.currentTimeMillis() - startTime);
             taskExecution.setProgress(100);
             taskExecution.setStatus(Status.COMPLETED);
@@ -241,8 +263,7 @@ public class TaskWorker {
     }
 
     private void executeSubTasks(
-        long jobId, List<WorkflowTask> subWorkflowTasks, Map<String, Object> context)
-        throws Exception {
+        long jobId, List<WorkflowTask> subWorkflowTasks, Map<String, Object> context) throws Exception {
 
         for (WorkflowTask subWorkflowTask : subWorkflowTasks) {
             TaskExecution subTaskExecution = TaskExecution.builder()
@@ -250,7 +271,7 @@ public class TaskWorker {
                 .workflowTask(subWorkflowTask)
                 .build();
 
-            subTaskExecution.evaluate(context);
+            subTaskExecution.evaluate(context, evaluator);
 
             Object output = doExecuteSubTask(subTaskExecution);
 
@@ -265,7 +286,7 @@ public class TaskWorker {
             exception = cause;
         }
 
-        logger.error(exception.getMessage(), exception);
+        log.error(exception.getMessage(), exception);
 
         taskExecution.setError(
             new ExecutionError(exception.getMessage(), Arrays.asList(ExceptionUtils.getStackFrames(exception))));
@@ -274,11 +295,15 @@ public class TaskWorker {
         eventPublisher.publishEvent(new TaskExecutionErrorEvent(taskExecution));
     }
 
-    private long calculateTimeout(TaskExecution taskExecution) {
+    long calculateTimeout(TaskExecution taskExecution) {
         if (taskExecution.getTimeout() != null) {
             Duration duration = Duration.parse("PT" + taskExecution.getTimeout());
 
             return duration.toMillis();
+        }
+
+        if (defaultTimeout != null) {
+            return defaultTimeout;
         }
 
         return DEFAULT_TIME_OUT;

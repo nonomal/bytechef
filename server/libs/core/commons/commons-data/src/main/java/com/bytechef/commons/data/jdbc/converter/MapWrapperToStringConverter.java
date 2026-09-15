@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,10 +17,9 @@
 package com.bytechef.commons.data.jdbc.converter;
 
 import com.bytechef.commons.data.jdbc.wrapper.MapWrapper;
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import com.fasterxml.jackson.annotation.JsonAutoDetect.Visibility;
 import org.springframework.core.convert.converter.Converter;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * @author Ivica Cardic
@@ -29,10 +28,10 @@ public class MapWrapperToStringConverter implements Converter<MapWrapper, String
 
     private final ObjectMapper objectMapper;
 
-    @SuppressFBWarnings("EI2")
     public MapWrapperToStringConverter(ObjectMapper objectMapper) {
-        this.objectMapper = objectMapper.copy()
-            .setSerializationInclusion(JsonInclude.Include.ALWAYS);
+        this.objectMapper = objectMapper.rebuild()
+            .changeDefaultVisibility(vc -> vc.with(Visibility.ANY))
+            .build();
     }
 
     @Override

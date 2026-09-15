@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,19 +20,14 @@ import static com.bytechef.component.encharge.constant.EnchargeConstants.EMAIL;
 
 import com.bytechef.component.OpenApiComponentHandler;
 import com.bytechef.component.definition.ActionDefinition;
+import com.bytechef.component.definition.ActionDefinition.OptionsFunction;
 import com.bytechef.component.definition.ComponentCategory;
-import com.bytechef.component.definition.ComponentDSL.ModifiableComponentDefinition;
-import com.bytechef.component.definition.ComponentDSL.ModifiableObjectProperty;
-import com.bytechef.component.definition.ComponentDSL.ModifiableProperty;
-import com.bytechef.component.definition.ComponentDSL.ModifiableStringProperty;
-import com.bytechef.component.definition.OptionsDataSource.ActionOptionsFunction;
-import com.bytechef.component.definition.Property.ValueProperty;
+import com.bytechef.component.definition.ComponentDsl.ModifiableComponentDefinition;
+import com.bytechef.component.definition.ComponentDsl.ModifiableProperty;
+import com.bytechef.component.definition.ComponentDsl.ModifiableStringProperty;
 import com.bytechef.component.encharge.util.EnchargeUtils;
-import com.bytechef.definition.BaseProperty;
 import com.google.auto.service.AutoService;
-import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 
 /**
  * @author Monika Domiter
@@ -52,17 +47,12 @@ public class EnchargeComponentHandler extends AbstractEnchargeComponentHandler {
     public ModifiableProperty<?> modifyProperty(
         ActionDefinition actionDefinition, ModifiableProperty<?> modifiableProperty) {
 
-        if (Objects.equals(actionDefinition.getName(), "addTag")) {
-            Optional<List<? extends ValueProperty<?>>> propertiesOptional =
-                ((ModifiableObjectProperty) modifiableProperty).getProperties();
-
-            for (BaseProperty baseProperty : propertiesOptional.get()) {
-                if (Objects.equals(baseProperty.getName(), EMAIL)) {
-                    ((ModifiableStringProperty) baseProperty)
-                        .options((ActionOptionsFunction<String>) EnchargeUtils::getUserEmailOptions);
-                }
-            }
+        if (Objects.equals(actionDefinition.getName(), "addTag") &&
+            Objects.equals(modifiableProperty.getName(), EMAIL)) {
+            ((ModifiableStringProperty) modifiableProperty)
+                .options((OptionsFunction<String>) EnchargeUtils::getUserEmailOptions);
         }
+
         return modifiableProperty;
     }
 }

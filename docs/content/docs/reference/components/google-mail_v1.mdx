@@ -1,0 +1,833 @@
+---
+title: "Gmail"
+description: "Gmail is a widely used email service by Google, offering free and feature-rich communication, organization, and storage capabilities accessible through web browsers and mobile apps."
+---
+
+
+Categories: Communication
+
+
+Type: googleMail/v1
+
+<hr />
+
+
+
+
+## Connections
+
+Version: 1
+
+
+### OAuth2 Authorization Code
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| clientId | Client Id | STRING |  | true |
+| clientSecret | Client Secret | STRING |  | true |
+
+
+
+## Connection Setup
+
+### Create OAuth 2.0 Application
+
+Creation of OAuth 2.0 application is documented [here](/reference/components/google-application-setup_v1#create-oauth-20-application).
+
+### Enable Gmail API
+
+1. In the [Google Cloud Console](https://console.cloud.google.com/), select your project.
+2. Go to the **APIs & Services**.
+3. Click on **ENABLE APIS AND SERVICES**.
+4. Search for "gmail api" in the search bar.
+5. Click on **Gmail API**.
+6. Click **Enable**.
+
+<div style={{ position: 'relative', height:0, width: '100%', overflow: 'hidden', zindex: 49, boxSizing: 'border-box', paddingBottom: 'calc(50.05219207% + 32px)'}}>
+    <iframe src="https://www.guidejar.com/embed/2d7279c7-91c3-43c9-9004-99f08d7e30ff?type=1&controls=on" width="100%" height="100%" style={{height:'100%', position:'absolute', inset:0}} allowFullScreen frameBorder="0"></iframe>
+</div>
+
+
+
+<hr />
+
+
+## Actions
+
+
+### Add Labels
+Name: addLabels
+
+`Add labels to an email in your Gmail account.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| id | Message ID | STRING | ID of the message to add labels. | true |
+| labelIds | Labels IDs | ARRAY <details> <summary> Items </summary> [STRING] </details> | ID of the labels to add to message. You can add up to 100 labels with each update. | true |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Add Labels",
+  "name" : "addLabels",
+  "parameters" : {
+    "id" : "",
+    "labelIds" : [ "" ]
+  },
+  "type" : "googleMail/v1/addLabels"
+}
+```
+
+#### Output
+
+
+
+Type: OBJECT
+
+
+#### Properties
+
+|     Name     |     Type     |     Description     |
+|:------------:|:------------:|:-------------------:|
+| id | STRING | The ID of the message. |
+| threadId | STRING | The ID of the thread the message belongs to. |
+| labelIds | ARRAY <details> <summary> Items </summary> [STRING] </details> | List of IDs of labels applied to this message. |
+
+
+
+
+#### Output Example
+```json
+{
+  "id" : "",
+  "threadId" : "",
+  "labelIds" : [ "" ]
+}
+```
+
+#### Find Message ID
+
+To find the Message ID, click [here](/reference/components/google-mail_v1#how-to-find-message-id).
+
+#### Find Label ID
+
+To find the Label ID, click [here](/reference/components/google-mail_v1#how-to-find-label-id).
+
+
+
+### Archive Email
+Name: archiveEmail
+
+`Archive an email message.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| id | Message ID | STRING | ID of the message to be archived. | true |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Archive Email",
+  "name" : "archiveEmail",
+  "parameters" : {
+    "id" : ""
+  },
+  "type" : "googleMail/v1/archiveEmail"
+}
+```
+
+#### Output
+
+
+
+Type: OBJECT
+
+
+#### Properties
+
+|     Name     |     Type     |     Description     |
+|:------------:|:------------:|:-------------------:|
+| id | STRING | The ID of the message. |
+| threadId | STRING | The ID of the thread the message belongs to. |
+| labelIds | ARRAY <details> <summary> Items </summary> [STRING] </details> | List of IDs of labels applied to this message. |
+
+
+
+
+#### Output Example
+```json
+{
+  "id" : "",
+  "threadId" : "",
+  "labelIds" : [ "" ]
+}
+```
+
+#### Find Message ID
+
+To find the Message ID, click [here](/reference/components/google-mail_v1#how-to-find-message-id).
+
+
+
+### Create Label
+Name: createLabel
+
+`Creates a new label.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| name | Name | STRING | The display name of the newly created label. | true |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Create Label",
+  "name" : "createLabel",
+  "parameters" : {
+    "name" : ""
+  },
+  "type" : "googleMail/v1/createLabel"
+}
+```
+
+#### Output
+
+
+
+Type: OBJECT
+
+
+#### Properties
+
+|     Name     |     Type     |     Description     |
+|:------------:|:------------:|:-------------------:|
+| id | STRING | ID of the newly created label. |
+| labelListVisibility | STRING | The visibility of the label in the label list in the Gmail web interface. |
+| messageListVisibility | STRING | The visibility of messages with this label in the message list in the Gmail web interface. |
+| name | STRING | The display name of the label. |
+
+
+
+
+#### Output Example
+```json
+{
+  "id" : "",
+  "labelListVisibility" : "",
+  "messageListVisibility" : "",
+  "name" : ""
+}
+```
+
+
+
+
+### Delete Email
+Name: deleteEmail
+
+`Deletes an email from your Gmail account immediately and permanently.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| id | Message ID | STRING | The ID of the message to delete. | true |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Delete Email",
+  "name" : "deleteEmail",
+  "parameters" : {
+    "id" : ""
+  },
+  "type" : "googleMail/v1/deleteEmail"
+}
+```
+
+#### Output
+
+This action does not produce any output.
+
+
+
+
+
+
+### Get Email
+Name: getEmail
+
+`Gets the specified email message.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| id | Message ID | STRING | The ID of the message to retrieve. | true |
+| format | Format | STRING <details> <summary> Options </summary> <span title="Returns email message's from, to, subject, body and attachments.">SIMPLE</span>, <span title="Returns only email message ID and labels; does not return the email headers, body, or payload.">MINIMAL</span>, <span title="Returns the full email message data with body content parsed in the payload field; the raw field is not used. Format cannot be used when accessing the api using the gmail.metadata scope.">FULL</span>, <span title="Returns the full email message data with body content in the raw field as a base64url encoded string; the payload field is not used. Format cannot be used when accessing the api using the gmail.metadata scope.">RAW</span>, <span title="Returns only email message ID, labels, and email headers.">METADATA</span> </details> | The format to return the message in. | false |
+| metadataHeaders | Metadata headers | ARRAY <details> <summary> Items </summary> [STRING] </details> | When given and format is METADATA, only include headers specified. | false |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Get Email",
+  "name" : "getEmail",
+  "parameters" : {
+    "id" : "",
+    "format" : "",
+    "metadataHeaders" : [ "" ]
+  },
+  "type" : "googleMail/v1/getEmail"
+}
+```
+
+#### Output
+
+The output for this action is dynamic and may vary depending on the input parameters. To determine the exact structure of the output, you need to execute the action.
+
+
+
+
+
+
+### Get Thread
+Name: getThread
+
+`Gets the specified thread.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| id | Thread ID | STRING | The ID of the thread to retrieve. | true |
+| format | Format | STRING <details> <summary> Options </summary> <span title="Returns email message's from, to, subject, body and attachments.">SIMPLE</span>, <span title="Returns only email message ID and labels; does not return the email headers, body, or payload.">MINIMAL</span>, <span title="Returns the full email message data with body content parsed in the payload field; the raw field is not used. Format cannot be used when accessing the api using the gmail.metadata scope.">FULL</span>, <span title="Returns the full email message data with body content in the raw field as a base64url encoded string; the payload field is not used. Format cannot be used when accessing the api using the gmail.metadata scope.">RAW</span>, <span title="Returns only email message ID, labels, and email headers.">METADATA</span> </details> | The format to return the message in. | false |
+| metadataHeaders | Metadata headers | ARRAY <details> <summary> Items </summary> [STRING] </details> | When given and format is METADATA, only include headers specified. | false |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Get Thread",
+  "name" : "getThread",
+  "parameters" : {
+    "id" : "",
+    "format" : "",
+    "metadataHeaders" : [ "" ]
+  },
+  "type" : "googleMail/v1/getThread"
+}
+```
+
+#### Output
+
+The output for this action is dynamic and may vary depending on the input parameters. To determine the exact structure of the output, you need to execute the action.
+
+
+
+#### Find Message ID
+
+To find the Thread ID, click [here](/reference/components/google-mail_v1#how-to-find-thread-id).
+
+
+
+### List Labels
+Name: listLabels
+
+`Lists all labels in your mailbox.`
+
+#### Example JSON Structure
+```json
+{
+  "label" : "List Labels",
+  "name" : "listLabels",
+  "type" : "googleMail/v1/listLabels"
+}
+```
+
+#### Output
+
+
+
+Type: ARRAY
+
+
+Items Type: OBJECT
+
+
+#### Properties
+|     Name     |     Type     |     Description     |
+|:------------:|:------------:|:-------------------:|
+| name | STRING | The display name of the label. |
+| id | STRING | ID of the label. |
+| messageListVisibility | STRING | The visibility of messages with this label in the message list in the Gmail web interface. |
+| labelListVisibility | STRING | The visibility of the label in the label list in the Gmail web interface. |
+| type | STRING | The owner type for the label. |
+
+
+
+
+
+#### Output Example
+```json
+[ {
+  "name" : "",
+  "id" : "",
+  "messageListVisibility" : "",
+  "labelListVisibility" : "",
+  "type" : ""
+} ]
+```
+
+
+
+
+### Remove Labels
+Name: removeLabels
+
+`Removes labels on the specified message.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| id | Message ID | STRING | ID of the message to remove labels. | true |
+| labelIds | Labels IDs | ARRAY <details> <summary> Items </summary> [STRING] </details> | ID of the labels to remove from message. | true |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Remove Labels",
+  "name" : "removeLabels",
+  "parameters" : {
+    "id" : "",
+    "labelIds" : [ "" ]
+  },
+  "type" : "googleMail/v1/removeLabels"
+}
+```
+
+#### Output
+
+
+
+Type: OBJECT
+
+
+#### Properties
+
+|     Name     |     Type     |     Description     |
+|:------------:|:------------:|:-------------------:|
+| id | STRING | The ID of the message. |
+| threadId | STRING | The ID of the thread the message belongs to. |
+| labelIds | ARRAY <details> <summary> Items </summary> [STRING] </details> | List of IDs of labels applied to this message. |
+
+
+
+
+#### Output Example
+```json
+{
+  "id" : "",
+  "threadId" : "",
+  "labelIds" : [ "" ]
+}
+```
+
+#### Find Message ID
+
+To find the Message ID, click [here](/reference/components/google-mail_v1#how-to-find-message-id).
+
+#### Find Label ID
+
+To find the Label ID, click [here](/reference/components/google-mail_v1#how-to-find-label-id).
+
+
+
+### Reply to Email
+Name: replyToEmail
+
+`Send a reply to an email message.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| id | Message ID | STRING | The ID of the message to reply to. | true |
+| to | To | ARRAY <details> <summary> Items </summary> [STRING] </details> | Recipients email addresses. | true |
+| bcc | Bcc | ARRAY <details> <summary> Items </summary> [STRING] </details> | Bcc recipients email addresses. | false |
+| cc | Cc | ARRAY <details> <summary> Items </summary> [STRING] </details> | Cc recipients email addresses. | false |
+| bodyType | Body Type | STRING <details> <summary> Options </summary> <span>plain</span>, <span>html</span> </details> |  | true |
+| body | Body - Text | STRING | The body of the message in text format. | true |
+| body | Body - HTML | STRING | The body of the message in HTML format. | true |
+| attachments | Attachments | ARRAY <details> <summary> Items </summary> [FILE_ENTRY] </details> | A list of attachments to send with the email. | false |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Reply to Email",
+  "name" : "replyToEmail",
+  "parameters" : {
+    "id" : "",
+    "to" : [ "" ],
+    "bcc" : [ "" ],
+    "cc" : [ "" ],
+    "bodyType" : "",
+    "body" : "",
+    "attachments" : [ {
+      "extension" : "",
+      "mimeType" : "",
+      "name" : "",
+      "url" : ""
+    } ]
+  },
+  "type" : "googleMail/v1/replyToEmail"
+}
+```
+
+#### Output
+
+
+
+Type: OBJECT
+
+
+#### Properties
+
+|     Name     |     Type     |     Description     |
+|:------------:|:------------:|:-------------------:|
+| id | STRING | The ID of the message. |
+| threadId | STRING | The ID of the thread the message belongs to. |
+| labelIds | ARRAY <details> <summary> Items </summary> [STRING] </details> | List of IDs of labels applied to this message. |
+
+
+
+
+#### Output Example
+```json
+{
+  "id" : "",
+  "threadId" : "",
+  "labelIds" : [ "" ]
+}
+```
+
+#### Find Message ID
+
+To find the Message ID, click [here](/reference/components/google-mail_v1#how-to-find-message-id).
+
+
+
+### Search Email
+Name: searchEmail
+
+`Lists the email messages in the user's mailbox.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| maxResults | Max Results | NUMBER | Maximum number of messages to return. | false |
+| pageToken | Page Token | STRING | Page token to retrieve a specific page of results in the list. | false |
+| from | From | STRING | The address sending the mail | false |
+| to | To | STRING | The address receiving the new mail | false |
+| subject | Subject | STRING | Words in the subject line | false |
+| category | Category | STRING <details> <summary> Options </summary> <span>primary</span>, <span>social</span>, <span>promotions</span>, <span>updates</span>, <span>forums</span>, <span>reservations</span>, <span>purchases</span> </details> | Messages in a certain category | false |
+| labelIds | Labels | ARRAY <details> <summary> Items </summary> [STRING] </details> | Only return messages with labels that match all of the specified label IDs. Messages in a thread might have labels that other messages in the same thread don't have. | false |
+| includeSpamTrash | Include Spam Trash | BOOLEAN <details> <summary> Options </summary> <span>true</span>, <span>false</span> </details> | Include messages from SPAM and TRASH in the results. | false |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Search Email",
+  "name" : "searchEmail",
+  "parameters" : {
+    "maxResults" : 0.0,
+    "pageToken" : "",
+    "from" : "",
+    "to" : "",
+    "subject" : "",
+    "category" : "",
+    "labelIds" : [ "" ],
+    "includeSpamTrash" : false
+  },
+  "type" : "googleMail/v1/searchEmail"
+}
+```
+
+#### Output
+
+
+
+Type: OBJECT
+
+
+#### Properties
+
+|     Name     |     Type     |     Description     |
+|:------------:|:------------:|:-------------------:|
+| messages | ARRAY <details> <summary> Items </summary> [&#123;STRING\(id), STRING\(threadId)&#125;] </details> |  |
+| nextPageToken | STRING |  |
+| resultSizeEstimate | NUMBER | Estimated number of messages. |
+
+
+
+
+#### Output Example
+```json
+{
+  "messages" : [ {
+    "id" : "",
+    "threadId" : ""
+  } ],
+  "nextPageToken" : "",
+  "resultSizeEstimate" : 0.0
+}
+```
+
+
+
+
+### Send Email
+Name: sendEmail
+
+`Creates and sends a new email message from your Gmail account.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| to | To | ARRAY <details> <summary> Items </summary> [STRING] </details> | Recipients email addresses. | true |
+| subject | Subject | STRING | Subject of the email. | true |
+| bcc | Bcc | ARRAY <details> <summary> Items </summary> [STRING] </details> | Bcc recipients email addresses. | false |
+| cc | Cc | ARRAY <details> <summary> Items </summary> [STRING] </details> | Cc recipients email addresses. | false |
+| replyTo | Reply To | ARRAY <details> <summary> Items </summary> [STRING] </details> | Reply-to email addresses. | false |
+| bodyType | Body Type | STRING <details> <summary> Options </summary> <span>plain</span>, <span>html</span> </details> |  | true |
+| body | Body - Text | STRING | The body of the message in text format. | true |
+| body | Body - HTML | STRING | The body of the message in HTML format. | true |
+| attachments | Attachments | ARRAY <details> <summary> Items </summary> [FILE_ENTRY] </details> | A list of attachments to send with the email. | false |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Send Email",
+  "name" : "sendEmail",
+  "parameters" : {
+    "to" : [ "" ],
+    "subject" : "",
+    "bcc" : [ "" ],
+    "cc" : [ "" ],
+    "replyTo" : [ "" ],
+    "bodyType" : "",
+    "body" : "",
+    "attachments" : [ {
+      "extension" : "",
+      "mimeType" : "",
+      "name" : "",
+      "url" : ""
+    } ]
+  },
+  "type" : "googleMail/v1/sendEmail"
+}
+```
+
+#### Output
+
+
+
+Type: OBJECT
+
+
+#### Properties
+
+|     Name     |     Type     |     Description     |
+|:------------:|:------------:|:-------------------:|
+| id | STRING | The ID of the message. |
+| threadId | STRING | The ID of the thread the message belongs to. |
+| labelIds | ARRAY <details> <summary> Items </summary> [STRING] </details> | List of IDs of labels applied to this message. |
+
+
+
+
+#### Output Example
+```json
+{
+  "id" : "",
+  "threadId" : "",
+  "labelIds" : [ "" ]
+}
+```
+
+
+
+
+
+## Triggers
+
+
+### New Email
+Name: newEmail
+
+`Triggers when new mail is found in your Gmail inbox.`
+
+Type: STATIC_WEBHOOK
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| topicName | Topic Name | STRING | Name of your PubSub topic you want to subscribe to. | true |
+| format | Format | STRING <details> <summary> Options </summary> <span title="Returns email message's from, to, subject, body and attachments.">SIMPLE</span>, <span title="Returns only email message ID and labels; does not return the email headers, body, or payload.">MINIMAL</span>, <span title="Returns the full email message data with body content parsed in the payload field; the raw field is not used. Format cannot be used when accessing the api using the gmail.metadata scope.">FULL</span>, <span title="Returns the full email message data with body content in the raw field as a base64url encoded string; the payload field is not used. Format cannot be used when accessing the api using the gmail.metadata scope.">RAW</span>, <span title="Returns only email message ID, labels, and email headers.">METADATA</span> </details> | The format to return the message in. | false |
+
+
+#### Output
+
+The output for this action is dynamic and may vary depending on the input parameters. To determine the exact structure of the output, you need to execute the action.
+
+#### JSON Example
+```json
+{
+  "label" : "New Email",
+  "name" : "newEmail",
+  "parameters" : {
+    "topicName" : "",
+    "format" : ""
+  },
+  "type" : "googleMail/v1/newEmail"
+}
+```
+### New Email Trigger Setup
+
+Setting up Pub/Sub service
+
+1. Deploy a project that has **New Mail Trigger**.
+2. Click this icon to copy the static webhook URL.
+3. In the search bar enter `pub/sub`.
+4. Click on **Pub/Sub**.
+5. Click on **Create topic**.
+6. Enter your topic name.
+7. Click on **Create**.
+8. Click on **Subscriptions**.
+9. Click on your automatically created subscription.
+10. Click on **Edit**.
+11. Select **Push**.
+12. Click on **Endpoint URL** and paste the previously copied URL.
+13. Select **Never expire**.
+14. Click on **Update**.
+15. Click on **Topics**.
+16. Click here.
+17. Click on **Add principal**.
+18. Add **gmail-api-push@system.gserviceaccount.com** as the new principal.
+19. Click here.
+20. Click on **Pub/Sub Publisher**.
+21. Click on **Save**.
+22. Click on **MyTopic**.
+23. This is your **topic name**.
+
+<div style={{ position: 'relative', height:0, width: '100%', overflow: 'hidden', zindex: 49, boxSizing: 'border-box', paddingBottom: 'calc(50.05219207% + 32px)'}}>
+    <iframe src="https://www.guidejar.com/embed/934ccb3b-1052-440e-bcfa-9cd5d27b8a91?type=1&controls=on" width="100%" height="100%" style={{height:'100%', position:'absolute', inset:0}} allowFullScreen frameBorder="0"></iframe>
+</div>
+
+
+
+### New Email Polling
+Name: newEmailPolling
+
+`Periodically checks your Gmail inbox for any new incoming emails.`
+
+Type: POLLING
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| format | Format | STRING <details> <summary> Options </summary> <span title="Returns email message's from, to, subject, body and attachments.">SIMPLE</span>, <span title="Returns only email message ID and labels; does not return the email headers, body, or payload.">MINIMAL</span>, <span title="Returns the full email message data with body content parsed in the payload field; the raw field is not used. Format cannot be used when accessing the api using the gmail.metadata scope.">FULL</span>, <span title="Returns the full email message data with body content in the raw field as a base64url encoded string; the payload field is not used. Format cannot be used when accessing the api using the gmail.metadata scope.">RAW</span>, <span title="Returns only email message ID, labels, and email headers.">METADATA</span> </details> | The format to return the message in. | false |
+
+
+#### Output
+
+The output for this action is dynamic and may vary depending on the input parameters. To determine the exact structure of the output, you need to execute the action.
+
+#### JSON Example
+```json
+{
+  "label" : "New Email Polling",
+  "name" : "newEmailPolling",
+  "parameters" : {
+    "format" : ""
+  },
+  "type" : "googleMail/v1/newEmailPolling"
+}
+```
+### New Email Pooling Trigger Setup
+
+Turning on Google Calendar API
+
+Gmail doesn’t manage its own time zone; it inherits the time zone from your Google Calendar settings, so we rely on the Calendar API to resolve times correctly.
+
+1. Go to the [Google Cloud Console](https://console.cloud.google.com/).
+2. Click on **APIs & Services**.
+3. In search bar enter "Google Calendar API".
+4. Click on **Google Calendar API**.
+5. Click on **Enable**.
+6. Done 🚀
+
+<div style={{ position: 'relative', height:0, width: '100%', overflow: 'hidden', zindex: 49, boxSizing: 'border-box', paddingBottom: 'calc(50.05219207% + 32px)'}}>
+    <iframe src="https://www.guidejar.com/embed/157feabc-9dec-4ac4-a538-5aa6a0bb0928?type=1&controls=on" width="100%" height="100%" style={{height:'100%', position:'absolute', inset:0}} allowFullScreen frameBorder="0"></iframe>
+</div>
+
+
+
+
+
+## What to do if your action is not listed here?
+
+If this component doesn't have the action you need, you can use **Custom Action** to create your own. Custom Actions empower you to define HTTP requests tailored to your specific requirements, allowing for greater flexibility in integrating with external services or APIs.
+
+To create a Custom Action, simply specify the desired HTTP method, path, and any necessary parameters. This way, you can extend the functionality of your component beyond the predefined actions, ensuring that you can meet all your integration needs effectively.
+
+<hr />
+
+# Additional Instructions
+
+### How to find Message ID
+
+The best way to find a message ID is to use the output of one of the Gmail actions or triggers. In the output, you will find an `id` property, which represents the message ID.
+
+Some actions and triggers that return a message ID:
+* **Search Email**
+* **Get Mail**
+* **Send Email**
+* **New Email** trigger
+
+#### Via API
+* Use the `GET https://gmail.googleapis.com/gmail/v1/users/{userId}/messages` endpoint.
+* Lists the messages in the user's mailbox.
+
+### How to find Label ID
+
+The best way to find a label ID is to use the **List Labels** action. It returns a list of labels, each containing a `name` and an `id`.
+
+#### Via API
+* Use the `GET https://gmail.googleapis.com/gmail/v1/users/{userId}/labels` endpoint.
+* Lists all labels in the user's mailbox.
+
+### How to find Thread ID
+
+The best way to find a thread ID is to use the output of Gmail actions such as **Get Thread**, **Get Mail**, or **Search Email**. In the output, you will find a `threadId` property.
+
+#### Via API
+* Use the `GET https://gmail.googleapis.com/gmail/v1/users/{userId}/threads` endpoint.
+* Lists the threads in the user's mailbox.
+
+## Troubleshooting
+
+### Access Blocked: Verification Process Not Completed
+
+Documentation for how to add a test user can be found [here](/reference/components/google-application-setup_v1#access-blocked-verification-process-not-completed)

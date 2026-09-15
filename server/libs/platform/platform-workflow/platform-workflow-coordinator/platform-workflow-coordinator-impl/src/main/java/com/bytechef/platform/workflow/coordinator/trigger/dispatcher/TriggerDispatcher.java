@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,8 +17,8 @@
 package com.bytechef.platform.workflow.coordinator.trigger.dispatcher;
 
 import com.bytechef.platform.workflow.execution.domain.TriggerExecution;
-import com.bytechef.platform.workflow.worker.trigger.event.TriggerExecutionEvent;
-import com.bytechef.platform.workflow.worker.trigger.message.route.TriggerWorkerMessageRoute;
+import com.bytechef.platform.workflow.worker.event.TriggerExecutionEvent;
+import com.bytechef.platform.workflow.worker.message.route.TriggerWorkerMessageRoute;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.List;
 import org.slf4j.Logger;
@@ -32,7 +32,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class TriggerDispatcher {
 
-    private static final Logger logger = LoggerFactory.getLogger(TriggerDispatcher.class);
+    private static final Logger log = LoggerFactory.getLogger(TriggerDispatcher.class);
 
     private final ApplicationEventPublisher eventPublisher;
     private final List<TriggerDispatcherPreSendProcessor> triggerDispatcherPreSendProcessors;
@@ -49,8 +49,8 @@ public class TriggerDispatcher {
     public void dispatch(TriggerExecution triggerExecution) {
         triggerExecution = preProcess(triggerExecution);
 
-        if (logger.isDebugEnabled()) {
-            logger.debug(
+        if (log.isDebugEnabled()) {
+            log.debug(
                 "Trigger id={}, type='{}' sent to route='{}'", triggerExecution.getId(), triggerExecution.getType(),
                 TriggerWorkerMessageRoute.TRIGGER_EXECUTION_EVENTS);
         }
@@ -59,7 +59,17 @@ public class TriggerDispatcher {
     }
 
     private TriggerExecution preProcess(TriggerExecution triggerExecution) {
-        for (TriggerDispatcherPreSendProcessor triggerDispatcherPreSendProcessor : triggerDispatcherPreSendProcessors) {
+        TriggerDispatcherPreSendProcessor triggerDispatcherPreSendProcessor = null;
+
+        for (TriggerDispatcherPreSendProcessor curTriggerDispatcherPreSendProcessor : triggerDispatcherPreSendProcessors) {
+            if (curTriggerDispatcherPreSendProcessor.canProcess(triggerExecution)) {
+                triggerDispatcherPreSendProcessor = curTriggerDispatcherPreSendProcessor;
+
+                break;
+            }
+        }
+
+        if (triggerDispatcherPreSendProcessor != null) {
             triggerExecution = triggerDispatcherPreSendProcessor.process(triggerExecution);
         }
 

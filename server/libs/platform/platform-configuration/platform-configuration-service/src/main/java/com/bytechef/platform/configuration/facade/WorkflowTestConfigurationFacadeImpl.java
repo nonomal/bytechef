@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,15 +19,18 @@ package com.bytechef.platform.configuration.facade;
 import com.bytechef.atlas.configuration.domain.Workflow;
 import com.bytechef.atlas.configuration.service.WorkflowService;
 import com.bytechef.commons.util.CollectionUtils;
-import com.bytechef.platform.configuration.domain.WorkflowConnection;
+import com.bytechef.exception.ConfigurationException;
+import com.bytechef.platform.configuration.domain.ComponentConnection;
 import com.bytechef.platform.configuration.domain.WorkflowTestConfiguration;
 import com.bytechef.platform.configuration.domain.WorkflowTestConfigurationConnection;
 import com.bytechef.platform.configuration.domain.WorkflowTrigger;
 import com.bytechef.platform.configuration.service.WorkflowTestConfigurationService;
 import com.bytechef.platform.connection.domain.Connection;
+import com.bytechef.platform.connection.exception.ConnectionErrorType;
 import com.bytechef.platform.connection.service.ConnectionService;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -42,39 +45,49 @@ import org.springframework.transaction.annotation.Transactional;
 public class WorkflowTestConfigurationFacadeImpl implements WorkflowTestConfigurationFacade {
 
     private final ConnectionService connectionService;
-    private final WorkflowConnectionFacade workflowConnectionFacade;
+    private final ComponentConnectionFacade componentConnectionFacade;
     private final WorkflowService workflowService;
     private final WorkflowTestConfigurationService workflowTestConfigurationService;
 
     @SuppressFBWarnings("EI")
     public WorkflowTestConfigurationFacadeImpl(
-        ConnectionService connectionService, WorkflowConnectionFacade workflowConnectionFacade,
+        ConnectionService connectionService, ComponentConnectionFacade componentConnectionFacade,
         WorkflowService workflowService, WorkflowTestConfigurationService workflowTestConfigurationService) {
 
         this.connectionService = connectionService;
-        this.workflowConnectionFacade = workflowConnectionFacade;
+        this.componentConnectionFacade = componentConnectionFacade;
         this.workflowService = workflowService;
         this.workflowTestConfigurationService = workflowTestConfigurationService;
     }
 
     @Override
+    public void deleteWorkflowTestConfigurationConnection(
+        String workflowId, String workflowNodeName, String workflowConnectionKey, long connectionId,
+        long environmentId) {
+
+        workflowTestConfigurationService.deleteWorkflowTestConfigurationConnection(
+            workflowId, workflowNodeName, workflowConnectionKey, environmentId);
+    }
+
+    @Override
     public void removeUnusedWorkflowTestConfigurationConnections(Workflow workflow) {
-        workflowTestConfigurationService
-            .fetchWorkflowTestConfiguration(Validate.notNull(workflow.getId(), "id"))
-            .ifPresent(workflowTestConfiguration -> {
-                workflowTestConfiguration.setInputs(getInputs(workflow, workflowTestConfiguration));
+        List<WorkflowTestConfiguration> workflowTestConfigurations = workflowTestConfigurationService
+            .getWorkflowTestConfigurations(Validate.notNull(workflow.getId(), "id"));
 
-                List<WorkflowConnection> taskWorkflowConnections = CollectionUtils.flatMap(
-                    workflow.getAllTasks(), workflowConnectionFacade::getWorkflowConnections);
-                List<WorkflowConnection> triggerWorkflowConnections = CollectionUtils.flatMap(
-                    WorkflowTrigger.of(workflow), workflowConnectionFacade::getWorkflowConnections);
+        for (WorkflowTestConfiguration workflowTestConfiguration : workflowTestConfigurations) {
+            workflowTestConfiguration.setInputs(getInputs(workflow, workflowTestConfiguration));
 
-                workflowTestConfiguration.setConnections(
-                    getWorkflowTestConfigurationConnections(
-                        taskWorkflowConnections, triggerWorkflowConnections, workflowTestConfiguration));
+            List<ComponentConnection> taskComponentConnections = CollectionUtils.flatMap(
+                workflow.getTasks(true), componentConnectionFacade::getComponentConnections);
+            List<ComponentConnection> triggerComponentConnections = CollectionUtils.flatMap(
+                WorkflowTrigger.of(workflow), componentConnectionFacade::getComponentConnections);
 
-                workflowTestConfigurationService.saveWorkflowTestConfiguration(workflowTestConfiguration);
-            });
+            workflowTestConfiguration.setConnections(
+                getWorkflowTestConfigurationConnections(
+                    taskComponentConnections, triggerComponentConnections, workflowTestConfiguration));
+
+            workflowTestConfigurationService.saveWorkflowTestConfiguration(workflowTestConfiguration);
+        }
     }
 
     @Override
@@ -90,30 +103,53 @@ public class WorkflowTestConfigurationFacadeImpl implements WorkflowTestConfigur
     }
 
     @Override
+    public void saveClusterElementTestConfigurationConnection(
+        String workflowId, String workflowNodeName, String clusterElementType,
+        String clusterElementWorkflowNodeName, String workflowConnectionKey, long connectionId,
+        long environmentId) {
+
+        Connection connection = connectionService.getConnection(connectionId);
+
+        ComponentConnection componentConnection = componentConnectionFacade.getClusterElementComponentConnection(
+            workflowId, workflowNodeName, clusterElementType, clusterElementWorkflowNodeName, workflowConnectionKey);
+
+        if (!Objects.equals(connection.getComponentName(), componentConnection.componentName())) {
+            throw new ConfigurationException(
+                "Connection component name does not match workflow test configuration connection component name",
+                ConnectionErrorType.INVALID_CONNECTION_COMPONENT_NAME);
+        }
+
+        workflowTestConfigurationService.saveWorkflowTestConfigurationConnection(
+            workflowId, workflowNodeName, workflowConnectionKey, connectionId, false, environmentId);
+    }
+
+    @Override
     public void saveWorkflowTestConfigurationConnection(
-        String workflowId, String workflowNodeName, String workflowConnectionKey, long connectionId) {
+        String workflowId, String workflowNodeName, String workflowConnectionKey, long connectionId,
+        long environmentId) {
 
         Workflow workflow = workflowService.getWorkflow(workflowId);
 
         validateConnection(workflowNodeName, workflowConnectionKey, connectionId, workflow);
 
+        boolean workflowNodeTrigger = WorkflowTrigger.fetch(workflow, workflowNodeName)
+            .isPresent();
+
         workflowTestConfigurationService.saveWorkflowTestConfigurationConnection(
-            workflowId, workflowNodeName, workflowConnectionKey, connectionId);
+            workflowId, workflowNodeName, workflowConnectionKey, connectionId, workflowNodeTrigger, environmentId);
     }
 
     @Override
-    public void saveWorkflowTestConfigurationInputs(String workflowId, Map<String, String> inputs) {
-        Workflow workflow = workflowService.getWorkflow(workflowId);
+    public void saveWorkflowTestConfigurationInputs(String workflowId, String key, Object value, long environmentId) {
+        Validate.notEmpty(key, "Missing required param: " + key);
 
-        validateInputs(inputs, workflow);
-
-        workflowTestConfigurationService.saveWorkflowTestConfigurationInputs(workflowId, inputs);
+        workflowTestConfigurationService.saveWorkflowTestConfigurationInputs(workflowId, key, value, environmentId);
     }
 
-    private static Map<String, String> getInputs(
+    private static Map<String, Object> getInputs(
         Workflow workflow, WorkflowTestConfiguration workflowTestConfiguration) {
 
-        Map<String, String> inputMap = new HashMap<>(workflowTestConfiguration.getInputs());
+        Map<String, Object> inputMap = new HashMap<>(workflowTestConfiguration.getInputs());
 
         for (String key : new HashSet<>(inputMap.keySet())) {
             if (!CollectionUtils.anyMatch(workflow.getInputs(), input -> Objects.equals(input.name(), key))) {
@@ -125,25 +161,29 @@ public class WorkflowTestConfigurationFacadeImpl implements WorkflowTestConfigur
     }
 
     private List<WorkflowTestConfigurationConnection> getWorkflowTestConfigurationConnections(
-        List<WorkflowConnection> taskWorkflowConnections, List<WorkflowConnection> triggerWorkflowConnections,
+        List<ComponentConnection> taskComponentConnections, List<ComponentConnection> triggerComponentConnections,
         WorkflowTestConfiguration workflowTestConfiguration) {
 
         List<WorkflowTestConfigurationConnection> workflowTestConfigurationConnections = new ArrayList<>(
             workflowTestConfiguration.getConnections());
 
-        workflowTestConfigurationConnections.removeIf(connection -> anyMatch(taskWorkflowConnections, connection)
-            && anyMatch(triggerWorkflowConnections, connection));
+        workflowTestConfigurationConnections.removeIf(connection -> noneMatch(taskComponentConnections, connection)
+            && noneMatch(triggerComponentConnections, connection));
 
         return workflowTestConfigurationConnections;
     }
 
-    private static boolean anyMatch(
-        List<WorkflowConnection> taskWorkflowConnections, WorkflowTestConfigurationConnection connection) {
+    private static boolean noneMatch(
+        List<ComponentConnection> taskComponentConnections, WorkflowTestConfigurationConnection connection) {
 
-        return !CollectionUtils.anyMatch(
-            taskWorkflowConnections,
-            workflowConnection -> Objects.equals(
-                workflowConnection.workflowNodeName(), connection.getWorkflowNodeName()));
+        return taskComponentConnections.stream()
+            .noneMatch(workflowConnection -> matchesConnection(workflowConnection, connection));
+    }
+
+    private static boolean matchesConnection(
+        ComponentConnection workflowConnection, WorkflowTestConfigurationConnection connection) {
+        return Objects.equals(workflowConnection.workflowNodeName(), connection.getWorkflowNodeName())
+            && Objects.equals(workflowConnection.key(), connection.getWorkflowConnectionKey());
     }
 
     private void validateConnections(
@@ -162,20 +202,29 @@ public class WorkflowTestConfigurationFacadeImpl implements WorkflowTestConfigur
 
         Connection connection = connectionService.getConnection(connectionId);
 
-        WorkflowConnection workflowConnection = workflowConnectionFacade.getWorkflowConnection(
+        ComponentConnection componentConnection = componentConnectionFacade.getComponentConnection(
             workflow.getId(), workflowNodeName, workflowConnectionKey);
 
-        if (!Objects.equals(connection.getComponentName(), workflowConnection.componentName())) {
-            throw new IllegalArgumentException(
-                "Connection component name does not match workflow test configuration connection component name");
+        if (!Objects.equals(connection.getComponentName(), componentConnection.componentName())) {
+            throw new ConfigurationException(
+                "Connection component name does not match workflow test configuration connection component name",
+                ConnectionErrorType.INVALID_CONNECTION_COMPONENT_NAME);
         }
     }
 
-    private static void validateInputs(Map<String, ?> inputs, Workflow workflow) {
+    static void validateInputs(Map<String, ?> inputs, Workflow workflow) {
         for (Workflow.Input input : workflow.getInputs()) {
             if (input.required()) {
                 Validate.isTrue(inputs.containsKey(input.name()), "Missing required param: " + input.name());
-                Validate.notEmpty((String) inputs.get(input.name()), "Missing required param: " + input.name());
+
+                Object value = inputs.get(input.name());
+
+                boolean empty = value == null
+                    || (value instanceof CharSequence charSequence && charSequence.isEmpty())
+                    || (value instanceof Map<?, ?> map && map.isEmpty())
+                    || (value instanceof Collection<?> collection && collection.isEmpty());
+
+                Validate.isTrue(!empty, "Missing required param: " + input.name());
             }
         }
     }

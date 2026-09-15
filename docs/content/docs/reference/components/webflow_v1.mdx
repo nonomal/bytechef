@@ -1,0 +1,263 @@
+---
+title: "Webflow"
+description: "Webflow is a web design and development platform that allows users to build responsive websites visually without writing code."
+---
+
+
+Categories: Developer Tools
+
+
+Type: webflow/v1
+
+<hr />
+
+
+
+
+## Connections
+
+Version: 1
+
+
+### OAuth2 Authorization Code
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| clientId | Client Id | STRING |  | true |
+| clientSecret | Client Secret | STRING |  | true |
+
+
+
+## Connection Setup
+
+### Create OAuth2 App
+
+1. Navigate to [Webflow](https://webflow.com) dashboard.
+2. Click on **View dashboard**.
+3. Click on your account.
+4. Click on **Workspaces**.
+5. Click on your workspace.
+6. Click on **Apps & Integrations**.
+7. Click on **Develop**.
+8. Click on **Create an App**.
+9. Enter name and app homepageU URL.
+10. Click on **Continue**.
+11. Enable **Data client (REST API)**.
+12. Enter **Redirect URI** depending on your instance:
+    - `https://app.bytechef.io/callback` (Cloud)
+    - `http://localhost:5173/callback` (Local dev)
+13. Add required scopes and click on **Create App**.
+14. Click this icon.
+15. Click on **Edit App**.
+16. Click on **Building blocks**.
+17. Here you can see your credentials.
+18. Done 🚀.
+
+<div style={{ position: 'relative', height:0, width: '100%', overflow: 'hidden', zIndex: 49, boxSizing: 'border-box', paddingBottom: 'calc(52.05219207% + 32px)'}}>
+    <iframe src="https://www.guidejar.com/embed/92d252f2-4843-47c4-a74b-d0b5d64ea359?type=1&controls=on" width="100%" height="100%" style={{height:'100%', position:'absolute', inset:0}} allowFullScreen frameBorder="0"></iframe>
+</div>
+
+
+
+<hr />
+
+
+## Actions
+
+
+### Fulfill Order
+Name: fulfillOrder
+
+`Updates an order's status to fulfilled.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| siteId | Site ID | STRING | Unique identifier for a site. | true |
+| orderId | Order ID | STRING <details> <summary> Depends On </summary> siteId </details> | Unique identifier for an order. | true |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Fulfill Order",
+  "name" : "fulfillOrder",
+  "parameters" : {
+    "siteId" : "",
+    "orderId" : ""
+  },
+  "type" : "webflow/v1/fulfillOrder"
+}
+```
+
+#### Output
+
+
+
+Type: OBJECT
+
+
+#### Properties
+
+|     Name     |     Type     |     Description     |
+|:------------:|:------------:|:-------------------:|
+| orderId | STRING | ID of the order. |
+| status | STRING | Status of the order. |
+
+
+
+
+#### Output Example
+```json
+{
+  "orderId" : "",
+  "status" : ""
+}
+```
+
+#### Find Site ID and Order ID
+
+To find the Site ID, click [here](/reference/components/webflow_v1#how-to-find-the-site-id).
+
+To find the Order ID, click [here](/reference/components/webflow_v1#how-to-find-the-order-id).
+
+*Note: This action is only available with paid account.*
+
+
+
+### Get Collection Item
+Name: getCollectionItem
+
+`Get collection item in a collection.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| siteId | Site ID | STRING | Unique identifier for a site. | false |
+| collectionId | Collection ID | STRING <details> <summary> Depends On </summary> siteId </details> | Unique identifier for a collection. | true |
+| itemId | Item  ID | STRING <details> <summary> Depends On </summary> collectionId </details> | Unique identifier for an item. | true |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Get Collection Item",
+  "name" : "getCollectionItem",
+  "parameters" : {
+    "siteId" : "",
+    "collectionId" : "",
+    "itemId" : ""
+  },
+  "type" : "webflow/v1/getCollectionItem"
+}
+```
+
+#### Output
+
+
+
+Type: OBJECT
+
+
+#### Properties
+
+|     Name     |     Type     |     Description     |
+|:------------:|:------------:|:-------------------:|
+| id | STRING | ID of the item. |
+| fieldData | OBJECT <details> <summary> Properties </summary> &#123;STRING\(name), STRING\(slug)&#125; </details> |  |
+
+
+
+
+#### Output Example
+```json
+{
+  "id" : "",
+  "fieldData" : {
+    "name" : "",
+    "slug" : ""
+  }
+}
+```
+
+#### Find Site ID, Collection ID and Item ID
+
+To find the Site ID, click [here](/reference/components/webflow_v1#how-to-find-the-site-id).
+
+To find the Collection ID, click [here](/reference/components/webflow_v1#how-to-find-the-collection-id).
+
+To find the Item ID, click [here](/reference/components/webflow_v1#how-to-find-the-item-id).
+
+
+
+
+
+## What to do if your action is not listed here?
+
+If this component doesn't have the action you need, you can use **Custom Action** to create your own. Custom Actions empower you to define HTTP requests tailored to your specific requirements, allowing for greater flexibility in integrating with external services or APIs.
+
+To create a Custom Action, simply specify the desired HTTP method, path, and any necessary parameters. This way, you can extend the functionality of your component beyond the predefined actions, ensuring that you can meet all your integration needs effectively.
+
+<hr />
+
+# Additional Instructions
+
+### How to find the Site ID
+
+The Site ID is a unique value that can be found in the Webflow UI or via the API.
+
+- **Method 1: Via API**
+
+Use the `GET /sites` endpoint to retrieve a list of all sites and their IDs.
+
+- **Method 2: In the Webflow UI**
+
+1. Go to your dashboard and open the site that you want to use.
+2. On the top of left bar click menu and select **Site settings**.
+3. Scroll down to **Overview** and there is your Site ID.
+
+### How to find the Order ID
+
+The Order ID is a site-scoped identifier for an order that can be found in the Webflow UI or via the API.
+
+- **Method 1: Via API**
+
+Use the `GET /sites/SITE_ID/orders` endpoint. List orders within a site to retrieve their IDs.
+
+- **Method 2: In the Webflow UI**
+
+1. Go to your dashboard and click **Ecommerce**.
+2. Click **Orders** and choose a specific order.
+
+### How to find the Collection ID
+
+The Collection ID is a site-scoped identifier for a collection that can be found in the Webflow UI or via the API.
+
+- **Method 1: Via API**
+
+Use the `GET /sites/SITE_ID/collections` endpoint. List collections within a site to retrieve their IDs.
+
+- **Method 2: In the Webflow UI**
+
+1. Go to your dashboard and open the site that you want to use.
+2. On the top bar click **CMS**.
+3. On the left bar find the collection that you want to use and click **Settings**.
+4. Under **Collection Settings** you will find Collection ID.
+
+### How to find the Item ID
+
+The Item ID is a collection-scoped identifier for an item that can be found in the Webflow UI or via the API.
+
+- **Method 1: Via API**
+
+Use the `GET /collections/COLLECTION_ID/items` endpoint. List items within a collection to retrieve their IDs.
+
+- **Method 2: In the Webflow UI**
+
+1. Go to your dashboard and open the site that you want to use.
+2. On the top bar click **CMS**.
+3. On the left bar click on the collection that you want to use.
+4. You will find list of items and click on the one that you want to use.
+5. Under **Item details** you will find Item ID.

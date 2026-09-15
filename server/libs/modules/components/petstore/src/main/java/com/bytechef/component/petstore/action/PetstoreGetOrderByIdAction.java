@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,12 +17,13 @@
 package com.bytechef.component.petstore.action;
 
 import static com.bytechef.component.OpenApiComponentHandler.PropertyType;
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.integer;
-import static com.bytechef.component.definition.ComponentDSL.object;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.integer;
+import static com.bytechef.component.definition.ComponentDsl.object;
+import static com.bytechef.component.definition.ComponentDsl.outputSchema;
 import static com.bytechef.component.definition.Context.Http.ResponseType;
 
-import com.bytechef.component.definition.ComponentDSL;
+import com.bytechef.component.definition.ComponentDsl;
 import com.bytechef.component.petstore.property.PetstoreOrderProperties;
 import java.util.Map;
 
@@ -32,7 +33,7 @@ import java.util.Map;
  * @generated
  */
 public class PetstoreGetOrderByIdAction {
-    public static final ComponentDSL.ModifiableActionDefinition ACTION_DEFINITION = action("getOrderById")
+    public static final ComponentDsl.ModifiableActionDefinition ACTION_DEFINITION = action("getOrderById")
         .title("Find purchase order by ID")
         .description(
             "For valid response try integer IDs with value <= 5 or > 10. Other values will generate exceptions.")
@@ -48,10 +49,10 @@ public class PetstoreGetOrderByIdAction {
             .metadata(
                 Map.of(
                     "type", PropertyType.PATH)))
-        .outputSchema(object().properties(PetstoreOrderProperties.PROPERTIES)
+        .output(outputSchema(object().properties(PetstoreOrderProperties.PROPERTIES)
             .metadata(
                 Map.of(
-                    "responseType", ResponseType.JSON)));
+                    "responseType", ResponseType.JSON))));
 
     private PetstoreGetOrderByIdAction() {
     }

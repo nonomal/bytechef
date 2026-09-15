@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,15 +18,15 @@ package com.bytechef.platform.component.definition;
 
 import com.bytechef.commons.util.OptionalUtils;
 import com.bytechef.component.definition.ActionDefinition;
+import com.bytechef.component.definition.ClusterElementDefinition;
 import com.bytechef.component.definition.ComponentCategory;
 import com.bytechef.component.definition.ComponentDefinition;
 import com.bytechef.component.definition.ConnectionDefinition;
-import com.bytechef.component.definition.DataStreamItemReader;
-import com.bytechef.component.definition.DataStreamItemWriter;
 import com.bytechef.component.definition.Help;
+import com.bytechef.component.definition.PropertyGroup;
 import com.bytechef.component.definition.Resources;
 import com.bytechef.component.definition.TriggerDefinition;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import com.bytechef.component.definition.UnifiedApiDefinition;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -39,50 +39,57 @@ import java.util.Optional;
  */
 public abstract class AbstractComponentDefinitionWrapper implements ComponentDefinition {
 
-    protected final List<? extends ActionDefinition> actions;
-    protected final List<ComponentCategory> categories;
+    protected final List<ActionDefinition> actions;
+    protected final List<ComponentCategory> componentCategories;
     protected final ConnectionDefinition connection;
     protected final Boolean customAction;
     protected final Help customActionHelp;
-    protected final DataStreamItemReader dataStreamItemReader;
-    protected final DataStreamItemWriter dataStreamItemWriter;
+    protected final List<ClusterElementDefinition<?>> clusterElements;
     protected final String description;
     protected final String icon;
     protected final List<String> tags;
     protected final Map<String, Object> metadata;
     protected final String name;
+    protected final List<? extends PropertyGroup> inputs;
     protected final Resources resources;
-    protected final int version;
     protected final String title;
-    protected final List<? extends TriggerDefinition> triggers;
+    protected final List<TriggerDefinition> triggers;
+    protected final UnifiedApiDefinition unifiedApi;
+    protected final int version;
 
     public AbstractComponentDefinitionWrapper(ComponentDefinition componentDefinition) {
         this.actions = OptionalUtils.orElse(componentDefinition.getActions(), List.of());
-        this.categories = OptionalUtils.orElse(componentDefinition.getCategories(), List.of());
+        this.componentCategories = OptionalUtils.orElse(componentDefinition.getComponentCategories(), List.of());
         this.connection = OptionalUtils.orElse(componentDefinition.getConnection(), null);
         this.customAction = OptionalUtils.orElse(componentDefinition.getCustomAction(), null);
         this.customActionHelp = OptionalUtils.orElse(componentDefinition.getCustomActionHelp(), null);
-        this.dataStreamItemReader = OptionalUtils.orElse(componentDefinition.getDataStreamItemReader(), null);
-        this.dataStreamItemWriter = OptionalUtils.orElse(componentDefinition.getDataStreamItemWriter(), null);
+        this.clusterElements = OptionalUtils.orElse(componentDefinition.getClusterElements(), null);
         this.description = OptionalUtils.orElse(componentDefinition.getDescription(), null);
         this.icon = OptionalUtils.orElse(componentDefinition.getIcon(), null);
         this.tags = OptionalUtils.orElse(componentDefinition.getTags(), null);
         this.metadata = OptionalUtils.orElse(componentDefinition.getMetadata(), null);
         this.name = componentDefinition.getName();
+        this.inputs = OptionalUtils.orElse(componentDefinition.getInputs(), null);
         this.resources = OptionalUtils.orElse(componentDefinition.getResources(), null);
         this.title = OptionalUtils.orElse(componentDefinition.getTitle(), null);
         this.triggers = OptionalUtils.orElse(componentDefinition.getTriggers(), null);
+        this.unifiedApi = OptionalUtils.orElse(componentDefinition.getUnifiedApi(), null);
         this.version = componentDefinition.getVersion();
     }
 
     @Override
-    public Optional<List<? extends ActionDefinition>> getActions() {
+    public Optional<List<ActionDefinition>> getActions() {
         return Optional.ofNullable(actions == null ? null : new ArrayList<>(actions));
     }
 
     @Override
-    public Optional<List<ComponentCategory>> getCategories() {
-        return Optional.ofNullable(categories == null ? null : new ArrayList<>(categories));
+    public Optional<List<ComponentCategory>> getComponentCategories() {
+        return Optional.ofNullable(componentCategories == null ? null : new ArrayList<>(componentCategories));
+    }
+
+    @Override
+    public Optional<List<ClusterElementDefinition<?>>> getClusterElements() {
+        return Optional.ofNullable(clusterElements);
     }
 
     @Override
@@ -98,16 +105,6 @@ public abstract class AbstractComponentDefinitionWrapper implements ComponentDef
     @Override
     public Optional<Help> getCustomActionHelp() {
         return Optional.ofNullable(customActionHelp);
-    }
-
-    @Override
-    public Optional<DataStreamItemReader> getDataStreamItemReader() {
-        return Optional.ofNullable(dataStreamItemReader);
-    }
-
-    @Override
-    public Optional<DataStreamItemWriter> getDataStreamItemWriter() {
-        return Optional.ofNullable(dataStreamItemWriter);
     }
 
     @Override
@@ -131,7 +128,11 @@ public abstract class AbstractComponentDefinitionWrapper implements ComponentDef
     }
 
     @Override
-    @SuppressFBWarnings("EI")
+    public Optional<List<? extends PropertyGroup>> getInputs() {
+        return Optional.ofNullable(inputs == null ? null : new ArrayList<>(inputs));
+    }
+
+    @Override
     public Optional<Resources> getResources() {
         return Optional.ofNullable(resources);
     }
@@ -147,8 +148,13 @@ public abstract class AbstractComponentDefinitionWrapper implements ComponentDef
     }
 
     @Override
-    public Optional<List<? extends TriggerDefinition>> getTriggers() {
+    public Optional<List<TriggerDefinition>> getTriggers() {
         return Optional.ofNullable(triggers == null ? null : new ArrayList<>(triggers));
+    }
+
+    @Override
+    public Optional<UnifiedApiDefinition> getUnifiedApi() {
+        return Optional.ofNullable(unifiedApi);
     }
 
     @Override

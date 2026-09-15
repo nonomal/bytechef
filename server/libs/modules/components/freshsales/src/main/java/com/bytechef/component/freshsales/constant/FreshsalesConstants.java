@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,13 +27,10 @@ public class FreshsalesConstants {
     public static final String ADDRESS = "address";
     public static final String CITY = "city";
     public static final String COUNTRY = "country";
-    public static final String CREATE_ACCOUNT = "createAccount";
-    public static final String CREATE_CONTACT = "createContact";
-    public static final String CREATE_LEAD = "createLead";
     public static final String EMAIL = "email";
     public static final String FACEBOOK = "facebook";
     public static final String FIRST_NAME = "first_name";
-    public static final String FRESHSALES = "freshsales";
+    public static final String ID = "id";
     public static final String JOB_TITLE = "job_title";
     public static final String LAST_NAME = "last_name";
     public static final String LINKEDIN = "linkedin";
@@ -46,5 +43,4 @@ public class FreshsalesConstants {
     public static final String WEBSITE = "website";
     public static final String WORK_NUMBER = "work_number";
     public static final String ZIPCODE = "zipcode";
-
 }

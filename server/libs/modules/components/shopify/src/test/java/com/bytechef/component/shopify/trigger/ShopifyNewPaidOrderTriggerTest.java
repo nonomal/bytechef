@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,51 +18,61 @@ package com.bytechef.component.shopify.trigger;
 
 import static com.bytechef.component.shopify.constant.ShopifyConstants.ID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.Mockito.when;
 
-import com.bytechef.component.definition.TriggerDefinition.DynamicWebhookEnableOutput;
-import com.bytechef.component.shopify.util.ShopifyUtils;
-import java.time.LocalDateTime;
+import com.bytechef.component.definition.TriggerDefinition.WebhookEnableOutput;
+import com.bytechef.component.shopify.util.ShopifyTriggerUtils;
+import com.bytechef.component.test.definition.MockParametersFactory;
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 /**
  * @author Monika Domiter
+ * @author Nikolina Spehar
  */
 class ShopifyNewPaidOrderTriggerTest extends AbstractShopifyTriggerTest {
 
     @Test
-    void testDynamicWebhookEnable() {
+    void testWebhookEnable() {
         String webhookUrl = "testWebhookUrl";
 
-        shopifyUtilsMockedStatic
-            .when(
-                () -> ShopifyUtils.subscribeWebhook(mockedParameters, webhookUrl, mockedTriggerContext, "orders/paid"))
-            .thenReturn(123L);
+        shopifyTriggerUtilsMockedStatic
+            .when(() -> ShopifyTriggerUtils.subscribeWebhook(
+                stringArgumentCaptor.capture(), stringArgumentCaptor.capture(), contextArgumentCaptor.capture()))
+            .thenReturn("webhookId");
 
-        DynamicWebhookEnableOutput dynamicWebhookEnableOutput = ShopifyNewPaidOrderTrigger.dynamicWebhookEnable(
+        WebhookEnableOutput webhookEnableOutput = ShopifyNewPaidOrderTrigger.webhookEnable(
             mockedParameters, mockedParameters, webhookUrl, workflowExecutionId, mockedTriggerContext);
 
-        Map<String, ?> parameters = dynamicWebhookEnableOutput.parameters();
-        LocalDateTime webhookExpirationDate = dynamicWebhookEnableOutput.webhookExpirationDate();
+        WebhookEnableOutput expectedWebhookEnableOutput = new WebhookEnableOutput(
+            Map.of(ID, "webhookId"), null);
 
-        Map<String, Object> expectedParameters = Map.of(ID, 123L);
-
-        assertEquals(expectedParameters, parameters);
-        assertNull(webhookExpirationDate);
+        assertEquals(expectedWebhookEnableOutput, webhookEnableOutput);
+        assertEquals(List.of(webhookUrl, "ORDERS_PAID"), stringArgumentCaptor.getAllValues());
+        assertEquals(mockedTriggerContext, contextArgumentCaptor.getValue());
     }
 
     @Test
-    void testDynamicWebhookRequest() {
+    void testWebhookDisable() {
+        mockedParameters = MockParametersFactory.create(Map.of(ID, "webhookId"));
+
+        ShopifyNewPaidOrderTrigger.webhookDisable(
+            mockedParameters, mockedParameters, mockedParameters, workflowExecutionId, mockedTriggerContext);
+
+        shopifyTriggerUtilsMockedStatic
+            .verify(() -> ShopifyTriggerUtils.unsubscribeWebhook(mockedParameters, mockedTriggerContext));
+    }
+
+    @Test
+    void testWebhookRequest() {
         when(mockedWebhookBody.getContent())
             .thenReturn(mockedObject);
 
-        Object result = ShopifyNewPaidOrderTrigger.dynamicWebhookRequest(
+        Object result = ShopifyNewPaidOrderTrigger.webhookRequest(
             mockedParameters, mockedParameters, mockedHttpHeaders, mockedHttpParameters, mockedWebhookBody,
-            mockedWebhookMethod, mockedDynamicWebhookEnableOutput, mockedTriggerContext);
+            mockedWebhookMethod, mockedParameters, mockedTriggerContext);
 
         assertEquals(mockedObject, result);
-
     }
 }

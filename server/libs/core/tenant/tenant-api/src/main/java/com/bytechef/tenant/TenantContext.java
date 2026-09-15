@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,21 +18,57 @@ package com.bytechef.tenant;
 
 import com.bytechef.tenant.constant.TenantConstants;
 import java.util.Objects;
+import java.util.concurrent.Callable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 import org.springframework.util.Assert;
 
 /**
  * @author Ivica Cardic
+ * @author Igor Beslic
  */
 public class TenantContext {
 
+    public static final String CURRENT_TENANT_ID = "CURRENT_TENANT_ID";
     public static final String DEFAULT_TENANT_ID = "public";
+    private static final String TENANT_PATTERN = TenantConstants.TENANT_PREFIX + "_";
 
     private static final ThreadLocal<String> currentTenant = ThreadLocal.withInitial(() -> DEFAULT_TENANT_ID);
+    private static final Logger log = LoggerFactory.getLogger(TenantContext.class);
+
+    public static <V> V callWithTenantId(String tenantId, Callable<V> callable) {
+        String curTenantId = getCurrentTenantId();
+
+        try {
+            setCurrentTenantId(tenantId);
+
+            return callable.call();
+        } catch (Exception e) {
+            log.error("Unable to execute call with tenant ID {}", tenantId);
+
+            throw new RuntimeException(e);
+        } finally {
+            setCurrentTenantId(curTenantId);
+        }
+    }
 
     public static String getCurrentDatabaseSchema() {
-        return Objects.equals(getCurrentTenantId(), DEFAULT_TENANT_ID)
-            ? DEFAULT_TENANT_ID
-            : TenantConstants.TENANT_PREFIX + "_" + getCurrentTenantId();
+        return getCurrentDatabaseSchema(null);
+    }
+
+    public static String getCurrentDatabaseSchema(String vectorSchemaSuffix) {
+        if (Objects.equals(getCurrentTenantId(), DEFAULT_TENANT_ID)) {
+            return DEFAULT_TENANT_ID;
+        }
+
+        String currentSuffix = "";
+
+        if (Objects.nonNull(vectorSchemaSuffix)) {
+            currentSuffix = vectorSchemaSuffix + "_";
+        }
+
+        return TENANT_PATTERN + currentSuffix + getCurrentTenantId();
     }
 
     public static String getCurrentTenantId() {
@@ -43,9 +79,33 @@ public class TenantContext {
         setCurrentTenantId(DEFAULT_TENANT_ID);
     }
 
+    public static void runWithTenantId(String tenantId, Runnable runnable) {
+        String curTenantId = getCurrentTenantId();
+
+        try {
+            setCurrentTenantId(tenantId);
+
+            try {
+                runnable.run();
+            } catch (Exception e) {
+                throw new RuntimeException("Unable to execute run with tenant ID " + tenantId, e);
+            }
+        } finally {
+            setCurrentTenantId(curTenantId);
+        }
+    }
+
     public static void setCurrentTenantId(String tenantId) {
         Assert.notNull(tenantId, "tenantId must not be null");
 
         currentTenant.set(tenantId);
+
+        MDC.put("tenantId", tenantId);
+    }
+
+    @FunctionalInterface
+    public interface Runnable {
+
+        void run() throws Exception;
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,14 +16,28 @@
 
 package com.bytechef.component.microsoft.teams.util;
 
-import static com.bytechef.component.microsoft.teams.constant.MicrosoftTeamsConstants.BASE_URL;
+import static com.bytechef.component.definition.ComponentDsl.option;
+import static com.bytechef.component.microsoft.teams.constant.MicrosoftTeamsConstants.CONTENT_TYPE;
+import static com.bytechef.component.microsoft.teams.constant.MicrosoftTeamsConstants.CONTENT_URL;
 import static com.bytechef.component.microsoft.teams.constant.MicrosoftTeamsConstants.DISPLAY_NAME;
+import static com.bytechef.component.microsoft.teams.constant.MicrosoftTeamsConstants.E_TAG;
 import static com.bytechef.component.microsoft.teams.constant.MicrosoftTeamsConstants.ID;
+import static com.bytechef.component.microsoft.teams.constant.MicrosoftTeamsConstants.NAME;
+import static com.bytechef.component.microsoft.teams.constant.MicrosoftTeamsConstants.TEAM_ID;
 import static com.bytechef.component.microsoft.teams.constant.MicrosoftTeamsConstants.VALUE;
+import static com.bytechef.component.microsoft.teams.constant.MicrosoftTeamsConstants.WEB_DAV_URL;
+import static com.bytechef.microsoft.commons.MicrosoftConstants.LAST_TIME_CHECKED;
+import static com.bytechef.microsoft.commons.MicrosoftUtils.getOptions;
 
-import com.bytechef.component.definition.ActionContext;
+import com.bytechef.component.definition.Context;
 import com.bytechef.component.definition.Context.Http;
-import com.bytechef.component.definition.Context.TypeReference;
+import com.bytechef.component.definition.Option;
+import com.bytechef.component.definition.Parameters;
+import com.bytechef.component.definition.TriggerDefinition.PollOutput;
+import com.bytechef.component.definition.TypeReference;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -36,22 +50,193 @@ public class MicrosoftTeamsUtils {
     private MicrosoftTeamsUtils() {
     }
 
-    public static List<String> getChatMembers(ActionContext context, Map<?, ?> map) {
-        List<String> members = new ArrayList<>();
+    public static List<Map<String, String>> getAttachmentsList(List<String> fileIds, Context context) {
+        List<Map<String, String>> attachmetsList = new ArrayList<>();
 
-        Map<String, Object> body = context.http(http -> http.get(BASE_URL + "/chats/" + map.get(ID) + "/members"))
+        for (String fileId : fileIds) {
+            attachmetsList.add(getAttachments(fileId, context));
+        }
+
+        return attachmetsList;
+    }
+
+    private static Map<String, String> getAttachments(String fileId, Context context) {
+        Map<String, String> body = context
+            .http(http -> http.get("https://graph.microsoft.com/v1.0/me/drive/items/" + fileId))
+            .configuration(Http.responseType(Http.ResponseType.JSON))
+            .queryParameter("$select", "id,name,webUrl,webDavUrl,@microsoft.graph.downloadUrl,etag")
+            .execute()
+            .getBody(new TypeReference<>() {});
+
+        String eTag = body.get(E_TAG);
+        String id = eTag.substring(eTag.indexOf('{') + 1, eTag.indexOf('}'));
+
+        return Map.of(
+            ID, id,
+            CONTENT_TYPE, "reference",
+            CONTENT_URL, body.get(WEB_DAV_URL),
+            NAME, body.get(NAME));
+    }
+
+    public static List<Option<String>> getChatIdOptions(
+        Parameters inputParameters, Parameters connectionParameters, Map<String, String> dependencyPaths,
+        String searchText, Context context) {
+
+        List<Option<String>> options = new ArrayList<>();
+        String nextLink = "/chats";
+
+        while (nextLink != null) {
+            String currentLink = nextLink;
+
+            Map<String, Object> body = context.http(http -> http.get(currentLink))
+                .queryParameters("$expand", "members")
+                .configuration(Http.responseType(Http.ResponseType.JSON))
+                .execute()
+                .getBody(new TypeReference<>() {});
+
+            if (body.get(VALUE) instanceof List<?> list) {
+                for (Object item : list) {
+                    if (item instanceof Map<?, ?> map) {
+
+                        List<String> chatMembers = new ArrayList<>();
+
+                        if (map.get("members") instanceof List<?> members) {
+                            for (Object member : members) {
+                                if (member instanceof Map<?, ?> memberMap) {
+                                    chatMembers.add((String) memberMap.get(DISPLAY_NAME));
+                                }
+                            }
+                        }
+
+                        String chatName = getChatName((String) map.get("topic"), chatMembers);
+
+                        options.add(option(map.get("chatType") + " chat: " + chatName, (String) map.get(ID)));
+                    }
+                }
+            }
+
+            nextLink = (String) body.get("@odata.nextLink");
+        }
+
+        return options;
+    }
+
+    private static String getChatName(String topic, List<String> members) {
+        String membersString = members.isEmpty() ? "No title" : String.join(",", members);
+
+        return topic == null ? membersString : topic;
+    }
+
+    public static List<Option<String>> getChannelIdOptions(
+        Parameters inputParameters, Parameters connectionParameters, Map<String, String> dependencyPaths,
+        String searchText, Context context) {
+
+        if (!inputParameters.containsKey(TEAM_ID)) {
+            return List.of();
+        }
+
+        Map<String, Object> body = context.http(http -> http.get(
+            "/teams/" + inputParameters.getRequiredString(TEAM_ID) + "/channels"))
             .configuration(Http.responseType(Http.ResponseType.JSON))
             .execute()
             .getBody(new TypeReference<>() {});
 
-        if (body.get(VALUE) instanceof List<?> list) {
-            for (Object item : list) {
-                if (item instanceof Map<?, ?> memberMap) {
-                    members.add((String) memberMap.get(DISPLAY_NAME));
-                }
-            }
+        return getOptions(context, body, DISPLAY_NAME, ID);
+    }
+
+    public static String getHtmlAttachmentsTag(List<Map<String, String>> attachments) {
+        StringBuilder stringBuilder = new StringBuilder();
+
+        for (Map<String, String> attachment : attachments) {
+            stringBuilder.append("<attachment id=%s></attachment>".formatted(attachment.get(ID)));
         }
 
-        return members;
+        return stringBuilder.toString();
+    }
+
+    public static List<Option<String>> getTeamIdOptions(
+        Parameters inputParameters, Parameters connectionParameters, Map<String, String> dependencyPaths,
+        String searchText, Context context) {
+
+        Map<String, Object> body = context.http(http -> http.get("/me/joinedTeams"))
+            .configuration(Http.responseType(Http.ResponseType.JSON))
+            .execute()
+            .getBody(new TypeReference<>() {});
+
+        return getOptions(context, body, DISPLAY_NAME, ID);
+    }
+
+    public static PollOutput includeRepliesPoll(
+        String url, String containsKey, Parameters closureParameters, Context context) {
+
+        ZoneId zoneId = ZoneId.systemDefault();
+        LocalDateTime now = LocalDateTime.now(zoneId);
+        LocalDateTime startDateTime = getStartDateTime(closureParameters, context, now);
+
+        List<Map<?, ?>> messages = fetchMessages(url, context).stream()
+            .filter(item -> item instanceof Map<?, ?> map && map.containsKey(containsKey))
+            .map(item -> (Map<?, ?>) item)
+            .flatMap(map -> collectMessageWithReplies(map, startDateTime, now, zoneId)
+                .stream())
+            .toList();
+
+        return new PollOutput(messages, Map.of(LAST_TIME_CHECKED, now), false);
+    }
+
+    private static LocalDateTime getStartDateTime(Parameters closureParameters, Context context, LocalDateTime now) {
+        return closureParameters.getLocalDateTime(
+            LAST_TIME_CHECKED, context.isEditorEnvironment() ? now.minusHours(3) : now);
+    }
+
+    private static List<?> fetchMessages(String url, Context context) {
+        Map<String, Object> body = context
+            .http(http -> http.get(url))
+            .queryParameter("$expand", "replies")
+            .configuration(Http.responseType(Http.ResponseType.JSON))
+            .execute()
+            .getBody(new TypeReference<>() {});
+
+        return body.get(VALUE) instanceof List<?> list ? list : List.of();
+    }
+
+    private static List<Map<?, ?>> collectMessageWithReplies(
+        Map<?, ?> message, LocalDateTime startDateTime, LocalDateTime now, ZoneId zoneId) {
+
+        List<Map<?, ?>> result = new ArrayList<>();
+
+        if (isWithinTimeRange(message, startDateTime, now, zoneId)) {
+            result.add(message);
+        }
+
+        collectRepliesInRange(message.get("replies"), startDateTime, now, zoneId, result);
+
+        return result;
+    }
+
+    private static void collectRepliesInRange(
+        Object replies, LocalDateTime startDateTime, LocalDateTime now, ZoneId zoneId, List<Map<?, ?>> result) {
+
+        if (!(replies instanceof List<?> repliesList)) {
+            return;
+        }
+
+        repliesList.stream()
+            .filter(
+                reply -> reply instanceof Map<?, ?> replyMap && isWithinTimeRange(replyMap, startDateTime, now, zoneId))
+            .map(reply -> (Map<?, ?>) reply)
+            .forEach(result::add);
+    }
+
+    private static boolean isWithinTimeRange(
+        Map<?, ?> item, LocalDateTime startDateTime, LocalDateTime now, ZoneId zoneId) {
+
+        LocalDateTime createdAt = parseToLocalDateTime((String) item.get("createdDateTime"), zoneId);
+
+        return createdAt.isAfter(startDateTime) && createdAt.isBefore(now);
+    }
+
+    private static LocalDateTime parseToLocalDateTime(String dateTime, ZoneId zoneId) {
+        return LocalDateTime.ofInstant(ZonedDateTime.parse(dateTime)
+            .toInstant(), zoneId);
     }
 }

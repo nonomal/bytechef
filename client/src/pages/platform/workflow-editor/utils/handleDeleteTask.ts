@@ -1,0 +1,439 @@
+import useWorkflowTestChatStore from '@/pages/platform/workflow-editor/stores/useWorkflowTestChatStore';
+import {ON_ERROR_MAIN_BRANCH, ON_ERROR_WIRE_KEY_ERROR_BRANCH, ON_ERROR_WIRE_KEY_MAIN_BRANCH} from '@/shared/constants';
+import {Workflow, WorkflowTask} from '@/shared/middleware/platform/configuration';
+import {invalidatePreviousWorkflowNodeOutputsForWorkflow} from '@/shared/queries/platform/workflowNodeOutputs.queries';
+import {
+    BranchCaseType,
+    NodeDataType,
+    UpdateWorkflowMutationType,
+    WorkflowDefinitionType,
+    WorkflowTaskType,
+} from '@/shared/types';
+import {QueryClient} from '@tanstack/react-query';
+
+import useWorkflowDataStore, {WorkflowDataType, setWorkflowWithoutHistory} from '../stores/useWorkflowDataStore';
+import useWorkflowNodeDetailsPanelStore from '../stores/useWorkflowNodeDetailsPanelStore';
+import findAndRemoveClusterElement from './findAndRemoveClusterElement';
+import getRecursivelyUpdatedTasks from './getRecursivelyUpdatedTasks';
+import {getTask} from './getTask';
+import stringifyWorkflowDefinition from './stringifyWorkflowDefinition';
+import {TASK_DISPATCHER_CONFIG} from './taskDispatcherConfig';
+import {forEachNestedTaskGroup} from './taskTraversalUtils';
+import {drainPendingSaves, isWorkflowMutating, setWorkflowMutating} from './workflowMutationGuard';
+
+interface HandleDeleteTaskProps {
+    cancelWorkflowQueries: () => void;
+    rootClusterElementNodeData?: NodeDataType;
+    clusterElementsCanvasOpen?: boolean;
+    currentNode?: NodeDataType;
+    data: NodeDataType;
+    invalidateWorkflowQueries: () => void;
+    queryClient: QueryClient;
+    setRootClusterElementNodeData?: (node: NodeDataType) => void;
+    setCurrentNode?: (node: NodeDataType) => void;
+    updateWorkflowMutation: UpdateWorkflowMutationType;
+    workflow: Workflow & WorkflowDataType;
+}
+
+export default function handleDeleteTask({
+    cancelWorkflowQueries,
+    clusterElementsCanvasOpen,
+    currentNode,
+    data,
+    invalidateWorkflowQueries,
+    queryClient,
+    rootClusterElementNodeData,
+    setCurrentNode,
+    setRootClusterElementNodeData,
+    updateWorkflowMutation,
+    workflow,
+}: HandleDeleteTaskProps) {
+    if (!workflow?.definition) {
+        return;
+    }
+
+    const workflowDefinition: WorkflowDefinitionType = JSON.parse(workflow?.definition);
+
+    const {tasks: workflowTasks} = workflowDefinition;
+
+    if (!workflowTasks) {
+        return;
+    }
+
+    let updatedTasks: Array<WorkflowTaskType>;
+
+    if (data.conditionData) {
+        const parentConditionTask = TASK_DISPATCHER_CONFIG.condition.getTask({
+            taskDispatcherId: data.conditionData.conditionId,
+            tasks: workflowTasks,
+        });
+
+        const taskConditionCase = data.conditionData.conditionCase;
+
+        if (!parentConditionTask?.parameters) {
+            return;
+        }
+
+        parentConditionTask.parameters[taskConditionCase as string] = (
+            parentConditionTask.parameters[taskConditionCase] as Array<WorkflowTask>
+        ).filter((childTask) => childTask.name !== data.name);
+
+        updatedTasks = workflowTasks.map((task) => {
+            if (task.name !== parentConditionTask.name) {
+                return task;
+            }
+
+            return parentConditionTask;
+        }) as Array<WorkflowTaskType>;
+    } else if (data.loopData) {
+        const parentLoopTask = TASK_DISPATCHER_CONFIG.loop.getTask({
+            taskDispatcherId: data.loopData.loopId,
+            tasks: workflowTasks,
+        });
+
+        if (!parentLoopTask?.parameters) {
+            return;
+        }
+
+        parentLoopTask.parameters.iteratee = (parentLoopTask.parameters.iteratee as Array<WorkflowTask>).filter(
+            (childTask) => childTask.name !== data.name
+        );
+
+        updatedTasks = workflowTasks.map((task) => {
+            if (task.name !== parentLoopTask.name) {
+                return task;
+            }
+
+            return parentLoopTask;
+        }) as Array<WorkflowTaskType>;
+    } else if (data.mapData) {
+        const parentMapTask = TASK_DISPATCHER_CONFIG.map.getTask({
+            taskDispatcherId: data.mapData.mapId,
+            tasks: workflowTasks,
+        });
+
+        if (!parentMapTask?.parameters) {
+            return;
+        }
+
+        parentMapTask.parameters.iteratee = (parentMapTask.parameters.iteratee as Array<WorkflowTask>).filter(
+            (childTask) => childTask.name !== data.name
+        );
+
+        updatedTasks = workflowTasks.map((task) => {
+            if (task.name !== parentMapTask.name) {
+                return task;
+            }
+
+            return parentMapTask;
+        }) as Array<WorkflowTaskType>;
+    } else if (data.branchData) {
+        const parentBranchTask = TASK_DISPATCHER_CONFIG.branch.getTask({
+            taskDispatcherId: data.branchData.branchId,
+            tasks: workflowTasks,
+        });
+
+        if (!parentBranchTask?.parameters) {
+            return;
+        }
+
+        const {caseKey} = data.branchData;
+        const {name, parameters} = parentBranchTask;
+
+        if (caseKey === 'default') {
+            parentBranchTask.parameters.default = (parameters.default as Array<WorkflowTask>).filter(
+                (childTask) => childTask.name !== data.name
+            );
+        } else if (parameters.cases) {
+            parameters.cases = (parameters.cases as BranchCaseType[]).map((caseItem) => {
+                if (caseItem.key === caseKey) {
+                    return {
+                        ...caseItem,
+                        tasks: (caseItem.tasks || []).filter((childTask) => childTask.name !== data.name),
+                    };
+                }
+
+                return caseItem;
+            });
+        }
+
+        updatedTasks = workflowTasks.map((task) => {
+            if (task.name !== name) {
+                return task;
+            }
+
+            return parentBranchTask;
+        }) as Array<WorkflowTaskType>;
+    } else if (data.parallelData) {
+        const parentParallelTask = TASK_DISPATCHER_CONFIG.parallel.getTask({
+            taskDispatcherId: data.parallelData.parallelId,
+            tasks: workflowTasks,
+        });
+
+        if (!parentParallelTask?.parameters) {
+            return;
+        }
+
+        parentParallelTask.parameters.tasks = (parentParallelTask.parameters.tasks as Array<WorkflowTask>).filter(
+            (childTask) => childTask.name !== data.name
+        );
+
+        updatedTasks = workflowTasks.map((task) => {
+            if (task.name !== parentParallelTask.name) {
+                return task;
+            }
+
+            return parentParallelTask;
+        }) as Array<WorkflowTaskType>;
+    } else if (data.eachData) {
+        const parentEachTask = TASK_DISPATCHER_CONFIG.loop.getTask({
+            taskDispatcherId: data.eachData.eachId,
+            tasks: workflowTasks,
+        });
+
+        if (!parentEachTask?.parameters) {
+            return;
+        }
+
+        parentEachTask.parameters.iteratee = {};
+
+        updatedTasks = workflowTasks.map((task) => {
+            if (task.name !== parentEachTask.name) {
+                return task;
+            }
+
+            return parentEachTask;
+        }) as Array<WorkflowTaskType>;
+    } else if (data.forkJoinData) {
+        const parentForkJoinTask = TASK_DISPATCHER_CONFIG['fork-join'].getTask({
+            taskDispatcherId: data.forkJoinData.forkJoinId,
+            tasks: workflowTasks,
+        });
+
+        if (!parentForkJoinTask?.parameters) {
+            return;
+        }
+
+        parentForkJoinTask.parameters.branches = parentForkJoinTask.parameters.branches
+            .map((branch: Array<WorkflowTask>) => branch.filter((task: WorkflowTask) => task.name !== data.name))
+            .filter((branch: Array<WorkflowTask>) => branch.length > 0);
+
+        updatedTasks = workflowTasks.map((task) => {
+            if (task.name !== parentForkJoinTask.name) {
+                return task;
+            }
+
+            return parentForkJoinTask;
+        }) as Array<WorkflowTaskType>;
+    } else if (data.onErrorData) {
+        const parentOnErrorTask = TASK_DISPATCHER_CONFIG['on-error'].getTask({
+            taskDispatcherId: data.onErrorData.onErrorId,
+            tasks: workflowTasks,
+        });
+
+        const taskOnErrorCase = data.onErrorData.onErrorCase;
+
+        if (!parentOnErrorTask?.parameters) {
+            return;
+        }
+
+        const wireKey =
+            taskOnErrorCase === ON_ERROR_MAIN_BRANCH ? ON_ERROR_WIRE_KEY_MAIN_BRANCH : ON_ERROR_WIRE_KEY_ERROR_BRANCH;
+
+        parentOnErrorTask.parameters[wireKey] = (parentOnErrorTask.parameters[wireKey] as Array<WorkflowTask>).filter(
+            (childTask) => childTask.name !== data.name
+        );
+
+        updatedTasks = workflowTasks.map((task) => {
+            if (task.name !== parentOnErrorTask.name) {
+                return task;
+            }
+
+            return parentOnErrorTask;
+        }) as Array<WorkflowTaskType>;
+    } else if (clusterElementsCanvasOpen && rootClusterElementNodeData) {
+        const mainRootClusterElementTask = getTask({
+            tasks: workflowTasks,
+            workflowNodeName: rootClusterElementNodeData.name,
+        });
+
+        if (!mainRootClusterElementTask || !mainRootClusterElementTask.clusterElements) {
+            return;
+        }
+
+        const clusterElementRemovalResult = findAndRemoveClusterElement({
+            clickedElementName: data.name,
+            clickedElementType: data.clusterElementType,
+            clusterElements: mainRootClusterElementTask.clusterElements,
+        });
+
+        const updatedRootClusterElementTask = {
+            ...mainRootClusterElementTask,
+            clusterElements: clusterElementRemovalResult.elements,
+        };
+
+        if (clusterElementRemovalResult.elementFound) {
+            const updatedClusterElements = clusterElementRemovalResult.elements;
+
+            if (setRootClusterElementNodeData && setCurrentNode) {
+                if (currentNode?.clusterRoot && !currentNode.isNestedClusterRoot) {
+                    setCurrentNode({
+                        ...currentNode,
+                        clusterElements: updatedClusterElements,
+                    });
+                }
+
+                setRootClusterElementNodeData({
+                    ...rootClusterElementNodeData,
+                    clusterElements: updatedClusterElements,
+                });
+
+                if (currentNode?.name === data.name) {
+                    useWorkflowNodeDetailsPanelStore.getState().setWorkflowNodeDetailsPanelOpen(true);
+
+                    setCurrentNode({
+                        ...rootClusterElementNodeData,
+                        clusterElements: updatedClusterElements,
+                    });
+                }
+            }
+        }
+
+        // Check if the task is at top level
+        const topLevelTaskIndex = workflowTasks.findIndex((task) => task.name === mainRootClusterElementTask.name);
+
+        if (topLevelTaskIndex !== -1) {
+            updatedTasks = workflowTasks.map((task) => {
+                if (task.name !== mainRootClusterElementTask?.name) {
+                    return task;
+                }
+
+                return updatedRootClusterElementTask;
+            }) as Array<WorkflowTaskType>;
+        } else {
+            updatedTasks = getRecursivelyUpdatedTasks(
+                workflowTasks as Array<WorkflowTask>,
+                updatedRootClusterElementTask
+            ) as Array<WorkflowTaskType>;
+        }
+    } else {
+        updatedTasks = workflowTasks.filter((task: WorkflowTask) => task.name !== data.name);
+    }
+
+    if (isWorkflowMutating(workflow.id!)) {
+        return;
+    }
+
+    useWorkflowNodeDetailsPanelStore.getState().removePendingSaveNodeName(data.name);
+
+    // Cancel any in-flight workflow query refetches from previous mutations
+    // to prevent stale server data from overwriting the upcoming optimistic update.
+    cancelWorkflowQueries();
+
+    const updatedDefinition = stringifyWorkflowDefinition({
+        ...workflowDefinition,
+        tasks: updatedTasks,
+    });
+
+    const previousWorkflow = workflow;
+
+    // Optimistic UI: close panel and update store immediately so layout recomputes once
+    if (currentNode?.name === data.name && !currentNode?.clusterElementType) {
+        useWorkflowNodeDetailsPanelStore.getState().reset();
+        useWorkflowTestChatStore.getState().setWorkflowTestChatPanelOpen(false);
+    }
+
+    const optimisticTasks = buildOptimisticTasks(workflow.tasks || [], updatedTasks!, data.name);
+
+    useWorkflowDataStore.getState().setWorkflow({
+        ...workflow,
+        definition: updatedDefinition,
+        tasks: optimisticTasks,
+    });
+
+    setWorkflowMutating(workflow.id!, true);
+
+    updateWorkflowMutation.mutate(
+        {
+            id: workflow.id!,
+            workflow: {
+                definition: updatedDefinition,
+                version: workflow.version,
+            },
+        },
+        {
+            onError: () => {
+                // Rollback optimistic update on failure (not an undo step)
+                setWorkflowWithoutHistory(previousWorkflow);
+
+                invalidateWorkflowQueries();
+            },
+            onSettled: () => {
+                setWorkflowMutating(workflow.id!, false);
+
+                invalidatePreviousWorkflowNodeOutputsForWorkflow(queryClient, workflow.id!);
+
+                invalidateWorkflowQueries();
+
+                drainPendingSaves(workflow.id!);
+            },
+            onSuccess: (updatedWorkflow) => {
+                // Update the version from the server response so that the next mutation
+                // uses the correct version (prevents OptimisticLockingFailureException).
+                // Keep the current optimistic state to avoid layout flicker.
+                const currentWorkflow = useWorkflowDataStore.getState().workflow;
+
+                useWorkflowDataStore.getState().setWorkflow({
+                    ...currentWorkflow,
+                    version: updatedWorkflow.version,
+                });
+            },
+        }
+    );
+}
+
+/**
+ * Recursively collects all task name→parameters mappings from the hierarchical definition tasks,
+ * including tasks nested inside task dispatcher parameters (condition caseTrue/caseFalse, loop iteratee, etc.).
+ */
+function collectAllTaskParameters(
+    tasks: Array<WorkflowTaskType>,
+    result: Map<string, Record<string, object> | undefined> = new Map()
+): Map<string, Record<string, object> | undefined> {
+    for (const task of tasks) {
+        result.set(task.name, task.parameters);
+
+        if (task.parameters) {
+            forEachNestedTaskGroup(task.parameters as Record<string, unknown>, (subtasks) => {
+                collectAllTaskParameters(subtasks as Array<WorkflowTaskType>, result);
+            });
+        }
+    }
+
+    return result;
+}
+
+/**
+ * Builds optimistic tasks by removing the deleted task and applying parameter changes
+ * from definition-parsed tasks onto the rich workflow task objects (which carry componentName, icon, etc.).
+ * Handles both top-level deletion (filter) and nested deletion (parent parameter update).
+ */
+export function buildOptimisticTasks(
+    workflowTasks: WorkflowTask[],
+    updatedTasks: Array<WorkflowTaskType>,
+    deletedTaskName: string
+): WorkflowTask[] {
+    const updatedParametersByName = collectAllTaskParameters(updatedTasks);
+
+    return workflowTasks
+        .filter((task) => task.name !== deletedTaskName && updatedParametersByName.has(task.name))
+        .map((task) => {
+            const updatedParameters = updatedParametersByName.get(task.name);
+
+            if (updatedParameters && updatedParameters !== task.parameters) {
+                return {...task, parameters: updatedParameters};
+            }
+
+            return task;
+        });
+}

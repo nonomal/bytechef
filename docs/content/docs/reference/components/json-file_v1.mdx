@@ -1,0 +1,142 @@
+---
+title: "JSON File"
+description: "Reads and writes data from a JSON file."
+---
+
+
+Categories: Helpers
+
+
+Type: jsonFile/v1
+
+<hr />
+
+
+
+
+## Actions
+
+
+### Read from File
+Name: read
+
+`Reads data from a JSON file.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| fileType | File Type | STRING <details> <summary> Options </summary> <span>JSON</span>, <span>JSONL</span> </details> | The file type to choose. | true |
+| fileEntry | File Entry | FILE_ENTRY | The object property which contains a reference to the JSON file to read from. | true |
+| isArray | Is Array | BOOLEAN <details> <summary> Options </summary> <span>true</span>, <span>false</span> </details> | The object input is array? | false |
+| path | Path | STRING | The path where the array is e.g 'data'. Leave blank to use the top level object. | false |
+| pageSize | Page Size | INTEGER | The amount of child elements to return in a page. | false |
+| pageNumber | Page Number | INTEGER | The page number to get. | false |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Read from File",
+  "name" : "read",
+  "parameters" : {
+    "fileType" : "",
+    "fileEntry" : {
+      "extension" : "",
+      "mimeType" : "",
+      "name" : "",
+      "url" : ""
+    },
+    "isArray" : false,
+    "path" : "",
+    "pageSize" : 1,
+    "pageNumber" : 1
+  },
+  "type" : "jsonFile/v1/read"
+}
+```
+
+#### Output
+
+The output for this action is dynamic and may vary depending on the input parameters. To determine the exact structure of the output, you need to execute the action.
+
+
+
+
+
+
+### Write to File
+Name: write
+
+`Writes workflow data to a JSON or JSONL file. Source Data is the object or array to serialize (typically a data pill), not a file path.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| fileType | File Type | STRING <details> <summary> Options </summary> <span>JSON</span>, <span>JSONL</span> </details> | The file type to choose. | true |
+| type | Type | STRING <details> <summary> Options </summary> <span>OBJECT</span>, <span>ARRAY</span> </details> | Whether Source Data is a JSON object or a JSON array. | false |
+| source | Source Data | OBJECT <details> <summary> Properties </summary> &#123;&#125; </details> | The JSON object to write. Map this from a previous step with a data pill. This is the data itself, not a file path. | true |
+| source | Source Data | ARRAY <details> <summary> Items </summary> [] </details> | The JSON array (list of objects) to write. Map this from a previous step with a data pill. For JSON, the file contains one JSON array. For JSONL, each item is written as one JSON object per line. | true |
+| filename | Filename | STRING | Filename to set for binary data. By default, "file.json" will be used. | true |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Write to File",
+  "name" : "write",
+  "parameters" : {
+    "fileType" : "",
+    "type" : "",
+    "source" : [ ],
+    "filename" : ""
+  },
+  "type" : "jsonFile/v1/write"
+}
+```
+
+#### Output
+
+
+
+Type: FILE_ENTRY
+
+
+#### Properties
+
+|     Name     |     Type     |     Description     |
+|:------------:|:------------:|:-------------------:|
+| extension | STRING |  |
+| mimeType | STRING |  |
+| name | STRING |  |
+| url | STRING |  |
+
+
+
+
+#### Output Example
+```json
+{
+  "extension" : "",
+  "mimeType" : "",
+  "name" : "",
+  "url" : ""
+}
+```
+
+
+
+
+
+
+<hr />
+
+# Additional Instructions
+
+## Write to File
+
+`source` is the JSON to serialize into the file, not a file path and not source code. Map it from a previous step with a data pill.
+
+- Type **OBJECT**: writes one JSON object.
+- Type **ARRAY**: writes a JSON array of objects. For JSONL, each array item is written as one JSON object per line.
+
+The action returns a `FILE_ENTRY` for the created file.

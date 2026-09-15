@@ -1,0 +1,330 @@
+import Button from '@/components/Button/Button';
+import LoadingIcon from '@/components/LoadingIcon';
+import Switch from '@/components/Switch/Switch';
+import {Tooltip, TooltipContent, TooltipTrigger} from '@/components/ui/tooltip';
+import ProjectDeploymentEditWorkflowDialog from '@/pages/automation/project-deployments/components/ProjectDeploymentEditWorkflowDialog';
+import ProjectDeploymentWorkflowListItemDropdownMenu from '@/pages/automation/project-deployments/components/project-deployment-workflow-list/ProjectDeploymentWorkflowListItemDropdownMenu';
+import {getPageUrl} from '@/pages/automation/project-deployments/components/project-deployment-workflow-list/util/pageUrl-utils';
+import useProjectDeploymentWorkflowSheetStore from '@/pages/automation/project-deployments/stores/useProjectDeploymentWorkflowSheetStore';
+import useWorkflowExecutionSheetStore from '@/pages/automation/workflow-executions/stores/useWorkflowExecutionSheetStore';
+import WorkflowTriggerAndComponentsRow from '@/shared/components/workflow/WorkflowTriggerAndComponentsRow';
+import {ProjectDeploymentApi, ProjectDeploymentWorkflow, Workflow} from '@/shared/middleware/automation/configuration';
+import {ComponentDefinitionBasic} from '@/shared/middleware/platform/configuration';
+import {useEnableProjectDeploymentWorkflowMutation} from '@/shared/mutations/automation/projectDeploymentWorkflows.mutations';
+import {ProjectDeploymentKeys} from '@/shared/queries/automation/projectDeployments.queries';
+import {useQueryClient} from '@tanstack/react-query';
+import {useCopyToClipboard} from '@uidotdev/usehooks';
+import {ClipboardIcon, FormIcon, MessageCircleMoreIcon, PlayIcon} from 'lucide-react';
+import {MouseEvent, useState} from 'react';
+import {useNavigate} from 'react-router-dom';
+import {toast} from 'sonner';
+import {twMerge} from 'tailwind-merge';
+
+const projectDeploymentApi = new ProjectDeploymentApi();
+
+interface ProjectDeploymentWorkflowListItemProps {
+    environmentId: number;
+    filteredComponentNames?: string[];
+    projectDeploymentEnabled: boolean;
+    projectDeploymentId: number;
+    projectDeploymentWorkflow: ProjectDeploymentWorkflow;
+    projectName?: string;
+    projectVersion?: number;
+    workflow: Workflow;
+    workflowComponentDefinitions: {
+        [key: string]: ComponentDefinitionBasic | undefined;
+    };
+    workflowTaskDispatcherDefinitions: {
+        [key: string]: ComponentDefinitionBasic | undefined;
+    };
+}
+
+const ProjectDeploymentWorkflowListItem = ({
+    environmentId,
+    filteredComponentNames,
+    projectDeploymentEnabled,
+    projectDeploymentId,
+    projectDeploymentWorkflow,
+    projectName,
+    projectVersion,
+    workflow,
+    workflowComponentDefinitions,
+    workflowTaskDispatcherDefinitions,
+}: ProjectDeploymentWorkflowListItemProps) => {
+    const [showEditWorkflowDialog, setShowEditWorkflowDialog] = useState(false);
+
+    const openProjectDeploymentWorkflowSheet = useProjectDeploymentWorkflowSheetStore(
+        (state) => state.openProjectDeploymentWorkflowSheet
+    );
+    const setWorkflowExecutionSheetOpen = useWorkflowExecutionSheetStore(
+        (state) => state.setWorkflowExecutionSheetOpen
+    );
+
+    /* eslint-disable @typescript-eslint/no-unused-vars */
+    const [_, copyToClipboard] = useCopyToClipboard();
+    const navigate = useNavigate();
+    const queryClient = useQueryClient();
+
+    const {enabled, lastExecutionDate, lastExecutionStatus, staticWebhookUrl} = projectDeploymentWorkflow;
+
+    const formTrigger =
+        workflow.triggers && workflow.triggers.findIndex((trigger) => trigger.type.includes('form/')) !== -1;
+
+    const formTriggerPageUrl = getPageUrl('form', environmentId, staticWebhookUrl);
+
+    const hostedChatTrigger =
+        workflow.triggers &&
+        workflow.triggers.findIndex((trigger) => trigger.type.includes('chat/')) !== -1 &&
+        (workflow.triggers?.[0]?.parameters?.mode ?? 1) === 1;
+
+    const hostedChatTriggerPageUrl = getPageUrl('chats', undefined, staticWebhookUrl);
+
+    const enableProjectDeploymentWorkflowMutation = useEnableProjectDeploymentWorkflowMutation({
+        onSuccess: () => {
+            queryClient.invalidateQueries({
+                queryKey: ProjectDeploymentKeys.projectDeployments,
+            });
+        },
+    });
+
+    const handleWorkflowClick = () => {
+        if (workflow) {
+            setWorkflowExecutionSheetOpen(false);
+
+            openProjectDeploymentWorkflowSheet({projectDeploymentId, projectName, projectVersion, workflow});
+        }
+    };
+
+    const handleRunWorkflowClick = (event: MouseEvent<HTMLButtonElement>) => {
+        event?.stopPropagation();
+
+        projectDeploymentApi
+            .createProjectDeploymentWorkflowJob({
+                id: projectDeploymentId,
+                workflowId: workflow.id!,
+            })
+            .then(() => toast('Workflow request sent.'));
+    };
+
+    interface HandleEnableProjectDeploymentWorkflowProps {
+        projectDeploymentId: number;
+        value: boolean;
+        workflowId: string;
+    }
+
+    const handleEnableProjectDeploymentWorkflow = ({
+        projectDeploymentId,
+        value,
+        workflowId,
+    }: HandleEnableProjectDeploymentWorkflowProps) => {
+        enableProjectDeploymentWorkflowMutation.mutate(
+            {
+                enable: value,
+                id: projectDeploymentId,
+                workflowId: workflowId,
+            },
+            {
+                onSuccess: () => {
+                    projectDeploymentWorkflow.enabled = !projectDeploymentWorkflow?.enabled;
+                },
+            }
+        );
+    };
+
+    return (
+        <li className="flex items-center justify-between rounded-md px-3 py-1 hover:bg-surface-neutral-primary-hover">
+            <div className="flex min-w-0 flex-1 cursor-pointer items-center" onClick={handleWorkflowClick}>
+                <div className="flex w-full max-w-80 min-w-0 shrink flex-col gap-1">
+                    <Tooltip>
+                        <TooltipTrigger className="line-clamp-1 w-full truncate text-start">
+                            <span
+                                className={twMerge(
+                                    'block truncate text-sm font-semibold',
+                                    !enabled && 'text-content-neutral-secondary'
+                                )}
+                            >
+                                {workflow.label}
+                            </span>
+                        </TooltipTrigger>
+
+                        <TooltipContent align="start" className="max-w-md break-all">
+                            {workflow.label}
+                        </TooltipContent>
+                    </Tooltip>
+
+                    <div className="flex gap-x-6 xl:hidden">
+                        {projectDeploymentWorkflow?.lastExecutionDate ? (
+                            <Tooltip>
+                                <TooltipTrigger
+                                    className={twMerge(
+                                        'flex items-center text-xs text-content-neutral-secondary',
+                                        lastExecutionStatus === 'FAILED' && 'text-content-destructive-primary'
+                                    )}
+                                >
+                                    <span className="pr-1 text-xs capitalize">
+                                        {lastExecutionStatus?.toLocaleLowerCase() || ''}
+                                    </span>
+
+                                    <span className="text-xs">
+                                        {`at ${lastExecutionDate?.toLocaleDateString()} ${lastExecutionDate?.toLocaleTimeString()}`}
+                                    </span>
+                                </TooltipTrigger>
+
+                                <TooltipContent>Last Execution Date</TooltipContent>
+                            </Tooltip>
+                        ) : (
+                            <span className="flex items-center text-xs text-content-neutral-secondary">
+                                No executions
+                            </span>
+                        )}
+                    </div>
+                </div>
+
+                <div className="ml-6 flex items-center gap-1">
+                    <WorkflowTriggerAndComponentsRow
+                        className="hidden sm:flex"
+                        filteredComponentNames={filteredComponentNames}
+                        workflow={workflow}
+                        workflowComponentDefinitions={workflowComponentDefinitions}
+                        workflowTaskDispatcherDefinitions={workflowTaskDispatcherDefinitions}
+                    />
+                </div>
+            </div>
+
+            <div className="flex shrink-0 items-center gap-x-4">
+                <div className="hidden xl:block">
+                    {projectDeploymentWorkflow?.lastExecutionDate ? (
+                        <Tooltip>
+                            <TooltipTrigger
+                                className={twMerge(
+                                    'flex items-center text-sm text-content-neutral-secondary',
+                                    lastExecutionStatus === 'FAILED' && 'text-content-destructive-primary'
+                                )}
+                            >
+                                <span className="pr-1 text-xs capitalize">
+                                    {lastExecutionStatus?.toLocaleLowerCase() || ''}
+                                </span>
+
+                                <span className="text-xs">
+                                    {`at ${lastExecutionDate?.toLocaleDateString()} ${lastExecutionDate?.toLocaleTimeString()}`}
+                                </span>
+                            </TooltipTrigger>
+
+                            <TooltipContent>Last Execution Date</TooltipContent>
+                        </Tooltip>
+                    ) : (
+                        <span className="text-xs">No executions</span>
+                    )}
+                </div>
+
+                <div className="flex items-center gap-x-6">
+                    <div className="min-w-[36px]">
+                        {(!workflow.triggers?.length ||
+                            workflow.triggers?.some((trigger) => trigger.type.includes('manual'))) && (
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button
+                                        disabled={!projectDeploymentEnabled || !enabled}
+                                        icon={<PlayIcon className="text-success" />}
+                                        onClick={handleRunWorkflowClick}
+                                        size="icon"
+                                        variant="ghost"
+                                    />
+                                </TooltipTrigger>
+
+                                <TooltipContent>Run workflow manually</TooltipContent>
+                            </Tooltip>
+                        )}
+
+                        {!hostedChatTrigger && !formTrigger && staticWebhookUrl && (
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button
+                                        disabled={!enabled}
+                                        icon={<ClipboardIcon />}
+                                        onClick={() =>
+                                            copyToClipboard(
+                                                staticWebhookUrl! + (workflow.sseStreamResponse ? '/sse' : '')
+                                            )
+                                        }
+                                        size="icon"
+                                        variant="ghost"
+                                    />
+                                </TooltipTrigger>
+
+                                <TooltipContent>Copy static workflow webhook trigger url</TooltipContent>
+                            </Tooltip>
+                        )}
+
+                        {formTrigger && staticWebhookUrl && (
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button
+                                        disabled={!enabled}
+                                        icon={<FormIcon />}
+                                        onClick={() => navigate(formTriggerPageUrl)}
+                                        size="icon"
+                                        variant="ghost"
+                                    />
+                                </TooltipTrigger>
+
+                                <TooltipContent>Click to open a form</TooltipContent>
+                            </Tooltip>
+                        )}
+
+                        {hostedChatTrigger && staticWebhookUrl && (
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button
+                                        disabled={!enabled}
+                                        icon={<MessageCircleMoreIcon />}
+                                        onClick={() => window.open(hostedChatTriggerPageUrl, '_self')}
+                                        size="icon"
+                                        variant="ghost"
+                                    />
+                                </TooltipTrigger>
+
+                                <TooltipContent>Open hosted chat (URL is not copied)</TooltipContent>
+                            </Tooltip>
+                        )}
+                    </div>
+
+                    <div className="relative flex items-center">
+                        {enableProjectDeploymentWorkflowMutation.isPending && (
+                            <LoadingIcon className="absolute top-[3px] left-[-15px]" />
+                        )}
+
+                        <Switch
+                            checked={enabled}
+                            className="mr-2"
+                            disabled={enableProjectDeploymentWorkflowMutation.isPending}
+                            onCheckedChange={(value) =>
+                                handleEnableProjectDeploymentWorkflow({
+                                    projectDeploymentId,
+                                    value,
+                                    workflowId: workflow.id!,
+                                })
+                            }
+                            onClick={(event) => event.stopPropagation()}
+                        />
+                    </div>
+                </div>
+
+                <ProjectDeploymentWorkflowListItemDropdownMenu
+                    onEditClick={() => setShowEditWorkflowDialog(true)}
+                    workflow={workflow}
+                />
+            </div>
+
+            {showEditWorkflowDialog && projectDeploymentWorkflow && (
+                <ProjectDeploymentEditWorkflowDialog
+                    onClose={() => setShowEditWorkflowDialog(false)}
+                    projectDeploymentWorkflow={projectDeploymentWorkflow}
+                    workflow={workflow}
+                />
+            )}
+        </li>
+    );
+};
+
+export default ProjectDeploymentWorkflowListItem;

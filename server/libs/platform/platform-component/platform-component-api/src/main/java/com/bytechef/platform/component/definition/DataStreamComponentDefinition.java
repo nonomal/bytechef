@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,20 +16,20 @@
 
 package com.bytechef.platform.component.definition;
 
+import static com.bytechef.component.definition.datastream.ItemReader.SOURCE;
+import static com.bytechef.component.definition.datastream.ItemWriter.DESTINATION;
+import static com.bytechef.platform.component.definition.datastream.ItemProcessor.PROCESSOR;
+
+import com.bytechef.component.definition.ClusterElementDefinition;
+import java.util.List;
+
 /**
  * @author Ivica Cardic
  */
-public interface DataStreamComponentDefinition extends PlatformComponentDefinition {
+public interface DataStreamComponentDefinition extends ClusterRootComponentDefinition {
 
-    /**
-     *
-     */
-    String DATA_STREAM = "dataStream";
-
-    /**
-     *
-     */
-    enum ComponentType {
-        SOURCE, DESTINATION
+    @Override
+    default List<ClusterElementDefinition.ClusterElementType> getClusterElementTypes() {
+        return List.of(SOURCE, DESTINATION, PROCESSOR);
     }
 }

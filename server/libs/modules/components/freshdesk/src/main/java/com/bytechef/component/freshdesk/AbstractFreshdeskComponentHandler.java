@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,13 +16,15 @@
 
 package com.bytechef.component.freshdesk;
 
-import static com.bytechef.component.definition.ComponentDSL.component;
+import static com.bytechef.component.definition.ComponentDsl.component;
+import static com.bytechef.component.definition.ComponentDsl.tool;
 
 import com.bytechef.component.OpenApiComponentHandler;
 import com.bytechef.component.definition.ComponentDefinition;
 import com.bytechef.component.freshdesk.action.FreshdeskCreateCompanyAction;
 import com.bytechef.component.freshdesk.action.FreshdeskCreateContactAction;
 import com.bytechef.component.freshdesk.action.FreshdeskCreateTicketAction;
+import com.bytechef.component.freshdesk.action.FreshdeskUpdateTicketAction;
 import com.bytechef.component.freshdesk.connection.FreshdeskConnection;
 
 /**
@@ -35,11 +37,17 @@ public abstract class AbstractFreshdeskComponentHandler implements OpenApiCompon
         component("freshdesk")
             .title("Freshdesk")
             .description(
-                "Freshdesk is a cloud-based customer support software that helps businesses manage customer queries and tickets efficiently."))
-                    .actions(modifyActions(FreshdeskCreateCompanyAction.ACTION_DEFINITION,
-                        FreshdeskCreateContactAction.ACTION_DEFINITION, FreshdeskCreateTicketAction.ACTION_DEFINITION))
-                    .connection(modifyConnection(FreshdeskConnection.CONNECTION_DEFINITION))
-                    .triggers(getTriggers());
+                "Freshdesk is a cloud-based customer support software that helps businesses manage customer queries and tickets efficiently.")
+            .version(1))
+                .actions(modifyActions(FreshdeskCreateCompanyAction.ACTION_DEFINITION,
+                    FreshdeskCreateContactAction.ACTION_DEFINITION, FreshdeskCreateTicketAction.ACTION_DEFINITION,
+                    FreshdeskUpdateTicketAction.ACTION_DEFINITION))
+                .connection(modifyConnection(FreshdeskConnection.CONNECTION_DEFINITION))
+                .clusterElements(modifyClusterElements(tool(FreshdeskCreateCompanyAction.ACTION_DEFINITION),
+                    tool(FreshdeskCreateContactAction.ACTION_DEFINITION),
+                    tool(FreshdeskCreateTicketAction.ACTION_DEFINITION),
+                    tool(FreshdeskUpdateTicketAction.ACTION_DEFINITION)))
+                .triggers(getTriggers());
 
     @Override
     public ComponentDefinition getDefinition() {

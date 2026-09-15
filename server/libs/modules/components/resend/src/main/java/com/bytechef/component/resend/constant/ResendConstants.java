@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,10 +16,10 @@
 
 package com.bytechef.component.resend.constant;
 
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.definition.ComponentDsl.string;
 
-import com.bytechef.component.definition.ComponentDSL.ModifiableStringProperty;
-import com.bytechef.component.definition.Property;
+import com.bytechef.component.definition.ComponentDsl.ModifiableStringProperty;
+import com.bytechef.component.definition.Property.ControlType;
 
 /**
  * @author Monika Domiter
@@ -30,19 +30,16 @@ public final class ResendConstants {
     }
 
     public static final String ATTACHMENTS = "attachments";
-    public static final String BASE_URL = "https://api.resend.com";
     public static final String BCC = "bcc";
     public static final String CC = "cc";
     public static final String CONTENT_TYPE = "contentType";
     public static final String EMAIL = "email";
-    public static final String EMAIL_ADDRESS = "Email address";
     public static final String FROM = "from";
     public static final String HEADERS = "headers";
     public static final String HTML = "html";
+    public static final String ID = "id";
     public static final String NAME = "name";
     public static final String REPLY_TO = "reply_to";
-    public static final String RESEND = "resend";
-    public static final String SEND_EMAIL = "sendEmail";
     public static final String SUBJECT = "subject";
     public static final String TAGS = "tags";
     public static final String TEXT = "text";
@@ -50,6 +47,6 @@ public final class ResendConstants {
     public static final String VALUE = "value";
 
     public static final ModifiableStringProperty EMAIL_PROPERTY = string(EMAIL)
-        .label(EMAIL_ADDRESS)
-        .controlType(Property.ControlType.EMAIL);
+        .label("Email Address")
+        .controlType(ControlType.EMAIL);
 }

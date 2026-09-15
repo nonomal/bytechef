@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 
 package com.bytechef.tenant.service;
 
+import com.bytechef.tenant.constant.Tenancy;
 import java.util.List;
 
 /**
@@ -39,7 +40,7 @@ public interface TenantService {
 
     boolean isMultiTenantEnabled();
 
-    void loadChangelog(List<String> tenantIds, String contexts);
+    void loadChangelog(List<String> tenantIds, Tenancy tenancy);
 
     boolean tenantIdsByUserEmailExist(String email);
 

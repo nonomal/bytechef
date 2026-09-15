@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,9 @@ package com.bytechef.automation.configuration.web.rest.mapper;
 import com.bytechef.automation.configuration.domain.Workspace;
 import com.bytechef.automation.configuration.web.rest.mapper.config.AutomationConfigurationMapperSpringConfig;
 import com.bytechef.automation.configuration.web.rest.model.WorkspaceModel;
+import org.mapstruct.InheritInverseConfiguration;
 import org.mapstruct.Mapper;
+import org.mapstruct.extensions.spring.DelegatingConverter;
 import org.springframework.core.convert.converter.Converter;
 
 /**
@@ -30,4 +32,8 @@ public interface WorkspaceMapper extends Converter<Workspace, WorkspaceModel> {
 
     @Override
     WorkspaceModel convert(Workspace workspace);
+
+    @InheritInverseConfiguration
+    @DelegatingConverter
+    Workspace invertConvert(WorkspaceModel workspaceModel);
 }

@@ -1,39 +1,136 @@
 import {
-    DeleteWorkflowNodeParameter200ResponseModel,
+    DeleteClusterElementParameter200Response,
+    DeleteClusterElementParameterOperationRequest,
     DeleteWorkflowNodeParameterRequest,
 } from '@/shared/middleware/platform/configuration';
+import {environmentStore} from '@/shared/stores/useEnvironmentStore';
+import {UseMutationResult} from '@tanstack/react-query';
+
+import useWorkflowDataStore from '../stores/useWorkflowDataStore';
+import useWorkflowEditorStore from '../stores/useWorkflowEditorStore';
+import useWorkflowNodeDetailsPanelStore from '../stores/useWorkflowNodeDetailsPanelStore';
+import {decodePath} from './encodingUtils';
+import {enqueueWorkflowMutation} from './workflowMutationQueue';
 
 export default function deleteProperty(
     workflowId: string,
     path: string,
-    currentComponent: ComponentType,
-    setCurrentComponent: (currentComponent: ComponentType) => void,
     deleteWorkflowNodeParameterMutation: UseMutationResult<
-        DeleteWorkflowNodeParameter200ResponseModel,
+        DeleteClusterElementParameter200Response,
         Error,
         DeleteWorkflowNodeParameterRequest,
         unknown
+    >,
+    deleteClusterElementParameterMutation?: UseMutationResult<
+        DeleteClusterElementParameter200Response,
+        Error,
+        DeleteClusterElementParameterOperationRequest,
+        unknown
     >
 ) {
-    const {workflowNodeName} = currentComponent;
+    const currentNode = useWorkflowNodeDetailsPanelStore.getState().currentNode;
+    const rootClusterElementNodeData = useWorkflowEditorStore.getState().rootClusterElementNodeData;
 
-    deleteWorkflowNodeParameterMutation.mutate(
-        {
-            deleteWorkflowNodeParameterRequestModel: {
-                path,
-                workflowNodeName,
-            },
-            id: workflowId,
-        },
-        {
-            onSuccess: (response) =>
-                setCurrentComponent({
-                    ...currentComponent,
-                    parameters: response.parameters,
-                }),
+    const decodedPath = decodePath(path);
+
+    if (!currentNode) {
+        console.error('No current node found in the store');
+
+        return;
+    }
+
+    if (currentNode?.clusterElementType) {
+        if (!deleteClusterElementParameterMutation) {
+            return;
         }
+
+        const clusterElementType = currentNode.clusterElementType;
+        const clusterElementWorkflowNodeName = currentNode.workflowNodeName;
+
+        enqueueWorkflowMutation(() =>
+            deleteClusterElementParameterMutation.mutateAsync(
+                {
+                    clusterElementType,
+                    clusterElementWorkflowNodeName,
+                    deleteClusterElementParameterRequest: {
+                        path: decodedPath,
+                    },
+                    environmentId: environmentStore.getState().currentEnvironmentId,
+                    id: workflowId,
+                    workflowNodeName: rootClusterElementNodeData?.workflowNodeName || '',
+                },
+                {
+                    onError: (error) => {
+                        console.error('Failed to delete cluster element parameter:', error);
+                    },
+                    onSuccess: (response) => {
+                        const {setCurrentNode} = useWorkflowNodeDetailsPanelStore.getState();
+
+                        setCurrentNode({
+                            ...currentNode,
+                            displayConditions: response.displayConditions,
+                            metadata: response.metadata,
+                            parameters: response.parameters,
+                        });
+
+                        if (response.parameters) {
+                            useWorkflowDataStore
+                                .getState()
+                                .updateWorkflowNodeParameters(
+                                    clusterElementWorkflowNodeName,
+                                    response.parameters,
+                                    response.version,
+                                    response.metadata as Record<string, unknown> | undefined
+                                );
+                        }
+                    },
+                }
+            )
+        );
+
+        return;
+    }
+
+    const nodeWorkflowNodeName = rootClusterElementNodeData?.workflowNodeName || currentNode?.workflowNodeName || '';
+
+    enqueueWorkflowMutation(() =>
+        deleteWorkflowNodeParameterMutation.mutateAsync(
+            {
+                deleteClusterElementParameterRequest: {
+                    path: decodedPath,
+                },
+                environmentId: environmentStore.getState().currentEnvironmentId,
+                id: workflowId,
+                workflowNodeName: nodeWorkflowNodeName,
+            },
+            {
+                onError: (error) => {
+                    console.error('Failed to delete workflow node parameter:', error);
+                },
+                onSuccess: (response) => {
+                    const {setCurrentNode} = useWorkflowNodeDetailsPanelStore.getState();
+
+                    if (currentNode) {
+                        setCurrentNode({
+                            ...currentNode,
+                            displayConditions: response.displayConditions,
+                            metadata: response.metadata,
+                            parameters: response.parameters,
+                        });
+                    }
+
+                    if (response.parameters) {
+                        useWorkflowDataStore
+                            .getState()
+                            .updateWorkflowNodeParameters(
+                                nodeWorkflowNodeName,
+                                response.parameters,
+                                response.version,
+                                response.metadata as Record<string, unknown> | undefined
+                            );
+                    }
+                },
+            }
+        )
     );
 }
-
-import {ComponentType} from '@/shared/types';
-import {UseMutationResult} from '@tanstack/react-query';

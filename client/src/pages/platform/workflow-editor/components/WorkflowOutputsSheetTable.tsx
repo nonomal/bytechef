@@ -1,3 +1,4 @@
+import Button from '@/components/Button/Button';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -8,51 +9,39 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import {Button} from '@/components/ui/button';
 import {Table, TableBody, TableCell, TableHead, TableHeader, TableRow} from '@/components/ui/table';
 import WorkflowOutputsSheetDialog from '@/pages/platform/workflow-editor/components/WorkflowOutputsSheetDialog';
-import {useWorkflowMutation} from '@/pages/platform/workflow-editor/providers/workflowMutationProvider';
-import {WorkflowInputModel, WorkflowModel} from '@/shared/middleware/platform/configuration';
+import {useWorkflowEditor} from '@/pages/platform/workflow-editor/providers/workflowEditorProvider';
+import {Workflow, WorkflowInput} from '@/shared/middleware/platform/configuration';
 import {WorkflowDefinitionType} from '@/shared/types';
 import {CableIcon, EditIcon, Trash2Icon} from 'lucide-react';
 import {useState} from 'react';
 
 import useWorkflowDataStore from '../stores/useWorkflowDataStore';
+import saveWorkflowDefinitionUpdate from '../utils/saveWorkflowDefinitionUpdate';
 import WorkflowOutputValue from './WorkflowOutputValue';
 
-const SPACE = 4;
-
-const WorkflowOutputsSheetTable = ({workflow}: {workflow: WorkflowModel}) => {
+const WorkflowOutputsSheetTable = ({workflow}: {workflow: Workflow}) => {
     const [currentInputIndex, setCurrentInputIndex] = useState<number>(-1);
     const [showEditDialog, setShowEditDialog] = useState(false);
     const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
-    const {updateWorkflowMutation} = useWorkflowMutation();
+    const componentDefinitions = useWorkflowDataStore((state) => state.componentDefinitions);
 
-    const {componentDefinitions} = useWorkflowDataStore();
+    const {updateWorkflowMutation} = useWorkflowEditor();
 
-    function handleDelete(input: WorkflowInputModel) {
-        const definitionObject: WorkflowDefinitionType = JSON.parse(workflow.definition!);
+    function handleDelete(input: WorkflowInput) {
+        saveWorkflowDefinitionUpdate({
+            updateDefinition: (workflowDefinition: WorkflowDefinitionType) => {
+                const outputs = workflowDefinition.outputs ?? [];
 
-        const outputs: WorkflowInputModel[] = definitionObject.outputs ?? [];
+                if (!outputs.some((output) => output.name === input.name)) {
+                    return undefined;
+                }
 
-        const index = outputs.findIndex((curInput) => curInput.name === input.name);
-
-        outputs.splice(index, 1);
-
-        updateWorkflowMutation.mutate({
-            id: workflow.id!,
-            workflowModel: {
-                definition: JSON.stringify(
-                    {
-                        ...definitionObject,
-                        outputs,
-                    },
-                    null,
-                    SPACE
-                ),
-                version: workflow.version,
+                return {...workflowDefinition, outputs: outputs.filter((output) => output.name !== input.name)};
             },
+            updateWorkflowMutation: updateWorkflowMutation!,
         });
 
         setShowDeleteDialog(false);
@@ -61,15 +50,15 @@ const WorkflowOutputsSheetTable = ({workflow}: {workflow: WorkflowModel}) => {
     return (
         <>
             {workflow.outputs && workflow.outputs.length > 0 ? (
-                <Table>
+                <Table className="table-fixed">
                     <TableHeader>
-                        <TableRow>
-                            <TableHead>Name</TableHead>
+                        <TableRow className="border-b-border/50">
+                            <TableHead className="w-[25%] truncate">Name</TableHead>
 
-                            <TableHead>Value</TableHead>
+                            <TableHead className="w-[60%] truncate">Value</TableHead>
 
-                            <TableHead>
-                                <span className="sr-only">Edit</span>
+                            <TableHead className="w-[15%]">
+                                <span className="sr-only">Actions</span>
                             </TableHead>
                         </TableRow>
                     </TableHeader>
@@ -77,10 +66,12 @@ const WorkflowOutputsSheetTable = ({workflow}: {workflow: WorkflowModel}) => {
                     <TableBody>
                         {workflow.outputs &&
                             workflow.outputs.map((output, index) => (
-                                <TableRow key={output.name}>
-                                    <TableCell>{output.name}</TableCell>
+                                <TableRow className="cursor-pointer border-b-border/50" key={output.name}>
+                                    <TableCell className="truncate" title={output.name}>
+                                        {output.name}
+                                    </TableCell>
 
-                                    <TableCell>
+                                    <TableCell className="overflow-hidden" title={output.value.toString()}>
                                         <WorkflowOutputValue
                                             componentDefinitions={componentDefinitions}
                                             value={output.value.toString()}
@@ -89,26 +80,24 @@ const WorkflowOutputsSheetTable = ({workflow}: {workflow: WorkflowModel}) => {
 
                                     <TableCell className="flex justify-end">
                                         <Button
+                                            icon={<EditIcon />}
                                             onClick={() => {
                                                 setCurrentInputIndex(index);
                                                 setShowEditDialog(true);
                                             }}
                                             size="icon"
                                             variant="ghost"
-                                        >
-                                            <EditIcon className="size-4" />
-                                        </Button>
+                                        />
 
                                         <Button
+                                            icon={<Trash2Icon className="text-destructive" />}
                                             onClick={() => {
                                                 setCurrentInputIndex(index);
                                                 setShowDeleteDialog(true);
                                             }}
                                             size="icon"
                                             variant="ghost"
-                                        >
-                                            <Trash2Icon className="h-4 text-destructive" />
-                                        </Button>
+                                        />
                                     </TableCell>
                                 </TableRow>
                             ))}
@@ -121,11 +110,13 @@ const WorkflowOutputsSheetTable = ({workflow}: {workflow: WorkflowModel}) => {
 
                         <h3 className="mt-2 text-sm font-semibold">No outputs</h3>
 
-                        <p className="mt-1 text-sm text-gray-500">Get started by creating a new input.</p>
+                        <p className="mt-1 text-sm text-content-neutral-secondary">
+                            Get started by creating a new input.
+                        </p>
 
                         <div className="mt-6">
                             <WorkflowOutputsSheetDialog
-                                triggerNode={<Button size="sm">New Output</Button>}
+                                triggerNode={<Button label="New Output" size="sm" />}
                                 workflow={workflow}
                             />
                         </div>

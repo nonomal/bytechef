@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,17 +16,20 @@
 
 package com.bytechef.component.jira.util;
 
+import static com.bytechef.component.jira.constant.JiraConstants.CONTENT;
+import static com.bytechef.component.jira.constant.JiraConstants.DESCRIPTION;
 import static com.bytechef.component.jira.constant.JiraConstants.ID;
 import static com.bytechef.component.jira.constant.JiraConstants.ISSUETYPE;
 import static com.bytechef.component.jira.constant.JiraConstants.NAME;
 import static com.bytechef.component.jira.constant.JiraConstants.PROJECT;
+import static com.bytechef.component.jira.constant.JiraConstants.TEXT;
+import static com.bytechef.component.jira.constant.JiraConstants.TYPE;
 
-import com.bytechef.component.definition.ActionContext;
 import com.bytechef.component.definition.Context;
 import com.bytechef.component.definition.Context.Http;
-import com.bytechef.component.definition.Context.TypeReference;
 import com.bytechef.component.definition.Parameters;
 import com.bytechef.component.definition.TriggerContext;
+import com.bytechef.component.definition.TypeReference;
 import com.bytechef.component.exception.ProviderException;
 import java.util.List;
 import java.util.Map;
@@ -39,28 +42,24 @@ public class JiraUtils {
     private JiraUtils() {
     }
 
-    public static String getBaseUrl(Context context) {
-        List<?> body = context
-            .http(http -> http.get("https://api.atlassian.com/oauth/token/accessible-resources"))
-            .configuration(Http.responseType(Http.ResponseType.JSON))
-            .execute()
-            .getBody(new TypeReference<>() {});
-
-        Object object = body.getFirst();
-
-        if (object instanceof Map<?, ?> map) {
-            return "https://api.atlassian.com/ex/jira/" + map.get(ID) + "/rest/api/3";
+    public static void addDescriptionField(Map<String, Object> project, String description) {
+        if (description != null) {
+            project.put(DESCRIPTION, Map.of(
+                CONTENT, List.of(
+                    Map.of(
+                        CONTENT, List.of(
+                            Map.of(
+                                TEXT, description,
+                                TYPE, TEXT)),
+                        TYPE, "paragraph")),
+                TYPE, "doc",
+                "version", 1));
         }
-
-        return null;
     }
 
-    public static String getProjectName(
-        Parameters inputParameters, Parameters connectionParameters, ActionContext context) {
-
+    public static String getProjectName(Parameters inputParameters, Context context) {
         Map<String, Object> body = context
-            .http(http -> http.get(
-                getBaseUrl(context) + "/project/" + inputParameters.getRequiredString(PROJECT)))
+            .http(http -> http.get("/project/" + inputParameters.getRequiredString(PROJECT)))
             .configuration(Http.responseType(Http.ResponseType.JSON))
             .execute()
             .getBody(new TypeReference<>() {});
@@ -71,10 +70,10 @@ public class JiraUtils {
     public static Integer subscribeWebhook(
         Parameters inputParameters, String webhookUrl, TriggerContext context, String event) {
 
-        StringBuilder jqlFitler = new StringBuilder(PROJECT + " = " + inputParameters.getRequiredString(PROJECT));
+        StringBuilder jqlFilter = new StringBuilder(PROJECT + " = " + inputParameters.getRequiredString(PROJECT));
 
         if (inputParameters.getString(ISSUETYPE) != null) {
-            jqlFitler
+            jqlFilter
                 .append(" AND ")
                 .append(ISSUETYPE)
                 .append(" = ")
@@ -82,13 +81,13 @@ public class JiraUtils {
         }
 
         Map<String, ?> body = context
-            .http(http -> http.post(getBaseUrl(context) + "/webhook"))
+            .http(http -> http.post("/webhook"))
             .body(Http.Body.of(
                 "url", webhookUrl,
                 "webhooks", List.of(
                     Map.of(
                         "events", List.of(event),
-                        "jqlFilter", jqlFitler.toString()))))
+                        "jqlFilter", jqlFilter.toString()))))
             .configuration(Http.responseType(Http.ResponseType.JSON))
             .execute()
             .getBody(new TypeReference<>() {});
@@ -107,7 +106,7 @@ public class JiraUtils {
     public static void unsubscribeWebhook(Parameters outputParameters, TriggerContext context) {
 
         context
-            .http(http -> http.delete(getBaseUrl(context) + "/webhook"))
+            .http(http -> http.delete("/webhook"))
             .body(Http.Body.of("webhookIds", List.of(outputParameters.getInteger(ID))))
             .configuration(Http.responseType(Http.ResponseType.JSON))
             .execute();

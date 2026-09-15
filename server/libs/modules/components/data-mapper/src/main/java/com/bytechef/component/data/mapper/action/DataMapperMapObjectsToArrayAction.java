@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,15 +20,17 @@ import static com.bytechef.component.data.mapper.constant.DataMapperConstants.FI
 import static com.bytechef.component.data.mapper.constant.DataMapperConstants.INPUT;
 import static com.bytechef.component.data.mapper.constant.DataMapperConstants.INPUT_TYPE;
 import static com.bytechef.component.data.mapper.constant.DataMapperConstants.VALUE_KEY;
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.array;
-import static com.bytechef.component.definition.ComponentDSL.integer;
-import static com.bytechef.component.definition.ComponentDSL.object;
-import static com.bytechef.component.definition.ComponentDSL.option;
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.data.mapper.constant.InputType.ARRAY;
+import static com.bytechef.component.data.mapper.constant.InputType.OBJECT;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.array;
+import static com.bytechef.component.definition.ComponentDsl.object;
+import static com.bytechef.component.definition.ComponentDsl.option;
+import static com.bytechef.component.definition.ComponentDsl.string;
 
-import com.bytechef.component.definition.ActionContext;
-import com.bytechef.component.definition.ComponentDSL.ModifiableActionDefinition;
+import com.bytechef.component.data.mapper.constant.InputType;
+import com.bytechef.component.definition.ComponentDsl.ModifiableActionDefinition;
+import com.bytechef.component.definition.Context;
 import com.bytechef.component.definition.Parameters;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -42,51 +44,54 @@ import java.util.Map;
 public class DataMapperMapObjectsToArrayAction {
 
     public static final ModifiableActionDefinition ACTION_DEFINITION = action("mapObjectsToArray")
-        .title("Map objects to array")
+        .title("Map Objects to Array")
         .description("Transform an object or array of objects into an array of key-value pairs.")
         .properties(
-            integer(INPUT_TYPE)
-                .label("Input type")
+            string(INPUT_TYPE)
+                .label("Input Type")
                 .description("Type of the input. Cam be an object or an array of objects.")
                 .options(
-                    option("Object", 1),
-                    option("Array", 2))
+                    option("Object", OBJECT.name()),
+                    option("Array", ARRAY.name()))
                 .required(true),
             object(INPUT)
                 .label("Input")
                 .description("An input object containing one or more properties.")
-                .displayCondition("inputType == 1")
+                .displayCondition("inputType == '%s'".formatted(OBJECT.name()))
                 .required(true),
             array(INPUT)
                 .label("Input")
                 .description("An input array containing one or more objects.")
-                .displayCondition("inputType == 2")
+                .displayCondition("inputType == '%s'".formatted(ARRAY.name()))
                 .items(object())
                 .required(true),
             string(FIELD_KEY)
-                .label("Field key")
+                .label("Field Key")
                 .description(
-                    "Property key of each newly created object in the array. Its property value will be a property key from the input.")
+                    "Property key of each newly created object in the array. Its property value will be a property " +
+                        "key from the input.")
                 .required(true),
             string(VALUE_KEY)
-                .label("Value key")
+                .label("Value Key")
                 .description(
-                    "Property key of each newly created object in the array. Its property value will be a property value from the input.")
+                    "Property key of each newly created object in the array. Its property value will be a property " +
+                        "value from the input.")
                 .required(true))
         .output()
+        .help("", "https://docs.bytechef.io/reference/components/data-mapper_v1#map-objects-to-array")
         .perform(DataMapperMapObjectsToArrayAction::perform);
 
     private DataMapperMapObjectsToArrayAction() {
     }
 
     @SuppressWarnings("unchecked")
-    protected static List<Map<String, Object>> perform(
-        Parameters inputParameters, Parameters connectionParameters, ActionContext context) {
+    public static List<Map<String, Object>> perform(
+        Parameters inputParameters, Parameters connectionParameters, Context context) {
 
         List<Map<String, Object>> output = new ArrayList<>();
-        Integer inoutType = inputParameters.getInteger(INPUT_TYPE);
+        InputType inputType = inputParameters.get(INPUT_TYPE, InputType.class);
 
-        if (inoutType != null && inoutType.equals(1)) {
+        if (inputType == OBJECT) {
             Map<String, Object> input = inputParameters.getMap(INPUT, Object.class, new HashMap<>());
 
             fillOutput(inputParameters, input, output);

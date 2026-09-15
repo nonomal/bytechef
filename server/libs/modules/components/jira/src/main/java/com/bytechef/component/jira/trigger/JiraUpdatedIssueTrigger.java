@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,26 +16,26 @@
 
 package com.bytechef.component.jira.trigger;
 
-import static com.bytechef.component.definition.ComponentDSL.ModifiableTriggerDefinition;
-import static com.bytechef.component.definition.ComponentDSL.string;
-import static com.bytechef.component.definition.ComponentDSL.trigger;
+import static com.bytechef.component.definition.ComponentDsl.ModifiableTriggerDefinition;
+import static com.bytechef.component.definition.ComponentDsl.outputSchema;
+import static com.bytechef.component.definition.ComponentDsl.string;
+import static com.bytechef.component.definition.ComponentDsl.trigger;
 import static com.bytechef.component.jira.constant.JiraConstants.ID;
 import static com.bytechef.component.jira.constant.JiraConstants.ISSUE;
 import static com.bytechef.component.jira.constant.JiraConstants.ISSUETYPE;
 import static com.bytechef.component.jira.constant.JiraConstants.ISSUE_OUTPUT_PROPERTY;
 import static com.bytechef.component.jira.constant.JiraConstants.PROJECT;
-import static com.bytechef.component.jira.constant.JiraConstants.UPDATED_ISSUE;
 
-import com.bytechef.component.definition.Context.TypeReference;
-import com.bytechef.component.definition.OptionsDataSource.TriggerOptionsFunction;
 import com.bytechef.component.definition.Parameters;
 import com.bytechef.component.definition.TriggerContext;
-import com.bytechef.component.definition.TriggerDefinition.DynamicWebhookEnableOutput;
 import com.bytechef.component.definition.TriggerDefinition.HttpHeaders;
 import com.bytechef.component.definition.TriggerDefinition.HttpParameters;
+import com.bytechef.component.definition.TriggerDefinition.OptionsFunction;
 import com.bytechef.component.definition.TriggerDefinition.TriggerType;
 import com.bytechef.component.definition.TriggerDefinition.WebhookBody;
+import com.bytechef.component.definition.TriggerDefinition.WebhookEnableOutput;
 import com.bytechef.component.definition.TriggerDefinition.WebhookMethod;
+import com.bytechef.component.definition.TypeReference;
 import com.bytechef.component.jira.util.JiraOptionsUtils;
 import com.bytechef.component.jira.util.JiraUtils;
 import java.util.Map;
@@ -45,48 +45,49 @@ import java.util.Map;
  */
 public class JiraUpdatedIssueTrigger {
 
-    public static final ModifiableTriggerDefinition TRIGGER_DEFINITION = trigger(UPDATED_ISSUE)
+    public static final ModifiableTriggerDefinition TRIGGER_DEFINITION = trigger("updatedIssue")
         .title("Updated Issue")
         .description("Triggers when an issue is updated.")
+        .help("", "https://docs.bytechef.io/reference/components/jira_v1#updated-issue")
         .type(TriggerType.DYNAMIC_WEBHOOK)
         .properties(
             string(PROJECT)
-                .label("Project")
-                .description("Project where new issue is created.")
-                .options((TriggerOptionsFunction<String>) JiraOptionsUtils::getProjectIdOptions)
+                .label("Project ID")
+                .description("ID of the project where issues is updated.")
+                .options((OptionsFunction<String>) JiraOptionsUtils::getProjectIdOptions)
                 .required(true),
             string(ISSUETYPE)
-                .label("Issue type")
-                .description("The type of issue.")
-                .options((TriggerOptionsFunction<String>) JiraOptionsUtils::getIssueTypesIdOptions)
+                .label("Issue Type ID")
+                .description("ID of the issue type.")
+                .options((OptionsFunction<String>) JiraOptionsUtils::getIssueTypesIdOptions)
                 .optionsLookupDependsOn(PROJECT)
                 .required(false))
-        .outputSchema(ISSUE_OUTPUT_PROPERTY)
-        .dynamicWebhookEnable(JiraUpdatedIssueTrigger::dynamicWebhookEnable)
-        .dynamicWebhookDisable(JiraUpdatedIssueTrigger::dynamicWebhookDisable)
-        .dynamicWebhookRequest(JiraUpdatedIssueTrigger::dynamicWebhookRequest);
+        .output(outputSchema(ISSUE_OUTPUT_PROPERTY))
+        .webhookEnable(JiraUpdatedIssueTrigger::webhookEnable)
+        .webhookDisable(JiraUpdatedIssueTrigger::webhookDisable)
+        .webhookRequest(JiraUpdatedIssueTrigger::webhookRequest);
 
     private JiraUpdatedIssueTrigger() {
     }
 
-    protected static DynamicWebhookEnableOutput dynamicWebhookEnable(
+    protected static WebhookEnableOutput webhookEnable(
         Parameters inputParameters, Parameters connectionParameters, String webhookUrl,
         String workflowExecutionId, TriggerContext context) {
 
-        return new DynamicWebhookEnableOutput(
+        return new WebhookEnableOutput(
             Map.of(ID, JiraUtils.subscribeWebhook(inputParameters, webhookUrl, context, "jira:issue_updated")), null);
     }
 
-    protected static void dynamicWebhookDisable(
+    protected static void webhookDisable(
         Parameters inputParameters, Parameters connectionParameters, Parameters outputParameters,
         String workflowExecutionId, TriggerContext context) {
 
         JiraUtils.unsubscribeWebhook(outputParameters, context);
     }
 
-    protected static Object dynamicWebhookRequest(
+    protected static Object webhookRequest(
         Parameters inputParameters, Parameters connectionParameters, HttpHeaders headers,
-        HttpParameters parameters, WebhookBody body, WebhookMethod method, DynamicWebhookEnableOutput output,
+        HttpParameters parameters, WebhookBody body, WebhookMethod method, Parameters output,
         TriggerContext context) {
 
         return body

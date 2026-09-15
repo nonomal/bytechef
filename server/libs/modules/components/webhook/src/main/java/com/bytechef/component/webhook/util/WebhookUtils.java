@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,14 +22,12 @@ import static com.bytechef.component.webhook.constant.WebhookConstants.HEADERS;
 import static com.bytechef.component.webhook.constant.WebhookConstants.METHOD;
 import static com.bytechef.component.webhook.constant.WebhookConstants.PARAMETERS;
 
-import com.bytechef.component.definition.OutputResponse;
 import com.bytechef.component.definition.Parameters;
 import com.bytechef.component.definition.TriggerContext;
 import com.bytechef.component.definition.TriggerDefinition.HttpHeaders;
 import com.bytechef.component.definition.TriggerDefinition.HttpParameters;
 import com.bytechef.component.definition.TriggerDefinition.WebhookBody;
 import com.bytechef.component.definition.TriggerDefinition.WebhookMethod;
-import com.bytechef.component.definition.TriggerDefinition.WebhookValidateFunction;
 import com.bytechef.component.definition.TriggerDefinition.WebhookValidateResponse;
 import java.util.List;
 import java.util.Map;
@@ -41,17 +39,9 @@ import java.util.stream.Collectors;
  */
 public class WebhookUtils {
 
-    public static OutputResponse getOutput(
-        Parameters inputParameters, HttpHeaders headers, HttpParameters parameters, WebhookBody body,
-        WebhookMethod method, TriggerContext context) {
-
-        return context.output(output -> output.get(
-            getWebhookResult(inputParameters, headers, parameters, body, method, context)));
-    }
-
     public static Map<String, ?> getWebhookResult(
-        Parameters inputParameters, HttpHeaders headers, HttpParameters parameters, WebhookBody body,
-        WebhookMethod method, TriggerContext context) {
+        Parameters inputParameters, Parameters connectionParameters, HttpHeaders headers, HttpParameters parameters,
+        WebhookBody body, WebhookMethod method, Parameters output, TriggerContext context) {
 
         Map<String, ?> headerMap = headers.toMap();
         Map<String, ?> parameterMap = parameters.toMap();
@@ -59,37 +49,34 @@ public class WebhookUtils {
         if (body == null) {
             return Map.of(
                 METHOD, method,
-                HEADERS, headerMap
-                    .entrySet()
+                HEADERS, headerMap.entrySet()
                     .stream()
                     .collect(Collectors.toMap(Map.Entry::getKey, WebhookUtils::checkList)),
-                PARAMETERS, parameterMap
-                    .entrySet()
+                PARAMETERS, parameterMap.entrySet()
                     .stream()
                     .collect(Collectors.toMap(Map.Entry::getKey, WebhookUtils::checkList)));
         } else {
             return Map.of(
                 BODY, body.getContent(),
                 METHOD, method,
-                HEADERS, headerMap
-                    .entrySet()
+                HEADERS, headerMap.entrySet()
                     .stream()
                     .collect(Collectors.toMap(Map.Entry::getKey, WebhookUtils::checkList)),
-                PARAMETERS, parameterMap
-                    .entrySet()
+                PARAMETERS, parameterMap.entrySet()
                     .stream()
                     .collect(Collectors.toMap(Map.Entry::getKey, WebhookUtils::checkList)));
         }
     }
 
-    public static WebhookValidateFunction getWebhookValidateFunction() {
-        return (inputParameters, headers, parameters, body, method, triggerContext) -> {
-            if (Objects.equals(getCsrfToken(headers), inputParameters.getRequiredString(CSRF_TOKEN))) {
-                return WebhookValidateResponse.ok(); // OK
-            } else {
-                return WebhookValidateResponse.badRequest(); // Bad Request
-            }
-        };
+    public static WebhookValidateResponse getWebhookValidate(
+        Parameters inputParameters, HttpHeaders headers, HttpParameters parameters, WebhookBody body,
+        WebhookMethod method, TriggerContext context) {
+
+        if (Objects.equals(getCsrfToken(headers), inputParameters.getRequiredString(CSRF_TOKEN))) {
+            return WebhookValidateResponse.ok(); // OK
+        } else {
+            return WebhookValidateResponse.badRequest(); // Bad Request
+        }
     }
 
     private static Object checkList(Map.Entry<String, ?> entry) {
@@ -104,7 +91,7 @@ public class WebhookUtils {
 
     private static String getCsrfToken(HttpHeaders headers) {
         return headers
-            .firstValue("x-csrf-token")
+            .firstValue("X-Csrf-Token")
             .orElse(null);
     }
 }

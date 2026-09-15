@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,8 +16,8 @@
 
 package com.bytechef.platform.scheduler;
 
-import com.bytechef.platform.workflow.execution.WorkflowExecutionId;
-import java.time.LocalDateTime;
+import com.bytechef.platform.workflow.WorkflowExecutionId;
+import java.time.Instant;
 import java.util.Map;
 
 /**
@@ -32,11 +32,13 @@ public interface TriggerScheduler {
     void cancelPollingTrigger(String workflowExecutionId);
 
     void scheduleDynamicWebhookTriggerRefresh(
-        LocalDateTime webhookExpirationDate, String componentName, int componentVersion,
-        WorkflowExecutionId workflowExecutionId);
+        Instant webhookExpirationDate, String componentName, int componentVersion,
+        WorkflowExecutionId workflowExecutionId, Long connectionId);
 
     void scheduleScheduleTrigger(
         String pattern, String zoneId, Map<String, Object> output, WorkflowExecutionId workflowExecutionId);
 
     void schedulePollingTrigger(WorkflowExecutionId workflowExecutionId);
+
+    void scheduleOneTimeTask(Instant executeAt, Map<String, ?> output, long jobId);
 }

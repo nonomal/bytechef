@@ -13,14 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * Modifications copyright (C) 2023 ByteChef Inc.
+ * Modifications copyright (C) 2025 ByteChef
  */
 
 package com.bytechef.atlas.execution.domain;
 
+import com.bytechef.atlas.configuration.constant.WorkflowConstants;
+import com.bytechef.atlas.configuration.domain.DeferredEvaluationParameterKeys;
 import com.bytechef.atlas.configuration.domain.Task;
 import com.bytechef.atlas.configuration.domain.WorkflowTask;
-import com.bytechef.commons.util.LocalDateTimeUtils;
+import com.bytechef.commons.data.jdbc.wrapper.MapWrapper;
 import com.bytechef.error.Errorable;
 import com.bytechef.error.ExecutionError;
 import com.bytechef.evaluator.Evaluator;
@@ -31,13 +33,13 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.time.Duration;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import org.apache.commons.lang3.Validate;
+import java.util.Set;
 import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.Id;
@@ -48,6 +50,7 @@ import org.springframework.data.domain.Persistable;
 import org.springframework.data.jdbc.core.mapping.AggregateReference;
 import org.springframework.data.relational.core.mapping.Column;
 import org.springframework.data.relational.core.mapping.Table;
+import org.springframework.util.Assert;
 
 /**
  * Wraps the {@link WorkflowTask} instance to add execution semantics to the task.
@@ -70,8 +73,6 @@ import org.springframework.data.relational.core.mapping.Table;
 public final class TaskExecution
     implements Errorable, Cloneable, Persistable<Long>, Prioritizable, Progressable, Retryable, Task {
 
-    private static final int DEFAULT_TASK_NUMBER = -1;
-
     /**
      * Defines the various states that a {@link TaskExecution} can be in at any give moment in time.
      */
@@ -93,16 +94,18 @@ public final class TaskExecution
         }
     }
 
+    private static final int DEFAULT_TASK_NUMBER = -1;
+
     @CreatedBy
     @Column("created_by")
     private String createdBy;
 
     @Column("created_date")
     @CreatedDate
-    private LocalDateTime createdDate;
+    private Instant createdDate;
 
     @Column("end_date")
-    private LocalDateTime endDate;
+    private Instant endDate;
 
     @Column("error")
     private ExecutionError error;
@@ -122,10 +125,10 @@ public final class TaskExecution
 
     @Column("last_modified_date")
     @LastModifiedDate
-    private LocalDateTime lastModifiedDate;
+    private Instant lastModifiedDate;
 
-    @Transient
-    private Map<String, Object> metadata = new HashMap<>();
+    @Column
+    private MapWrapper metadata = new MapWrapper();
 
     @Column
     private int maxRetries;
@@ -152,7 +155,7 @@ public final class TaskExecution
     private int retryDelayFactor;
 
     @Column("start_date")
-    private LocalDateTime startDate;
+    private Instant startDate;
 
     @Column
     private int status;
@@ -162,6 +165,9 @@ public final class TaskExecution
 
     @Column("workflow_task")
     private WorkflowTask workflowTask;
+
+    @Transient
+    private transient boolean handled;
 
     public TaskExecution() {
     }
@@ -173,15 +179,55 @@ public final class TaskExecution
     /**
      * Evaluate the {@link WorkflowTask}
      *
+     * <p>
+     * Task dispatchers with conditional branches (e.g., condition) register parameter keys that contain sub-task
+     * definitions via {@link DeferredEvaluationParameterKeys}. These keys are excluded from evaluation so that sub-task
+     * expressions remain intact until the selected branch is actually dispatched.
+     *
      * @param context The context value to evaluate the task against
      * @return the evaluated {@link TaskExecution} instance.
      */
-    public TaskExecution evaluate(Map<String, ?> context) {
+    @SuppressWarnings("unchecked")
+    public TaskExecution evaluate(Map<String, ?> context, Evaluator evaluator) {
         WorkflowTask workflowTask = getWorkflowTask();
 
-        Map<String, Object> map = Evaluator.evaluate(workflowTask.toMap(), context);
+        Set<String> deferredKeys = DeferredEvaluationParameterKeys.forTaskType(workflowTask.getType());
 
-        setWorkflowTask(new WorkflowTask(map));
+        if (deferredKeys.isEmpty()) {
+            Map<String, Object> map = evaluator.evaluate(workflowTask.toMap(), context);
+
+            setWorkflowTask(new WorkflowTask(map));
+        } else {
+            Map<String, Object> taskMap = new HashMap<>(workflowTask.toMap());
+
+            Map<String, ?> originalParameters = (Map<String, ?>) taskMap.get(WorkflowConstants.PARAMETERS);
+
+            if (originalParameters == null) {
+                originalParameters = Map.of();
+            }
+
+            Map<String, Object> deferredValues = new HashMap<>();
+            Map<String, Object> parametersForEvaluation = new HashMap<>(originalParameters);
+
+            for (String deferredKey : deferredKeys) {
+                if (parametersForEvaluation.containsKey(deferredKey)) {
+                    deferredValues.put(deferredKey, parametersForEvaluation.remove(deferredKey));
+                }
+            }
+
+            taskMap.put(WorkflowConstants.PARAMETERS, parametersForEvaluation);
+
+            Map<String, Object> evaluatedMap = new HashMap<>(evaluator.evaluate(taskMap, context));
+
+            Map<String, Object> evaluatedParameters = new HashMap<>(
+                (Map<String, Object>) evaluatedMap.get(WorkflowConstants.PARAMETERS));
+
+            evaluatedParameters.putAll(deferredValues);
+
+            evaluatedMap.put(WorkflowConstants.PARAMETERS, evaluatedParameters);
+
+            setWorkflowTask(new WorkflowTask(evaluatedMap));
+        }
 
         return this;
     }
@@ -220,7 +266,7 @@ public final class TaskExecution
      *
      * @return Date
      */
-    public LocalDateTime getCreatedDate() {
+    public Instant getCreatedDate() {
         return createdDate;
     }
 
@@ -229,7 +275,7 @@ public final class TaskExecution
      *
      * @return Date
      */
-    public LocalDateTime getEndDate() {
+    public Instant getEndDate() {
         return endDate;
     }
 
@@ -276,7 +322,7 @@ public final class TaskExecution
         return lastModifiedBy;
     }
 
-    public LocalDateTime getLastModifiedDate() {
+    public Instant getLastModifiedDate() {
         return lastModifiedDate;
     }
 
@@ -286,7 +332,7 @@ public final class TaskExecution
     }
 
     public Map<String, ?> getMetadata() {
-        return Collections.unmodifiableMap(metadata);
+        return Collections.unmodifiableMap(metadata.getMap());
     }
 
     @JsonIgnore
@@ -310,7 +356,7 @@ public final class TaskExecution
 
     @JsonIgnore
     public Map<String, ?> getParameters() {
-        Validate.notNull(workflowTask, "workflowTask");
+        Assert.notNull(workflowTask, "workflowTask");
 
         return workflowTask.getParameters();
     }
@@ -375,7 +421,7 @@ public final class TaskExecution
      *
      * @return Date
      */
-    public LocalDateTime getStartDate() {
+    public Instant getStartDate() {
         return startDate;
     }
 
@@ -388,7 +434,6 @@ public final class TaskExecution
         return Status.values()[status];
     }
 
-    @SuppressFBWarnings("EI")
     public WorkflowTask getWorkflowTask() {
         return workflowTask;
     }
@@ -410,7 +455,7 @@ public final class TaskExecution
     @Override
     @JsonIgnore
     public String getType() {
-        Validate.notNull(workflowTask.getType(), "Type must not be null");
+        Assert.notNull(workflowTask.getType(), "Type must not be null");
 
         return workflowTask.getType();
     }
@@ -421,16 +466,20 @@ public final class TaskExecution
     }
 
     public TaskExecution putMetadata(String key, Object value) {
-        metadata.put(key, value);
+        Map<String, Object> map = new HashMap<>(metadata.getMap());
+
+        map.put(key, value);
+
+        metadata = new MapWrapper(map);
 
         return this;
     }
 
-    public void setEndDate(LocalDateTime endDate) {
+    public void setEndDate(Instant endDate) {
         this.endDate = endDate;
 
         if (endDate != null && startDate != null) {
-            this.executionTime = LocalDateTimeUtils.getTime(endDate) - LocalDateTimeUtils.getTime(startDate);
+            this.executionTime = endDate.toEpochMilli() - startDate.toEpochMilli();
         }
     }
 
@@ -458,9 +507,9 @@ public final class TaskExecution
 
     public void setMetadata(Map<String, ?> metadata) {
         if (metadata == null) {
-            this.metadata = new HashMap<>();
+            this.metadata = new MapWrapper();
         } else {
-            this.metadata = new HashMap<>(metadata);
+            this.metadata = new MapWrapper(metadata);
         }
     }
 
@@ -494,7 +543,7 @@ public final class TaskExecution
         this.retryDelayFactor = retryDelayFactor;
     }
 
-    public void setStartDate(LocalDateTime startDate) {
+    public void setStartDate(Instant startDate) {
         this.startDate = startDate;
     }
 
@@ -504,6 +553,14 @@ public final class TaskExecution
 
     public void setTaskNumber(int taskNumber) {
         this.taskNumber = taskNumber;
+    }
+
+    public boolean isHandled() {
+        return handled;
+    }
+
+    public void setHandled(boolean handled) {
+        this.handled = handled;
     }
 
     public void setWorkflowTask(WorkflowTask workflowTask) {
@@ -539,7 +596,8 @@ public final class TaskExecution
 
     @SuppressFBWarnings("EI")
     public static final class Builder {
-        private LocalDateTime endDate;
+
+        private Instant endDate;
         private ExecutionError error;
         private Long id;
         private Long jobId;
@@ -552,7 +610,7 @@ public final class TaskExecution
         private int retryAttempts;
         private String retryDelay = "1s";
         private int retryDelayFactor = 2;
-        private LocalDateTime startDate;
+        private Instant startDate;
         private Status status = Status.CREATED;
         private int taskNumber = DEFAULT_TASK_NUMBER;
         private WorkflowTask workflowTask;
@@ -560,7 +618,7 @@ public final class TaskExecution
         private Builder() {
         }
 
-        public Builder endDate(LocalDateTime endDate) {
+        public Builder endDate(Instant endDate) {
             this.endDate = endDate;
             return this;
         }
@@ -625,7 +683,7 @@ public final class TaskExecution
             return this;
         }
 
-        public Builder startDate(LocalDateTime startDate) {
+        public Builder startDate(Instant startDate) {
             this.startDate = startDate;
             return this;
         }
@@ -641,7 +699,7 @@ public final class TaskExecution
         }
 
         public Builder workflowTask(WorkflowTask workflowTask) {
-            Validate.notNull(workflowTask, "'workflowTask' must not be null");
+            Assert.notNull(workflowTask, "'workflowTask' must not be null");
 
             this.workflowTask = workflowTask;
             return this;

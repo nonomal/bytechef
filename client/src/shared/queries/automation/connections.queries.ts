@@ -1,17 +1,18 @@
 /* eslint-disable sort-keys */
 import {
+    Connection,
     ConnectionApi,
-    ConnectionModel,
     ConnectionTagApi,
     GetWorkspaceConnectionsRequest,
-} from '@/shared/middleware/automation/connection';
-import {TagModel} from '@/shared/middleware/platform/connection';
+    Tag,
+} from '@/shared/middleware/automation/configuration';
+import {DEFINITION_STALE_TIME} from '@/shared/queries/queryConstants';
 import {useQuery} from '@tanstack/react-query';
 
 export const ConnectionKeys = {
     connection: (id: number) => [...ConnectionKeys.connections, id],
-    connectionTags: ['projectConnectionTags'],
-    connections: ['projectConnections'],
+    connectionTags: ['automation_connectionTags'],
+    connections: ['automation_connections'],
     filteredConnections: (filters: {
         id?: number;
         componentName?: string;
@@ -20,29 +21,16 @@ export const ConnectionKeys = {
     }) => [...ConnectionKeys.connections, filters],
 };
 
-export const useGetConnectionsQuery = (
-    request: {
-        componentName?: string;
-        connectionVersion?: number;
-        tagId?: number;
-    },
-    enabled?: boolean
-) =>
-    useQuery<ConnectionModel[], Error>({
-        queryKey: ConnectionKeys.filteredConnections(request),
-        queryFn: () => new ConnectionApi().getConnections(request),
-        enabled: enabled === undefined ? true : enabled,
-    });
-
 export const useGetConnectionTagsQuery = () =>
-    useQuery<TagModel[], Error>({
+    useQuery<Tag[], Error>({
         queryKey: ConnectionKeys.connectionTags,
         queryFn: () => new ConnectionTagApi().getConnectionTags(),
     });
 
 export const useGetWorkspaceConnectionsQuery = (request: GetWorkspaceConnectionsRequest, enabled?: boolean) =>
-    useQuery<ConnectionModel[], Error>({
+    useQuery<Connection[], Error>({
         queryKey: ConnectionKeys.filteredConnections(request),
         queryFn: () => new ConnectionApi().getWorkspaceConnections(request),
         enabled: enabled === undefined ? true : enabled,
+        staleTime: DEFINITION_STALE_TIME,
     });

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the ByteChef Enterprise license (the "Enterprise License");
  * you may not use this file except in compliance with the Enterprise License.
@@ -7,13 +7,13 @@
 
 package com.bytechef.ee.platform.data.storage.db.remote.client.config;
 
-import com.bytechef.component.definition.ActionContext.Data.Scope;
 import com.bytechef.ee.platform.data.storage.db.remote.client.service.RemoteJdbcDataStorageServiceClient;
 import com.bytechef.ee.remote.client.LoadBalancedRestClient;
-import com.bytechef.platform.constant.AppType;
-import com.bytechef.platform.data.storage.annotation.ConditionalOnDataStorageProviderDb;
+import com.bytechef.platform.constant.PlatformType;
+import com.bytechef.platform.data.storage.DataStorage;
+import com.bytechef.platform.data.storage.annotation.ConditionalOnDataStorageProviderJdbc;
+import com.bytechef.platform.data.storage.domain.DataStorageScope;
 import com.bytechef.platform.data.storage.jdbc.service.JdbcDataStorageService;
-import com.bytechef.platform.data.storage.service.DataStorageService;
 import java.util.Map;
 import java.util.Optional;
 import org.slf4j.Logger;
@@ -27,62 +27,67 @@ import org.springframework.context.annotation.Configuration;
  * @author Ivica Cardic
  */
 @Configuration
-@ConditionalOnDataStorageProviderDb
+@ConditionalOnDataStorageProviderJdbc
 public class RemoteJdbcDataStorageClientConfiguration {
 
-    private static final Logger logger = LoggerFactory.getLogger(RemoteJdbcDataStorageClientConfiguration.class);
+    private static final Logger log = LoggerFactory.getLogger(RemoteJdbcDataStorageClientConfiguration.class);
 
     public RemoteJdbcDataStorageClientConfiguration() {
-        if (logger.isInfoEnabled()) {
-            logger.info("Data storage provider type enabled: db");
+        if (log.isInfoEnabled()) {
+            log.info("Data storage provider type enabled: db");
         }
     }
 
     @Bean
-    DataStorageService dataStorageService(JdbcDataStorageService dbDataStorageService) {
-        return new DataStorageServiceImpl(dbDataStorageService);
+    DataStorage dataStorageService(JdbcDataStorageService jdbcDataStorageService) {
+        return new DataStorageImpl(jdbcDataStorageService);
     }
 
     @Bean
-    JdbcDataStorageService dbDataStorageService(LoadBalancedRestClient loadBalancedRestClient) {
+    JdbcDataStorageService jdbcDataStorageService(LoadBalancedRestClient loadBalancedRestClient) {
         return new RemoteJdbcDataStorageServiceClient(loadBalancedRestClient);
     }
 
-    private record DataStorageServiceImpl(JdbcDataStorageService jdbcDataStorageService)
-        implements DataStorageService {
+    private record DataStorageImpl(JdbcDataStorageService jdbcDataStorageService) implements DataStorage {
 
         @Override
         public <T> Optional<T> fetch(
-            String componentName, Scope scope, String scopeId, String key,
-            AppType type) {
+            String componentName, DataStorageScope scope, String scopeId,
+            String key, long environmentId, PlatformType type) {
 
-            return jdbcDataStorageService.fetch(componentName, scope, scopeId, key, type);
+            return jdbcDataStorageService.fetch(componentName, scope, scopeId, key, environmentId, type);
         }
 
         @Override
         public <T> T get(
-            String componentName, Scope scope, String scopeId, String key,
-            AppType type) {
+            String componentName, DataStorageScope scope, String scopeId,
+            String key, long environmentId, PlatformType type) {
 
-            return jdbcDataStorageService.get(componentName, scope, scopeId, key, type);
+            return jdbcDataStorageService.get(componentName, scope, scopeId, key, environmentId, type);
         }
 
         @Override
-        public <T> Map<String, T> getAll(String componentName, Scope scope, String scopeId, AppType type) {
-            return jdbcDataStorageService.getAll(componentName, scope, scopeId, type);
+        public <T> Map<String, T> getAll(
+            String componentName, DataStorageScope scope, String scopeId, long environmentId,
+            PlatformType type) {
+
+            return jdbcDataStorageService.getAll(componentName, scope, scopeId, environmentId, type);
         }
 
         @Override
         public void put(
-            String componentName, Scope scope, String scopeId, String key,
-            AppType type, Object value) {
+            String componentName, DataStorageScope scope, String scopeId,
+            String key, Object value, long environmentId, PlatformType type) {
 
-            jdbcDataStorageService.put(componentName, scope, scopeId, key, type, value);
+            jdbcDataStorageService.put(componentName, scope, scopeId, key, environmentId, type, value);
         }
 
         @Override
-        public void delete(String componentName, Scope scope, String scopeId, String key, AppType type) {
-            jdbcDataStorageService.delete(componentName, scope, scopeId, key, type);
+        public void delete(
+            String componentName, DataStorageScope scope, String scopeId,
+            String key, long environmentId, PlatformType type) {
+
+            jdbcDataStorageService.delete(componentName, scope, scopeId, key, environmentId, type);
         }
     }
 }

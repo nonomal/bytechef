@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,74 +16,101 @@
 
 package com.bytechef.component.quickbooks.action;
 
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.number;
-import static com.bytechef.component.definition.ComponentDSL.object;
-import static com.bytechef.component.definition.ComponentDSL.string;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.dynamicProperties;
+import static com.bytechef.component.definition.ComponentDsl.number;
+import static com.bytechef.component.definition.ComponentDsl.option;
+import static com.bytechef.component.definition.ComponentDsl.outputSchema;
+import static com.bytechef.component.definition.ComponentDsl.string;
 import static com.bytechef.component.definition.Context.Http.responseType;
-import static com.bytechef.component.quickbooks.constant.QuickbooksConstants.BASE_URL;
-import static com.bytechef.component.quickbooks.constant.QuickbooksConstants.COMPANY_ID;
-import static com.bytechef.component.quickbooks.constant.QuickbooksConstants.CREATE_ITEM;
+import static com.bytechef.component.quickbooks.constant.ItemType.INVENTORY;
+import static com.bytechef.component.quickbooks.constant.ItemType.NON_INVENTORY;
+import static com.bytechef.component.quickbooks.constant.ItemType.SERVICE;
+import static com.bytechef.component.quickbooks.constant.QuickbooksConstants.ACCOUNT;
+import static com.bytechef.component.quickbooks.constant.QuickbooksConstants.ASSET_ACCOUNT_REF;
+import static com.bytechef.component.quickbooks.constant.QuickbooksConstants.EXPENSE_ACCOUNT_REF;
+import static com.bytechef.component.quickbooks.constant.QuickbooksConstants.INCOME_ACCOUNT_REF;
+import static com.bytechef.component.quickbooks.constant.QuickbooksConstants.INV_START_DATE;
+import static com.bytechef.component.quickbooks.constant.QuickbooksConstants.ITEM_OUTPUT_PROPERTY;
 import static com.bytechef.component.quickbooks.constant.QuickbooksConstants.NAME;
-import static com.bytechef.component.quickbooks.constant.QuickbooksConstants.QUANTITY;
+import static com.bytechef.component.quickbooks.constant.QuickbooksConstants.QTY_ON_HAND;
+import static com.bytechef.component.quickbooks.constant.QuickbooksConstants.TYPE;
+import static com.bytechef.component.quickbooks.constant.QuickbooksConstants.VALUE;
 
 import com.bytechef.component.definition.ActionContext;
-import com.bytechef.component.definition.ComponentDSL.ModifiableActionDefinition;
-import com.bytechef.component.definition.Context;
+import com.bytechef.component.definition.ComponentDsl.ModifiableActionDefinition;
+import com.bytechef.component.definition.Context.Http;
 import com.bytechef.component.definition.Parameters;
+import com.bytechef.component.definition.TypeReference;
+import com.bytechef.component.quickbooks.constant.Entity;
+import com.bytechef.component.quickbooks.util.QuickbooksUtils;
+import java.util.Map;
 
 /**
  * @author Mario Cvjetojevic
  * @author Luka Ljubić
+ * @author Monika Kušter
  */
-public final class QuickbooksCreateItemAction {
+public class QuickbooksCreateItemAction {
 
-    public static final ModifiableActionDefinition ACTION_DEFINITION = action(CREATE_ITEM)
-        .title("Create item")
+    public static final ModifiableActionDefinition ACTION_DEFINITION = action("createItem")
+        .title("Create Item")
         .description("Creates a new item.")
         .properties(
             string(NAME)
                 .label("Name")
-                .description("Name of the item. This value must be unique. Required for create.")
+                .description("Name of the item.")
                 .maxLength(100)
                 .required(true),
-            number(QUANTITY)
-                .label("Quantity on hand")
-                .description(
-                    "Current quantity of the Inventory items available for sale. Not used for Service or " +
-                        "NonInventory type items.Required for Inventory type items."))
-        .outputSchema(
-            object()
-                .properties(
-                    string("id")
-                        .label("ID")
-                        .required(true),
-                    string("name")
-                        .label("Name"),
-                    string("description")
-                        .label("Description"),
-                    number("unitPrice")
-                        .label("Unit price")))
+            string(TYPE)
+                .label("Type")
+                .description("Type of item.")
+                .options(
+                    option("Inventory", INVENTORY.name()),
+                    option("Service", SERVICE.name()),
+                    option("Non-inventory", NON_INVENTORY.name()))
+                .defaultValue(SERVICE.name())
+                .required(true),
+            dynamicProperties(ACCOUNT)
+                .propertiesLookupDependsOn(TYPE)
+                .properties(QuickbooksUtils::getPropertiesForItem),
+            string(EXPENSE_ACCOUNT_REF)
+                .label("Expense Account")
+                .options(QuickbooksUtils.getOptions(Entity.ACCOUNT, "Expense"))
+                .required(true),
+            number(QTY_ON_HAND)
+                .label("Quantity on Hand")
+                .description("Current quantity of the inventory items available for sale.")
+                .displayCondition("%s == '%s'".formatted(TYPE, INVENTORY))
+                .required(true))
+        .output(outputSchema(ITEM_OUTPUT_PROPERTY))
         .perform(QuickbooksCreateItemAction::perform);
 
     private QuickbooksCreateItemAction() {
     }
 
-    public static Object perform(Parameters inputParameters, Parameters connectionParameters, ActionContext context) {
-        return context
-            .http(http -> http.post(BASE_URL + "/v3/company/" + getCompanyId(connectionParameters) + "/item"))
+    protected static Object perform(
+        Parameters inputParameters, Parameters connectionParameters, ActionContext actionContext) {
+
+        Map<String, String> account = inputParameters.getMap(ACCOUNT, String.class);
+
+        String incomeAccount = account.get(INCOME_ACCOUNT_REF);
+        String assetAccount = account.get(ASSET_ACCOUNT_REF);
+        String invStartDate = account.get(INV_START_DATE);
+        String expenseAccount = inputParameters.getString(EXPENSE_ACCOUNT_REF);
+
+        return actionContext
+            .http(http -> http.post("/item"))
             .body(
-                Context.Http.Body.of(
+                Http.Body.of(
                     NAME, inputParameters.getRequiredString(NAME),
-                    QUANTITY, inputParameters.getRequired(QUANTITY)))
-            .configuration(responseType(Context.Http.ResponseType.JSON))
+                    QTY_ON_HAND, inputParameters.getDouble(QTY_ON_HAND),
+                    INCOME_ACCOUNT_REF, incomeAccount == null ? null : Map.of(VALUE, incomeAccount),
+                    ASSET_ACCOUNT_REF, assetAccount == null ? null : Map.of(VALUE, assetAccount),
+                    INV_START_DATE, invStartDate,
+                    EXPENSE_ACCOUNT_REF, expenseAccount == null ? null : Map.of(VALUE, expenseAccount)))
+            .configuration(responseType(Http.ResponseType.XML))
             .execute()
-            .getBody(new Context.TypeReference<>() {});
-    }
-
-    private static String getCompanyId(Parameters connectionParameters) {
-        String companyId = connectionParameters.getRequiredString(COMPANY_ID);
-
-        return companyId.replace(" ", "");
+            .getBody(new TypeReference<>() {});
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,10 +24,10 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
-import com.bytechef.component.definition.Context.TypeReference;
-import com.bytechef.component.definition.TriggerDefinition.DynamicWebhookEnableOutput;
+import com.bytechef.component.definition.TriggerDefinition.WebhookEnableOutput;
+import com.bytechef.component.definition.TypeReference;
 import com.bytechef.component.pipedrive.util.PipedriveUtils;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
@@ -37,19 +37,19 @@ import org.junit.jupiter.api.Test;
 class PipedriveUpdatedOrganizationTriggerTest extends AbstractPipedriveTriggerTest {
 
     @Test
-    void testDynamicWebhookEnable() {
+    void testWebhookEnable() {
         String webhookUrl = "testWebhookUrl";
 
         pipedriveUtilsMockedStatic.when(
             () -> PipedriveUtils.subscribeWebhook("organization", UPDATED, webhookUrl, mockedTriggerContext))
             .thenReturn(123);
 
-        DynamicWebhookEnableOutput dynamicWebhookEnableOutput =
-            PipedriveUpdatedOrganizationTrigger.dynamicWebhookEnable(
+        WebhookEnableOutput webhookEnableOutput =
+            PipedriveUpdatedOrganizationTrigger.webhookEnable(
                 mockedParameters, mockedParameters, webhookUrl, workflowExecutionId, mockedTriggerContext);
 
-        Map<String, ?> parameters = dynamicWebhookEnableOutput.parameters();
-        LocalDateTime webhookExpirationDate = dynamicWebhookEnableOutput.webhookExpirationDate();
+        Map<String, ?> parameters = webhookEnableOutput.parameters();
+        Instant webhookExpirationDate = webhookEnableOutput.webhookExpirationDate();
 
         Map<String, Object> expectedParameters = Map.of(ID, 123);
 
@@ -58,15 +58,15 @@ class PipedriveUpdatedOrganizationTriggerTest extends AbstractPipedriveTriggerTe
     }
 
     @Test
-    void testDynamicWebhookRequest() {
+    void testWebhookRequest() {
         Map<String, ?> currentMap = Map.of(CURRENT, mockedObject);
 
         when(mockedWebhookBody.getContent(any(TypeReference.class)))
             .thenReturn(currentMap);
 
-        Object result = PipedriveUpdatedOrganizationTrigger.dynamicWebhookRequest(
+        Object result = PipedriveUpdatedOrganizationTrigger.webhookRequest(
             mockedParameters, mockedParameters, mockedHttpHeaders, mockedHttpParameters, mockedWebhookBody,
-            mockedWebhookMethod, mockedDynamicWebhookEnableOutput, mockedTriggerContext);
+            mockedWebhookMethod, mockedWebhookEnableOutput, mockedTriggerContext);
 
         assertEquals(mockedObject, result);
     }

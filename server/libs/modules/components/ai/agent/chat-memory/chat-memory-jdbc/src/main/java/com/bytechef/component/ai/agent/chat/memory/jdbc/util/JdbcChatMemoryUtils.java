@@ -1,0 +1,212 @@
+/*
+ * Copyright 2025 ByteChef
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.bytechef.component.ai.agent.chat.memory.jdbc.util;
+
+import static com.bytechef.component.definition.ComponentDsl.option;
+import static com.bytechef.platform.component.definition.ai.agent.DataSourceFunction.DATA_SOURCE;
+
+import com.bytechef.component.definition.ClusterElementDefinition;
+import com.bytechef.component.definition.ComponentDsl;
+import com.bytechef.component.definition.Parameters;
+import com.bytechef.platform.component.ComponentConnection;
+import com.bytechef.platform.component.definition.ClusterElementContextAware;
+import com.bytechef.platform.component.definition.MultipleConnectionsOptionsFunction;
+import com.bytechef.platform.component.definition.ParametersFactory;
+import com.bytechef.platform.component.definition.ai.agent.DataSourceFunction;
+import com.bytechef.platform.component.service.ClusterElementDefinitionService;
+import com.bytechef.platform.configuration.domain.ClusterElement;
+import com.bytechef.platform.configuration.domain.ClusterElementMap;
+import java.sql.DatabaseMetaData;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import javax.sql.DataSource;
+import org.springframework.ai.chat.memory.ChatMemoryRepository;
+import org.springframework.ai.chat.memory.repository.jdbc.HsqldbChatMemoryRepositoryDialect;
+import org.springframework.ai.chat.memory.repository.jdbc.JdbcChatMemoryRepository;
+import org.springframework.ai.chat.memory.repository.jdbc.JdbcChatMemoryRepositoryDialect;
+import org.springframework.ai.chat.memory.repository.jdbc.MysqlChatMemoryRepositoryDialect;
+import org.springframework.ai.chat.memory.repository.jdbc.OracleChatMemoryRepositoryDialect;
+import org.springframework.ai.chat.memory.repository.jdbc.SqlServerChatMemoryRepositoryDialect;
+import org.springframework.ai.chat.messages.Message;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.datasource.init.DatabasePopulatorUtils;
+import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
+import org.springframework.jdbc.support.JdbcUtils;
+
+/**
+ * @author Ivica Cardic
+ */
+public class JdbcChatMemoryUtils {
+
+    private JdbcChatMemoryUtils() {
+    }
+
+    public static ChatMemoryRepository getChatMemoryRepository(
+        Parameters extensions, Map<String, ComponentConnection> componentConnections,
+        ClusterElementDefinitionService clusterElementDefinitionService) throws Exception {
+
+        DataSource dataSource = getDataSource(extensions, componentConnections, clusterElementDefinitionService);
+
+        initializeSchema(dataSource);
+
+        JdbcTemplate jdbcTemplate = new JdbcTemplate(dataSource);
+
+        JdbcChatMemoryRepositoryDialect dialect = JdbcChatMemoryRepositoryDialect.from(dataSource);
+
+        ChatMemoryRepository delegate = JdbcChatMemoryRepository.builder()
+            .jdbcTemplate(jdbcTemplate)
+            .dialect(dialect)
+            .build();
+
+        return new OrderedJdbcChatMemoryRepository(
+            delegate, jdbcTemplate, getSelectConversationIdsOrderedSql(dialect));
+    }
+
+    public static String getSelectConversationIdsOrderedSql(JdbcChatMemoryRepositoryDialect dialect) {
+        if (dialect instanceof MysqlChatMemoryRepositoryDialect) {
+            return "SELECT conversation_id FROM SPRING_AI_CHAT_MEMORY GROUP BY conversation_id ORDER BY MAX(`timestamp`) DESC";
+        } else if (dialect instanceof OracleChatMemoryRepositoryDialect) {
+            return "SELECT CONVERSATION_ID FROM SPRING_AI_CHAT_MEMORY GROUP BY CONVERSATION_ID ORDER BY MAX(\"TIMESTAMP\") DESC";
+        } else if (dialect instanceof SqlServerChatMemoryRepositoryDialect) {
+            return "SELECT conversation_id FROM SPRING_AI_CHAT_MEMORY GROUP BY conversation_id ORDER BY MAX([timestamp]) DESC";
+        } else if (dialect instanceof HsqldbChatMemoryRepositoryDialect) {
+            return "SELECT conversation_id FROM SPRING_AI_CHAT_MEMORY GROUP BY conversation_id ORDER BY MAX(timestamp) DESC";
+        }
+
+        return "SELECT conversation_id FROM SPRING_AI_CHAT_MEMORY GROUP BY conversation_id ORDER BY MAX(\"timestamp\") DESC";
+    }
+
+    private static void initializeSchema(DataSource dataSource) {
+        String schemaScript = resolveSchemaScript(dataSource);
+
+        ResourceDatabasePopulator populator = new ResourceDatabasePopulator(new ClassPathResource(schemaScript));
+
+        populator.setContinueOnError(true);
+
+        DatabasePopulatorUtils.execute(populator, dataSource);
+    }
+
+    private static String resolveSchemaScript(DataSource dataSource) {
+        String productName = null;
+
+        try {
+            productName = JdbcUtils.extractDatabaseMetaData(dataSource, DatabaseMetaData::getDatabaseProductName);
+        } catch (Exception ignored) {
+        }
+
+        String schemaName = switch (productName != null ? productName : "") {
+            case "MySQL" -> "schema-mysql.sql";
+            case "MariaDB" -> "schema-mariadb.sql";
+            case "Oracle" -> "schema-oracle.sql";
+            default -> "schema-postgresql.sql";
+        };
+
+        return "org/springframework/ai/chat/memory/repository/jdbc/" + schemaName;
+    }
+
+    public static DataSource getDataSource(
+        Parameters extensions, Map<String, ComponentConnection> componentConnections,
+        ClusterElementDefinitionService clusterElementDefinitionService) throws Exception {
+
+        ClusterElement clusterElement = ClusterElementMap.of(extensions)
+            .getClusterElement(DATA_SOURCE);
+
+        DataSourceFunction dataSourceFunction = clusterElementDefinitionService.getClusterElement(
+            clusterElement.getComponentName(), clusterElement.getComponentVersion(),
+            clusterElement.getClusterElementName());
+
+        ComponentConnection componentConnection = componentConnections.get(clusterElement.getWorkflowNodeName());
+
+        Map<String, ?> componentConnectionParameters = componentConnection.getParameters();
+
+        return dataSourceFunction.apply(
+            ParametersFactory.create(clusterElement.getParameters()),
+            ParametersFactory.create(componentConnectionParameters),
+            ParametersFactory.create(clusterElement.getExtensions()), componentConnections);
+    }
+
+    public static ClusterElementDefinition.OptionsFunction<String> getClusterElementFirstMessages() {
+        return (inputParameters, connectionParameters, lookupDependsOnPaths, searchText, context) -> {
+            DataSource dataSource = ((ClusterElementContextAware) context).resolveClusterElement(
+                DATA_SOURCE,
+                (
+                    dataSourceFn, elementInputParams, elementConnectionParams, elementExtensions,
+                    elementComponentConnections, ctx) -> {
+                    try {
+                        return ((DataSourceFunction) dataSourceFn).apply(
+                            elementInputParams, elementConnectionParams,
+                            ParametersFactory.create(Map.of()), Map.of());
+                    } catch (Exception exception) {
+                        return null;
+                    }
+                });
+
+            if (dataSource == null) {
+                return List.of();
+            }
+
+            initializeSchema(dataSource);
+
+            JdbcTemplate jdbcTemplate = new JdbcTemplate(dataSource);
+            JdbcChatMemoryRepositoryDialect dialect = JdbcChatMemoryRepositoryDialect.from(dataSource);
+            JdbcChatMemoryRepository jdbcChatMemoryRepository = JdbcChatMemoryRepository.builder()
+                .jdbcTemplate(jdbcTemplate)
+                .dialect(dialect)
+                .build();
+
+            ChatMemoryRepository chatMemoryRepository = new OrderedJdbcChatMemoryRepository(
+                jdbcChatMemoryRepository, jdbcTemplate, getSelectConversationIdsOrderedSql(dialect));
+
+            List<ComponentDsl.ModifiableOption<String>> options = new ArrayList<>();
+            List<String> conversationIds = chatMemoryRepository.findConversationIds();
+
+            for (String conversationId : conversationIds) {
+                List<Message> messages = chatMemoryRepository.findByConversationId(conversationId);
+
+                Message message = messages.getFirst();
+
+                options.add(option(conversationId, conversationId, message.getText()));
+            }
+
+            return options;
+        };
+    }
+
+    public static MultipleConnectionsOptionsFunction<String>
+        getFirstMessages(ClusterElementDefinitionService clusterElementDefinitionService) {
+        return (inputParameters, componentConnections, extensions, context) -> {
+            ChatMemoryRepository chatMemoryRepository = getChatMemoryRepository(
+                extensions, componentConnections, clusterElementDefinitionService);
+
+            List<ComponentDsl.ModifiableOption<String>> options = new ArrayList<>();
+
+            List<String> conversationIds = chatMemoryRepository.findConversationIds();
+
+            for (String conversationId : conversationIds) {
+                List<Message> messages = chatMemoryRepository.findByConversationId(conversationId);
+
+                Message message = messages.getFirst();
+
+                options.add(option(conversationId, conversationId, message.getText()));
+            }
+
+            return options;
+        };
+    }
+}

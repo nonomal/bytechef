@@ -1,0 +1,95 @@
+---
+title: "Hacker News"
+description: "Hacker News is a social news website focused on computer science, startups and technology-related topics."
+---
+
+
+Categories: Social Media
+
+
+Type: hackerNews/v1
+
+<hr />
+
+
+
+
+## Actions
+
+
+### Fetch Top Stories
+Name: fetchTopStories
+
+`Fetch top stories from Hacker News.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| numberOfStories | Number Of Stories | INTEGER | Number of stories to fetch. | true |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Fetch Top Stories",
+  "name" : "fetchTopStories",
+  "parameters" : {
+    "numberOfStories" : 1
+  },
+  "type" : "hackerNews/v1/fetchTopStories"
+}
+```
+
+#### Output
+
+
+
+Type: ARRAY
+
+
+Items Type: OBJECT
+
+
+#### Properties
+|     Name     |     Type     |     Description     |
+|:------------:|:------------:|:-------------------:|
+| by | STRING | The username of the item's author. |
+| descendants | INTEGER | In the case of stories or polls, the total comment count. |
+| id | INTEGER | The item's unique id. |
+| kids | ARRAY <details> <summary> Items </summary> [INTEGER] </details> | The ids of the item's comments, in ranked display order. |
+| score | INTEGER | The story's score, or the votes for a pollopt. |
+| time | INTEGER | Creation date of the item, in Unix Time. |
+| title | STRING | The title of the story, poll or job. HTML. |
+| type | STRING | The type of item. |
+| url | STRING | The URL of the story. |
+
+
+
+
+
+#### Output Example
+```json
+[ {
+  "by" : "",
+  "descendants" : 1,
+  "id" : 1,
+  "kids" : [ 1 ],
+  "score" : 1,
+  "time" : 1,
+  "title" : "",
+  "type" : "",
+  "url" : ""
+} ]
+```
+
+
+
+
+
+
+## What to do if your action is not listed here?
+
+If this component doesn't have the action you need, you can use **Custom Action** to create your own. Custom Actions empower you to define HTTP requests tailored to your specific requirements, allowing for greater flexibility in integrating with external services or APIs.
+
+To create a Custom Action, simply specify the desired HTTP method, path, and any necessary parameters. This way, you can extend the functionality of your component beyond the predefined actions, ensuring that you can meet all your integration needs effectively.
+

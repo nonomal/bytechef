@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,26 +16,45 @@
 
 package com.bytechef.platform.configuration.dto;
 
-import com.bytechef.platform.component.registry.domain.ActionDefinition;
-import com.bytechef.platform.component.registry.domain.Output;
-import com.bytechef.platform.component.registry.domain.Property;
-import com.bytechef.platform.component.registry.domain.TriggerDefinition;
-import com.bytechef.platform.workflow.task.dispatcher.registry.domain.TaskDispatcherDefinition;
+import com.bytechef.platform.component.domain.ActionDefinition;
+import com.bytechef.platform.component.domain.ClusterElementDefinition;
+import com.bytechef.platform.component.domain.TriggerDefinition;
+import com.bytechef.platform.domain.OutputResponse;
+import com.bytechef.platform.workflow.task.dispatcher.domain.TaskDispatcherDefinition;
+import org.jspecify.annotations.Nullable;
 
 /**
  * @author Ivica Cardic
  */
 public record WorkflowNodeOutputDTO(
-    ActionDefinition actionDefinition, Property outputSchema, Object sampleOutput,
-    TaskDispatcherDefinition taskDispatcherDefinition, TriggerDefinition triggerDefinition, String workflowNodeName) {
+    @Nullable ActionDefinition actionDefinition, @Nullable ClusterElementDefinition clusterElementDefinition,
+    @Nullable OutputResponse outputResponse, @Nullable TaskDispatcherDefinition taskDispatcherDefinition,
+    boolean testOutputResponse, @Nullable TriggerDefinition triggerDefinition,
+    @Nullable OutputResponse variableOutputResponse, String workflowNodeName) {
 
     public WorkflowNodeOutputDTO(
-        ActionDefinition actionDefinition, Output output, TaskDispatcherDefinition taskDispatcherDefinition,
-        TriggerDefinition triggerDefinition, String workflowNodeName) {
+        @Nullable ActionDefinition actionDefinition, @Nullable ClusterElementDefinition clusterElementDefinition,
+        @Nullable OutputResponse outputResponse, @Nullable TaskDispatcherDefinition taskDispatcherDefinition,
+        boolean testOutputResponse, @Nullable TriggerDefinition triggerDefinition, String workflowNodeName) {
 
         this(
-            actionDefinition, output == null ? null : output.getOutputSchema(),
-            output == null ? null : output.getSampleOutput(), taskDispatcherDefinition,
-            triggerDefinition, workflowNodeName);
+            actionDefinition, clusterElementDefinition, outputResponse, taskDispatcherDefinition,
+            testOutputResponse, triggerDefinition, null, workflowNodeName);
+    }
+
+    public Object getSampleOutput() {
+        if (outputResponse != null) {
+            return outputResponse.sampleOutput();
+        }
+
+        return null;
+    }
+
+    public Object getVariableSampleOutput() {
+        if (variableOutputResponse != null) {
+            return variableOutputResponse.sampleOutput();
+        }
+
+        return null;
     }
 }

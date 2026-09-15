@@ -1,32 +1,63 @@
-import {Alert, AlertDescription, AlertTitle} from '@/components/ui/alert';
-import {Button} from '@/components/ui/button';
-import {Card, CardContent, CardDescription, CardHeader, CardTitle} from '@/components/ui/card';
+import Button from '@/components/Button/Button';
+import {Input} from '@/components/Input/Input';
+import LoadingIcon from '@/components/LoadingIcon';
+import {Card, CardContent, CardHeader, CardTitle} from '@/components/ui/card';
 import {Checkbox} from '@/components/ui/checkbox';
 import {Form, FormControl, FormField, FormItem, FormLabel, FormMessage} from '@/components/ui/form';
-import {Input} from '@/components/ui/input';
+import {getLoginRedirect, rememberLoginRedirect} from '@/shared/auth/login-redirect-utils';
+import {useAnalytics} from '@/shared/hooks/useAnalytics';
 import PublicLayoutContainer from '@/shared/layout/PublicLayoutContainer';
 import {useAuthenticationStore} from '@/shared/stores/useAuthenticationStore';
+import {useFeatureFlagsStore} from '@/shared/stores/useFeatureFlagsStore';
 import {zodResolver} from '@hookform/resolvers/zod';
-import {useQueryClient} from '@tanstack/react-query';
-import React, {useEffect} from 'react';
+import {EyeIcon, EyeOffIcon, ShieldCheckIcon} from 'lucide-react';
+import {useCallback, useEffect, useRef, useState} from 'react';
 import {useForm} from 'react-hook-form';
-import {Link, Navigate, useLocation, useNavigate} from 'react-router-dom';
+import {Link, Navigate, useLocation, useNavigate, useSearchParams} from 'react-router-dom';
 import {z} from 'zod';
+import {useShallow} from 'zustand/react/shallow';
+
+import githubLogo from '../images/github-logo.svg';
+import googleLogo from '../images/google-logo.svg';
+import MfaVerification from './MfaVerification';
 
 const formSchema = z.object({
-    email: z.string().email().min(5, 'Email is required').max(254),
-    password: z.string().min(4, 'Password is required').max(50),
+    email: z.string().min(5, {message: 'Email is required'}).max(254),
+    password: z.string().min(4, {message: 'Password is required'}).max(50),
     rememberMe: z.boolean(),
 });
 
+interface SsoRedirectI {
+    providerName: string;
+    url: string;
+}
+
 const Login = () => {
-    const {authenticated, getAccount, login, loginError, sessionHasBeenFetched} = useAuthenticationStore();
+    const [showPassword, setShowPassword] = useState(false);
+    const [ssoRedirect, setSsoRedirect] = useState<SsoRedirectI | null>(null);
+    const lastCheckedEmailRef = useRef<string>('');
+    const abortControllerRef = useRef<AbortController | null>(null);
+
+    const {authenticated, login, loginError, mfaRequired, reset, verifyMfa} = useAuthenticationStore(
+        useShallow((state) => ({
+            authenticated: state.authenticated,
+            login: state.login,
+            loginError: state.loginError,
+            mfaRequired: state.mfaRequired,
+            reset: state.reset,
+            verifyMfa: state.verifyMfa,
+        }))
+    );
+
+    const ff_1874 = useFeatureFlagsStore()('ff-1874');
+
+    const analytics = useAnalytics();
 
     const pageLocation = useLocation();
 
     const navigate = useNavigate();
 
-    const queryClient = useQueryClient();
+    const [searchParams] = useSearchParams();
 
     const form = useForm<z.infer<typeof formSchema>>({
         defaultValues: {
@@ -34,135 +65,333 @@ const Login = () => {
             password: '',
             rememberMe: false,
         },
+
         resolver: zodResolver(formSchema),
     });
 
-    const handleSubmit = ({email, password, rememberMe}: z.infer<typeof formSchema>) => {
-        login(email, password, rememberMe);
+    const {
+        formState: {isSubmitting},
+    } = form;
+
+    const handleSubmit = async ({email, password, rememberMe}: z.infer<typeof formSchema>) => {
+        return login(email, password, rememberMe).then((account) => {
+            if (account) {
+                analytics.identify(account);
+            }
+        });
+    };
+
+    const handleMfaVerify = async (code: string): Promise<boolean> => {
+        const account = await verifyMfa(code);
+
+        if (account) {
+            analytics.identify(account);
+
+            return true;
+        }
+
+        return false;
+    };
+
+    const handleEmailBlur = useCallback(async () => {
+        const email = form.getValues('email');
+        const atIndex = email?.indexOf('@') ?? -1;
+
+        if (!email || atIndex < 1 || atIndex >= email.length - 1) {
+            setSsoRedirect(null);
+
+            return;
+        }
+
+        if (email === lastCheckedEmailRef.current) {
+            return;
+        }
+
+        lastCheckedEmailRef.current = email;
+
+        abortControllerRef.current?.abort();
+
+        const abortController = new AbortController();
+
+        abortControllerRef.current = abortController;
+
+        try {
+            const response = await fetch('/api/sso/discover', {
+                body: JSON.stringify({email}),
+                headers: {'Content-Type': 'application/json'},
+                method: 'POST',
+                signal: AbortSignal.any([abortController.signal, AbortSignal.timeout(5000)]),
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+
+                if (data.redirectUrl) {
+                    setSsoRedirect({providerName: data.providerName, url: data.redirectUrl});
+                } else {
+                    setSsoRedirect(null);
+                }
+            } else {
+                setSsoRedirect(null);
+            }
+        } catch {
+            setSsoRedirect(null);
+        }
+    }, [form]);
+
+    const {from} = pageLocation.state || {
+        from: getLoginRedirect(pageLocation.search) ?? {pathname: '/', search: pageLocation.search},
     };
 
     useEffect(() => {
-        if (!sessionHasBeenFetched) {
-            getAccount();
-        }
+        const company = searchParams.get('company');
 
-        if (sessionHasBeenFetched) {
-            queryClient.resetQueries();
+        if (company) {
+            fetch(`/api/sso/discover-by-name?company=${encodeURIComponent(company)}`)
+                .then((response) => {
+                    if (response.ok) {
+                        return response.json();
+                    }
+                })
+                .then((data) => {
+                    if (data?.redirectUrl) {
+                        rememberLoginRedirect(getLoginRedirect(pageLocation.search));
+
+                        window.location.href = data.redirectUrl;
+                    }
+                })
+                .catch(() => {
+                    // fall back to normal login
+                });
         }
-    }, [sessionHasBeenFetched, queryClient, getAccount]);
+    }, [pageLocation.search, searchParams]);
 
     useEffect(() => {
-        if (authenticated) {
-            navigate('/');
+        if (searchParams.get('error') === 'oauth2') {
+            navigate('/account-error', {
+                state: {
+                    error: 'Failed to sign in with social provider. Please try again or use email/password.',
+                    fromInternalFlow: true,
+                },
+            });
         }
-    }, [authenticated, navigate]);
+    }, [navigate, searchParams]);
 
-    const {from} = pageLocation.state || {from: {pathname: '/', search: pageLocation.search}};
+    useEffect(() => {
+        if (loginError && !authenticated) {
+            navigate('/account-error', {
+                state: {
+                    error: 'Failed to sign in, please check your credentials and try again.',
+                    fromInternalFlow: true,
+                },
+            });
+
+            reset();
+        }
+    }, [authenticated, loginError, navigate, reset]);
 
     if (authenticated) {
         return <Navigate replace to={from} />;
     }
 
+    if (mfaRequired) {
+        return <MfaVerification onBack={reset} onVerify={handleMfaVerify} />;
+    }
+
     return (
         <PublicLayoutContainer>
-            <Card className="mx-auto w-full max-w-sm shadow-none">
-                <CardHeader>
-                    <CardTitle className="text-xl">Sign in</CardTitle>
-
-                    <CardDescription>Enter your email below to login to your account.</CardDescription>
+            <Card className="mx-auto max-w-sm rounded-xl p-6 text-start shadow-none">
+                <CardHeader className="p-0 pb-10">
+                    <CardTitle className="self-center text-xl font-semibold text-content-neutral-primary">
+                        Welcome back
+                    </CardTitle>
                 </CardHeader>
 
-                <CardContent>
-                    {loginError && (
-                        <Alert className="mb-4" variant="destructive">
-                            <AlertTitle>Failed to sign in!</AlertTitle>
+                <CardContent className="flex flex-col gap-6 p-0">
+                    {ff_1874 && (
+                        <>
+                            <div className="flex flex-col gap-4">
+                                <Button
+                                    icon={<img alt="Google logo" src={googleLogo} />}
+                                    label="Continue with Google"
+                                    onClick={() => {
+                                        rememberLoginRedirect(getLoginRedirect(pageLocation.search));
 
-                            <AlertDescription>Please check your credentials and try again.</AlertDescription>
-                        </Alert>
+                                        window.location.href = '/oauth2/authorization/google';
+                                    }}
+                                    size="lg"
+                                    variant="outline"
+                                />
+
+                                <Button
+                                    icon={<img alt="Github logo" src={githubLogo} />}
+                                    label="Continue with Github"
+                                    onClick={() => {
+                                        rememberLoginRedirect(getLoginRedirect(pageLocation.search));
+
+                                        window.location.href = '/oauth2/authorization/github';
+                                    }}
+                                    size="lg"
+                                    variant="outline"
+                                />
+                            </div>
+
+                            <div className="flex items-center">
+                                <hr className="w-1/2 border-content-neutral-tertiary" />
+
+                                <p className="px-2 text-sm text-content-neutral-tertiary">or</p>
+
+                                <hr className="w-1/2 border-content-neutral-tertiary" />
+                            </div>
+                        </>
                     )}
 
                     <Form {...form}>
-                        <form className="grid gap-4" onSubmit={form.handleSubmit(handleSubmit)}>
-                            <FormField
-                                control={form.control}
-                                name="email"
-                                render={({field}) => (
-                                    <FormItem>
-                                        <FormLabel>Email</FormLabel>
+                        <form onSubmit={form.handleSubmit(handleSubmit)} role="form">
+                            <div className="flex flex-col gap-2">
+                                <FormField
+                                    control={form.control}
+                                    name="email"
+                                    render={({field}) => (
+                                        <FormItem>
+                                            <FormLabel className="text-content-neutral-primary" htmlFor="email">
+                                                Email
+                                            </FormLabel>
 
-                                        <FormControl>
-                                            <Input placeholder="m@example.com" type="email" {...field} />
-                                        </FormControl>
+                                            <FormControl>
+                                                <Input
+                                                    autoComplete="email"
+                                                    className="py-5 hover:border-stroke-brand-primary"
+                                                    id="email"
+                                                    type="email"
+                                                    {...field}
+                                                    onBlur={() => {
+                                                        field.onBlur();
+                                                        handleEmailBlur();
+                                                    }}
+                                                />
+                                            </FormControl>
 
-                                        <FormMessage />
-                                    </FormItem>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+
+                                {ssoRedirect && (
+                                    <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
+                                        <p className="mb-2 text-sm text-blue-800">
+                                            Your organization uses SSO for authentication.
+                                        </p>
+
+                                        <Button
+                                            className="w-full"
+                                            icon={<ShieldCheckIcon className="size-4" />}
+                                            label={`Continue with ${ssoRedirect.providerName}`}
+                                            onClick={() => {
+                                                rememberLoginRedirect(getLoginRedirect(pageLocation.search));
+
+                                                window.location.href = ssoRedirect.url;
+                                            }}
+                                            size="lg"
+                                            variant="outline"
+                                        />
+                                    </div>
                                 )}
-                            />
 
-                            <FormField
-                                control={form.control}
-                                name="password"
-                                render={({field}) => (
-                                    <FormItem>
-                                        <div className="flex items-center space-y-1">
-                                            <FormLabel>Password</FormLabel>
+                                <FormField
+                                    control={form.control}
+                                    name="password"
+                                    render={({field}) => (
+                                        <FormItem>
+                                            <FormLabel className="text-content-neutral-primary" htmlFor="password">
+                                                Password
+                                            </FormLabel>
+
+                                            <FormControl>
+                                                <div className="relative">
+                                                    <Input
+                                                        aria-label="Password"
+                                                        className="py-5 hover:border-stroke-brand-primary"
+                                                        id="password"
+                                                        type={showPassword ? 'text' : 'password'}
+                                                        {...field}
+                                                    />
+
+                                                    {form.getValues('password') !== '' && (
+                                                        <Button
+                                                            aria-label={
+                                                                showPassword ? 'Hide Password' : 'Show Password'
+                                                            }
+                                                            className="absolute top-1 right-2 z-10"
+                                                            icon={showPassword ? <EyeOffIcon /> : <EyeIcon />}
+                                                            onClick={() => setShowPassword((show) => !show)}
+                                                            size="iconSm"
+                                                            type="button"
+                                                            variant="ghost"
+                                                        />
+                                                    )}
+                                                </div>
+                                            </FormControl>
+
+                                            <FormMessage />
 
                                             <Link
-                                                className="ml-auto inline-block text-sm underline"
+                                                className="inline-block text-sm text-content-neutral-secondary hover:text-content-neutral-primary"
                                                 to="/password-reset/init"
                                             >
                                                 Forgot your password?
                                             </Link>
-                                        </div>
-
-                                        <FormControl>
-                                            <Input type="password" {...field} />
-                                        </FormControl>
-
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
 
                             <FormField
                                 control={form.control}
                                 name="rememberMe"
                                 render={({field}) => (
-                                    <FormItem className="flex items-center space-x-3 space-y-0 ">
+                                    <FormItem className="flex items-center space-y-0 space-x-2 py-4">
                                         <FormControl>
-                                            <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                                            <Checkbox
+                                                checked={field.value}
+                                                id="stayLoggedInButton"
+                                                onCheckedChange={field.onChange}
+                                            />
                                         </FormControl>
 
-                                        <FormLabel>Remember me</FormLabel>
+                                        <FormLabel
+                                            className="font-normal text-content-neutral-primary"
+                                            htmlFor="stayLoggedInButton"
+                                        >
+                                            Stay logged in
+                                        </FormLabel>
                                     </FormItem>
                                 )}
                             />
 
-                            <Button className="w-full" type="submit">
-                                Sign in
-                            </Button>
-
-                            {/*<div className="py-1 text-center">OR</div>*/}
-
-                            {/*<Button className="w-full" variant="outline">*/}
-
-                            {/*    Sign in with Google*/}
-
-                            {/*</Button>*/}
-
-                            {/*<Button className="w-full" variant="outline">*/}
-
-                            {/*    Sign in with GitHub*/}
-
-                            {/*</Button>*/}
+                            <Button
+                                aria-label="log in button"
+                                className="w-full"
+                                disabled={isSubmitting}
+                                icon={
+                                    isSubmitting ? (
+                                        <div aria-label="loading icon">
+                                            <LoadingIcon />
+                                        </div>
+                                    ) : undefined
+                                }
+                                label="Log in"
+                                size="lg"
+                                type="submit"
+                            />
                         </form>
                     </Form>
 
-                    <div className="mt-4 text-center text-sm">
-                        <span className="mr-1">Don&apos;t have an account?</span>
+                    <div className="flex items-center justify-center gap-1 text-sm">
+                        <span className="text-content-neutral-secondary">Don&apos;t have an account?</span>
 
-                        <Link className="underline" to="/register">
-                            Create an account
+                        <Link to="/register">
+                            <Button className="px-1" label="Create account" variant="link" />
                         </Link>
                     </div>
                 </CardContent>

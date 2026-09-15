@@ -1,0 +1,15 @@
+mutation updateMcpComponentWithTools($id: ID!, $input: McpComponentWithToolsInput!) {
+    updateMcpComponentWithTools(id: $id, input: $input) {
+        id
+        componentName
+        componentVersion
+        title
+        mcpServerId
+        connectionId
+        createdBy
+        createdDate
+        lastModifiedBy
+        lastModifiedDate
+        version
+    }
+}

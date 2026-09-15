@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,13 +16,13 @@
 
 package com.bytechef.component.rabbitmq;
 
-import static com.bytechef.component.definition.ComponentDSL.component;
+import static com.bytechef.component.definition.ComponentDsl.component;
+import static com.bytechef.component.definition.ComponentDsl.tool;
 
 import com.bytechef.component.ComponentHandler;
 import com.bytechef.component.definition.ComponentDefinition;
 import com.bytechef.component.rabbitmq.action.RabbitMqSendMessageAction;
 import com.bytechef.component.rabbitmq.connection.RabbitMqConnection;
-import com.bytechef.component.rabbitmq.constant.RabbitMqConstants;
 import com.bytechef.component.rabbitmq.trigger.RabbitMqNewMessageTrigger;
 import com.google.auto.service.AutoService;
 
@@ -32,13 +32,16 @@ import com.google.auto.service.AutoService;
 @AutoService(ComponentHandler.class)
 public class RabbitMqComponentHandler implements ComponentHandler {
 
-    private static final ComponentDefinition COMPONENT_DEFINITION = component(RabbitMqConstants.RABBIT_MQ)
+    private static final ComponentDefinition COMPONENT_DEFINITION = component("rabbitMQ")
         .title("RabbitMQ")
         .description(
-            "RabbitMQ is an open-source message broker software that enables efficient communication between different systems, applications, and services. It supports multiple messaging protocols and facilitates a reliable and flexible messaging system.")
+            "RabbitMQ is an open-source message broker software that enables efficient communication between " +
+                "different systems, applications, and services. It supports multiple messaging protocols and " +
+                "facilitates a reliable and flexible messaging system.")
         .icon("path:assets/rabbitmq.svg")
         .connection(RabbitMqConnection.CONNECTION_DEFINITION)
         .actions(RabbitMqSendMessageAction.ACTION_DEFINITION)
+        .clusterElements(tool(RabbitMqSendMessageAction.ACTION_DEFINITION))
         .triggers(RabbitMqNewMessageTrigger.TRIGGER_DEFINITION);
 
     @Override

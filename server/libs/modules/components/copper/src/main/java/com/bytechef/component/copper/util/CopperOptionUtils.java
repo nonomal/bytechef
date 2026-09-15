@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,20 +16,19 @@
 
 package com.bytechef.component.copper.util;
 
-import static com.bytechef.component.copper.constant.CopperConstants.BASE_URL;
 import static com.bytechef.component.copper.constant.CopperConstants.COMPANY;
 import static com.bytechef.component.copper.constant.CopperConstants.ID;
 import static com.bytechef.component.copper.constant.CopperConstants.LEAD;
 import static com.bytechef.component.copper.constant.CopperConstants.NAME;
 import static com.bytechef.component.copper.constant.CopperConstants.PERSON;
 import static com.bytechef.component.copper.constant.CopperConstants.TYPE;
-import static com.bytechef.component.definition.ComponentDSL.option;
+import static com.bytechef.component.definition.ComponentDsl.option;
 
 import com.bytechef.component.definition.ActionContext;
 import com.bytechef.component.definition.Context.Http;
-import com.bytechef.component.definition.Context.TypeReference;
 import com.bytechef.component.definition.Option;
 import com.bytechef.component.definition.Parameters;
+import com.bytechef.component.definition.TypeReference;
 import com.bytechef.component.exception.ProviderException;
 import java.util.ArrayList;
 import java.util.List;
@@ -47,7 +46,7 @@ public class CopperOptionUtils {
         List<Option<String>> options = new ArrayList<>();
 
         for (Map<String, Object> map : value) {
-            options.add(option(String.valueOf(map.get(NAME)), String.valueOf(map.get(ID))));
+            options.add(option((String) map.get(NAME), String.valueOf(map.get(ID))));
         }
 
         return options;
@@ -55,12 +54,12 @@ public class CopperOptionUtils {
 
     @SuppressWarnings("unchecked")
     public static List<Option<String>> getActivityTypeOptions(
-        Parameters inputParameters, Parameters connectionParameters, Map<String, String> dependencyPaths,
+        Parameters inputParameters, Parameters connectionParameters, Map<String, String> lookupDependsOnPaths,
         String searchText, ActionContext context) {
 
-        Map<String, ArrayList<Map<String, Object>>> body = null;
+        Map<String, List<Map<String, Object>>> body;
 
-        Http.Response response = context.http(http -> http.get(BASE_URL + "/activity_types"))
+        Http.Response response = context.http(http -> http.get("/activity_types"))
             .configuration(Http.responseType(Http.ResponseType.JSON))
             .execute();
 
@@ -79,16 +78,16 @@ public class CopperOptionUtils {
 
         body
             .getOrDefault("user", new ArrayList<>())
-            .forEach(map -> options.add(option(String.valueOf(map.get("name")), String.valueOf(map.get("id")))));
+            .forEach(map -> options.add(option((String) map.get(NAME), String.valueOf(map.get(ID)))));
 
         return options;
     }
 
     public static List<Option<String>> getCompanyIdOptions(
-        Parameters inputParameters, Parameters connectionParameters, Map<String, String> dependencyPaths,
+        Parameters inputParameters, Parameters connectionParameters, Map<String, String> lookupDependsOnPaths,
         String searchText, ActionContext context) {
 
-        List<Map<String, Object>> body = context.http(http -> http.post(BASE_URL + "/companies/search"))
+        List<Map<String, Object>> body = context.http(http -> http.post("/companies/search"))
             .configuration(Http.responseType(Http.ResponseType.JSON))
             .execute()
             .getBody(new TypeReference<>() {});
@@ -97,10 +96,10 @@ public class CopperOptionUtils {
     }
 
     public static List<Option<String>> getContactTypesOptions(
-        Parameters inputParameters, Parameters connectionParameters, Map<String, String> dependencyPaths,
+        Parameters inputParameters, Parameters connectionParameters, Map<String, String> lookupDependsOnPaths,
         String searchText, ActionContext context) {
 
-        List<Map<String, Object>> body = context.http(http -> http.get(BASE_URL + "/contact_types"))
+        List<Map<String, Object>> body = context.http(http -> http.get("/contact_types"))
             .configuration(Http.responseType(Http.ResponseType.JSON))
             .execute()
             .getBody(new TypeReference<>() {});
@@ -110,20 +109,25 @@ public class CopperOptionUtils {
 
     @SuppressWarnings("unchecked")
     public static List<Option<String>> getParentOptions(
-        Parameters inputParameters, Parameters connectionParameters, Map<String, String> dependencyPaths,
+        Parameters inputParameters, Parameters connectionParameters, Map<String, String> lookupDependsOnPaths,
         String searchText, ActionContext context) {
+
+        if (!inputParameters.containsKey(TYPE)) {
+            return List.of();
+        }
 
         String parentType = inputParameters.getRequiredString(TYPE);
 
-        Http.Executor executor = switch (parentType) {
-            case LEAD -> context.http(http -> http.post(BASE_URL + "/leads/search"));
-            case PERSON -> context.http(http -> http.post(BASE_URL + "/people/search"));
-            case COMPANY -> context.http(http -> http.post(BASE_URL + "/companies/search"));
-            default -> context.http(http -> http.post(BASE_URL + "/opportunities/search"));
+        String url = switch (parentType) {
+            case LEAD -> "/leads/search";
+            case PERSON -> "/people/search";
+            case COMPANY -> "/companies/search";
+            default -> "/opportunities/search";
         };
 
         List<Map<String, Object>> body;
-        Http.Response response = executor.configuration(Http.responseType(Http.ResponseType.JSON))
+        Http.Response response = context.http(http -> http.post(url))
+            .configuration(Http.responseType(Http.ResponseType.JSON))
             .execute();
 
         try {
@@ -141,10 +145,10 @@ public class CopperOptionUtils {
     }
 
     public static List<Option<String>> getTagsOptions(
-        Parameters inputParameters, Parameters connectionParameters, Map<String, String> dependencyPaths,
+        Parameters inputParameters, Parameters connectionParameters, Map<String, String> lookupDependsOnPaths,
         String searchText, ActionContext context) {
 
-        List<Map<String, Object>> body = context.http(http -> http.get(BASE_URL + "/tags"))
+        List<Map<String, Object>> body = context.http(http -> http.get("/tags"))
             .configuration(Http.responseType(Http.ResponseType.JSON))
             .execute()
             .getBody(new TypeReference<>() {});
@@ -152,7 +156,7 @@ public class CopperOptionUtils {
         List<Option<String>> options = new ArrayList<>();
 
         for (Map<String, Object> linkedHashMap : body) {
-            String name = String.valueOf(linkedHashMap.get(NAME));
+            String name = (String) linkedHashMap.get(NAME);
 
             options.add(option(name, name));
         }
@@ -161,10 +165,10 @@ public class CopperOptionUtils {
     }
 
     public static List<Option<String>> getUserOptions(
-        Parameters inputParameters, Parameters connectionParameters, Map<String, String> dependencyPaths,
+        Parameters inputParameters, Parameters connectionParameters, Map<String, String> lookupDependsOnPaths,
         String searchText, ActionContext context) {
 
-        List<Map<String, Object>> body = context.http(http -> http.post(BASE_URL + "/users/search"))
+        List<Map<String, Object>> body = context.http(http -> http.post("/users/search"))
             .configuration(Http.responseType(Http.ResponseType.JSON))
             .execute()
             .getBody(new TypeReference<>() {});

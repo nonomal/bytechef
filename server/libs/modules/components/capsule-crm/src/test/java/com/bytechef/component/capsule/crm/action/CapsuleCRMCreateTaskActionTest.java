@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,21 +16,28 @@
 
 package com.bytechef.component.capsule.crm.action;
 
-import static com.bytechef.component.capsule.crm.action.CapsuleCRMCreateTaskAction.POST_TASKS_CONTEXT_FUNCTION;
 import static com.bytechef.component.capsule.crm.constant.CapsuleCRMConstants.CATEGORY;
 import static com.bytechef.component.capsule.crm.constant.CapsuleCRMConstants.DESCRIPTION;
 import static com.bytechef.component.capsule.crm.constant.CapsuleCRMConstants.DETAIL;
 import static com.bytechef.component.capsule.crm.constant.CapsuleCRMConstants.DUE_ON;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-import com.bytechef.component.definition.Context;
+import com.bytechef.component.definition.ActionContext;
+import com.bytechef.component.definition.Context.ContextFunction;
+import com.bytechef.component.definition.Context.Http;
+import com.bytechef.component.definition.Context.Http.Body;
+import com.bytechef.component.definition.Context.Http.BodyContentType;
+import com.bytechef.component.definition.Context.Http.Configuration;
+import com.bytechef.component.definition.Context.Http.Configuration.ConfigurationBuilder;
+import com.bytechef.component.definition.Context.Http.Executor;
+import com.bytechef.component.definition.Context.Http.ResponseType;
+import com.bytechef.component.test.definition.MockParametersFactory;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 
 /**
  * @author Monika Domiter
@@ -38,27 +45,26 @@ import org.junit.jupiter.api.Test;
 class CapsuleCRMCreateTaskActionTest extends AbstractCapsuleCRMActionTest {
 
     @Test
-    void testPerform() {
+    void testPerform(
+        ActionContext mockedContext, ArgumentCaptor<ContextFunction<Http, Executor>> httpFunctionArgumentCaptor,
+        ArgumentCaptor<ConfigurationBuilder> configurationBuilderArgumentCaptor) {
+
         Map<String, Object> propertyStubsMap = createPropertyStubsMap();
 
-        when(mockedParameters.getRequiredString(DESCRIPTION))
-            .thenReturn((String) propertyStubsMap.get(DESCRIPTION));
-        when(mockedParameters.getDate(DUE_ON))
-            .thenReturn((Date) propertyStubsMap.get(DUE_ON));
-        when(mockedParameters.getString(DETAIL))
-            .thenReturn((String) propertyStubsMap.get(DETAIL));
-        when(mockedParameters.get(CATEGORY))
-            .thenReturn(propertyStubsMap.get(CATEGORY));
+        mockedParameters = MockParametersFactory.create(propertyStubsMap);
 
-        Object result = CapsuleCRMCreateTaskAction.perform(mockedParameters, mockedParameters, mockedContext);
+        Object result = CapsuleCRMCreateTaskAction.perform(mockedParameters, null, mockedContext);
 
-        assertEquals(responeseMap, result);
+        assertEquals(responseMap, result);
+        assertNotNull(httpFunctionArgumentCaptor.getValue());
+        assertEquals("/tasks", stringArgumentCaptor.getValue());
 
-        verify(mockedContext, times(1)).http(POST_TASKS_CONTEXT_FUNCTION);
+        ConfigurationBuilder configurationBuilder = configurationBuilderArgumentCaptor.getValue();
+        Configuration configuration = configurationBuilder.build();
 
-        Context.Http.Body body = bodyArgumentCaptor.getValue();
-
-        assertEquals(Map.of("task", propertyStubsMap), body.getContent());
+        assertEquals(ResponseType.JSON, configuration.getResponseType());
+        assertEquals(
+            Body.of(Map.of("task", propertyStubsMap), BodyContentType.JSON), bodyArgumentCaptor.getValue());
     }
 
     private static Map<String, Object> createPropertyStubsMap() {

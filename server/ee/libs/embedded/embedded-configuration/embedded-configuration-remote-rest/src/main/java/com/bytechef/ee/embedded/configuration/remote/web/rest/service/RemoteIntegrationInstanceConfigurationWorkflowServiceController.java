@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the ByteChef Enterprise license (the "Enterprise License");
  * you may not use this file except in compliance with the Enterprise License.
@@ -7,9 +7,9 @@
 
 package com.bytechef.ee.embedded.configuration.remote.web.rest.service;
 
-import com.bytechef.embedded.configuration.domain.IntegrationInstanceConfigurationWorkflow;
-import com.bytechef.embedded.configuration.domain.IntegrationInstanceConfigurationWorkflowConnection;
-import com.bytechef.embedded.configuration.service.IntegrationInstanceConfigurationWorkflowService;
+import com.bytechef.ee.embedded.configuration.domain.IntegrationInstanceConfigurationWorkflow;
+import com.bytechef.ee.embedded.configuration.domain.IntegrationInstanceConfigurationWorkflowConnection;
+import com.bytechef.ee.embedded.configuration.service.IntegrationInstanceConfigurationWorkflowService;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import io.swagger.v3.oas.annotations.Hidden;
 import java.util.List;
@@ -65,35 +65,34 @@ public class RemoteIntegrationInstanceConfigurationWorkflowServiceController {
     @RequestMapping(
         method = RequestMethod.GET,
         value = "/get-integration-instance-configuration-workflow-connection/{integrationInstanceConfigurationId}" +
-            "/{workflowId}/{workflowConnectionOperationName}/{workflowConnectionKey}",
+            "/{workflowId}/{operationName}/{key}",
         produces = {
             "application/json"
         })
     public ResponseEntity<IntegrationInstanceConfigurationWorkflowConnection>
         getIntegrationInstanceConfigurationWorkflowConnection(
             @PathVariable long integrationInstanceConfigurationId, @PathVariable String workflowId,
-            @PathVariable String workflowConnectionOperationName, @PathVariable String workflowConnectionKey) {
+            @PathVariable String operationName, @PathVariable String key) {
 
         return ResponseEntity.ok(
             integrationInstanceConfigurationWorkflowService.getIntegrationInstanceConfigurationWorkflowConnection(
-                integrationInstanceConfigurationId, workflowId, workflowConnectionOperationName,
-                workflowConnectionKey));
+                integrationInstanceConfigurationId, workflowId, operationName, key));
     }
 
     @RequestMapping(
         method = RequestMethod.GET,
         value = "/get-integration-instance-configuration-workflow-connection/{integrationInstanceConfigurationId}" +
-            "/{workflowId}/{workflowConnectionOperationName}",
+            "/{workflowId}/{operationName}",
         produces = {
             "application/json"
         })
     public ResponseEntity<List<IntegrationInstanceConfigurationWorkflowConnection>>
         getIntegrationInstanceWorkflowConnection(
             @PathVariable long integrationInstanceConfigurationId, @PathVariable String workflowId,
-            @PathVariable String workflowConnectionOperationName) {
+            @PathVariable String operationName) {
 
         return ResponseEntity.ok(
             integrationInstanceConfigurationWorkflowService.getIntegrationInstanceConfigurationWorkflowConnections(
-                integrationInstanceConfigurationId, workflowId, workflowConnectionOperationName));
+                integrationInstanceConfigurationId, workflowId, operationName));
     }
 }

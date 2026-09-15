@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the ByteChef Enterprise license (the "Enterprise License");
  * you may not use this file except in compliance with the Enterprise License.
@@ -7,10 +7,12 @@
 
 package com.bytechef.ee.embedded.configuration.remote.client.service;
 
-import com.bytechef.embedded.configuration.domain.IntegrationInstance;
-import com.bytechef.embedded.configuration.domain.IntegrationInstanceWorkflow;
-import com.bytechef.embedded.configuration.service.IntegrationInstanceService;
+import com.bytechef.ee.embedded.configuration.domain.IntegrationInstance;
+import com.bytechef.ee.embedded.configuration.service.IntegrationInstanceService;
+import com.bytechef.platform.annotation.ConditionalOnEEVersion;
+import com.bytechef.platform.configuration.domain.Environment;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.stereotype.Component;
 
 /**
@@ -19,7 +21,39 @@ import org.springframework.stereotype.Component;
  * @author Ivica Cardic
  */
 @Component
+@ConditionalOnEEVersion
 public class RemoteIntegrationInstanceServiceClient implements IntegrationInstanceService {
+
+    @Override
+    public IntegrationInstance create(IntegrationInstance integrationInstance) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public IntegrationInstance create(
+        long connectedUserId, long connectionId, long integrationInstanceConfigurationId) {
+
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void delete(long id) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public Optional<IntegrationInstance> fetchIntegrationInstance(
+        long connectedUserId, String componentName, Environment environment) {
+
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public IntegrationInstance getIntegrationInstance(
+        long connectedUserId, List<String> componentNames, Environment environment) {
+
+        throw new UnsupportedOperationException();
+    }
 
     @Override
     public List<IntegrationInstance> getConnectedUserIntegrationInstances(long connectedUserId) {
@@ -27,8 +61,27 @@ public class RemoteIntegrationInstanceServiceClient implements IntegrationInstan
     }
 
     @Override
+    public List<IntegrationInstance> getConnectedUserIntegrationInstances(long connectedUserId, boolean enabled) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public List<IntegrationInstance> getConnectedUserIntegrationInstances(
+        long connectedUserId, Environment environment) {
+
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public List<IntegrationInstance> getIntegrationInstances(
+        long connectedUserId, String componentName, Environment environment) {
+
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
     public List<IntegrationInstance> getConnectedUserIntegrationInstances(List<Long> connectedUserIds) {
-        return null;
+        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -37,14 +90,23 @@ public class RemoteIntegrationInstanceServiceClient implements IntegrationInstan
     }
 
     @Override
-    public void updateEnabled(long id, boolean enable) {
+    public IntegrationInstance
+        getIntegrationInstance(long connectedUserId, String workflowId, Environment environment) {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public IntegrationInstanceWorkflow updateWorkflowEnabled(
-        long id, long integrationInstanceConfigurationWorkflowId, boolean enable) {
+    public List<IntegrationInstance> getIntegrationInstances(List<Long> ids) {
+        throw new UnsupportedOperationException();
+    }
 
+    @Override
+    public List<IntegrationInstance> getIntegrationInstances(long integrationInstanceConfigurationId) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void updateEnabled(long id, boolean enable) {
         throw new UnsupportedOperationException();
     }
 }

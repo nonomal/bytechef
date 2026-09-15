@@ -1,0 +1,237 @@
+---
+title: "VTiger"
+description: "VTiger is a comprehensive customer relationship management (CRM) platform that offers sales, marketing, and support solutions to streamline business."
+---
+
+
+Categories: CRM
+
+
+Type: vtiger/v1
+
+<hr />
+
+
+
+
+## Connections
+
+Version: 1
+
+
+### Basic Auth
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| username | Username | STRING | Enter your username/email. | true |
+| password | Access Key | STRING |  | true |
+| instance_url | VTiger Instance URL | STRING | For the instance URL, add the url without the endpoint. | true |
+
+
+
+## Connection Setup
+
+### Find Access Key
+
+1. Navigate to [VTiger](https://www.vtiger.com/) dashboard.
+2. Click on your account icon.
+3. Click on **My Preferences**.
+4. Here you can see your credentials.
+5. Done 🚀.
+
+<div style={{ position: 'relative', height:0, width: '100%', overflow: 'hidden', zIndex: 49, boxSizing: 'border-box', paddingBottom: 'calc(52.05219207% + 32px)'}}>
+    <iframe src="https://www.guidejar.com/embed/ad9fa498-8bd3-49d8-9e44-efd6b4068af8?type=1&controls=on" width="100%" height="100%" style={{height:'100%', position:'absolute', inset:0}} allowFullScreen frameBorder="0"></iframe>
+</div>
+
+
+
+<hr />
+
+
+## Actions
+
+
+### Create Contact
+Name: createContact
+
+`Creates a new contact.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| firstname | First Name | STRING | First name of the contact. | true |
+| lastname | Last Name | STRING | Last name of the contact. | true |
+| email | Email | STRING | Email address of the contact. | true |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Create Contact",
+  "name" : "createContact",
+  "parameters" : {
+    "firstname" : "",
+    "lastname" : "",
+    "email" : ""
+  },
+  "type" : "vtiger/v1/createContact"
+}
+```
+
+#### Output
+
+
+
+Type: OBJECT
+
+
+#### Properties
+
+|     Name     |     Type     |     Description     |
+|:------------:|:------------:|:-------------------:|
+| result | OBJECT <details> <summary> Properties </summary> &#123;STRING\(firstname), STRING\(lastname), STRING\(email), STRING\(phone), STRING\(assigned_user_id), STRING\(id)&#125; </details> |  |
+
+
+
+
+#### Output Example
+```json
+{
+  "result" : {
+    "firstname" : "",
+    "lastname" : "",
+    "email" : "",
+    "phone" : "",
+    "assigned_user_id" : "",
+    "id" : ""
+  }
+}
+```
+
+
+
+
+### Create Product
+Name: createProduct
+
+`Creates a new product for your CRM.`
+
+#### Properties
+
+|      Name       |      Label     |     Type     |     Description     | Required |
+|:---------------:|:--------------:|:------------:|:-------------------:|:--------:|
+| productname | Product Name | STRING | Name of the product. | true |
+| product_type | Product Type | STRING <details> <summary> Options </summary> <span>Solo</span>, <span>Fixed Bundle</span> </details> | Type of the product. | true |
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Create Product",
+  "name" : "createProduct",
+  "parameters" : {
+    "productname" : "",
+    "product_type" : ""
+  },
+  "type" : "vtiger/v1/createProduct"
+}
+```
+
+#### Output
+
+
+
+Type: OBJECT
+
+
+#### Properties
+
+|     Name     |     Type     |     Description     |
+|:------------:|:------------:|:-------------------:|
+| results | OBJECT <details> <summary> Properties </summary> &#123;STRING\(productname), STRING\(product_type), STRING\(assigned_user_id), STRING\(id)&#125; </details> |  |
+
+
+
+
+#### Output Example
+```json
+{
+  "results" : {
+    "productname" : "",
+    "product_type" : "",
+    "assigned_user_id" : "",
+    "id" : ""
+  }
+}
+```
+
+
+
+
+### Get Me
+Name: getMe
+
+`Get more information about yourself.`
+
+#### Example JSON Structure
+```json
+{
+  "label" : "Get Me",
+  "name" : "getMe",
+  "type" : "vtiger/v1/getMe"
+}
+```
+
+#### Output
+
+
+
+Type: OBJECT
+
+
+#### Properties
+
+|     Name     |     Type     |     Description     |
+|:------------:|:------------:|:-------------------:|
+| result | OBJECT <details> <summary> Properties </summary> &#123;STRING\(id), STRING\(user_name), STRING\(user_type), STRING\(email), STRING\(phone_home), STRING\(phone_work), STRING\(phone_mobile), STRING\(userlable), STRING\(address_street), STRING\(address_city), STRING\(address_state), STRING\(address_country), STRING\(roleid), STRING\(language), BOOLEAN\(is_admin), BOOLEAN\(is_owner), STRING\(status)&#125; </details> |  |
+
+
+
+
+#### Output Example
+```json
+{
+  "result" : {
+    "id" : "",
+    "user_name" : "",
+    "user_type" : "",
+    "email" : "",
+    "phone_home" : "",
+    "phone_work" : "",
+    "phone_mobile" : "",
+    "userlable" : "",
+    "address_street" : "",
+    "address_city" : "",
+    "address_state" : "",
+    "address_country" : "",
+    "roleid" : "",
+    "language" : "",
+    "is_admin" : false,
+    "is_owner" : false,
+    "status" : ""
+  }
+}
+```
+
+
+
+
+
+
+## What to do if your action is not listed here?
+
+If this component doesn't have the action you need, you can use **Custom Action** to create your own. Custom Actions empower you to define HTTP requests tailored to your specific requirements, allowing for greater flexibility in integrating with external services or APIs.
+
+To create a Custom Action, simply specify the desired HTTP method, path, and any necessary parameters. This way, you can extend the functionality of your component beyond the predefined actions, ensuring that you can meet all your integration needs effectively.
+

@@ -1,0 +1,138 @@
+---
+openapi: "3.0.1"
+info:
+  title: "Spotify"
+  description: "Spotify is a popular music streaming service that offers a vast library of songs, podcasts, and playlists for users to enjoy."
+  version: "v1"
+servers:
+  - url: "https://api.spotify.com/v1"
+paths:
+  /me/player/play:
+    put:
+      summary: "Play/Resume Playback"
+      description: "Start or resume current playback on an active device."
+      operationId: "startResumePlayback"
+      security:
+        - "oauth2":
+            - "user-modify-playback-state"
+      x-ai-agent-tool: true
+      x-help: "https://docs.bytechef.io/reference/components/spotify_v1#playresume-playback"
+      parameters:
+        - name: "deviceId"
+          in: "query"
+          required: false
+          description: "The id of the device this command is targeting. If not supplied, the user's currently active device is the target."
+          schema:
+            title: "Device ID"
+            type: "string"
+            x-dynamic-options: true
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: "object"
+              properties:
+                context_uri:
+                  type: "string"
+                  description: "Spotify URI of the context to play (album, artist, playlist)."
+                uris:
+                  type: "array"
+                  description: "Spotify track URIs to play."
+                  title: "Tracks"
+                  items:
+                    type: "string"
+                    format: "uri"
+                position_ms:
+                  type: "integer"
+                  description: "The position in milliseconds to start playback from."
+                  title: "Position"
+      responses:
+        204:
+          description: "Successful operation"
+  /playlists/{playlist_id}/tracks:
+    post:
+      summary: "Add Items to a Playlist"
+      description: "Adds one or more items to your playlist."
+      operationId: "addItemsToPlaylist"
+      x-ai-agent-tool: true
+      x-help: "https://docs.bytechef.io/reference/components/spotify_v1#add-items-to-a-playlist"
+      security:
+        - "oauth2":
+            - "playlist-modify-public"
+            - "playlist-modify-private"
+            - "playlist-read-private"
+      parameters:
+        - name: "playlist_id"
+          in: "path"
+          description: "ID of the playlist the items will be added to."
+          required: true
+          schema:
+            title: "Playlist ID"
+            type: "string"
+            x-dynamic-options: true
+        - name: "uris"
+          in: "query"
+          required: true
+          schema:
+            type: "array"
+            title: "Tracks"
+            description: "URI's of the items to add to the playlist."
+            maxItems: 100
+            items:
+              type: "string"
+              format: "uri"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: "object"
+              properties:
+                position:
+                  type: "integer"
+                  description: "Position to insert the items, a zero-based index."
+      responses:
+        201:
+          description: "Successful operation"
+          content:
+            application/json:
+              schema:
+                type: "object"
+                properties:
+                  snapshot_id:
+                    type: "string"
+                    description: "The snapshot ID of the playlist."
+components:
+  securitySchemes:
+    oauth2:
+      type: "oauth2"
+      flows:
+        authorizationCode:
+          authorizationUrl: "https://accounts.spotify.com/authorize"
+          tokenUrl: "https://accounts.spotify.com/api/token"
+          refreshUrl: "https://accounts.spotify.com/api/token"
+          scopes:
+            "ugc-image-upload" : "Write access to user-provided images."
+            "user-read-playback-state" : "Read access to a user’s player state."
+            "user-modify-playback-state" : "Write access to a user’s playback state."
+            "user-read-currently-playing" : "Read access to a user’s currently playing content."
+            "app-remote-control" : "Remote control playback of Spotify. This scope is currently available to Spotify iOS and Android SDKs."
+            "streaming" : "Control playback of a Spotify track. This scope is currently available to the Web Playback SDK. The user must have a Spotify Premium account."
+            "playlist-read-private" : "Read access to user's private playlists."
+            "playlist-read-collaborative" : "Include collaborative playlists when requesting a user's playlists."
+            "playlist-modify-private" : "Write access to a user's private playlists."
+            "playlist-modify-public" : "Write access to a user's public playlists."
+            "user-follow-modify" : "Write/delete access to the list of artists and other users that the user follows."
+            "user-follow-read" : "Read access to the list of artists and other users that the user follows."
+            "user-read-playback-position" : "Read access to a user’s playback position in a content."
+            "user-top-read" : "Read access to a user's top artists and tracks."
+            "user-read-recently-played" : "Read access to a user’s recently played tracks."
+            "user-library-modify" : "Write/delete access to a user's `Your Music` library."
+            "user-library-read" : "Read access to a user's library."
+            "user-read-email" : "Read access to user’s email address."
+            "user-read-private" : "Read access to user’s subscription details (type of user account)."
+            "user-personalized" : "Get personalized content for the user."
+            "user-soa-link" : "Link a partner user account to a Spotify user account."
+            "user-soa-unlink" : "Unlink a partner user account from a Spotify account."
+            "soa-manage-entitlements" : "Modify entitlements for linked users."
+            "soa-manage-partner" : "Update partner information."
+            "soa-create-partner" : "Create new partners, platform partners only."

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,25 +16,25 @@
 
 package com.bytechef.component.xlsx.file.action;
 
-import static com.bytechef.component.definition.ComponentDSL.action;
-import static com.bytechef.component.definition.ComponentDSL.array;
-import static com.bytechef.component.definition.ComponentDSL.bool;
-import static com.bytechef.component.definition.ComponentDSL.date;
-import static com.bytechef.component.definition.ComponentDSL.dateTime;
-import static com.bytechef.component.definition.ComponentDSL.fileEntry;
-import static com.bytechef.component.definition.ComponentDSL.integer;
-import static com.bytechef.component.definition.ComponentDSL.nullable;
-import static com.bytechef.component.definition.ComponentDSL.number;
-import static com.bytechef.component.definition.ComponentDSL.object;
-import static com.bytechef.component.definition.ComponentDSL.string;
-import static com.bytechef.component.definition.ComponentDSL.time;
+import static com.bytechef.component.definition.ComponentDsl.action;
+import static com.bytechef.component.definition.ComponentDsl.array;
+import static com.bytechef.component.definition.ComponentDsl.bool;
+import static com.bytechef.component.definition.ComponentDsl.date;
+import static com.bytechef.component.definition.ComponentDsl.dateTime;
+import static com.bytechef.component.definition.ComponentDsl.fileEntry;
+import static com.bytechef.component.definition.ComponentDsl.integer;
+import static com.bytechef.component.definition.ComponentDsl.nullable;
+import static com.bytechef.component.definition.ComponentDsl.number;
+import static com.bytechef.component.definition.ComponentDsl.object;
+import static com.bytechef.component.definition.ComponentDsl.outputSchema;
+import static com.bytechef.component.definition.ComponentDsl.string;
+import static com.bytechef.component.definition.ComponentDsl.time;
 import static com.bytechef.component.xlsx.file.constant.XlsxFileConstants.FILENAME;
 import static com.bytechef.component.xlsx.file.constant.XlsxFileConstants.ROWS;
 import static com.bytechef.component.xlsx.file.constant.XlsxFileConstants.SHEET_NAME;
-import static com.bytechef.component.xlsx.file.constant.XlsxFileConstants.WRITE;
 
 import com.bytechef.component.definition.ActionContext;
-import com.bytechef.component.definition.ComponentDSL.ModifiableActionDefinition;
+import com.bytechef.component.definition.ComponentDsl.ModifiableActionDefinition;
 import com.bytechef.component.definition.FileEntry;
 import com.bytechef.component.definition.Parameters;
 import com.bytechef.component.xlsx.file.constant.XlsxFileConstants;
@@ -55,8 +55,8 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
  */
 public class XlsxFileWriteAction {
 
-    public static final ModifiableActionDefinition ACTION_DEFINITION = action(WRITE)
-        .title("Write to file")
+    public static final ModifiableActionDefinition ACTION_DEFINITION = action("write")
+        .title("Write to File")
         .description("Writes the data to a XLS/XLSX file.")
         .properties(
             string(SHEET_NAME)
@@ -66,20 +66,21 @@ public class XlsxFileWriteAction {
                 .advancedOption(true),
             array(ROWS)
                 .label("Rows")
-                .description("The array of objects to write to the file.")
+                .description("The array of rows to write to the file.")
                 .required(true)
+                .placeholder("Add Row")
                 .items(
                     object()
+                        .placeholder("Add Column")
                         .additionalProperties(
                             bool(), date(), dateTime(), integer(), nullable(), number(), string(), time())),
             string(FILENAME)
                 .label("Filename")
-                .description(
-                    "Filename to set for binary data. By default, \"file.xlsx\" will be used.")
+                .description("Filename to set for binary data. By default, \"file.xlsx\" will be used.")
                 .required(true)
                 .defaultValue("file.xlsx")
                 .advancedOption(true))
-        .outputSchema(fileEntry())
+        .output(outputSchema(fileEntry()))
         .perform(XlsxFileWriteAction::perform);
 
     @SuppressWarnings({

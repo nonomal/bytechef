@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,17 +16,8 @@
 
 package com.bytechef.component.affinity;
 
-import com.bytechef.test.jsonasssert.JsonFileAssert;
-import org.junit.jupiter.api.Test;
-
 /**
- * @author Monika Domiter
+ * @generated
  */
-class AffinityComponentHandlerTest {
-
-    @Test
-    void testGetComponentDefinition() {
-        JsonFileAssert.assertEquals(
-            "definition/affinity_v1.json", new AffinityComponentHandler().getDefinition());
-    }
+public class AffinityComponentHandlerTest extends AbstractAffinityComponentHandlerTest {
 }

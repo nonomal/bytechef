@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,13 +24,11 @@ import java.util.List;
  */
 public interface WorkspaceService {
 
-    Workspace create(Workspace workspace);
-
-    void delete(long id);
-
+    /**
+     * Returns every workspace in the current tenant, without any user-based filtering. Callers that must respect
+     * per-user visibility should filter the result through {@code PermissionService} membership checks.
+     *
+     * @return all workspaces in the tenant
+     */
     List<Workspace> getWorkspaces();
-
-    Workspace getWorkspace(long id);
-
-    Workspace update(Workspace workspace);
 }

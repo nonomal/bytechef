@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,9 +16,8 @@
 
 package com.bytechef.platform.connection.facade;
 
-import com.bytechef.platform.connection.domain.ConnectionEnvironment;
 import com.bytechef.platform.connection.dto.ConnectionDTO;
-import com.bytechef.platform.constant.AppType;
+import com.bytechef.platform.constant.PlatformType;
 import com.bytechef.platform.tag.domain.Tag;
 import java.util.List;
 
@@ -27,19 +26,24 @@ import java.util.List;
  */
 public interface ConnectionFacade {
 
-    ConnectionDTO create(ConnectionDTO connectionDTO, AppType type);
+    long create(ConnectionDTO connectionDTO, PlatformType type);
 
     void delete(Long id);
 
+    Integer executeConnectionRefresh(Long connectionId);
+
     ConnectionDTO getConnection(Long id);
 
+    List<ConnectionDTO> getConnections(List<Long> connectionIds, PlatformType type);
+
     List<ConnectionDTO> getConnections(
-        String componentName, Integer connectionVersion, ConnectionEnvironment connectionEnvironment,
-        Long tagId, AppType type);
+        String componentName, Integer connectionVersion, List<Long> connectionIds, Long tagId, Long environmentId,
+        PlatformType type);
 
-    List<Tag> getConnectionTags(AppType type);
+    List<Tag> getConnectionTags(PlatformType type);
 
-    ConnectionDTO update(Long id, List<Tag> tags);
+    void update(long id, List<Tag> tags);
 
-    ConnectionDTO update(ConnectionDTO connectionDTO);
+    void update(long id, String name, List<Tag> tags, int version);
+
 }

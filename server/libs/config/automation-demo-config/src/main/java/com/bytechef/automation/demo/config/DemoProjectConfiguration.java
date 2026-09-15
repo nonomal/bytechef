@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ package com.bytechef.automation.demo.config;
 import com.bytechef.atlas.configuration.domain.Workflow;
 import com.bytechef.atlas.configuration.domain.Workflow.SourceType;
 import com.bytechef.atlas.configuration.service.WorkflowService;
+import com.bytechef.atlas.coordinator.annotation.ConditionalOnCoordinator;
 import com.bytechef.automation.configuration.domain.Project;
 import com.bytechef.automation.configuration.service.ProjectService;
 import com.bytechef.automation.configuration.service.ProjectWorkflowService;
@@ -31,7 +32,7 @@ import org.apache.commons.lang3.Validate;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.DependsOn;
+import org.springframework.context.annotation.Profile;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.support.ResourcePatternResolver;
 import org.springframework.transaction.annotation.Transactional;
@@ -40,7 +41,8 @@ import org.springframework.transaction.annotation.Transactional;
  * @author Ivica Cardic
  */
 @Configuration
-@DependsOn("mapUtils")
+@ConditionalOnCoordinator
+@Profile("demo")
 public class DemoProjectConfiguration {
 
     private final ProjectService projectService;
@@ -82,7 +84,7 @@ public class DemoProjectConfiguration {
                         resource.getContentAsString(StandardCharsets.UTF_8), Workflow.Format.JSON, SourceType.JDBC);
 
                     projectWorkflowService.addWorkflow(
-                        Validate.notNull(project.getId(), "id"), project.getLastVersion(), workflow.getId());
+                        Validate.notNull(project.getId(), "id"), project.getLastProjectVersion(), workflow.getId());
                 }
             }
         };

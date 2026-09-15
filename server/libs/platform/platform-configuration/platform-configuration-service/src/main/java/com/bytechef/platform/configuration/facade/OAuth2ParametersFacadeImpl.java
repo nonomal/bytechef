@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,10 +16,10 @@
 
 package com.bytechef.platform.configuration.facade;
 
-import com.bytechef.platform.component.registry.domain.OAuth2AuthorizationParameters;
-import com.bytechef.platform.component.registry.facade.ConnectionDefinitionFacade;
+import com.bytechef.component.definition.Authorization.AuthorizationType;
+import com.bytechef.platform.component.domain.OAuth2AuthorizationParameters;
+import com.bytechef.platform.component.service.ConnectionDefinitionService;
 import com.bytechef.platform.oauth2.service.OAuth2Service;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import java.util.Map;
 import org.springframework.stereotype.Service;
 
@@ -29,23 +29,23 @@ import org.springframework.stereotype.Service;
 @Service
 public class OAuth2ParametersFacadeImpl implements OAuth2ParametersFacade {
 
-    private final ConnectionDefinitionFacade connectionDefinitionFacade;
+    private final ConnectionDefinitionService connectionDefinitionService;
     private final OAuth2Service oAuth2Service;
 
-    @SuppressFBWarnings("EI")
     public OAuth2ParametersFacadeImpl(
-        ConnectionDefinitionFacade connectionDefinitionFacade, OAuth2Service oAuth2Service) {
+        ConnectionDefinitionService connectionDefinitionService, OAuth2Service oAuth2Service) {
 
-        this.connectionDefinitionFacade = connectionDefinitionFacade;
+        this.connectionDefinitionService = connectionDefinitionService;
         this.oAuth2Service = oAuth2Service;
     }
 
     @Override
     public OAuth2AuthorizationParameters getOAuth2AuthorizationParameters(
-        String componentName, int connectionVersion, Map<String, ?> connectionParameters, String authorizationName) {
+        String componentName, int connectionVersion, Map<String, ?> connectionParameters,
+        AuthorizationType authorizationType) {
 
-        return connectionDefinitionFacade.getOAuth2AuthorizationParameters(
-            componentName, connectionVersion, authorizationName,
+        return connectionDefinitionService.getOAuth2AuthorizationParameters(
+            componentName, connectionVersion, authorizationType,
             oAuth2Service.checkPredefinedParameters(componentName, connectionParameters));
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,9 +18,20 @@ package com.bytechef.component.data.storage.util;
 
 import static com.bytechef.component.data.storage.constant.DataStorageConstants.TYPE;
 import static com.bytechef.component.data.storage.constant.DataStorageConstants.VALUE;
-import static com.bytechef.component.definition.ComponentDSL.nullable;
+import static com.bytechef.component.definition.ComponentDsl.array;
+import static com.bytechef.component.definition.ComponentDsl.bool;
+import static com.bytechef.component.definition.ComponentDsl.date;
+import static com.bytechef.component.definition.ComponentDsl.dateTime;
+import static com.bytechef.component.definition.ComponentDsl.integer;
+import static com.bytechef.component.definition.ComponentDsl.nullable;
+import static com.bytechef.component.definition.ComponentDsl.number;
+import static com.bytechef.component.definition.ComponentDsl.object;
+import static com.bytechef.component.definition.ComponentDsl.string;
+import static com.bytechef.component.definition.ComponentDsl.time;
 
+import com.bytechef.component.data.storage.constant.ValueType;
 import com.bytechef.component.definition.Parameters;
+import com.bytechef.component.definition.Property.ValueProperty;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -29,58 +40,84 @@ import java.util.ArrayList;
 public class DataStorageUtils {
 
     public static Class<?> getType(Parameters inputParameters) {
-        return switch (inputParameters.getRequiredInteger(TYPE)) {
-            case 1 -> ArrayList.class;
-            case 2 -> Boolean.class;
-            case 3 -> LocalDate.class;
-            case 4 -> LocalDateTime.class;
-            case 5 -> Integer.class;
-            case 7 -> Number.class;
-            case 8 -> Object.class;
-            case 9 -> String.class;
-            case 10 -> LocalTime.class;
-            default -> nullable().getClass();
+        return switch (inputParameters.getRequired(TYPE, ValueType.class)) {
+            case ARRAY -> ArrayList.class;
+            case BOOLEAN -> Boolean.class;
+            case DATE -> LocalDate.class;
+            case DATE_TIME -> LocalDateTime.class;
+            case INTEGER -> Integer.class;
+            case NUMBER -> Number.class;
+            case OBJECT -> Object.class;
+            case STRING -> String.class;
+            case TIME -> LocalTime.class;
+            default -> null;
         };
     }
 
     public static Object getValue(Parameters inputParameters) {
         Object value = null;
 
-        switch (inputParameters.getRequiredInteger(TYPE)) {
-            case 1:
+        switch (inputParameters.getRequired(TYPE, ValueType.class)) {
+            case ARRAY:
                 value = inputParameters.getRequiredArray(VALUE);
+
                 break;
-            case 2:
+            case BOOLEAN:
                 value = inputParameters.getRequiredBoolean(VALUE);
+
                 break;
-            case 3:
+            case DATE:
                 value = inputParameters.getRequiredLocalDate(VALUE);
+
                 break;
-            case 4:
+            case DATE_TIME:
                 value = inputParameters.getRequiredLocalDateTime(VALUE);
+
                 break;
-            case 5:
+            case INTEGER:
                 value = inputParameters.getRequiredInteger(VALUE);
+
                 break;
-            case 6:
+            case NULL:
                 value = nullable();
+
                 break;
-            case 7:
+            case NUMBER:
                 value = inputParameters.getRequiredDouble(VALUE);
+
                 break;
-            case 8:
+            case OBJECT:
                 value = inputParameters.getRequiredMap(VALUE);
+
                 break;
-            case 9:
+            case STRING:
                 value = inputParameters.getRequiredString(VALUE);
+
                 break;
-            case 10:
+            case TIME:
                 value = inputParameters.getRequiredLocalTime(VALUE);
+
                 break;
             default:
+
                 break;
         }
 
         return value;
+    }
+
+    public static ValueProperty<?> getValueProperty(ValueType valueType) {
+        return switch (valueType) {
+            case ARRAY -> array();
+            case BOOLEAN -> bool();
+            case DATE -> date();
+            case DATE_TIME -> dateTime();
+            case INTEGER -> integer();
+            case NUMBER -> number();
+            case OBJECT -> object();
+            case STRING -> string();
+            case TIME -> time();
+            default -> nullable();
+        };
     }
 }

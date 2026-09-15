@@ -1,0 +1,29 @@
+query knowledgeBase($id: ID!) {
+    knowledgeBase(id: $id) {
+        id
+        name
+        description
+        maxChunkSize
+        minChunkSizeChars
+        overlap
+        documents {
+            id
+            name
+            document {
+                name
+                extension
+                mimeType
+                url
+            }
+            status
+            tags
+            createdDate
+            chunks {
+                id
+                knowledgeBaseDocumentId
+            }
+        }
+        createdDate
+        lastModifiedDate
+    }
+}

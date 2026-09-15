@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ import java.util.Optional;
 
 /**
  * @author Ivica Cardic
+ * @author Igor Beslic
  */
 public interface Authorization {
 
@@ -50,7 +51,7 @@ public interface Authorization {
     /**
      *
      */
-    String AUTHORIZATION_TYPE = "authorizationName";
+    String AUTHORIZATION_TYPE = "authorizationType";
 
     /**
      *
@@ -139,60 +140,71 @@ public interface Authorization {
         /**
          *
          */
-        API_KEY,
+        API_KEY(false),
 
         /**
          *
          */
-        BASIC_AUTH,
+        BASIC_AUTH(false),
 
         /**
          *
          */
-        BEARER_TOKEN, CUSTOM,
+        BEARER_TOKEN(false),
+
+        /**
+         * Custom authorization type
+         */
+        CUSTOM(false),
 
         /**
          *
          */
-        DIGEST_AUTH,
+        DIGEST_AUTH(false),
 
         /**
          *
          */
-        NONE,
+        OAUTH2_AUTHORIZATION_CODE(true),
 
         /**
          *
          */
-        OAUTH2_AUTHORIZATION_CODE,
+        OAUTH2_AUTHORIZATION_CODE_PKCE(true),
 
         /**
          *
          */
-        OAUTH2_AUTHORIZATION_CODE_PKCE,
+        OAUTH2_CLIENT_CREDENTIALS(false),
 
         /**
          *
          */
-        OAUTH2_CLIENT_CREDENTIALS,
+        OAUTH2_IMPLICIT_CODE(false),
 
         /**
          *
          */
-        OAUTH2_IMPLICIT_CODE,
+        OAUTH2_RESOURCE_OWNER_PASSWORD(false);
+
+        private final boolean requiresTokenRefresh;
+
+        public boolean requiresTokenRefresh() {
+            return requiresTokenRefresh;
+        }
 
         /**
          *
-         */
-        OAUTH2_RESOURCE_OWNER_PASSWORD;
-
-        /**
-         *
-         * @return
+         * @return the lowercased name of enum
          */
         public String getName() {
             return name().toLowerCase();
         }
+
+        AuthorizationType(boolean requiresTokenRefresh) {
+            this.requiresTokenRefresh = requiresTokenRefresh;
+        }
+
     }
 
     /**
@@ -272,6 +284,8 @@ public interface Authorization {
     Optional<String> getDescription();
 
     String getName();
+
+    Optional<OAuth2AuthorizationExtraQueryParametersFunction> getOauth2AuthorizationExtraQueryParameters();
 
     /**
      * TODO
@@ -387,8 +401,8 @@ public interface Authorization {
          * @return
          */
         AuthorizationCallbackResponse apply(
-            Parameters connectionParameters, String code, String redirectUri, String codeVerifier, Context context)
-            throws Exception;
+            Parameters connectionParameters, String code, String redirectUri, String codeVerifier,
+            Context context) throws Exception;
     }
 
     /**
@@ -434,17 +448,17 @@ public interface Authorization {
     }
 
     /**
-     * Adds oauth refresh token value to provided connectionParameters
+     *
      */
     @FunctionalInterface
-    interface RefreshTokenFunction {
+    interface OAuth2AuthorizationExtraQueryParametersFunction {
 
         /**
          * @param connectionParameters
          * @param context
          * @return
          */
-        String apply(Parameters connectionParameters, Context context) throws Exception;
+        Map<String, String> apply(Parameters connectionParameters, Context context) throws Exception;
     }
 
     /**
@@ -463,6 +477,21 @@ public interface Authorization {
          */
         Pkce apply(String verifier, String challenge, String challengeMethod, Context context)
             throws Exception;
+    }
+
+    /**
+     * Adds oauth refresh token value to provided connectionParameters
+     */
+    @FunctionalInterface
+    interface RefreshTokenFunction {
+
+        /**
+         * @param connectionParameters
+         * @param context
+         * @return
+         */
+        String apply(Parameters connectionParameters, Context context) throws Exception;
+
     }
 
     /**
@@ -509,7 +538,7 @@ public interface Authorization {
          * @param context
          * @return
          */
-        List<String> apply(Parameters connectionParameters, Context context) throws Exception;
+        Map<String, Boolean> apply(Parameters connectionParameters, Context context) throws Exception;
     }
 
     /**
@@ -630,7 +659,7 @@ public interface Authorization {
      * @param accessToken
      * @param expiresIn
      */
-    record RefreshTokenResponse(String accessToken, String refreshToken, Long expiresIn) {
+    record RefreshTokenResponse(String accessToken, String refreshToken, Integer expiresIn) {
     }
 
     /**

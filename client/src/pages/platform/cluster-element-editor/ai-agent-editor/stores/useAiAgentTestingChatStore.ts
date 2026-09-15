@@ -1,0 +1,92 @@
+import {
+    ToolExecutionEventI,
+    addToolExecutionToLastAssistantMessage as addToolExecutionHelper,
+    appendToLastAssistantMessage as appendHelper,
+    setLastAssistantMessageContent as setContentHelper,
+} from '@/shared/util/assistant-message-utils';
+import {generateRandomId} from '@/shared/util/random-utils';
+import {ThreadMessageLike} from '@assistant-ui/react';
+
+/* eslint-disable sort-keys */
+import {create} from 'zustand';
+import {devtools} from 'zustand/middleware';
+
+interface AiAgentTestingChatStateI {
+    conversationId: string | undefined;
+    generateConversationId: () => void;
+
+    messages: ThreadMessageLike[];
+    setMessage: (message: ThreadMessageLike) => void;
+    addToolExecution: (toolExecution: ToolExecutionEventI) => void;
+    appendToLastAssistantMessage: (delta: string) => void;
+    setLastAssistantMessageContent: (content: string) => void;
+    setLastAssistantMessageError: (errorMessage: string) => void;
+    resetMessages: () => void;
+    truncateMessagesFrom: (index: number) => void;
+
+    resumeUrl: string | null;
+    setResumeUrl: (resumeUrl: string | null) => void;
+}
+
+const useAiAgentTestingChatStore = create<AiAgentTestingChatStateI>()(
+    devtools(
+        (set) => ({
+            conversationId: undefined,
+            generateConversationId: () => {
+                set({conversationId: generateRandomId()});
+            },
+
+            messages: [],
+            setMessage: (message) =>
+                set((state) => ({
+                    messages: [...state.messages, message],
+                })),
+            addToolExecution: (toolExecution: ToolExecutionEventI) =>
+                set((state) => ({
+                    messages: addToolExecutionHelper(state.messages, toolExecution),
+                })),
+            appendToLastAssistantMessage: (delta: string) =>
+                set((state) => ({
+                    messages: appendHelper(state.messages, delta),
+                })),
+            setLastAssistantMessageContent: (content: string) =>
+                set((state) => ({
+                    messages: setContentHelper(state.messages, content),
+                })),
+            setLastAssistantMessageError: (errorMessage: string) =>
+                set((state) => {
+                    const updatedMessages = [...state.messages];
+                    const errorStatus = {error: errorMessage, reason: 'error' as const, type: 'incomplete' as const};
+
+                    for (let i = updatedMessages.length - 1; i >= 0; i--) {
+                        if (updatedMessages[i]?.role === 'assistant') {
+                            updatedMessages[i] = {...updatedMessages[i], status: errorStatus};
+
+                            return {messages: updatedMessages};
+                        }
+                    }
+
+                    return {
+                        messages: [
+                            ...updatedMessages,
+                            {content: '', role: 'assistant', status: errorStatus} as ThreadMessageLike,
+                        ],
+                    };
+                }),
+            resetMessages: () => set({messages: [], resumeUrl: null}),
+            truncateMessagesFrom: (index: number) =>
+                set((state) => ({
+                    messages: state.messages.slice(0, Math.max(0, index)),
+                    resumeUrl: null,
+                })),
+
+            resumeUrl: null,
+            setResumeUrl: (resumeUrl) => set({resumeUrl}),
+        }),
+        {
+            name: 'bytechef.ai-agent-testing-chat',
+        }
+    )
+);
+
+export default useAiAgentTestingChatStore;

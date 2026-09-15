@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -41,8 +41,9 @@ public class WorkflowTestConfigurationConnection {
     }
 
     @Default
-    public WorkflowTestConfigurationConnection(Long connectionId, String workflowConnectionKey,
-        String workflowNodeName) {
+    public WorkflowTestConfigurationConnection(
+        Long connectionId, String workflowConnectionKey, String workflowNodeName) {
+
         this.connectionId = connectionId == null ? null : AggregateReference.to(connectionId);
         this.workflowConnectionKey = workflowConnectionKey;
         this.workflowNodeName = workflowNodeName;
@@ -59,8 +60,8 @@ public class WorkflowTestConfigurationConnection {
 
         WorkflowTestConfigurationConnection that = (WorkflowTestConfigurationConnection) o;
 
-        return Objects.equals(connectionId, that.connectionId)
-            && Objects.equals(workflowConnectionKey, that.workflowConnectionKey) &&
+        return Objects.equals(connectionId, that.connectionId) &&
+            Objects.equals(workflowConnectionKey, that.workflowConnectionKey) &&
             Objects.equals(workflowNodeName, that.workflowNodeName);
     }
 

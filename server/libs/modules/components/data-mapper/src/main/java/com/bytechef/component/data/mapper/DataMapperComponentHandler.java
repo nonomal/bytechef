@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,8 +16,8 @@
 
 package com.bytechef.component.data.mapper;
 
-import static com.bytechef.component.data.mapper.constant.DataMapperConstants.DATA_MAPPER;
-import static com.bytechef.component.definition.ComponentDSL.component;
+import static com.bytechef.component.definition.ComponentDsl.component;
+import static com.bytechef.component.definition.ComponentDsl.tool;
 
 import com.bytechef.component.ComponentHandler;
 import com.bytechef.component.data.mapper.action.DataMapperMapObjectsToArrayAction;
@@ -37,19 +37,28 @@ import com.google.auto.service.AutoService;
 @AutoService(ComponentHandler.class)
 public class DataMapperComponentHandler implements ComponentHandler {
 
-    private static final ComponentDefinition COMPONENT_DEFINITION = component(DATA_MAPPER)
+    private static final ComponentDefinition COMPONENT_DEFINITION = component("dataMapper")
         .title("Data Mapper")
+        .version(1)
         .description("The Data Mapper enables you to configure data mappings.")
         .icon("path:assets/data-mapper.svg")
         .categories(ComponentCategory.HELPERS)
         .actions(
+            DataMapperMapObjectsToArrayAction.ACTION_DEFINITION,
+            DataMapperMapObjectsToObjectAction.ACTION_DEFINITION,
+            DataMapperMergeAndPivotByKeyAction.ACTION_DEFINITION,
             DataMapperRenameKeysAction.ACTION_DEFINITION,
-            DataMapperReplaceValueAction.ACTION_DEFINITION,
             DataMapperReplaceAllSpecifiedValuesAction.ACTION_DEFINITION,
             DataMapperReplaceMultipleValuesByKeyAction.ACTION_DEFINITION,
-            DataMapperMapObjectsToObjectAction.ACTION_DEFINITION,
-            DataMapperMapObjectsToArrayAction.ACTION_DEFINITION,
-            DataMapperMergeAndPivotByKeyAction.ACTION_DEFINITION);
+            DataMapperReplaceValueAction.ACTION_DEFINITION)
+        .clusterElements(
+            tool(DataMapperMapObjectsToArrayAction.ACTION_DEFINITION),
+            tool(DataMapperMapObjectsToObjectAction.ACTION_DEFINITION),
+            tool(DataMapperMergeAndPivotByKeyAction.ACTION_DEFINITION),
+            tool(DataMapperRenameKeysAction.ACTION_DEFINITION),
+            tool(DataMapperReplaceAllSpecifiedValuesAction.ACTION_DEFINITION),
+            tool(DataMapperReplaceMultipleValuesByKeyAction.ACTION_DEFINITION),
+            tool(DataMapperReplaceValueAction.ACTION_DEFINITION));
 
     @Override
     public ComponentDefinition getDefinition() {

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-present ByteChef Inc.
+ * Copyright 2025 ByteChef
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,8 @@
 
 package com.bytechef.automation.configuration.web.rest;
 
-import com.bytechef.automation.configuration.facade.ProjectFacade;
+import com.bytechef.atlas.coordinator.annotation.ConditionalOnCoordinator;
+import com.bytechef.automation.configuration.facade.ProjectTagFacade;
 import com.bytechef.automation.configuration.web.rest.model.TagModel;
 import com.bytechef.automation.configuration.web.rest.model.UpdateTagsRequestModel;
 import com.bytechef.platform.tag.domain.Tag;
@@ -32,30 +33,32 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @RestController
 @RequestMapping("${openapi.openAPIDefinition.base-path.automation:}/internal")
+@ConditionalOnCoordinator
 public class ProjectTagApiController implements ProjectTagApi {
 
     private final ConversionService conversionService;
-    private final ProjectFacade projectFacade;
+    private final ProjectTagFacade projectTagFacade;
 
     @SuppressFBWarnings("EI")
-    public ProjectTagApiController(ConversionService conversionService, ProjectFacade projectFacade) {
+    public ProjectTagApiController(ConversionService conversionService, ProjectTagFacade projectTagFacade) {
         this.conversionService = conversionService;
-        this.projectFacade = projectFacade;
+        this.projectTagFacade = projectTagFacade;
     }
 
     @Override
     public ResponseEntity<List<TagModel>> getProjectTags() {
-        return ResponseEntity.ok(projectFacade.getProjectTags()
-            .stream()
-            .map(tag -> conversionService.convert(tag, TagModel.class))
-            .toList());
+        return ResponseEntity.ok(
+            projectTagFacade.getProjectTags()
+                .stream()
+                .map(tag -> conversionService.convert(tag, TagModel.class))
+                .toList());
     }
 
     @Override
     public ResponseEntity<Void> updateProjectTags(Long id, UpdateTagsRequestModel updateTagsRequestModel) {
         List<TagModel> tagModels = updateTagsRequestModel.getTags();
 
-        projectFacade.updateProjectTags(
+        projectTagFacade.updateProjectTags(
             id,
             tagModels.stream()
                 .map(tagModel -> conversionService.convert(tagModel, Tag.class))
